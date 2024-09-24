@@ -338,6 +338,10 @@ except ValueError:
     UVICORN_WORKERS = 1
     log.info(f"Invalid UVICORN_WORKERS value, defaulting to {UVICORN_WORKERS}")
 
+RESET_CONFIG_ON_START = (
+    os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
+)
+
 ####################################
 # WEBUI_AUTH (Required for security)
 ####################################

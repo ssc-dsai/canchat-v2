@@ -432,6 +432,9 @@ async def lifespan(app: FastAPI):
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
 
+    if RESET_CONFIG_ON_START:
+        reset_config()
+
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
 
