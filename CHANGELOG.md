@@ -875,7 +875,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📋 Ollama /embed Form Data**: Adjusted the integration inaccuracies in the /embed form data to ensure it perfectly matches with Ollama's specifications.
 - **🔧 O1 Max Completion Tokens Issue**: Resolved compatibility issues with OpenAI's o1 models max_completion_tokens param to ensure smooth operation.
 - **🔄 Pip Install Database Issue**: Fixed a critical issue where database changes during pip installations were reverting and not saving chat logs, now ensuring data persistence and reliability in chat operations.
+<<<<<<< HEAD
 - **🏷️ Chat Rename Tab Update**: Fixed the functionality to change the web browser's tab title simultaneously when a chat is renamed, keeping tab titles consistent.
+=======
+>>>>>>> 1037c66e2 (doc: changelog)
 
 ## [0.3.29] - 2023-09-25
 
