@@ -896,6 +896,7 @@
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, chatId, {
 					models: selectedModels,
+					messages: messages,
 					history: history,
 					params: params,
 					files: chatFiles
