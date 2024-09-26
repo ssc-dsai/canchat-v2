@@ -231,10 +231,6 @@
 			mediaRecorder.onstart = () => {
 				console.log('Recording started');
 				audioChunks = [];
-			};
-
-			mediaRecorder.ondataavailable = (event) => {
-				if (hasStartedSpeaking) {
 					audioChunks.push(event.data);
 				}
 			};
