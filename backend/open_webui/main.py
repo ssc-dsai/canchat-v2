@@ -19,7 +19,6 @@ from aiocache import cached
 import aiohttp
 import requests
 
-
 from fastapi import (
     Depends,
     FastAPI,
