@@ -82,6 +82,7 @@
 							</div>
 						{/if}
 					</div>
+<<<<<<< HEAD
 
 					{#if edit}
 						<div>
@@ -126,6 +127,24 @@
 					{item?.file?.data?.content ?? 'No content'}
 				</div>
 			{/if}
+=======
+				</div>
+			</div>
+
+			<div>
+				<button
+					on:click={() => {
+						show = false;
+					}}
+				>
+					<XMark />
+				</button>
+			</div>
+		</div>
+
+		<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+			{file?.content ?? 'No content'}
+>>>>>>> 60540210c (enh: show extracted file content)
 		</div>
 	</div>
 </Modal>
