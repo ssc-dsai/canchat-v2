@@ -22,7 +22,7 @@
 	export let small = false;
 
 	export let file = null;
-	export let enableModal = true;
+	export let edit = false;
 
 	export let name: string;
 	export let type: string;

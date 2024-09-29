@@ -20,6 +20,10 @@
 		item?.meta?.content_type === 'application/pdf' ||
 		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
 
+	export let edit = false;
+
+	let enableFullContent = false;
+
 	onMount(() => {
 		console.log(item);
 		if (item?.context === 'full') {
@@ -110,11 +114,7 @@
 							</Tooltip>
 						</div>
 					{/if}
-				</div>
 			</div>
-		</div>
-
-		<div class="max-h-[75vh] overflow-auto">
 			{#if isPDF}
 				<iframe
 					title={item?.name}
