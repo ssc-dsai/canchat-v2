@@ -1,6 +1,5 @@
 from alembic import op
 from sqlalchemy import Inspector
-import uuid
 
 
 def get_existing_tables():
