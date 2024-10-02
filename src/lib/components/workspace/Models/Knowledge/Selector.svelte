@@ -14,9 +14,6 @@
 
 	let query = '';
 
-	let items = [];
-	let filteredItems = [];
-
 	let fuse = null;
 	$: if (fuse) {
 		filteredItems = query

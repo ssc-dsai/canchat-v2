@@ -184,11 +184,8 @@
 							on:click={() => {
 								console.log(item);
 								confirmSelect(item);
-							}}
 							on:mousemove={() => {
 								selectedIdx = idx;
-							}}
-						>
 							<div>
 								<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
 									{#if item.legacy}
@@ -269,6 +266,34 @@
 									</div>
 								{/if}
 							</div> -->
+=======
+							on:focus={() => {}}
+						>
+							<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
+								<div class="line-clamp-1">
+									{item.name}
+								</div>
+
+								{#if item?.meta?.document}
+									<div
+										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs px-1"
+									>
+										Document
+									</div>
+								{:else}
+									<div
+										class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs px-1"
+									>
+										Collection
+									</div>
+								{/if}
+							</div>
+
+							<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
+								{item.description}
+							</div>
+						</button>
+>>>>>>> b06855f01 (refac: rename projects -> knowledge)
 					{/each}
 
 					{#if prompt
