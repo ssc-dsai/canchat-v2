@@ -31,11 +31,7 @@
 		knowledge,
 		tools,
 		functions,
-		tags,
 		banners,
-		showSettings,
-		showChangelog,
-		temporaryChatEnabled,
 		toolServers
 	} from '$lib/stores';
 
