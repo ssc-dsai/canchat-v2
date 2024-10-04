@@ -40,11 +40,6 @@
 					<div class=" font-medium text-lg dark:text-gray-100">
 						<a
 							href="#"
-							class="hover:underline line-clamp-1"
-							on:click|preventDefault={() => {
-								if (!isPDF && item.url) {
-									window.open(
-										item.type === 'file' ? `${item.url}/content` : `${item.url}`,
 										'_blank'
 									);
 								}

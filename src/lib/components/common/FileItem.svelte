@@ -21,7 +21,7 @@
 	export let edit = false;
 	export let small = false;
 
-	export let file = null;
+	export let item = null;
 	export let edit = false;
 
 	export let name: string;
