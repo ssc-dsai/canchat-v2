@@ -977,6 +977,7 @@
 	"Select Engine": "",
 	"Select Knowledge": "",
 	"Select only one model to call": "Sélectionnez seulement un modèle pour appeler",
+	"Select/Add Files": "",
 	"Selected model(s) do not support image inputs": "Les modèle(s) sélectionné(s) ne prennent pas en charge les entrées d'images",
 	"Semantic distance to query": "",
 	"Send": "Envoyer",
