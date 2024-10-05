@@ -200,7 +200,6 @@
 				</div>
 			</PaneResizer>
 		{/if}
-
 		<Pane
 			bind:pane
 			defaultSize={0}
