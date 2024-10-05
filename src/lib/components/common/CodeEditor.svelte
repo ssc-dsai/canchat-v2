@@ -130,13 +130,12 @@
 		return await language?.load();
 	};
 
-	const getLang = () => {
-		if (lang === 'python') {
-			return python();
-		} else if (lang === 'javascript') {
-			return javascript();
-		}
-		return python();
+	const getLang = async () => {
+		console.log(languages);
+
+		const language = languages.find((l) => l.alias.includes(lang));
+
+		return await language?.load();
 	};
 
 	export const formatPythonCodeHandler = async () => {
