@@ -46,7 +46,6 @@
 			if (selection.toString().trim().length > 0) {
 				const range = selection.getRangeAt(0);
 				const rect = range.getBoundingClientRect();
-
 				const parentRect = contentContainerElement.getBoundingClientRect();
 
 				// Adjust based on parent rect
