@@ -1,16 +1,15 @@
 <script lang="ts">
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
-
+	import { onMount, getContext, tick, createEventDispatcher } from 'svelte';
 	import { blur, fade } from 'svelte/transition';
 
 	import Suggestions from './Suggestions.svelte';
 	import { sanitizeResponseContent } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
+	import MessageInput from '../MessageInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -18,16 +17,64 @@
 	export let models = [];
 	export let atSelectedModel;
 
-	export let submitPrompt;
+	export let createMessagePair: Function;
+	export let stopResponse: Function;
+	export let autoScroll = false;
+
+	export let atSelectedModel: Model | undefined;
+
+	export let prompt = '';
+	export let files = [];
+	export let availableToolIds = [];
+	export let selectedToolIds = [];
+	export let webSearchEnabled = false;
+
+	let models = [];
+
+	const selectSuggestionPrompt = async (p) => {
+		let text = p;
+
+		if (p.includes('{{CLIPBOARD}}')) {
+			const clipboardText = await navigator.clipboard.readText().catch((err) => {
+				toast.error($i18n.t('Failed to read clipboard contents'));
+				return '{{CLIPBOARD}}';
+			});
+
+			text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
+
+			console.log('Clipboard text:', clipboardText, text);
+		}
+
+		prompt = text;
+
+		console.log(prompt);
+		await tick();
+
+		const chatInputElement = document.getElementById('chat-textarea');
+		if (chatInputElement) {
+			chatInputElement.style.height = '';
+			chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';
+			chatInputElement.focus();
+
+			const words = findWordIndices(prompt);
+
+			if (words.length > 0) {
+				const word = words.at(0);
+				chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+			}
+		}
+
+		await tick();
+	};
 
 	let mounted = false;
 	let selectedModelIdx = 0;
 
-	$: if (modelIds.length > 0) {
+	$: if (selectedModels.length > 0) {
 		selectedModelIdx = models.length - 1;
 	}
 
-	$: models = modelIds.map((id) => $_models.find((m) => m.id === id));
+	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 
 	onMount(() => {
 		mounted = true;
@@ -79,7 +126,7 @@
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
+			class="w-full text-3xl text-gray-800 dark:text-gray-100 font-medium text-center flex items-center gap-4 font-primary"
 		>
 			<div>
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
@@ -90,36 +137,25 @@
 					{/if}
 				</div>
 
-				<div in:fade={{ duration: 200, delay: 200 }}>
-					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
-						<div
-							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
-						>
-							{@html marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
-							)}
-						</div>
-						{#if models[selectedModelIdx]?.info?.meta?.user}
-							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
-								By
-								{#if models[selectedModelIdx]?.info?.meta?.user.community}
-									<a
-										href="https://openwebui.com/m/{models[selectedModelIdx]?.info?.meta?.user
-											.username}"
-										>{models[selectedModelIdx]?.info?.meta?.user.name
-											? models[selectedModelIdx]?.info?.meta?.user.name
-											: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
-									>
-								{:else}
-									{models[selectedModelIdx]?.info?.meta?.user.name}
-								{/if}
-							</div>
-						{/if}
-					{:else}
-						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
-							{$i18n.t('How can I help you today?')}
-						</div>
-					{/if}
+				<div class="text-base font-normal lg:translate-x-6 lg:max-w-3xl w-full py-3">
+					<MessageInput
+						{history}
+						{selectedModels}
+						bind:files
+						bind:prompt
+						bind:autoScroll
+						bind:selectedToolIds
+						bind:webSearchEnabled
+						bind:atSelectedModel
+						{availableToolIds}
+						{transparentBackground}
+						{stopResponse}
+						{createMessagePair}
+						placeholder={$i18n.t('How can I help you today?')}
+						on:submit={(e) => {
+							dispatch('submit', e.detail);
+						}}
+					/>
 				</div>
 			</div>
 		</div>
