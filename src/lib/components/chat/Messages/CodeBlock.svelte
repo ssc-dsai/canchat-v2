@@ -21,6 +21,7 @@
 	const i18n = getContext('i18n');
 
 	export let id = '';
+	export let save = false;
 
 	export let onSave = (e) => {};
 	export let onCode = (e) => {};

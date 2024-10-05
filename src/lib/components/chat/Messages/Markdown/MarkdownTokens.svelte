@@ -34,6 +34,8 @@
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
 
+	export let save = false;
+
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
 	};
