@@ -64,6 +64,9 @@ def run_migrations():
         log.exception(f"Error running migrations: {e}")
 
 
+run_migrations()
+
+
 class Config(Base):
     __tablename__ = "config"
 
