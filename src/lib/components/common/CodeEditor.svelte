@@ -21,6 +21,23 @@
 
 	export let boilerplate = '';
 	export let value = '';
+	let _value = '';
+
+	$: if (value) {
+		updateValue();
+	}
+
+	const updateValue = () => {
+		_value = value;
+		if (codeEditor) {
+			codeEditor.dispatch({
+				changes: [{ from: 0, to: codeEditor.state.doc.length, insert: _value }]
+			});
+		}
+	};
+
+	export let id = '';
+	export let lang = '';
 
 	export let onSave = () => {};
 	export let onChange = () => {};
@@ -111,6 +128,15 @@
 	const getLang = async () => {
 		const language = languages.find((l) => l.alias.includes(lang));
 		return await language?.load();
+	};
+
+	const getLang = () => {
+		if (lang === 'python') {
+			return python();
+		} else if (lang === 'javascript') {
+			return javascript();
+		}
+		return python();
 	};
 
 	export const formatPythonCodeHandler = async () => {
