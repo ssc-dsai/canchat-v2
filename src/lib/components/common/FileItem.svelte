@@ -18,11 +18,7 @@
 	export let loading = false;
 
 	export let item = null;
-	export let edit = false;
 	export let small = false;
-
-	export let item = null;
-	export let edit = false;
 
 	export let name: string;
 	export let type: string;
