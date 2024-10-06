@@ -98,6 +98,7 @@
 
 								${cssContent}
 							</${''}style>
+							${cssContent}
                         </head>
                         <body>
                             ${htmlContent}
