@@ -292,7 +292,6 @@
 								{item.description}
 							</div>
 						</button>
->>>>>>> b06855f01 (refac: rename projects -> knowledge)
 					{/each}
 
 					{#if prompt
