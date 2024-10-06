@@ -2123,6 +2123,7 @@
 				bind:files
 				bind:pane={controlPane}
 				chatId={$chatId}
+				messages={createMessagesList(history.currentId)}
 				modelId={selectedModelIds?.at(0) ?? null}
 				models={selectedModelIds.reduce((a, e, i, arr) => {
 					const model = $models.find((m) => m.id === e);
