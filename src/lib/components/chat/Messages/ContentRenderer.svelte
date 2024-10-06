@@ -26,6 +26,10 @@
 
 	let floatingButtonsElement;
 
+	let selectedText = '';
+	let floatingInput = false;
+	let floatingInputValue = '';
+
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
 		if (
@@ -44,9 +48,9 @@
 			let selection = window.getSelection();
 
 			if (selection.toString().trim().length > 0) {
+				floatingInput = false;
 				const range = selection.getRangeAt(0);
 				const rect = range.getBoundingClientRect();
-				const parentRect = contentContainerElement.getBoundingClientRect();
 
 				// Adjust based on parent rect
 				const top = rect.bottom - parentRect.top;
@@ -111,6 +115,18 @@
 			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('keydown', keydownHandler);
+		}
+	});
+
+	$: if (floatingButtons) {
+		if (buttonsContainerElement) {
+			document.body.appendChild(buttonsContainerElement);
+		}
+	}
+
+	onDestroy(() => {
+		if (buttonsContainerElement) {
+			document.body.removeChild(buttonsContainerElement);
 		}
 	});
 </script>
