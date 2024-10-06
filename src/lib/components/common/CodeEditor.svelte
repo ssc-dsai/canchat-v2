@@ -131,10 +131,7 @@
 	};
 
 	const getLang = async () => {
-		console.log(languages);
-
 		const language = languages.find((l) => l.alias.includes(lang));
-
 		return await language?.load();
 	};
 
