@@ -118,17 +118,17 @@
 		}
 	});
 
-	$: if (floatingButtons) {
-		if (buttonsContainerElement) {
-			document.body.appendChild(buttonsContainerElement);
-		}
-	}
+	// $: if (floatingButtons) {
+	// 	if (buttonsContainerElement) {
+	// 		document.body.appendChild(buttonsContainerElement);
+	// 	}
+	// }
 
-	onDestroy(() => {
-		if (buttonsContainerElement) {
-			document.body.removeChild(buttonsContainerElement);
-		}
-	});
+	// onDestroy(() => {
+	// 	if (buttonsContainerElement) {
+	// 		document.body.removeChild(buttonsContainerElement);
+	// 	}
+	// });
 </script>
 
 <div bind:this={contentContainerElement}>
