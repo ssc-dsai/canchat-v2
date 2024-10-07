@@ -102,6 +102,12 @@
 		}
 	};
 
+	const keydownHandler = (e) => {
+		if (e.key === 'Escape') {
+			closeFloatingButtons();
+		}
+	};
+
 	onMount(() => {
 		if (floatingButtons) {
 			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
@@ -117,18 +123,6 @@
 			document.removeEventListener('keydown', keydownHandler);
 		}
 	});
-
-	// $: if (floatingButtons) {
-	// 	if (buttonsContainerElement) {
-	// 		document.body.appendChild(buttonsContainerElement);
-	// 	}
-	// }
-
-	// onDestroy(() => {
-	// 	if (buttonsContainerElement) {
-	// 		document.body.removeChild(buttonsContainerElement);
-	// 	}
-	// });
 </script>
 
 <div bind:this={contentContainerElement}>
