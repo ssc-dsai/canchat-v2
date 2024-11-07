@@ -1841,6 +1841,7 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
 # Qdrant
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
+QDRANT_TIMEOUT_SECONDS = os.environ.get("QDRANT_TIMEOUT_SECONDS", 5)
 
 ####################################
 # Information Retrieval (RAG)
