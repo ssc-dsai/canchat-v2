@@ -8,7 +8,6 @@ import shutil
 import sys
 import time
 import random
-
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
@@ -822,7 +821,6 @@ app.state.speech_speaker_embeddings_dataset = None
 # TASKS
 #
 ########################################
-
 
 app.state.config.TASK_MODEL = TASK_MODEL
 app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL

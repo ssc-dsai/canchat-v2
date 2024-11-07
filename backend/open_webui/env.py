@@ -239,6 +239,8 @@ if FROM_INIT_PY:
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static"))
 
+STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static"))
+
 FONTS_DIR = Path(os.getenv("FONTS_DIR", OPEN_WEBUI_DIR / "static" / "fonts"))
 
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
@@ -341,6 +343,12 @@ except ValueError:
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
+
+####################################
+# REDIS
+####################################
+
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 ####################################
 # WEBUI_AUTH (Required for security)

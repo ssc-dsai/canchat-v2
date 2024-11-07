@@ -21,7 +21,9 @@
 	const i18n = getContext('i18n');
 
 	export let id = '';
+
 	export let save = false;
+	export let run = true;
 
 	export let onSave = (e) => {};
 	export let onCode = (e) => {};
@@ -40,6 +42,10 @@
 	export let stickyButtonsClassName = 'top-8';
 
 	let pyodideWorker = null;
+
+	export let className = 'my-2';
+	export let editorClassName = '';
+	export let stickyButtonsClassName = 'top-8';
 
 	let _code = '';
 	$: if (code) {
