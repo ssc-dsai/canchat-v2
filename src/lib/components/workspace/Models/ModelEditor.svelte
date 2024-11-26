@@ -240,6 +240,9 @@
 			console.log(model?.access_control);
 			console.log(accessControl);
 
+			console.log(model?.access_control);
+			console.log(accessControl);
+
 			info = {
 				...info,
 				...JSON.parse(
