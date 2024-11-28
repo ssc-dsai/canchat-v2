@@ -6,6 +6,7 @@
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { getLanguages } from '$lib/i18n';
 
 	import { banners as _banners } from '$lib/stores';
 	import type { Banner } from '$lib/types';
@@ -38,6 +39,7 @@
 
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
+	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
@@ -53,6 +55,7 @@
 
 		promptSuggestions = $config?.default_prompt_suggestions ?? [];
 		banners = await getBanners(localStorage.token);
+		languages = await getLanguages();
 	});
 
 	const updateBanners = async () => {
@@ -293,17 +296,10 @@
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							type="button"
 							on:click={() => {
-								if (banners.length === 0 || banners.at(-1).content !== '') {
-									banners = [
-										...banners,
-										{
-											id: uuidv4(),
-											type: '',
-											title: '',
-											content: '',
-											dismissible: true,
-											timestamp: Math.floor(Date.now() / 1000)
-										}
+								if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {
+									promptSuggestions = [
+										...promptSuggestions,
+										{ content: '', title: ['', ''], lang: i18n.languages }
 									];
 								}
 							}}
@@ -320,6 +316,27 @@
 							</svg>
 						</button>
 					</div>
+					<div class="grid lg:grid-cols-2 flex-col gap-1.5">
+						{#each promptSuggestions as prompt, promptIdx}
+							<div
+								class=" flex border border-gray-100 dark:border-none dark:bg-gray-850 rounded-xl py-1.5"
+							>
+								<div class="flex flex-col flex-1 pl-1">
+									<select
+										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
+										bind:value={prompt.lang}
+										placeholder={$i18n.languages[prompt.lang] || 'Unknown Language'}
+									>
+										{#each languages as language}
+											<option value={language.code}>{language.title}</option>
+										{/each}
+									</select>
+									<div class="flex border-b border-gray-100 dark:border-gray-800 w-full">
+										<input
+											class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
+											placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
+											bind:value={prompt.title[0]}
+										/>
 
 					<div class=" flex flex-col space-y-1">
 						{#each banners as banner, bannerIdx}
