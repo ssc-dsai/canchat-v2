@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8-ccv2-1.0.1] - 2024-12-10
+
+### Fix
+
+- **🌐 Translation Update**: Added missing translation labels for Canadian French (fr-CA)
+
+## [0.4.8-ccv2-1.0.0] - 2024-12-09
+
+### Fix
+
+- **🔧 Rebasing**: Rebasing to version v0.4.8, kept our qdrant client.
+
 ## [0.4.8] - 2024-12-07
 
 ### Added
