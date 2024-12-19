@@ -253,6 +253,8 @@ def save_config(config):
 
 T = TypeVar("T")
 
+# Defines which configs should take precedence: database or env
+CONFIGURATION_PRECEDENCE = os.environ.get("CONFIGURATION_PRECEDENCE", "database")
 
 class PersistentConfig(Generic[T]):
     def __init__(self, env_name: str, config_path: str, env_value: T):
@@ -260,11 +262,14 @@ class PersistentConfig(Generic[T]):
         self.config_path = config_path
         self.env_value = env_value
         self.config_value = get_config_value(config_path)
-        if self.config_value is not None:
-            log.info(f"'{env_name}' loaded from the latest database entry")
-            self.value = self.config_value
-        else:
-            self.value = env_value
+
+        match CONFIGURATION_PRECEDENCE:
+            case "env":
+                log.info(f"'{env_name}' loaded from environment variable")
+                self.value = env_value
+            case "database" | _:
+                log.info(f"'{env_name}' loaded from the latest database entry")
+                self.value = self.config_value
 
         PERSISTENT_CONFIG_REGISTRY.append(self)
 
@@ -1108,7 +1113,7 @@ Analyze the chat history to determine the necessity of generating search queries
 - Always prioritize providing actionable and broad queries that maximize informational coverage.
 
 ### Output:
-Strictly return in JSON format: 
+Strictly return in JSON format:
 {
   "queries": ["query1", "query2"]
 }
@@ -1139,44 +1144,44 @@ AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 
 
 DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = """### Task:
-You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.  
+You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.
 
 ### **Instructions**:
-1. Analyze `<text>` for context and meaning.  
-2. Use `<type>` to guide your output:  
-   - **General**: Provide a natural, concise continuation.  
-   - **Search Query**: Complete as if generating a realistic search query.  
-3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.  
+1. Analyze `<text>` for context and meaning.
+2. Use `<type>` to guide your output:
+   - **General**: Provide a natural, concise continuation.
+   - **Search Query**: Complete as if generating a realistic search query.
+3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.
 4. Ensure the continuation:
-   - Flows naturally from `<text>`.  
-   - Avoids repetition, overexplaining, or unrelated ideas.  
-5. If unsure, return: `{ "text": "" }`.  
+   - Flows naturally from `<text>`.
+   - Avoids repetition, overexplaining, or unrelated ideas.
+5. If unsure, return: `{ "text": "" }`.
 
 ### **Output Rules**:
 - Respond only in JSON format: `{ "text": "<your_completion>" }`.
 
 ### **Examples**:
-#### Example 1:  
-Input:  
-<type>General</type>  
-<text>The sun was setting over the horizon, painting the sky</text>  
-Output:  
+#### Example 1:
+Input:
+<type>General</type>
+<text>The sun was setting over the horizon, painting the sky</text>
+Output:
 { "text": "with vibrant shades of orange and pink." }
 
-#### Example 2:  
-Input:  
-<type>Search Query</type>  
-<text>Top-rated restaurants in</text>  
-Output:  
-{ "text": "New York City for Italian cuisine." }  
+#### Example 2:
+Input:
+<type>Search Query</type>
+<text>Top-rated restaurants in</text>
+Output:
+{ "text": "New York City for Italian cuisine." }
 
 ---
 ### Context:
 <chat_history>
 {{MESSAGES:END:6}}
 </chat_history>
-<type>{{TYPE}}</type>  
-<text>{{PROMPT}}</text>  
+<type>{{TYPE}}</type>
+<text>{{PROMPT}}</text>
 #### Output:
 """
 
@@ -1392,13 +1397,13 @@ Respond to the user query using the provided context, incorporating inline citat
 - Respond in the same language as the user's query.
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
-- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**  
-- Do not cite if the <source_id> tag is not provided in the context.  
+- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**
+- Do not cite if the <source_id> tag is not provided in the context.
 - Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
 
 ### Example of Citation:
-If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:  
+If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:
 * "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
 If no <source_id> is present, the response should omit the citation.
 
