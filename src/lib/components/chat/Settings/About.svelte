@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getVersionUpdates } from '$lib/apis';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
-	import { showChangelog } from '$lib/stores';
+	import { WEBUI_NAME, showChangelog } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 
@@ -40,7 +40,7 @@
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
-					{'CANchat'}
+					{$WEBUI_NAME}
 					{$i18n.t('Version')}
 				</div>
 			</div>
@@ -72,15 +72,6 @@
 						<div>{$i18n.t("See what's new")}</div>
 					</button>
 				</div>
-
-				<button
-					class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-					on:click={() => {
-						checkForVersionUpdates();
-					}}
-				>
-					{$i18n.t('Check for updates')}
-				</button>
 			</div>
 		</div>
 
