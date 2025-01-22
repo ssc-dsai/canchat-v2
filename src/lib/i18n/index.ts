@@ -71,8 +71,13 @@ export const initI18n = (defaultLocale: string | undefined) => {
 const i18n = createI18nStore(i18next);
 const isLoadingStore = createIsLoadingStore(i18next);
 
-export const getLanguages = async () => {
-	const languages = (await import(`./locales/languages.json`)).default;
+export const getLanguages = async (currentLangCode = null) => {
+	let languages = (await import(`./locales/languages.json`)).default;
+
+	if (currentLangCode === "fr-CA") {
+		languages = (await import(`./locales/languages-fr.json`)).default;
+	}
+
 	return languages;
 };
 export default i18n;
