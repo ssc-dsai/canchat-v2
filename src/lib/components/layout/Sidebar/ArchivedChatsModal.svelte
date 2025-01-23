@@ -246,7 +246,7 @@
 					</div>
 				{:else}
 					<div class="text-left text-sm w-full mb-8">
-						{$i18n.t('You have no archived conversations.')}
+						{$i18n.t('You have no archived chats.')}
 					</div>
 				{/if}
 			</div>
