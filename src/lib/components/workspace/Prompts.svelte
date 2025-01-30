@@ -145,7 +145,17 @@
 						</div>
 
 						<div class=" text-xs px-0.5">
-							{#if prompt?.user?.role === 'admin' || (prompt?.user?.role === 'user' && prompt.access_control != null)}
+							{#if prompt.access_control == null} 
+								<Tooltip
+									content="public"
+									className="flex shrink-0"
+									placement="top-start"
+								>
+									<div class="shrink-0 text-gray-500">
+										{$i18n.t('Public')}
+									</div>
+								</Tooltip>
+							{:else if prompt?.user?.role === 'admin' || (prompt?.user?.role === 'user' && prompt.access_control != null)}
 								<Tooltip
 									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
 									className="flex shrink-0"
