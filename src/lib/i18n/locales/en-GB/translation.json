@@ -253,6 +253,7 @@
 	"Delete function?": "",
 	"Delete Message": "",
 	"Delete prompt?": "",
+	"delete_prompt_error": "You do not have permission to delete this prompt.",
 	"delete this link": "",
 	"Delete tool?": "",
 	"Delete User": "",

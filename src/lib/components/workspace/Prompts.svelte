@@ -39,6 +39,14 @@
 	let filteredItems = [];
 	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
 
+	let isAdmin = false;
+
+	onMount(async () => {
+		await init();
+		loaded = true;
+		isAdmin = $user?.role === 'admin';
+	});
+
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
@@ -70,6 +78,11 @@
 	};
 
 	const deleteHandler = async (prompt) => {
+		if (!isAdmin) {
+			toast.error($i18n.t('delete_prompt_error'));
+			return;
+		}
+
 		const command = prompt.command;
 		await deletePromptByCommand(localStorage.token, command);
 		await init();
@@ -80,10 +93,6 @@
 		await _prompts.set(await getPrompts(localStorage.token));
 	};
 
-	onMount(async () => {
-		await init();
-		loaded = true;
-	});
 </script>
 
 <svelte:head>
