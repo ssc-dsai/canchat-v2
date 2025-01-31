@@ -74,7 +74,6 @@
 		prompts = await getPromptList(localStorage.token);
 		await _prompts.set(await getPrompts(localStorage.token));
 	};
-
 </script>
 
 <svelte:head>
@@ -145,12 +144,8 @@
 						</div>
 
 						<div class=" text-xs px-0.5">
-							{#if prompt.access_control == null} 
-								<Tooltip
-									content="public"
-									className="flex shrink-0"
-									placement="top-start"
-								>
+							{#if prompt.access_control == null}
+								<Tooltip content="public" className="flex shrink-0" placement="top-start">
 									<div class="shrink-0 text-gray-500">
 										{$i18n.t('Public')}
 									</div>
