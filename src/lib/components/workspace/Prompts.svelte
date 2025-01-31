@@ -47,24 +47,6 @@
 		isAdmin = $user?.role === 'admin';
 	});
 
-	const shareHandler = async (prompt) => {
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
-
-		const url = 'https://openwebui.com';
-
-		const tab = await window.open(`${url}/prompts/create`, '_blank');
-		window.addEventListener(
-			'message',
-			(event) => {
-				if (event.origin !== url) return;
-				if (event.data === 'loaded') {
-					tab.postMessage(JSON.stringify(prompt), '*');
-				}
-			},
-			false
-		);
-	};
-
 	const cloneHandler = async (prompt) => {
 		sessionStorage.prompt = JSON.stringify(prompt);
 		goto('/workspace/prompts/create');
@@ -162,19 +144,27 @@
 						</div>
 
 						<div class=" text-xs px-0.5">
-							<Tooltip
-								content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-								className="flex shrink-0"
-								placement="top-start"
-							>
-								<div class="shrink-0 text-gray-500">
-									{$i18n.t('By {{name}}', {
-										name: capitalizeFirstLetter(
-											prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-										)
-									})}
-								</div>
-							</Tooltip>
+							{#if prompt.access_control == null}
+								<Tooltip content="public" className="flex shrink-0" placement="top-start">
+									<div class="shrink-0 text-gray-500">
+										{$i18n.t('Public')}
+									</div>
+								</Tooltip>
+							{:else if prompt?.user?.role === 'admin' || (prompt?.user?.role === 'user' && prompt.access_control != null)}
+								<Tooltip
+									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
+									className="flex shrink-0"
+									placement="top-start"
+								>
+									<div class="shrink-0 text-gray-500">
+										{$i18n.t('By {{name}}', {
+											name: capitalizeFirstLetter(
+												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+											)
+										})}
+									</div>
+								</Tooltip>
+							{/if}
 						</div>
 					</a>
 				</div>
@@ -201,9 +191,6 @@
 					</a>
 
 					<PromptMenu
-						shareHandler={() => {
-							shareHandler(prompt);
-						}}
 						cloneHandler={() => {
 							cloneHandler(prompt);
 						}}
