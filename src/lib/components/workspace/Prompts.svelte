@@ -160,7 +160,7 @@
 					</a>
 				</div>
 				<div class="flex flex-row gap-0.5 self-center">
-					{#if prompt.user.role === 'user' && prompt.access_control == null}
+					{#if prompt.user.role === 'user' && prompt.access_control == null || $user.role === 'admin' || prompt?.user?.id === $user.id}
 						<a
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
