@@ -256,7 +256,6 @@
 	"delete this link": "",
 	"Delete tool?": "",
 	"Delete User": "",
-	"delete_prompt_error": "You do not have permission to delete this prompt.",
 	"Deleted {{deleteModelTag}}": "",
 	"Deleted {{name}}": "",
 	"Deleted User": "",
