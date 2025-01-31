@@ -4,11 +4,10 @@
 	const i18n = getContext('i18n');
 
 	import { getGroups } from '$lib/apis/groups';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import { user } from '$lib/stores';
 
 	export let onChange: Function = () => {};
 
@@ -114,7 +113,9 @@
 					}}
 				>
 					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					{#if $user?.role === 'admin'}
+						<option class=" text-gray-700" value="public">Public</option>
+					{/if}
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
