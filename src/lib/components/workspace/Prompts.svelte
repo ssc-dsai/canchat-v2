@@ -92,7 +92,6 @@
 		prompts = await getPromptList(localStorage.token);
 		await _prompts.set(await getPrompts(localStorage.token));
 	};
-
 </script>
 
 <svelte:head>
