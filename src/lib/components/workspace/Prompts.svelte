@@ -126,7 +126,11 @@
 				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 			>
 				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-					<a href={prompt.user.role === 'admin' && prompt.access_control == null ? null : `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
+					<a
+						href={prompt.user.role === 'admin' && prompt.access_control == null
+							? null
+							: `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+					>
 						<div class=" flex-1 flex items-center gap-2 self-center">
 							<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
 							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
@@ -160,7 +164,7 @@
 					</a>
 				</div>
 				<div class="flex flex-row gap-0.5 self-center">
-					{#if prompt.user.role === 'user' && prompt.access_control == null || $user.role === 'admin' || prompt?.user?.id === $user.id}
+					{#if (prompt.user.role === 'user' && prompt.access_control == null) || $user.role === 'admin' || prompt?.user?.id === $user.id}
 						<a
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
