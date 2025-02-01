@@ -127,7 +127,8 @@
 			>
 				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 					<a
-						href={prompt.user.role === 'admin' && prompt.access_control == null
+						href={(prompt.user.role === 'user' && prompt.access_control == null) ||
+						($user.role !== 'admin' && prompt?.user?.id !== $user.id)
 							? null
 							: `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
 					>
