@@ -96,21 +96,24 @@
 				<select
 					id="models"
 					class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
-					value={accessControl !== null ? 'private' : 'public'}
+					value={$user?.role === 'user' || accessControl !== null ? 'private' : 'public'}
 					on:change={(e) => {
-						if (e.target.value === 'public') {
-							accessControl = null;
-						} else {
-							accessControl = {
-								read: {
-									group_ids: []
-								},
-								write: {
-									group_ids: []
-								}
-							};
+						if ($user?.role === 'admin') {
+							if (e.target.value === 'public') {
+								accessControl = null;
+							} else {
+								accessControl = {
+									read: {
+										group_ids: []
+									},
+									write: {
+										group_ids: []
+									}
+								};
+							}
 						}
 					}}
+					disabled={$user?.role === 'user'}
 				>
 					<option class=" text-gray-700" value="private" selected>Private</option>
 					{#if $user?.role === 'admin'}

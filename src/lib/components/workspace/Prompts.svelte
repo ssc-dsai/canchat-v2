@@ -127,10 +127,11 @@
 			>
 				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 					<a
-						href={(prompt.user.role === 'user' && prompt.access_control == null) ||
-						($user.role !== 'admin' && prompt?.user?.id !== $user.id)
-							? null
-							: `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+						href={$user.role === 'admin' ||
+						(prompt?.user?.id === $user.id &&
+							!(prompt.user.role === 'user' && prompt.access_control === null))
+							? `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`
+							: null}
 					>
 						<div class=" flex-1 flex items-center gap-2 self-center">
 							<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
@@ -165,7 +166,7 @@
 					</a>
 				</div>
 				<div class="flex flex-row gap-0.5 self-center">
-					{#if (prompt.user.role === 'user' && prompt.access_control == null) || $user.role === 'admin' || prompt?.user?.id === $user.id}
+					{#if $user.role === 'admin' || (prompt?.user?.id === $user.id && !(prompt.user.role === 'user' && prompt.access_control === null))}
 						<a
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
@@ -200,7 +201,9 @@
 							showDeleteConfirm = true;
 						}}
 						onClose={() => {}}
-						canDelete={$user.role === 'admin' || prompt?.user?.id === $user.id}
+						canDelete={$user.role === 'admin' ||
+							(prompt?.user?.id === $user.id &&
+								!(prompt.user.role === 'user' && prompt.access_control === null))}
 					>
 						<button
 							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
