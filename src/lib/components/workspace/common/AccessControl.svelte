@@ -122,10 +122,12 @@
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
-					{#if accessControl !== null}
-						{$i18n.t('Only select users and groups with permission can access')}
-					{:else}
-						{$i18n.t('Accessible to all users')}
+					{#if $user?.role === 'admin'}
+						{#if accessControl !== null}
+							{$i18n.t('Only select users and groups with permission can access')}
+						{:else}
+							{$i18n.t('Accessible to all users')}
+						{/if}
 					{/if}
 				</div>
 			</div>
