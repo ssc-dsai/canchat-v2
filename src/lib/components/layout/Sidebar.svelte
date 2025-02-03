@@ -57,6 +57,7 @@
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import GlobalLanguageSelector from '$lib/components/common/GlobalLanguageSelector.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -856,6 +857,10 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
+				<div class="mb-2 px-2.5 py-2">
+					<GlobalLanguageSelector />
+				</div>
+
 				{#if $user !== undefined}
 					<UserMenu
 						role={$user.role}
