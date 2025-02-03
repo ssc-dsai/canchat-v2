@@ -857,11 +857,8 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
-				<div class="mb-2 px-2.5 py-2">
-					<GlobalLanguageSelector />
-				</div>
-
 				{#if $user !== undefined}
+					<GlobalLanguageSelector />
 					<UserMenu
 						role={$user.role}
 						on:show={(e) => {
@@ -871,19 +868,19 @@
 						}}
 					>
 						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class="flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}
 						>
-							<div class=" self-center mr-3">
+							<div class="self-center mr-3">
 								<img
 									src={$user.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-full"
+									class="max-w-[30px] object-cover rounded-full"
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium">{$user.name}</div>
+							<div class="self-center font-medium">{$user.name}</div>
 						</button>
 					</UserMenu>
 				{/if}

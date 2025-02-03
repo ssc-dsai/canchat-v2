@@ -20,15 +20,31 @@
 	$: currentLanguage = languages.find((lang) => lang.code === currentLang);
 </script>
 
-<div
-	class="w-full flex justify-between items-center px-1 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+<button
+	class="flex w-full cursor-pointer select-none items-center gap-3 rounded-lg py-3 px-3 text-[14px] leading-3 text-black dark:text-white transition-colors duration-200 hover:bg-purple-800/30"
+	on:click|stopPropagation={toggleLanguage}
 >
-	<span class="text-xs font-medium">{$i18n.t('Language')}</span>
-	<button class="flex items-center space-x-1 px-2 py-1 rounded" on:click={toggleLanguage}>
-		<span class="text-sm">
-			{#if currentLanguage}
-				{currentLanguage.title}
-			{/if}
-		</span>
-	</button>
-</div>
+	<div>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="18"
+			height="18"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			class="tabler-icon tabler-icon-info-square-rounded"
+		>
+			<path d="M12 9h.01"></path>
+			<path d="M11 12h1v4h1"></path>
+			<path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z"></path>
+		</svg>
+	</div>
+	<span>
+		{#if currentLanguage}
+			{currentLanguage.title}
+		{/if}
+	</span>
+</button>
