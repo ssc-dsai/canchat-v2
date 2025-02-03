@@ -21,14 +21,14 @@
 </script>
 
 <button
-	class="flex w-full cursor-pointer select-none items-center gap-3 rounded-lg py-3 px-3 text-[14px] leading-3 text-black dark:text-white transition-colors duration-200 hover:bg-purple-800/30"
+	class="flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 	on:click|stopPropagation={toggleLanguage}
 >
-	<div>
+	<div class="self-center mr-3">
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
-			width="18"
-			height="18"
+			width="28"
+			height="28"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -42,9 +42,9 @@
 			<path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z"></path>
 		</svg>
 	</div>
-	<span>
+	<div class="self-center font-medium">
 		{#if currentLanguage}
 			{currentLanguage.title}
 		{/if}
-	</span>
+	</div>
 </button>

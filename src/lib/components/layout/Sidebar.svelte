@@ -876,7 +876,7 @@
 							<div class="self-center mr-3">
 								<img
 									src={$user.profile_image_url}
-									class="max-w-[30px] object-cover rounded-full"
+									class="max-w-[28px] object-cover rounded-full"
 									alt="User profile"
 								/>
 							</div>
