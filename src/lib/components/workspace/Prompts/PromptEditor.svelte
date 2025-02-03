@@ -1,11 +1,8 @@
 <script lang="ts">
 	import { onMount, tick, getContext } from 'svelte';
-
-	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import LockClosed from '$lib/components/icons/LockClosed.svelte';
-	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import AccessControl from '../common/AccessControl.svelte';
 	import { user } from '$lib/stores';
 
 	export let onSubmit: Function;
@@ -21,8 +18,6 @@
 	let content = '';
 
 	let accessControl = null;
-
-	let showAccessControlModal = false;
 
 	$: if (!edit) {
 		command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
@@ -82,12 +77,6 @@
 	});
 </script>
 
-<AccessControlModal
-	bind:show={showAccessControlModal}
-	bind:accessControl
-	accessRoles={['read', 'write']}
-/>
-
 <div class="w-full max-h-full">
 	<form
 		class="flex flex-col max-w-lg mx-auto mt-10 mb-10"
@@ -134,13 +123,13 @@
 				<div>
 					<div class="text-sm mb-2">{$i18n.t('Prompt Content')}</div>
 					<div class="w-full mt-1">
-						<Textarea
-							className="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						<textarea
+							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t(
 								'Write a summary in 50 words that summarizes [topic or keyword].'
 							)}
 							bind:value={content}
-							rows={6}
+							rows={4}
 							required
 						/>
 						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
@@ -156,18 +145,7 @@
 
 		<div class="mt-2">
 			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-				<button
-					class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-					type="button"
-					on:click={() => {
-						showAccessControlModal = true;
-					}}
-				>
-					<LockClosed strokeWidth="2.5" className="size-3.5" />
-					<div class="text-sm font-medium flex-shrink-0">
-						{$i18n.t('Access')}
-					</div>
-				</button>
+				<AccessControl bind:accessControl />
 			</div>
 		</div>
 
