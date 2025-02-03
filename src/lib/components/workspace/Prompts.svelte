@@ -140,25 +140,23 @@
 
 						<div class="text-xs px-0.5">
 							<Tooltip
-							  content={
-								prompt.access_control == null
-								  ? $i18n.t('Public')
-								  : prompt?.user?.email ?? $i18n.t('Deleted User')
-							  }
-							  className="flex shrink-0"
-							  placement="top-start"
+								content={prompt.access_control == null
+									? $i18n.t('Public')
+									: (prompt?.user?.email ?? $i18n.t('Deleted User'))}
+								className="flex shrink-0"
+								placement="top-start"
 							>
-							  <div class="shrink-0 text-gray-500">
-								{#if prompt.access_control == null}
-								  {$i18n.t('Public')}
-								{:else}
-								  {$i18n.t('By {{name}}', {
-									name: capitalizeFirstLetter(
-									  prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-									)
-								  })}
-								{/if}
-							  </div>
+								<div class="shrink-0 text-gray-500">
+									{#if prompt.access_control == null}
+										{$i18n.t('Public')}
+									{:else}
+										{$i18n.t('By {{name}}', {
+											name: capitalizeFirstLetter(
+												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+											)
+										})}
+									{/if}
+								</div>
 							</Tooltip>
 						</div>
 					</a>
