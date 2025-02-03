@@ -30,6 +30,20 @@
 
 	const submitHandler = async () => {
 		loading = true;
+		// this makes user 'private' by default in Prompts edit/create
+		// eliminating the need to interact with access control modal
+		if ($user?.role === 'user') {
+			accessControl = {
+				read: {
+					group_ids: [],
+					user_ids: []
+				},
+				write: {
+					group_ids: [],
+					user_ids: []
+				}
+			};
+		}
 
 		if (validateCommandString(command)) {
 			await onSubmit({
