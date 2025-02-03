@@ -127,9 +127,7 @@
 			>
 				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 					<a
-						href={$user.role === 'admin' ||
-						(prompt?.user?.id === $user.id &&
-							!(prompt.user.role === 'user' && prompt.access_control === null))
+						href={$user?.role === 'admin' || prompt?.user?.id === $user?.id
 							? `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`
 							: null}
 					>
@@ -140,33 +138,33 @@
 							</div>
 						</div>
 
-						<div class=" text-xs px-0.5">
-							{#if prompt.access_control == null}
-								<Tooltip content="public" className="flex shrink-0" placement="top-start">
-									<div class="shrink-0 text-gray-500">
-										{$i18n.t('Public')}
-									</div>
-								</Tooltip>
-							{:else if prompt?.user?.role === 'admin' || (prompt?.user?.role === 'user' && prompt.access_control != null)}
-								<Tooltip
-									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-									className="flex shrink-0"
-									placement="top-start"
-								>
-									<div class="shrink-0 text-gray-500">
-										{$i18n.t('By {{name}}', {
-											name: capitalizeFirstLetter(
-												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-											)
-										})}
-									</div>
-								</Tooltip>
-							{/if}
+						<div class="text-xs px-0.5">
+							<Tooltip
+							  content={
+								prompt.access_control == null
+								  ? $i18n.t('Public')
+								  : prompt?.user?.email ?? $i18n.t('Deleted User')
+							  }
+							  className="flex shrink-0"
+							  placement="top-start"
+							>
+							  <div class="shrink-0 text-gray-500">
+								{#if prompt.access_control == null}
+								  {$i18n.t('Public')}
+								{:else}
+								  {$i18n.t('By {{name}}', {
+									name: capitalizeFirstLetter(
+									  prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+									)
+								  })}
+								{/if}
+							  </div>
+							</Tooltip>
 						</div>
 					</a>
 				</div>
 				<div class="flex flex-row gap-0.5 self-center">
-					{#if $user.role === 'admin' || (prompt?.user?.id === $user.id && !(prompt.user.role === 'user' && prompt.access_control === null))}
+					{#if $user?.role === 'admin' || prompt?.user?.id === $user?.id}
 						<a
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
@@ -201,9 +199,7 @@
 							showDeleteConfirm = true;
 						}}
 						onClose={() => {}}
-						canDelete={$user.role === 'admin' ||
-							(prompt?.user?.id === $user.id &&
-								!(prompt.user.role === 'user' && prompt.access_control === null))}
+						canDelete={$user?.role === 'admin' || prompt?.user?.id === $user?.id}
 					>
 						<button
 							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
