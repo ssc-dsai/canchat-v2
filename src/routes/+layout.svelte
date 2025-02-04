@@ -372,14 +372,14 @@
 		<div class="flex flex-row h-screen">
 			<AppSidebar />
 			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
-				<div class="hidden lg:flex fixed top-0 right-[108px] px-2 py-[7px] z-50">
+				<div class="fixed top-0 right-[108px] px-2 py-[7px] z-50">
 					<GlobalLanguageSelector />
 				</div>
 				<slot />
 			</div>
 		</div>
 	{:else}
-		<div class="hidden lg:flex fixed top-0 right-[108px] px-2 py-[7px] z-50">
+		<div class="fixed top-0 right-[108px] px-2 py-[7px] z-50">
 			<GlobalLanguageSelector />
 		</div>
 		<slot />
