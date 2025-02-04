@@ -14,6 +14,7 @@
 	let loading = false;
 
 	let title = '';
+	let baseCommand = '';
 	let command = '';
 	let content = '';
 
@@ -29,12 +30,18 @@
 	};
 
 	$: if (!edit) {
-		command =
-			title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}-${generateRandomSuffix()}` : '';
+		baseCommand = title !== '' ? title.replace(/\s+/g, '-').toLowerCase() : '';
+		command = baseCommand;
 	}
 
 	const submitHandler = async () => {
 		loading = true;
+		
+		// Generate final command with suffix only on save
+		if (!edit) {
+			command = `${baseCommand}-${generateRandomSuffix()}`;
+		}
+
 		// this makes user 'private' by default in Prompts edit/create
 		// eliminating the need to interact with access control modal
 		if ($user?.role === 'user') {
@@ -79,7 +86,7 @@
 			title = prompt.title;
 			await tick();
 
-			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
+			baseCommand = command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 
 			accessControl = prompt?.access_control ?? null;
@@ -143,7 +150,7 @@
 							required
 						/>
 						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-							ⓘ {$i18n.t('Format your variables using brackets like this:')}
+								ⓘ {$i18n.t('Format your variables using brackets like this:')}
 							<span class="text-gray-600 dark:text-gray-300 font-medium"
 								>{'{{'}{$i18n.t('variable')}{'}}'}</span
 							>
