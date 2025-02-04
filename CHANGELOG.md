@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-02-04
+
+### Changed
+
+- **⚙️ Versioning Stability**: For stability purposes, we stopped rebasing our code from Open WebUI at v0.5.7.
+- **🎨 Redesigned Prompt Create/Edit Page**: A fresh UI to create & edit prompts.
+- **🌍 Translation Button**: We've change the location of the language button from the settings modals to the sidebar menu.
+- **⚙️ CI/CD Workflows**: Removed broken/unwanted workflows that we're dedicated to Open WebUI.
+
+### Added
+
+- **🔗Private Prompt Workspace for Users**: Users now have the ability to create/edit their own private prompts on their own Prompt Workspace.
+  
+### Fixed
+
+- **✨ Favicon Logo**: Favicon logos are now using the DSAI logo.
+- **🌍 Enhanced Internationalization (i18n)**: Refined and expanded translations.
+
+
 ## [0.5.7] - 2025-01-23
 
 ### Added
