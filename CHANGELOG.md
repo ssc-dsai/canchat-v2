@@ -17,12 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🔗Private Prompt Workspace for Users**: Users now have the ability to create/edit their own private prompts on their own Prompt Workspace.
-  
+
 ### Fixed
 
 - **✨ Favicon Logo**: Favicon logos are now using the DSAI logo.
 - **🌍 Enhanced Internationalization (i18n)**: Refined and expanded translations.
-
 
 ## [0.5.7] - 2025-01-23
 
