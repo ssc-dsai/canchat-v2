@@ -29,6 +29,18 @@
 		return result;
 	};
 
+	const generateCommandString = () => {
+		if (!edit) {
+			// Add random suffix only for private prompts
+			if (accessControl !== null) {
+				return `${baseCommand}-${generateRandomSuffix()}`;
+			}
+			// For public prompts, just use the base command
+			return baseCommand;
+		}
+		return command;
+	};
+
 	$: if (!edit) {
 		baseCommand = title !== '' ? title.replace(/\s+/g, '-').toLowerCase() : '';
 		command = baseCommand;
@@ -37,13 +49,10 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		// Generate final command with suffix only on save
-		if (!edit) {
-			command = `${baseCommand}-${generateRandomSuffix()}`;
-		}
+		// Generate final command
+		command = generateCommandString();
 
 		// this makes user 'private' by default in Prompts edit/create
-		// eliminating the need to interact with access control modal
 		if ($user?.role === 'user') {
 			accessControl = {
 				read: {
