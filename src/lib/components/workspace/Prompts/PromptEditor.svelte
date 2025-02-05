@@ -154,7 +154,7 @@
 							required
 						/>
 						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-													ⓘ {$i18n.t('Format your variables using brackets like this:')}
+							ⓘ {$i18n.t('Format your variables using brackets like this:')}
 							<span class="text-gray-600 dark:text-gray-300 font-medium"
 								>{'{{'}{$i18n.t('variable')}{'}}'}</span
 							>

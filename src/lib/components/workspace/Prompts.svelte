@@ -60,17 +60,17 @@
 
 	const getPromptGroupName = (prompt) => {
 		if (prompt.access_control === null) return null;
-		
+
 		// Check for both read and write group access
 		const writeGroupId = prompt.access_control.write.group_ids[0];
 		const readGroupId = prompt.access_control.read.group_ids[0];
 		const groupId = writeGroupId || readGroupId;
-		
+
 		if (groupId) {
-			const group = groups.find(g => g.id === groupId);
+			const group = groups.find((g) => g.id === groupId);
 			return group?.name;
 		}
-		
+
 		// Return null for private prompts (will show user name instead)
 		return null;
 	};
@@ -158,7 +158,7 @@
 							<Tooltip
 								content={prompt.access_control == null
 									? $i18n.t('Public')
-										: getPromptGroupName(prompt) ?? (prompt?.user?.email ?? $i18n.t('Deleted User'))}
+									: (getPromptGroupName(prompt) ?? prompt?.user?.email ?? $i18n.t('Deleted User'))}
 								className="flex shrink-0"
 								placement="top-start"
 							>
@@ -167,11 +167,10 @@
 										{$i18n.t('Public')}
 									{:else}
 										{$i18n.t('By {{name}}', {
-											name: getPromptGroupName(prompt) ?? 
+											name:
+												getPromptGroupName(prompt) ??
 												capitalizeFirstLetter(
-													prompt?.user?.name ?? 
-													prompt?.user?.email ?? 
-													$i18n.t('Deleted User')
+													prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
 												)
 										})}
 									{/if}

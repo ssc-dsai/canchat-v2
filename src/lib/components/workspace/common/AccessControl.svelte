@@ -20,13 +20,13 @@
 	onMount(async () => {
 		try {
 			groups = await getGroups(localStorage.token);
-			
+
 			if (!accessControl) {
 				accessControl = {
 					read: { group_ids: [], user_ids: [] },
-					write: { 
+					write: {
 						group_ids: [],
-						user_ids: [] 
+						user_ids: []
 					}
 				};
 			}
@@ -49,7 +49,12 @@
 			...accessControl,
 			[accessRoles.includes('write') ? 'write' : 'read']: {
 				...accessControl[accessRoles.includes('write') ? 'write' : 'read'],
-				group_ids: [...new Set([...accessControl[accessRoles.includes('write') ? 'write' : 'read'].group_ids, selectedGroupId])]
+				group_ids: [
+					...new Set([
+						...accessControl[accessRoles.includes('write') ? 'write' : 'read'].group_ids,
+						selectedGroupId
+					])
+				]
 			}
 		};
 
@@ -60,14 +65,14 @@
 	const toggleGroupAccess = (groupId: string) => {
 		const isWrite = accessControl.write.group_ids.includes(groupId);
 		const isRead = accessControl.read.group_ids.includes(groupId);
-		
+
 		if (isWrite) {
 			// Move from write to read
 			accessControl = {
 				...accessControl,
 				write: {
 					...accessControl.write,
-					group_ids: accessControl.write.group_ids.filter(id => id !== groupId)
+					group_ids: accessControl.write.group_ids.filter((id) => id !== groupId)
 				},
 				read: {
 					...accessControl.read,
@@ -80,7 +85,7 @@
 				...accessControl,
 				read: {
 					...accessControl.read,
-					group_ids: accessControl.read.group_ids.filter(id => id !== groupId)
+					group_ids: accessControl.read.group_ids.filter((id) => id !== groupId)
 				},
 				write: {
 					...accessControl.write,
