@@ -62,13 +62,6 @@
 		goto('/workspace/prompts/create');
 	};
 
-	const exportHandler = async (prompt) => {
-		let blob = new Blob([JSON.stringify([prompt])], {
-			type: 'application/json'
-		});
-		saveAs(blob, `prompt-export-${Date.now()}.json`);
-	};
-
 	const deleteHandler = async (prompt) => {
 		const command = prompt.command;
 		await deletePromptByCommand(localStorage.token, command);
@@ -198,9 +191,6 @@
 						}}
 						cloneHandler={() => {
 							cloneHandler(prompt);
-						}}
-						exportHandler={() => {
-							exportHandler(prompt);
 						}}
 						deleteHandler={async () => {
 							deletePrompt = prompt;
