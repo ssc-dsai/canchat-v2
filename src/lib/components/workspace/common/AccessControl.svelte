@@ -18,30 +18,20 @@
 	let groups = [];
 
 	onMount(async () => {
-		groups = await getGroups(localStorage.token);
-
-		if (accessControl === null && $user?.role === 'user') {
-			accessControl = {
-				read: {
-					group_ids: [],
-					user_ids: []
-				},
-				write: {
-					group_ids: [],
-					user_ids: []
-				}
-			};
-		} else if (accessControl !== null) {
-			accessControl = {
-				read: {
-					group_ids: accessControl?.read?.group_ids ?? [],
-					user_ids: accessControl?.read?.user_ids ?? []
-				},
-				write: {
-					group_ids: accessControl?.write?.group_ids ?? [],
-					user_ids: accessControl?.write?.user_ids ?? []
-				}
-			};
+		try {
+			groups = await getGroups(localStorage.token);
+			
+			if (!accessControl) {
+				accessControl = {
+					read: { group_ids: [], user_ids: [] },
+					write: { 
+						group_ids: [],
+						user_ids: [] 
+					}
+				};
+			}
+		} catch (error) {
+			console.error('Error loading groups:', error);
 		}
 	});
 
@@ -52,28 +42,51 @@
 	}
 
 	const onSelectGroup = () => {
-		if (selectedGroupId !== '') {
-			// By default, add to read access
-			accessControl.read.group_ids = [...accessControl.read.group_ids, selectedGroupId];
-			// Ensure it's not in write access
-			accessControl.write.group_ids = accessControl.write.group_ids.filter(
-				(id) => id !== selectedGroupId
-			);
+		if (!selectedGroupId) return;
 
-			selectedGroupId = '';
-		}
+		// When a group is selected, add it to write or read groups
+		accessControl = {
+			...accessControl,
+			[accessRoles.includes('write') ? 'write' : 'read']: {
+				...accessControl[accessRoles.includes('write') ? 'write' : 'read'],
+				group_ids: [...new Set([...accessControl[accessRoles.includes('write') ? 'write' : 'read'].group_ids, selectedGroupId])]
+			}
+		};
+
+		selectedGroupId = '';
 	};
 
 	// Helper function to toggle group access
 	const toggleGroupAccess = (groupId: string) => {
-		if (accessControl.write.group_ids.includes(groupId)) {
-			// If in write, move to read
-			accessControl.write.group_ids = accessControl.write.group_ids.filter((id) => id !== groupId);
-			accessControl.read.group_ids = [...accessControl.read.group_ids, groupId];
-		} else {
-			// If in read, move to write
-			accessControl.read.group_ids = accessControl.read.group_ids.filter((id) => id !== groupId);
-			accessControl.write.group_ids = [...accessControl.write.group_ids, groupId];
+		const isWrite = accessControl.write.group_ids.includes(groupId);
+		const isRead = accessControl.read.group_ids.includes(groupId);
+		
+		if (isWrite) {
+			// Move from write to read
+			accessControl = {
+				...accessControl,
+				write: {
+					...accessControl.write,
+					group_ids: accessControl.write.group_ids.filter(id => id !== groupId)
+				},
+				read: {
+					...accessControl.read,
+					group_ids: [...accessControl.read.group_ids, groupId]
+				}
+			};
+		} else if (isRead) {
+			// Move from read to write
+			accessControl = {
+				...accessControl,
+				read: {
+					...accessControl.read,
+					group_ids: accessControl.read.group_ids.filter(id => id !== groupId)
+				},
+				write: {
+					...accessControl.write,
+					group_ids: [...accessControl.write.group_ids, groupId]
+				}
+			};
 		}
 	};
 </script>

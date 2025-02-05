@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { user } from '$lib/stores';
 
@@ -48,24 +47,9 @@
 
 	const submitHandler = async () => {
 		loading = true;
-
-		// Generate final command
 		command = generateCommandString();
 
-		// this makes user 'private' by default in Prompts edit/create
-		if ($user?.role === 'user') {
-			accessControl = {
-				read: {
-					group_ids: [],
-					user_ids: []
-				},
-				write: {
-					group_ids: [],
-					user_ids: []
-				}
-			};
-		}
-
+		// Remove group requirement validation
 		if (validateCommandString(command)) {
 			await onSubmit({
 				title,
@@ -90,7 +74,17 @@
 		return regex.test(inputString);
 	};
 
+	// Initialize with group access control for non-admin users
 	onMount(async () => {
+		if (!edit && $user?.role === 'user') {
+			// Initialize empty access control without any group
+			// this makes user 'private' by default in Prompts edit/create
+			accessControl = {
+				read: { group_ids: [], user_ids: [] },
+				write: { group_ids: [], user_ids: [] }
+			};
+		}
+
 		if (prompt) {
 			title = prompt.title;
 			await tick();
@@ -160,7 +154,7 @@
 							required
 						/>
 						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-							ⓘ {$i18n.t('Format your variables using brackets like this:')}
+													ⓘ {$i18n.t('Format your variables using brackets like this:')}
 							<span class="text-gray-600 dark:text-gray-300 font-medium"
 								>{'{{'}{$i18n.t('variable')}{'}}'}</span
 							>
