@@ -44,6 +44,7 @@
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
+	import GlobalLanguageSelector from '$lib/components/common/GlobalLanguageSelector.svelte';
 
 	setContext('i18n', i18n);
 
@@ -370,12 +371,17 @@
 	{#if $isApp}
 		<div class="flex flex-row h-screen">
 			<AppSidebar />
-
 			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+				<div class="fixed top-0 right-[108px] px-2 py-[7px] z-50">
+					<GlobalLanguageSelector />
+				</div>
 				<slot />
 			</div>
 		</div>
 	{:else}
+		<div class="fixed top-0 right-[108px] px-2 py-[7px] z-50">
+			<GlobalLanguageSelector />
+		</div>
 		<slot />
 	{/if}
 {/if}
