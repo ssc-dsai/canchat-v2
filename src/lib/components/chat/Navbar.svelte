@@ -129,7 +129,6 @@
 						</button>
 					</Tooltip>
 				{/if}
-
 			</div>
 		</div>
 	</div>
