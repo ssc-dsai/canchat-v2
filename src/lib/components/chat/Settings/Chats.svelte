@@ -1,11 +1,7 @@
 <script lang="ts">
 	import { chats, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
 
-	import {
-		archiveAllChats,
-		deleteAllChats,
-		getChatList
-	} from '$lib/apis/chats';
+	import { archiveAllChats, deleteAllChats, getChatList } from '$lib/apis/chats';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
