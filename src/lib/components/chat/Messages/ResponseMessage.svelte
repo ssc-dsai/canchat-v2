@@ -475,10 +475,7 @@
 </script>
 
 {#key message.id}
-	<div
-		class=" flex w-full message-{message.id}"
-		id="message-{message.id}"
-	>
+	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
 		<div class="flex-shrink-0 mr-3">
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??

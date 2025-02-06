@@ -9,7 +9,7 @@
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
-	
+
 	// Addons
 	let titleAutoGenerate = true;
 	let autoTags = true;
@@ -526,7 +526,6 @@
 					</button>
 				</div>
 			</div>
-
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
