@@ -141,11 +141,9 @@
 			>
 				<a
 					class="flex flex-1 w-full"
-					href={$user?.role === 'admin' || 
-						(prompt?.user?.id === $user?.id || 
-						(prompt.access_control?.write?.group_ids?.some(id => 
-							groups.find(g => g.id === id)
-						)))
+					href={$user?.role === 'admin' ||
+					prompt?.user?.id === $user?.id ||
+					prompt.access_control?.write?.group_ids?.some((id) => groups.find((g) => g.id === id))
 						? `/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`
 						: null}
 				>
@@ -182,11 +180,7 @@
 					</div>
 				</a>
 				<div class="flex flex-row gap-0.5 self-center">
-					{#if $user?.role === 'admin' || 
-						(prompt?.user?.id === $user?.id || 
-						(prompt.access_control?.write?.group_ids?.some(id => 
-							groups.find(g => g.id === id)
-						)))}
+					{#if $user?.role === 'admin' || prompt?.user?.id === $user?.id || prompt.access_control?.write?.group_ids?.some( (id) => groups.find((g) => g.id === id) )}
 						<a
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
