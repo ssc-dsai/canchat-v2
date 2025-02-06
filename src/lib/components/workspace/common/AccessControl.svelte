@@ -11,7 +11,6 @@
 
 	export let onChange: Function = () => {};
 
-	export let accessRoles = ['read', 'write'];
 	export let accessControl = null;
 
 	let selectedGroupId = '';
@@ -44,55 +43,25 @@
 	const onSelectGroup = () => {
 		if (!selectedGroupId) return;
 
-		// When a group is selected, add it to write or read groups
+		 // Always set as read-only access for now
 		accessControl = {
 			...accessControl,
-			[accessRoles.includes('write') ? 'write' : 'read']: {
-				...accessControl[accessRoles.includes('write') ? 'write' : 'read'],
+			read: {
+				...accessControl.read,
 				group_ids: [
 					...new Set([
-						...accessControl[accessRoles.includes('write') ? 'write' : 'read'].group_ids,
+						...accessControl.read.group_ids,
 						selectedGroupId
 					])
 				]
+			},
+			write: {
+				group_ids: [],
+				user_ids: []
 			}
 		};
 
 		selectedGroupId = '';
-	};
-
-	// Helper function to toggle group access
-	const toggleGroupAccess = (groupId: string) => {
-		const isWrite = accessControl.write.group_ids.includes(groupId);
-		const isRead = accessControl.read.group_ids.includes(groupId);
-
-		if (isWrite) {
-			// Move from write to read
-			accessControl = {
-				...accessControl,
-				write: {
-					...accessControl.write,
-					group_ids: accessControl.write.group_ids.filter((id) => id !== groupId)
-				},
-				read: {
-					...accessControl.read,
-					group_ids: [...accessControl.read.group_ids, groupId]
-				}
-			};
-		} else if (isRead) {
-			// Move from read to write
-			accessControl = {
-				...accessControl,
-				read: {
-					...accessControl.read,
-					group_ids: accessControl.read.group_ids.filter((id) => id !== groupId)
-				},
-				write: {
-					...accessControl.write,
-					group_ids: [...accessControl.write.group_ids, groupId]
-				}
-			};
-		}
 	};
 </script>
 
@@ -242,30 +211,14 @@
 								</div>
 
 								<div class="w-full flex justify-end items-center gap-0.5">
-									<button
-										class=""
-										type="button"
-										on:click={() => {
-											if (accessRoles.includes('write')) {
-												toggleGroupAccess(group.id);
-											}
-										}}
-									>
-										{#if accessControl.write.group_ids.includes(group.id)}
-											<Badge type={'success'} content={$i18n.t('Write')} />
-										{:else}
-											<Badge type={'info'} content={$i18n.t('Read')} />
-										{/if}
-									</button>
+									<!-- Always show read-only badge for now -->
+									<Badge type={'info'} content={$i18n.t('Read')} />
 
 									<button
 										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 										type="button"
 										on:click={() => {
 											accessControl.read.group_ids = accessControl.read.group_ids.filter(
-												(id) => id !== group.id
-											);
-											accessControl.write.group_ids = accessControl.write.group_ids.filter(
 												(id) => id !== group.id
 											);
 										}}
