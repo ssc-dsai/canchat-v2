@@ -487,7 +487,7 @@
 				</div>
 			</div>
 
-			<div>
+			<!-- <div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">{$i18n.t('Allow User Location')}</div>
 
@@ -505,7 +505,7 @@
 						{/if}
 					</button>
 				</div>
-			</div>
+			</div> -->
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
