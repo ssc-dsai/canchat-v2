@@ -1236,7 +1236,6 @@
 	"Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text.": "",
 	"Workspace": "",
 	"Workspace Permissions": "",
-	"Write": "",
 	"Write a prompt suggestion (e.g. Who are you?)": "",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "",
 	"Write something...": "",
