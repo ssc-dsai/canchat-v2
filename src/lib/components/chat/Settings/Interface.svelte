@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { getBackendConfig } from '$lib/apis';
-	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
 	const dispatch = createEventDispatcher();
@@ -12,7 +10,7 @@
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
-
+	
 	let backgroundImageUrl = null;
 	let inputFiles = null;
 	let filesInputElement;
@@ -36,8 +34,6 @@
 
 	let landingPageMode = '';
 	let chatBubble = true;
-	let chatDirection: 'LTR' | 'RTL' = 'LTR';
-
 	let imageCompression = false;
 	let imageCompressionSize = {
 		width: '',
@@ -51,11 +47,6 @@
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
 	let hapticFeedback = false;
-
-	const toggleSplitLargeChunks = async () => {
-		splitLargeChunks = !splitLargeChunks;
-		saveSettings({ splitLargeChunks: splitLargeChunks });
-	};
 
 	const togglesScrollOnBranchChange = async () => {
 		scrollOnBranchChange = !scrollOnBranchChange;
@@ -186,11 +177,6 @@
 		}
 	};
 
-	const toggleChangeChatDirection = async () => {
-		chatDirection = chatDirection === 'LTR' ? 'RTL' : 'LTR';
-		saveSettings({ chatDirection });
-	};
-
 	const updateInterfaceHandler = async () => {
 		saveSettings({
 			models: [defaultModelId],
@@ -219,7 +205,6 @@
 		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings.scrollOnBranchChange ?? true;
-		chatDirection = $settings.chatDirection ?? 'LTR';
 		userLocation = $settings.userLocation ?? false;
 
 		notificationSound = $settings.notificationSound ?? true;
@@ -245,33 +230,33 @@
 		dispatch('save');
 	}}
 >
-	<input
-		bind:this={filesInputElement}
-		bind:files={inputFiles}
-		type="file"
-		hidden
-		accept="image/*"
-		on:change={() => {
-			let reader = new FileReader();
-			reader.onload = (event) => {
-				let originalImageUrl = `${event.target.result}`;
+<input
+bind:this={filesInputElement}
+bind:files={inputFiles}
+type="file"
+hidden
+accept="image/*"
+on:change={() => {
+	let reader = new FileReader();
+	reader.onload = (event) => {
+		let originalImageUrl = `${event.target.result}`;
 
-				backgroundImageUrl = originalImageUrl;
-				saveSettings({ backgroundImageUrl });
-			};
+		backgroundImageUrl = originalImageUrl;
+		saveSettings({ backgroundImageUrl });
+	};
 
-			if (
-				inputFiles &&
-				inputFiles.length > 0 &&
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
-			) {
-				reader.readAsDataURL(inputFiles[0]);
-			} else {
-				console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
-				inputFiles = null;
-			}
-		}}
-	/>
+	if (
+		inputFiles &&
+		inputFiles.length > 0 &&
+		['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
+	) {
+		reader.readAsDataURL(inputFiles[0]);
+	} else {
+		console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
+		inputFiles = null;
+	}
+}}
+/>
 
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
@@ -356,24 +341,6 @@
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Chat direction')}</div>
-
-					<button
-						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={toggleChangeChatDirection}
-						type="button"
-					>
-						{#if chatDirection === 'LTR'}
-							<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
 						{/if}
 					</button>
 				</div>
@@ -554,7 +521,7 @@
 					</button>
 				</div>
 			</div>
-
+			
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
@@ -622,27 +589,6 @@
 				</div>
 			</div>
 
-			<!-- <div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
-						{$i18n.t('Fluidly stream large external response chunks')}
-					</div>
-
-					<button
-						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={() => {
-							toggleSplitLargeChunks();
-						}}
-						type="button"
-					>
-						{#if splitLargeChunks === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div> -->
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

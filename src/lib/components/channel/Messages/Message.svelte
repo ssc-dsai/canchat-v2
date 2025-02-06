@@ -133,10 +133,9 @@
 		<div
 			class=" flex w-full message-{message.id}"
 			id="message-{message.id}"
-			dir={$settings.chatDirection}
 		>
 			<div
-				class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-9`}
+				class="flex-shrink-0 mr-3 w-9"
 			>
 				{#if showUserProfile}
 					<ProfilePreview user={message.user}>
