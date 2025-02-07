@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { user } from '$lib/stores';
+	import { user, showSidebar, mobile } from '$lib/stores';
 	import { getPromptByCommand } from '$lib/apis/prompts';
+	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -9,6 +10,10 @@
 	let prompt = null;
 	let loading = true;
 	let error = null;
+
+	const toggleSidebar = () => {
+		showSidebar.set(!$showSidebar);
+	};
 
 	onMount(async () => {
 		try {
@@ -25,54 +30,102 @@
 		} finally {
 			loading = false;
 		}
+		// Initialize sidebar state but don't force it based on mobile/desktop
+		showSidebar.set(localStorage.sidebar === 'true');
 	});
 </script>
 
-<div class="w-full max-h-full">
-	{#if loading}
-		<div class="flex justify-center items-center h-64">
-			<div class="loader">Loading...</div>
-		</div>
-	{:else if error}
-		<div class="flex justify-center items-center h-64">
-			<div class="text-red-500">{error}</div>
-		</div>
-	{:else if prompt}
-		<div class="flex flex-col max-w-lg mx-auto mt-10 mb-10">
-			<div class="w-full flex flex-col justify-center">
-				<div class="text-2xl font-medium font-primary mb-2.5">
-					{$i18n.t('View prompt')}
-				</div>
-
-				<div class="w-full flex flex-col gap-2.5">
-					<div class="w-full">
-						<div class="text-sm mb-2">{$i18n.t('Title')}</div>
-						<div class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850">
-							{prompt.title}
-						</div>
-					</div>
-
-					<div class="w-full">
-						<div class="text-sm mb-2">{$i18n.t('Command')}</div>
-						<div class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850">
-							/{prompt.command}
-						</div>
-					</div>
-
-					<div>
-						<div class="text-sm mb-2">{$i18n.t('Prompt Content')}</div>
-						<div
-							class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 whitespace-pre-wrap"
+<div class="flex h-screen w-full overflow-hidden bg-white dark:bg-gray-900">
+	<div class="flex w-full">
+		<Sidebar />
+		<div class="flex-1 flex flex-col overflow-hidden">
+			<nav class="w-full px-2.5 pt-1 backdrop-blur-xl drag-region">
+				<div class="flex items-center gap-1">
+					<div class="{!$showSidebar ? '' : 'md:hidden'} self-center flex flex-none items-center">
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							aria-label="Toggle Sidebar"
+							on:click={toggleSidebar}
 						>
-							{prompt.content}
+							<div class="m-auto self-center">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="2"
+									stroke="currentColor"
+									class="size-5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+									/>
+								</svg>
+							</div>
+						</button>
+					</div>
+					<div class="">
+						<div
+							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
+						>
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
+								<a class="min-w-fit rounded-full p-1.5 transition" href="/workspace/prompts">
+									{$i18n.t('Prompts')}
+								</a>
+							{/if}
 						</div>
 					</div>
 				</div>
+			</nav>
+
+			<div class="flex-1 overflow-y-auto">
+				{#if loading}
+					<div class="flex justify-center items-center h-64">
+						<div class="loader">Loading...</div>
+					</div>
+				{:else if error}
+					<div class="flex justify-center items-center h-64">
+						<div class="text-red-500">{error}</div>
+					</div>
+				{:else if prompt}
+					<div class="flex flex-col max-w-lg mx-auto mt-10 mb-10">
+						<div class="text-2xl font-medium font-primary mb-4">
+							{$i18n.t('View prompt')}
+						</div>
+
+						<div class="w-full flex flex-col gap-2.5">
+							<div class="w-full">
+								<div class="text-sm mb-2">{$i18n.t('Title')}</div>
+								<div class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850">
+									{prompt.title}
+								</div>
+							</div>
+
+							<div class="w-full">
+								<div class="text-sm mb-2">{$i18n.t('Command')}</div>
+								<div class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850">
+									{prompt.command}
+								</div>
+							</div>
+
+							<div>
+								<div class="text-sm mb-2">{$i18n.t('Prompt Content')}</div>
+								<div
+									class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 whitespace-pre-wrap"
+								>
+									{prompt.content}
+								</div>
+							</div>
+						</div>
+					</div>
+				{:else}
+					<div class="flex justify-center items-center h-64">
+						<div class="text-gray-500">{$i18n.t('Prompt not found')}</div>
+					</div>
+				{/if}
 			</div>
 		</div>
-	{:else}
-		<div class="flex justify-center items-center h-64">
-			<div class="text-gray-500">{$i18n.t('Prompt not found')}</div>
-		</div>
-	{/if}
+	</div>
 </div>
