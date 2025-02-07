@@ -18,7 +18,7 @@
 	export let onClose: Function = () => {};
 
 	// Show survey
-	showSurvey.set(true);
+	//showSurvey.set(true);
 </script>
 
 <Dropdown
