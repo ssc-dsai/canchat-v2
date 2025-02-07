@@ -16,10 +16,9 @@
 	export let showSurveyHandler: Function;
 
 	export let onClose: Function = () => {};
-	
-	// Show survey
-	//showSurvey.set(true);
 
+	// Show survey
+	showSurvey.set(true);
 </script>
 
 <Dropdown
