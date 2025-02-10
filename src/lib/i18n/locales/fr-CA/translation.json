@@ -9,7 +9,7 @@
 	"{{user}}'s Chats": "Chats de {{user}}",
 	"{{webUIName}} Backend Required": "Le serveur {{webUIName}} est requis",
 	"*Prompt node ID(s) are required for image generation": "*Les ID de nœud d’invite sont requis pour la génération d'images",
-	"A new version (v{{LATEST_VERSION}}) is now available.": "Une nouvelle version (v{{LATEST_VERSION}}) est maintenant disponible.",
+	"A new Canchat version (v{{LATEST_VERSION}}) is now available.": "Une nouvelle version de Canchat (v{{LATEST_VERSION}}) est maintenant disponible.",
 	"A task model is used when performing tasks such as generating titles for chats and web search queries": "Un modèle de tâche est utilisé lors de l’exécution de tâches telles que la génération de titres pour les chats et les requêtes de recherche sur le web.",
 	"a user": "un utilisateur",
 	"About": "À propos",
