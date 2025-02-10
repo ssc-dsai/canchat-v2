@@ -17,11 +17,11 @@
 </script>
 
 {#if !DISABLED}
-    <div
-        class="flex items-start bg-[#F1F8FE] dark:bg-[#020C1D] border border-[3371D5] dark:border-[#03113B] text-[#3371D5] dark:text-[#6795EC] rounded-lg px-3.5 py-3 text-xs max-w-80 pr-2 w-full shadow-lg"
-    >
-        <!-- Update notification content commented out but preserved for future reference -->
-        <!--
+	<div
+		class="flex items-start bg-[#F1F8FE] dark:bg-[#020C1D] border border-[3371D5] dark:border-[#03113B] text-[#3371D5] dark:text-[#6795EC] rounded-lg px-3.5 py-3 text-xs max-w-80 pr-2 w-full shadow-lg"
+	>
+		<!-- Update notification content commented out but preserved for future reference -->
+		<!--
         <div class="flex-1 font-medium">
             {$i18n.t(`A new version (v{{LATEST_VERSION}}) is now available.`, {
                 LATEST_VERSION: version.latest
@@ -33,15 +33,15 @@
         </div>
         -->
 
-        <div class=" flex-shrink-0 pr-1">
-            <button
-                class=" hover:text-blue-900 dark:hover:text-blue-300 transition"
-                on:click={() => {
-                    dispatch('close');
-                }}
-            >
-                <XMark />
-            </button>
-        </div>
-    </div>
+		<div class=" flex-shrink-0 pr-1">
+			<button
+				class=" hover:text-blue-900 dark:hover:text-blue-300 transition"
+				on:click={() => {
+					dispatch('close');
+				}}
+			>
+				<XMark />
+			</button>
+		</div>
+	</div>
 {/if}
