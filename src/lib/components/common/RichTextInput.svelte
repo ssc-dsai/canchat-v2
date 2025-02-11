@@ -46,6 +46,8 @@
 	export let messageInput = false;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
+	export let title = '';
+	export let ariaLabel = '';
 
 	let element;
 	let editor;
@@ -227,7 +229,12 @@
 				}
 			},
 			editorProps: {
-				attributes: { id },
+				attributes: {
+					id,
+					'aria-label': ariaLabel,
+					title: title,
+					role: 'textbox'
+				},
 				handleDOMEvents: {
 					compositionstart: (view, event) => {
 						oncompositionstart(event);
@@ -387,4 +394,11 @@
 	}
 </script>
 
-<div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
+<div
+	bind:this={element}
+	class="relative w-full min-w-full h-full min-h-fit {className}"
+	data-placeholder={placeholder}
+	aria-label={ariaLabel}
+	{title}
+	role="textbox"
+/>

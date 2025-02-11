@@ -466,6 +466,8 @@
 						type="file"
 						hidden
 						multiple
+						aria-label={$i18n.t('Upload files')}
+						title={$i18n.t('Upload files')}
 						on:change={async () => {
 							if (inputFiles && inputFiles.length > 0) {
 								const _inputFiles = Array.from(inputFiles);
@@ -612,6 +614,9 @@
 												bind:this={chatInputElement}
 												bind:value={prompt}
 												id="chat-input"
+												aria-label={$i18n.t('Type your message here')}
+												title={$i18n.t('Type your message here')}
+												role="textbox"
 												messageInput={true}
 												shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 													(!$mobile ||
@@ -826,6 +831,9 @@
 											bind:this={chatInputElement}
 											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+											aria-label={$i18n.t('Type your message here')}
+											title={$i18n.t('Type your message here')}
+											role="textbox"
 											bind:value={prompt}
 											on:compositionstart={() => (isComposing = true)}
 											on:compositionend={() => (isComposing = false)}
