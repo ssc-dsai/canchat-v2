@@ -22,7 +22,9 @@
 		on:click={toggleLanguage}
 	>
 		<!-- Updated text container with a solid contrasting background -->
-		<div class="m-auto self-center text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-900 px-1 rounded">
+		<div
+			class="m-auto self-center text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-900 px-1 rounded"
+		>
 			{currentLangDisplay}
 		</div>
 	</button>

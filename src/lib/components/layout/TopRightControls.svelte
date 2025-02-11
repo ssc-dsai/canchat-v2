@@ -70,7 +70,9 @@
 		<div class="flex items-center gap-1">
 			<GlobalLanguageSelector />
 			{#if $user !== undefined}
-				<div class="select-none flex rounded-xl p-1.5 hover:bg-gray-50 dark:hover:bg-gray-850 transition">
+				<div
+					class="select-none flex rounded-xl p-1.5 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+				>
 					<UserMenu
 						role={$user.role}
 						on:show={(e) => {
