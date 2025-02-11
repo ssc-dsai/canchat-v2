@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher } from 'svelte';
+	import { showChangelog } from '$lib/stores';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
@@ -21,9 +22,9 @@
 			LATEST_VERSION: version.latest
 		})}
 
-		<a href="https://github.com/ssc-dsai/canchat-v2/releases" target="_blank" class="underline">
-			{$i18n.t('Update for the latest features and improvements.')}</a
-		>
+		<button class="underline" on:click={() => showChangelog.set(true)}>
+			{$i18n.t('See the latest features and improvements')}
+		</button>
 	</div>
 
 	<div class=" flex-shrink-0 pr-1">
