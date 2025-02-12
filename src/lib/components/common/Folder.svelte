@@ -139,7 +139,7 @@
 					</div>
 
 					<div
-						class="flex w-full text-gray-900 dark:text-white bg-white dark:bg-gray-900 px-1 rounded"
+						class="flex w-full text-gray-900 dark:text-white bg-transparent group-hover:bg-gray-100 dark:group-hover:bg-gray-800 px-1 rounded transition"
 					>
 						{name}
 					</div>

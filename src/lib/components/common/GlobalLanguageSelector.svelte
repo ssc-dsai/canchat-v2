@@ -18,12 +18,11 @@
 
 <Tooltip content={currentLang === 'en-GB' ? 'Français' : 'English'}>
 	<button
-		class="flex cursor-pointer px-2 py-2 rounded-xl bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+		class="group flex cursor-pointer px-2 py-2 rounded-xl bg-transparent transition"
 		on:click={toggleLanguage}
 	>
-		<!-- Updated text container with a solid contrasting background -->
 		<div
-			class="m-auto self-center text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-900 px-1 rounded"
+			class="m-auto self-center text-sm font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-800 px-1.5 rounded transition"
 		>
 			{currentLangDisplay}
 		</div>
