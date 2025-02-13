@@ -591,6 +591,7 @@
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-1" />
 
+					<!--
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
@@ -657,7 +658,6 @@
 												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 												bind:value={prompt.content}
 											/>
-
 											<button
 												class="px-2"
 												type="button"
@@ -685,6 +685,7 @@
 							</div>
 						{/if}
 					</div>
+					-->
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
 
