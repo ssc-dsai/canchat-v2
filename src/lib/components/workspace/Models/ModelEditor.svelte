@@ -115,6 +115,21 @@
 		}
 	};
 
+	// Add validation logic
+	function validateDescription() {
+		if (enableDescription) {
+			if (!info.meta.description?.trim() || !info.meta.description_fr?.trim()) {
+				toast.error($i18n.t('Both English and French descriptions are required.'));
+				return false;
+			}
+		} else {
+			// If default selected, nullify both descriptions
+			info.meta.description = null;
+			info.meta.description_fr = null;
+		}
+		return true;
+	}
+
 	const submitHandler = async () => {
 		loading = true;
 
@@ -123,25 +138,24 @@
 
 		if (id === '') {
 			toast.error('Model ID is required.');
+			loading = false;
+			return;
 		}
 
 		if (name === '') {
 			toast.error('Model Name is required.');
+			loading = false;
+			return;
+		}
+
+		// Validate descriptions before proceeding
+		if (!validateDescription()) {
+			loading = false;
+			return;
 		}
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
-
-		if (enableDescription) {
-			if (!info.meta.description.trim() || !info.meta.description_fr.trim()) {
-				toast.error('Both English and French descriptions are required.');
-				loading = false;
-				return;
-			}
-		} else {
-			info.meta.description = null;
-			info.meta.description_fr = null;
-		}
 
 		if (knowledge.length > 0) {
 			info.meta.knowledge = knowledge;
@@ -514,6 +528,10 @@
 								type="button"
 								on:click={() => {
 									enableDescription = !enableDescription;
+									if (!enableDescription) {
+										info.meta.description = null;
+										info.meta.description_fr = null;
+									}
 								}}
 							>
 								{#if !enableDescription}
@@ -530,6 +548,7 @@
 									bind:value={info.meta.description}
 									placeholder={$i18n.t('Enter English description')}
 									className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+									required={enableDescription}
 								/>
 							</div>
 							<div class="mt-2">
@@ -537,6 +556,7 @@
 									bind:value={info.meta.description_fr}
 									placeholder={$i18n.t('Enter French description')}
 									className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+									required={enableDescription}
 								/>
 							</div>
 						{/if}

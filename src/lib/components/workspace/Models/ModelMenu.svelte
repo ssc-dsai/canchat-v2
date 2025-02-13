@@ -18,15 +18,6 @@
 	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
-	let locale = localStorage.locale || 'en-GB';
-
-	const updateLocale = () => {
-		locale = localStorage.locale || 'en-GB';
-	};
-
-	window.addEventListener('storage', updateLocale);
-	import { onDestroy } from 'svelte';
-	onDestroy(() => window.removeEventListener('storage', updateLocale));
 
 	// Compute whether a description exists for the current locale
 	$: modelDesc =
