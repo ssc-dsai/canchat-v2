@@ -245,11 +245,9 @@
 									<div class="  font-semibold line-clamp-1">{model.name}</div>
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-									{#if model.description}
-										<span class="line-clamp-1">
-											{model.description}
-										</span>
-									{/if}
+									<span class="line-clamp-1">
+										{model.description || model.name}
+									</span>
 								</div>
 							</div>
 						</button>
