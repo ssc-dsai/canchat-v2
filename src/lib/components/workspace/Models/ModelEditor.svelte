@@ -47,6 +47,20 @@
 
 	let enableDescription = true;
 
+	let locale = localStorage.locale || 'en-GB';
+
+	const updateLocale = () => {
+		locale = localStorage.locale || 'en-GB';
+	};
+
+	window.addEventListener('storage', updateLocale);
+
+	// Update enableDescription reactively when locale or model changes
+	$: if (model) {
+		enableDescription =
+			locale === 'fr-CA' ? model?.meta?.description_fr !== null : model?.meta?.description !== null;
+	}
+
 	$: if (!edit) {
 		if (name) {
 			id = name
@@ -63,6 +77,7 @@
 		meta: {
 			profile_image_url: '/static/favicon.png',
 			description: '',
+			description_fr: '',
 			suggestion_prompts: null,
 			tags: []
 		},
@@ -118,9 +133,14 @@
 		info.meta.capabilities = capabilities;
 
 		if (enableDescription) {
-			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
+			if (!info.meta.description.trim() || !info.meta.description_fr.trim()) {
+				toast.error('Both English and French descriptions are required.');
+				loading = false;
+				return;
+			}
 		} else {
 			info.meta.description = null;
+			info.meta.description_fr = null;
 		}
 
 		if (knowledge.length > 0) {
@@ -186,7 +206,11 @@
 
 			id = model.id;
 
-			enableDescription = model?.meta?.description !== null;
+			// Use locale toggle for description: if locale is 'fr-CA', check description_fr, else description.
+			enableDescription =
+				localStorage.locale === 'fr-CA'
+					? model?.meta?.description_fr !== null
+					: model?.meta?.description !== null;
 
 			if (model.base_model_id) {
 				const base_model = $models
@@ -501,11 +525,20 @@
 						</div>
 
 						{#if enableDescription}
-							<Textarea
-								className=" text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden "
-								placeholder={$i18n.t('Add a short description about what this model does')}
-								bind:value={info.meta.description}
-							/>
+							<div>
+								<Textarea
+									bind:value={info.meta.description}
+									placeholder={$i18n.t('Enter English description')}
+									className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+								/>
+							</div>
+							<div class="mt-2">
+								<Textarea
+									bind:value={info.meta.description_fr}
+									placeholder={$i18n.t('Enter French description')}
+									className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+								/>
+							</div>
 						{/if}
 					</div>
 
