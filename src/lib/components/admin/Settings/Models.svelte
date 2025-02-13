@@ -54,7 +54,8 @@
 
 	onMount(() => {
 		const updateLocale = () => {
-			locale = localStorage.locale || 'en-GB';
+			// Use store's set method instead of direct assignment
+			locale.set(localStorage.locale || 'en-GB');
 		};
 		window.addEventListener('storage', updateLocale);
 		return () => window.removeEventListener('storage', updateLocale);

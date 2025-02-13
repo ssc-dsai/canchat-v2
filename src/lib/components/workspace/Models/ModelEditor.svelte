@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { locale } from '$lib/stores/locale';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -47,19 +48,21 @@
 
 	let enableDescription = true;
 
-	let locale = localStorage.locale || 'en-GB';
+	onMount(() => {
+		const updateLocale = () => {
+			// Use store's set method instead of direct assignment
+			locale.set(localStorage.locale || 'en-GB');
+		};
+		window.addEventListener('storage', updateLocale);
+		return () => window.removeEventListener('storage', updateLocale);
+	});
 
-	const updateLocale = () => {
-		locale = localStorage.locale || 'en-GB';
-	};
-
-	window.addEventListener('storage', updateLocale);
-
-	// Update enableDescription reactively when locale or model changes
-	$: if (model) {
-		enableDescription =
-			locale === 'fr-CA' ? model?.meta?.description_fr !== null : model?.meta?.description !== null;
-	}
+	// Use $locale in reactive statements
+	$: enableDescription = model
+		? $locale === 'fr-CA'
+			? model?.meta?.description_fr !== null
+			: model?.meta?.description !== null
+		: true;
 
 	$: if (!edit) {
 		if (name) {
@@ -834,7 +837,7 @@
 												}
 											}
 										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1-8-8A8,8,0,0,1,12,20Z"
 											opacity=".25"
 										/><path
 											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
