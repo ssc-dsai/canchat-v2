@@ -1286,6 +1286,7 @@ DEFAULT_ARENA_MODEL = {
     "meta": {
         "profile_image_url": "/favicon.png",
         "description": "Submit your questions to anonymous AI chatbots and vote on the best response.",
+        "description_fr": "Soumettez vos questions à des robots conversationnels anonymes et votez pour la meilleure réponse.",
         "model_ids": None,
     },
 }
