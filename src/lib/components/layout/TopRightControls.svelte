@@ -71,7 +71,7 @@
 			<GlobalLanguageSelector />
 			{#if $user !== undefined}
 				<div
-					class="select-none flex rounded-xl p-1.5 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+					class="select-none flex rounded-xl p-2 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 				>
 					<UserMenu
 						role={$user.role}

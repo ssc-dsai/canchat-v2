@@ -22,7 +22,7 @@
 		on:click={toggleLanguage}
 	>
 		<div
-			class="m-auto self-center text-sm font-medium text-gray-900 dark:text-white px-1 rounded transition"
+			class="m-auto self-center text-sm font-medium text-gray-900 dark:text-white rounded transition"
 		>
 			{currentLangDisplay}
 		</div>
