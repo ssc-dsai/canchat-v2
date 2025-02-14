@@ -246,13 +246,13 @@
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 									<span class="line-clamp-1">
-											{#if model.description}
-												{model.description}
-											{:else if model.ollama?.digest}
-												{model.id} ({model.ollama.digest})
-											{:else}
-												{model.id}
-											{/if}
+										{#if model.description}
+											{model.description}
+										{:else if model.ollama?.digest}
+											{model.id} ({model.ollama.digest})
+										{:else}
+											{model.id}
+										{/if}
 									</span>
 								</div>
 							</div>

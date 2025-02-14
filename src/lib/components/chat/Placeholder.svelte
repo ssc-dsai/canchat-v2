@@ -87,7 +87,7 @@
 
 	// Add helper function to get localized description
 	function getModelDesc(model) {
-		return $locale === 'fr-CA' 
+		return $locale === 'fr-CA'
 			? sanitizeResponseContent(model?.info?.meta?.description_fr ?? '')
 			: sanitizeResponseContent(model?.info?.meta?.description ?? '');
 	}
@@ -166,11 +166,7 @@
 			<div class="flex mt-1 mb-2">
 				<div in:fade={{ duration: 100, delay: 50 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
-						<Tooltip
-							className=" w-fit"
-							content={marked.parse(modelDescription)}
-							placement="top"
-						>
+						<Tooltip className=" w-fit" content={marked.parse(modelDescription)} placement="top">
 							<div
 								class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
 							>
