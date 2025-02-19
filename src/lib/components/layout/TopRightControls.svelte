@@ -34,7 +34,7 @@
 	}
 
 	const handleNewChat = () => {
-		suggestionCycle.update(n => n + 1);
+		suggestionCycle.update((n) => n + 1);
 		goto('/');
 	};
 </script>

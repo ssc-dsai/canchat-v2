@@ -42,7 +42,7 @@
 	let showDownloadChatModal = false;
 
 	const handleNewChat = () => {
-		suggestionCycle.update(n => n + 1);
+		suggestionCycle.update((n) => n + 1);
 		initNewChat();
 	};
 </script>
