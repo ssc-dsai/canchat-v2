@@ -8,7 +8,8 @@
 		showControls,
 		showArchivedChats,
 		showSidebar,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		suggestionCycle
 	} from '$lib/stores';
 	import Tooltip from '../common/Tooltip.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
@@ -31,6 +32,11 @@
 	$: if (!isControlsEnabled && $showControls) {
 		showControls.set(false);
 	}
+
+	const handleNewChat = () => {
+		suggestionCycle.update((n) => n + 1);
+		goto('/');
+	};
 </script>
 
 <div class="fixed top-0 right-0 px-2 py-[7px] z-50 flex items-center gap-1">
@@ -56,7 +62,7 @@
 				<button
 					id="new-chat-button"
 					class="flex cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-					on:click={() => goto('/')}
+					on:click={handleNewChat}
 					aria-label="New Chat"
 				>
 					<div class="m-auto self-center">
@@ -70,29 +76,25 @@
 		<div class="flex items-center gap-1">
 			<GlobalLanguageSelector />
 			{#if $user !== undefined}
-				<UserMenu
-					className="max-w-[200px]"
-					role={$user.role}
-					on:show={(e) => {
-						if (e.detail === 'archived-chat') {
-							showArchivedChats.set(true);
-						}
-					}}
+				<div
+					class="select-none flex rounded-xl p-2 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 				>
-					<button
-						class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						aria-label="User Menu"
+					<UserMenu
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								showArchivedChats.set(true);
+							}
+						}}
 					>
-						<div class="self-center">
-							<img
-								src={$user.profile_image_url}
-								class="size-6 object-cover rounded-full"
-								alt="User profile"
-								draggable="false"
-							/>
-						</div>
-					</button>
-				</UserMenu>
+						<img
+							src={$user.profile_image_url}
+							class="size-6 object-cover rounded-full"
+							alt="User profile"
+							draggable="false"
+						/>
+					</UserMenu>
+				</div>
 			{/if}
 		</div>
 	</div>

@@ -213,7 +213,22 @@
 			searchDebounceTimeout = setTimeout(async () => {
 				allChatsLoaded = false;
 				currentChatPage.set(1);
-				await chats.set(await getChatListBySearchText(localStorage.token, search));
+
+				// Normalize search text: for each word that looks like a tag search, force "tag:" prefix
+				const normalizedSearch = search
+					.split(' ')
+					.map((word) => {
+						const isTagSearch = ['tag:', 'étiquette:'].some((prefix) => word.startsWith(prefix));
+						if (isTagSearch) {
+							const tagId = word.slice(word.indexOf(':') + 1);
+							// Always convert to "tag:" prefix
+							return `tag:${tagId}`;
+						}
+						return word;
+					})
+					.join(' ');
+
+				await chats.set(await getChatListBySearchText(localStorage.token, normalizedSearch));
 
 				if ($chats.length === 0) {
 					tags.set(await getAllTags(localStorage.token));
@@ -867,21 +882,19 @@
 							}
 						}}
 					>
-						<button
-							class="flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
+						<div
+							class="select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						>
 							<div class="self-center mr-3">
 								<img
 									src={$user.profile_image_url}
 									class="max-w-[28px] object-cover rounded-full"
 									alt="User profile"
+									draggable="false"
 								/>
 							</div>
 							<div class="self-center font-medium">{$user.name}</div>
-						</button>
+						</div>
 					</UserMenu>
 				{/if}
 			</div>
