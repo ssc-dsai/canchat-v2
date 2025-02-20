@@ -18,8 +18,8 @@
 	const getDocsUrl = () => {
 		const locale = localStorage.getItem('locale') || 'en-GB';
 		return locale.startsWith('fr')
-			? 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/AI-Governance-and-Oversight_fr.aspx'
-			: 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/AI-Governance-and-Oversight.aspx';
+			? 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx'
+			: 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat.aspx';
 	};
 </script>
 
