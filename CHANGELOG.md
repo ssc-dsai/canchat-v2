@@ -24,8 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔍 Feedback Survey EN/FR**: Survey enabling user feedback.
 - **🌍 Model Descriptions**: Now Models have a quick description in both official languages.
 
-
-
 ### Fixed
 
 - **✨ Favicon Logo**: Favicon logos are now using the DSAI logo.
