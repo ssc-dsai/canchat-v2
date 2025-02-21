@@ -80,23 +80,6 @@
 		// Revoke the URL to release memory
 		window.URL.revokeObjectURL(url);
 	};
-
-	const downloadJSONExport = async () => {
-		if (chat.id) {
-			let chatObj = null;
-
-			if (chat.id === 'local' || $temporaryChatEnabled) {
-				chatObj = chat;
-			} else {
-				chatObj = await getChatById(localStorage.token, chat.id);
-			}
-
-			let blob = new Blob([JSON.stringify([chatObj])], {
-				type: 'application/json'
-			});
-			saveAs(blob, `chat-export-${Date.now()}.json`);
-		}
-	};
 </script>
 
 <Dropdown

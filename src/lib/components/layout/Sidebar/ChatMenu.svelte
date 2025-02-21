@@ -101,21 +101,6 @@
 		// Revoke the URL to release memory
 		window.URL.revokeObjectURL(url);
 	};
-
-	const downloadJSONExport = async () => {
-		const chat = await getChatById(localStorage.token, chatId);
-
-		if (chat) {
-			let blob = new Blob([JSON.stringify([chat])], {
-				type: 'application/json'
-			});
-			saveAs(blob, `chat-export-${Date.now()}.json`);
-		}
-	};
-
-	$: if (show) {
-		checkPinned();
-	}
 </script>
 
 <Dropdown
