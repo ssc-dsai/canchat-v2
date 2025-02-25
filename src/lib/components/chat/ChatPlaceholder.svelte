@@ -23,6 +23,16 @@
 	let placeholderText: string;
 	let key = 0; // Add a key to force component updates
 
+	// Add helper function to get localized description
+	function getModelDesc(model, currentLocale) {
+		return currentLocale === 'fr-CA'
+			? sanitizeResponseContent(model?.info?.meta?.description_fr ?? '')
+			: sanitizeResponseContent(model?.info?.meta?.description ?? '');
+	}
+
+	// Create a reactive statement that updates descriptions when locale or model changes
+	$: modelDescription = getModelDesc(models[selectedModelIdx], $locale);
+
 	$: if (modelIds.length > 0) {
 		selectedModelIdx = models.length - 1;
 	}
@@ -36,6 +46,8 @@
 
 		const handleLanguageChange = () => {
 			key += 1; // Force component update
+			// Explicitly update model description when language changes
+			modelDescription = getModelDesc(models[selectedModelIdx], $locale);
 		};
 
 		window.addEventListener('languageChanged', handleLanguageChange);
@@ -105,9 +117,7 @@
 						<div
 							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
 						>
-							{@html marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
-							)}
+							{@html marked.parse(modelDescription)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
 							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">

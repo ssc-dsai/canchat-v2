@@ -90,32 +90,22 @@
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 
 	// Add helper function to get localized description
-	function getModelDesc(model) {
-		return $locale === 'fr-CA'
+	function getModelDesc(model, currentLocale) {
+		return currentLocale === 'fr-CA'
 			? sanitizeResponseContent(model?.info?.meta?.description_fr ?? '')
 			: sanitizeResponseContent(model?.info?.meta?.description ?? '');
 	}
 
-	// Create a reactive statement that updates descriptions when locale changes
-	$: modelDescription = getModelDesc(models[selectedModelIdx]);
+	// Create a reactive statement that updates descriptions when locale or model changes
+	$: modelDescription = getModelDesc(models[selectedModelIdx], $locale);
 
-	$: {
-		// Whenever the model changes, trigger a suggestion reshuffle
-		models[selectedModelIdx]?.info?.meta?.suggestion_prompts;
-		suggestionCycle.update((n) => n + 1);
-	}
+	let key = 0;
 
-	let placeholderText: string;
-
-	// Make placeholder text reactive to both store and event changes
-	$: placeholderText = $i18n ? $i18n.t('How can I help you today?') : '';
-
-	let key = 0; // Add a key to force component updates
-
-	// Update placeholder when language changes
 	onMount(() => {
 		const handleLanguageChange = () => {
-			key += 1; // Force component update
+			key += 1;
+			// Explicitly update model description when language changes
+			modelDescription = getModelDesc(models[selectedModelIdx], $locale);
 		};
 
 		window.addEventListener('languageChanged', handleLanguageChange);
