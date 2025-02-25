@@ -7,14 +7,14 @@
 
 	async function toggleLanguage() {
 		const newLocale = $locale === 'en-GB' ? 'fr-CA' : 'en-GB';
-		// Update store and localStorage
 		locale.set(newLocale);
-		localStorage.locale = newLocale; // This triggers the storage event
+
+		// Wait for i18n to update
 		await $i18n.changeLanguage(newLocale);
 
-		// Dispatch a custom event for immediate reactivity
+		// Force component updates
 		window.dispatchEvent(
-			new CustomEvent('storage', {
+			new CustomEvent('languageChanged', {
 				detail: { locale: newLocale }
 			})
 		);

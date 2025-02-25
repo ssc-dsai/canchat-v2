@@ -3,7 +3,8 @@
 	import { marked } from 'marked';
 
 	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import { locale, i18n } from '$lib/stores/locale';
 
 	import { blur, fade } from 'svelte/transition';
 
@@ -12,8 +13,6 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 
-	const i18n = getContext('i18n');
-
 	export let modelIds = [];
 	export let models = [];
 
@@ -21,6 +20,8 @@
 
 	let mounted = false;
 	let selectedModelIdx = 0;
+	let placeholderText: string;
+	let key = 0; // Add a key to force component updates
 
 	$: if (modelIds.length > 0) {
 		selectedModelIdx = models.length - 1;
@@ -28,12 +29,21 @@
 
 	$: models = modelIds.map((id) => $_models.find((m) => m.id === id));
 
+	$: placeholderText = $i18n ? $i18n.t('How can I help you today?') : '';
+
 	onMount(() => {
 		mounted = true;
+
+		const handleLanguageChange = () => {
+			key += 1; // Force component update
+		};
+
+		window.addEventListener('languageChanged', handleLanguageChange);
+		return () => window.removeEventListener('languageChanged', handleLanguageChange);
 	});
 </script>
 
-{#key mounted}
+{#key key}
 	<div class="m-auto w-full max-w-6xl px-8 lg:px-20">
 		<div class="flex justify-start">
 			<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
@@ -117,7 +127,7 @@
 						{/if}
 					{:else}
 						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
-							{$i18n.t('How can I help you today?')}
+							{placeholderText}
 						</div>
 					{/if}
 				</div>
