@@ -73,15 +73,15 @@
 			toast.error($i18n.t('Title cannot be an empty string.'));
 			return;
 		}
-		
+
 		await updateChatById(localStorage.token, id, { title });
-		
+
 		if (id === $chatId) {
 			_chatTitle.set(title);
 		}
 
 		dispatch('change', { type: 'rename', chatId: id, title });
-		
+
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		await pinnedChats.set(await getPinnedChatList(localStorage.token));
