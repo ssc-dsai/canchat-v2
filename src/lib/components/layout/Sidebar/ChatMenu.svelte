@@ -149,6 +149,10 @@
 			}
 		}
 	};
+
+	$: if (show) {
+		checkPinned();
+	}
 </script>
 
 <Dropdown
