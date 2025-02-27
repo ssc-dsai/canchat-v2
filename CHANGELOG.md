@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📂 Folders**: Removed JSON exportation.
 - **✏️ Chat Items**: Renaming chat items when in a chat folder now changes instantly.
 - **📂 Archived Chats**: Removed JSON exportation.
+- **📌 Pinned Chats**: Pinned chats now see an unpinning option.
 
 ## [0.5.7-ccv2-1.1.1] - 2025-02-21
 
