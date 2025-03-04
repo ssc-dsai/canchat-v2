@@ -5,9 +5,6 @@ on:
   push:
     branches:
       - main
-      - dev
-    tags:
-      - v*
 
 env:
   REGISTRY: ghcr.io
@@ -113,7 +110,6 @@ jobs:
   merge-main-images:
     runs-on: ubuntu-latest
     needs: [build-main-image]
-    if: ${{ contains(matrix.platform, ',') }}
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
