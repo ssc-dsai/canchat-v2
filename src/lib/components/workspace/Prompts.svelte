@@ -94,7 +94,7 @@
 		);
 	};
 
-	const getPromptDisplayText = (prompt) => {
+	$: getPromptDisplayText = (prompt) => {
 		if (prompt.access_control === null) {
 			return $i18n.t('Public');
 		}
