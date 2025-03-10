@@ -86,10 +86,6 @@
 	const deleteMessageHandler = async () => {
 		deleteMessage(message.id);
 	};
-
-	onMount(() => {
-		// console.log('UserMessage mounted');
-	});
 </script>
 
 <DeleteConfirmDialog

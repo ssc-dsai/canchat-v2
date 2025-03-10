@@ -130,8 +130,6 @@
 	};
 
 	onMount(async () => {
-		console.log(value);
-
 		if (preserveBreaks) {
 			turndownService.addRule('preserveBreaks', {
 				filter: 'br', // Target <br> elements

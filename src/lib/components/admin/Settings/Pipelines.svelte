@@ -104,7 +104,6 @@
 		valves_spec = null;
 
 		if (PIPELINES_LIST.length > 0) {
-			console.log(selectedPipelinesUrlIdx);
 			pipelines = await getPipelines(localStorage.token, selectedPipelinesUrlIdx);
 
 			if (pipelines.length > 0) {
@@ -146,9 +145,6 @@
 
 		if (pipelineFiles && pipelineFiles.length !== 0) {
 			const file = pipelineFiles[0];
-
-			console.log(file);
-
 			const res = await uploadPipeline(localStorage.token, file, selectedPipelinesUrlIdx).catch(
 				(error) => {
 					console.log(error);
@@ -205,8 +201,6 @@
 
 	onMount(async () => {
 		PIPELINES_LIST = await getPipelinesList(localStorage.token);
-		console.log(PIPELINES_LIST);
-
 		if (PIPELINES_LIST.length > 0) {
 			selectedPipelinesUrlIdx = PIPELINES_LIST[0]['idx'].toString();
 		}

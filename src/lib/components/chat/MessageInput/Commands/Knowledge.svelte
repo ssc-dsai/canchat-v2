@@ -182,7 +182,6 @@
 								: ''}"
 							type="button"
 							on:click={() => {
-								console.log(item);
 								confirmSelect(item);
 							on:mousemove={() => {
 								selectedIdx = idx;

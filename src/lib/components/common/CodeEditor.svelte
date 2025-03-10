@@ -191,7 +191,6 @@
 	};
 
 	onMount(() => {
-		console.log(value);
 		if (value === '') {
 			value = boilerplate;
 		}

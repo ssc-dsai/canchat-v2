@@ -207,8 +207,6 @@
 				return '';
 			});
 
-		console.log(permission);
-
 		if (permission === 'granted') {
 			responseAutoCopy = !responseAutoCopy;
 			saveSettings({ responseAutoCopy: responseAutoCopy });

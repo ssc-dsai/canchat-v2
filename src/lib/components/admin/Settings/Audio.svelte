@@ -62,7 +62,6 @@
 			});
 
 			if (res) {
-				console.log(res);
 				models = res.models;
 			}
 		}
@@ -85,7 +84,6 @@
 			});
 
 			if (res) {
-				console.log(res);
 				voices = res.voices;
 				voices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
 			}
@@ -134,7 +132,6 @@
 		const res = await getAudioConfig(localStorage.token);
 
 		if (res) {
-			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
 			TTS_API_KEY = res.tts.API_KEY;
