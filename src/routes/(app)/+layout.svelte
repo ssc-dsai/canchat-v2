@@ -68,7 +68,6 @@
 						await deleteDB('Chats');
 					}
 				}
-
 			} catch (error) {
 				// IndexedDB Not Found
 			}

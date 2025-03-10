@@ -864,8 +864,7 @@
 											bind:this={modelUploadInputElement}
 											type="file"
 											bind:files={modelInputFile}
-											on:change={() => {
-											}}
+											on:change={() => {}}
 											accept=".gguf,.safetensors"
 											required
 											hidden

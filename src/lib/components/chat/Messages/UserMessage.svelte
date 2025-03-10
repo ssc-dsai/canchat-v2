@@ -77,7 +77,6 @@
 	const deleteMessageHandler = async () => {
 		deleteMessage(message.id);
 	};
-
 </script>
 
 <div class=" flex w-full user-message" id="message-{message.id}">
