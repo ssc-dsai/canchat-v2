@@ -16,6 +16,8 @@
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import HelpMenu from './Help/HelpMenu.svelte';
+	import ShortcutsModal from '../chat/ShortcutsModal.svelte';
 
 	export let shareEnabled = false;
 	export let chat = null;
@@ -36,6 +38,22 @@
 	const handleNewChat = () => {
 		suggestionCycle.update((n) => n + 1);
 		goto('/');
+	};
+
+	// Help functionality
+	let showShortcuts = false;
+
+	const getSurveyUrl = () => {
+		const locale = localStorage.getItem('locale') || 'en-GB';
+		const langPrefix = locale.startsWith('fr') ? 'fr' : 'en';
+		return `https://forms-formulaires.alpha.canada.ca/${langPrefix}/id/cm6tm7j9h005cyr69fq8g86xd`;
+	};
+
+	const getDocsUrl = () => {
+		const locale = localStorage.getItem('locale') || 'en-GB';
+		return locale.startsWith('fr')
+			? 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx'
+			: 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat.aspx';
 	};
 </script>
 
@@ -72,6 +90,35 @@
 			</Tooltip>
 		{/if}
 
+			<!-- Help Button -->
+		<div class="flex">
+			<button id="show-shortcuts-button" class="hidden" on:click={() => { showShortcuts = !showShortcuts; }} />
+			<HelpMenu
+				showDocsHandler={() => {
+					window.open(getDocsUrl(), '_blank');
+				}}
+				showShortcutsHandler={() => {
+					showShortcuts = !showShortcuts;
+				}}
+				showSurveyHandler={() => {
+					window.open(getSurveyUrl(), '_blank');
+				}}
+			>
+				<Tooltip content={$i18n.t('Help')} placement="bottom">
+					<div
+						class="group flex cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-900 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+					>
+						<div class="flex items-center justify-center">
+							<!-- Help Icon SVG -->
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+					</div>
+				</Tooltip>
+			</HelpMenu>
+		</div>
+
 		<!-- Keep GlobalLanguageSelector and UserMenu together -->
 		<div class="flex items-center gap-1">
 			<GlobalLanguageSelector />
@@ -84,8 +131,8 @@
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
 								showArchivedChats.set(true);
-							}
-						}}
+							}}
+						}
 					>
 						<img
 							src={$user.profile_image_url}
@@ -99,3 +146,5 @@
 		</div>
 	</div>
 </div>
+
+<ShortcutsModal bind:show={showShortcuts} />
