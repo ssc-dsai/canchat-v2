@@ -115,10 +115,10 @@
 						class="group flex cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-900 transition hover:bg-gray-100 dark:hover:bg-gray-800"
 					>
 						<div class="flex items-center justify-center">
-							<!-- Help Icon SVG -->
+							<!-- Help Icon SVG - Increased from h-4 w-4 to size-5 to match other icons -->
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
-								class="h-4 w-4 text-gray-900 dark:text-white"
+								class="size-5 text-gray-900 dark:text-white"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"
