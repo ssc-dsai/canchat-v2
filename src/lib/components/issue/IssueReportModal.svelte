@@ -197,6 +197,23 @@
 				<p>{$i18n.t('Thank you! Your issue report has been submitted successfully.')}</p>
 			</div>
 		{:else}
+			{#if !issueType}
+				<p class="text-gray-600 dark:text-gray-300 mb-4">
+					{$i18n.t(
+						'Share your feedback to help us improve - report issues or suggest new features.'
+					)}
+				</p>
+			{:else if issueType === ISSUE_TYPE}
+				<p class="text-gray-600 dark:text-gray-300 mb-4">
+					{$i18n.t('Report any problems or bugs you encounter to help us improve the application.')}
+				</p>
+			{:else}
+				<p class="text-gray-600 dark:text-gray-300 mb-4">
+					{$i18n.t(
+						'Share your ideas for new features or improvements to make the application better.'
+					)}
+				</p>
+			{/if}
 			<form on:submit|preventDefault={submitReport} class="space-y-4">
 				<div>
 					<label for="issueType" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
