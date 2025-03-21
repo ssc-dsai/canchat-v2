@@ -315,7 +315,7 @@
 					<!-- File attachment field -->
 					<div>
 						<label for="files" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-							{$i18n.t('Attachments')} ({$i18n.t('max')}
+							{$i18n.t('Attach images')} ({$i18n.t('max')}
 							{MAX_FILES})
 						</label>
 						<div class="relative mt-1">
