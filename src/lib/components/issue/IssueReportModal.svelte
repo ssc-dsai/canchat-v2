@@ -210,7 +210,7 @@
 					>
 						<option value="" disabled selected>{$i18n.t('Select a type...')}</option>
 						{#each issueTypes as type}
-							<option value={type.value}>{type.label}</option>
+							<option value={type.value}>{$i18n.t(type.label)}</option>
 						{/each}
 					</select>
 				</div>
@@ -323,11 +323,6 @@
 								</span>
 							</div>
 						</div>
-						<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-							{$i18n.t('You can attach up to {{count}} images', {
-								count: MAX_FILES
-							})}
-						</p>
 					</div>
 
 					<!-- Submit buttons -->
