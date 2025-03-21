@@ -61,6 +61,21 @@
 		closeModal();
 	}
 
+	$: if (issueType) {
+		// Clear form data when switching between issue types
+		description = '';
+		stepsToReproduce = '';
+		files = null;
+		submitError = '';
+		submitSuccess = false;
+
+		// Clear file input element if it exists
+		const fileInput = document.getElementById('files') as HTMLInputElement;
+		if (fileInput) {
+			fileInput.value = '';
+		}
+	}
+
 	const submitReport = async () => {
 		if (!issueType || !email || !description || (issueType === 'Issue' && !stepsToReproduce)) {
 			submitError = $i18n.t('Please fill out all required fields');
@@ -285,20 +300,33 @@
 							{$i18n.t('Attachments')} ({$i18n.t('max')}
 							{MAX_FILES})
 						</label>
-						<input
-							type="file"
-							id="files"
-							on:change={handleFileChange}
-							multiple
-							accept="image/*"
-							class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-gray-700 dark:file:text-gray-300"
-							aria-label={$i18n.t('Choose File')}
-						/>
+						<div class="relative mt-1">
+							<input
+								type="file"
+								id="files"
+								on:change={handleFileChange}
+								multiple
+								accept="image/*"
+								class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+								aria-label={$i18n.t('Choose Files')}
+								title={$i18n.t('Choose Files')}
+							/>
+							<div class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+								<span
+									class="inline-flex items-center px-4 py-2 rounded-md border-0 text-sm font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-gray-700 dark:text-gray-300"
+									title={$i18n.t('Choose files')}
+								>
+									{$i18n.t('Choose Files')}
+								</span>
+								<span class="ml-3" title={$i18n.t('No file chosen')}>
+									{fileInputText(files)}
+								</span>
+							</div>
+						</div>
 						<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
 							{$i18n.t('You can attach up to {{count}} images (max 10MB per file)', {
 								count: MAX_FILES
 							})}
-							{fileInputText(files)}
 						</p>
 					</div>
 

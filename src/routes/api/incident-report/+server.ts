@@ -2,6 +2,17 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 
+// Environment detection function
+const getEnvironment = (hostname: string | undefined): string => {
+	if (!hostname) return 'local';
+
+	if (hostname.includes('prod')) return 'prod';
+	if (hostname.includes('uat')) return 'uat';
+	if (hostname.includes('dev')) return 'dev';
+
+	return 'local';
+};
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const formData = await request.formData();
@@ -10,6 +21,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		const username = formData.get('username') as string;
 		const issueType = (formData.get('issueType') as string) || 'Bug';
 		const stepsToReproduce = formData.get('stepsToReproduce') as string;
+
+		// Get environment from HOSTNAME
+		const environment = getEnvironment(env.HOSTNAME);
 
 		// Log the report details for debugging
 		console.log('Received incident report:', { email, username, description });
@@ -36,10 +50,11 @@ export const POST: RequestHandler = async ({ request }) => {
 				project: {
 					key: jiraProjectKey
 				},
-				summary: `${issueType === 'Bug' ? 'Issue' : 'Suggestion'} from ${username}`,
+				summary: `[${environment.toUpperCase()}] ${issueType === 'Bug' ? 'Issue' : 'Suggestion'} from ${username}`,
 				description:
 					issueType === 'Bug'
 						? `
+Environment: ${environment.toUpperCase()}
 Reported by: ${username}
 Email: ${email}
 
@@ -50,6 +65,7 @@ Steps to Reproduce:
 ${stepsToReproduce}
                     `
 						: `
+Environment: ${environment.toUpperCase()}
 Reported by: ${username}
 Email: ${email}
 
@@ -59,7 +75,7 @@ ${description}
 				issuetype: {
 					name: issueType
 				},
-				labels: [issueType === 'Bug' ? 'client-issue' : 'client-suggestion']
+				labels: [issueType === 'Bug' ? 'client-issue' : 'client-suggestion', `env-${environment}`]
 			}
 		};
 
