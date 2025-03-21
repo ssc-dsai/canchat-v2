@@ -9,11 +9,13 @@
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
 	import Keyboard from '$lib/components/icons/Keyboard.svelte';
+	import ExclamationCircle from '$lib/components/icons/ExclamationCircle.svelte';
 	const i18n = getContext('i18n');
 
 	export let showShortcutsHandler: Function;
 	export let showSurveyHandler: Function;
 	export let showDocsHandler: Function;
+	export let showIssueReportHandler: Function;
 
 	export let onClose: Function = () => {};
 
@@ -72,6 +74,17 @@
 					<div class="flex items-center">{$i18n.t('Survey')}</div>
 				</DropdownMenu.Item>
 			{/if}
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="incident-report-button"
+				on:click={() => {
+					showIssueReportHandler();
+				}}
+			>
+				<ExclamationCircle className="size-5" />
+				<div class="flex items-center">{$i18n.t('Report an Issue')}</div>
+			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
