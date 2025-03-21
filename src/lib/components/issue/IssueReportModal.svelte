@@ -206,6 +206,7 @@
 						id="issueType"
 						bind:value={issueType}
 						required
+						title={$i18n.t('Please select an item in the list')}
 						class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
 					>
 						<option value="" disabled selected>{$i18n.t('Select a type...')}</option>
