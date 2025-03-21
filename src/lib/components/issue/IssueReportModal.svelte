@@ -17,8 +17,16 @@
 	let submitSuccess = false;
 	let submitError = '';
 	let issueType = ''; // Start empty instead of defaulting to 'Issue'
-	const issueTypes = [$i18n.t('Issue'), $i18n.t('Suggestion')];
 	const MAX_FILES = 3;
+
+	const ISSUE_TYPE = 'Issue';
+	const SUGGESTION_TYPE = 'Suggestion';
+
+	// Use constants in the array but translate for display
+	const issueTypes = [
+		{ value: ISSUE_TYPE, label: $i18n.t('Issue') },
+		{ value: SUGGESTION_TYPE, label: $i18n.t('Suggestion') }
+	];
 
 	let mounted = false; // Add mounted variable
 
@@ -27,7 +35,7 @@
 	});
 
 	const getJiraIssueType = (type: string) => {
-		return type === 'Issue' ? 'Bug' : 'Task';
+		return type === ISSUE_TYPE ? 'Bug' : 'Task';
 	};
 
 	const resetForm = () => {
@@ -77,7 +85,7 @@
 	}
 
 	const submitReport = async () => {
-		if (!issueType || !email || !description || (issueType === 'Issue' && !stepsToReproduce)) {
+		if (!issueType || !email || !description || (issueType === ISSUE_TYPE && !stepsToReproduce)) {
 			submitError = $i18n.t('Please fill out all required fields');
 			return;
 		}
@@ -90,7 +98,7 @@
 			const formData = new FormData();
 			formData.append('email', email);
 			formData.append('description', description);
-			if (issueType === 'Issue') {
+			if (issueType === ISSUE_TYPE) {
 				formData.append('stepsToReproduce', stepsToReproduce);
 			}
 			formData.append('username', $user?.name || 'Anonymous');
@@ -158,7 +166,7 @@
 		<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
 			{#if !issueType}
 				{$i18n.t('Issue and Suggestion Form')}
-			{:else if issueType === 'Issue'}
+			{:else if issueType === ISSUE_TYPE}
 				{$i18n.t('Issue Form')}
 			{:else}
 				{$i18n.t('Suggestion Form')}
@@ -202,7 +210,7 @@
 					>
 						<option value="" disabled selected>{$i18n.t('Select a type...')}</option>
 						{#each issueTypes as type}
-							<option value={type}>{$i18n.t(type)}</option>
+							<option value={type.value}>{type.label}</option>
 						{/each}
 					</select>
 				</div>
@@ -230,7 +238,7 @@
 					</div>
 
 					<!-- Different fields based on issue type -->
-					{#if issueType === 'Issue'}
+					{#if issueType === ISSUE_TYPE}
 						<!-- Description field for Issue -->
 						<div>
 							<label
