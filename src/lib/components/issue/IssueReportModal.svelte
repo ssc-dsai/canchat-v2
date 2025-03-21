@@ -101,7 +101,7 @@
 			if (issueType === ISSUE_TYPE) {
 				formData.append('stepsToReproduce', stepsToReproduce);
 			}
-			formData.append('username', $user?.name || 'Anonymous');
+			formData.append('username', $user?.name || email); // it has to be one of these two if they are a user
 			formData.append('issueType', getJiraIssueType(issueType));
 
 			// Add files if any
