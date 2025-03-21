@@ -17,7 +17,7 @@
 	let submitSuccess = false;
 	let submitError = '';
 	let issueType = ''; // Start empty instead of defaulting to 'Issue'
-	const issueTypes = ['Issue', 'Suggestion'];
+	const issueTypes = [$i18n.t('Issue'), $i18n.t('Suggestion')];
 	const MAX_FILES = 3;
 
 	let mounted = false; // Add mounted variable
@@ -208,14 +208,6 @@
 				</div>
 
 				{#if issueType}
-					<p class="mb-4">
-						{$i18n.t(
-							issueType === 'Issue'
-								? 'Please provide details about the issue you encountered. This will help us fix it as quickly as possible.'
-								: 'Please provide details about your suggestion. This will help us improve the application.'
-						)}
-					</p>
-
 					{#if submitError}
 						<div class="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
 							<p>{submitError}</p>
@@ -314,7 +306,7 @@
 							<div class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
 								<span
 									class="inline-flex items-center px-4 py-2 rounded-md border-0 text-sm font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-gray-700 dark:text-gray-300"
-									title={$i18n.t('Choose files')}
+									title={$i18n.t('Choose Files')}
 								>
 									{$i18n.t('Choose Files')}
 								</span>
@@ -324,7 +316,7 @@
 							</div>
 						</div>
 						<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-							{$i18n.t('You can attach up to {{count}} images (max 10MB per file)', {
+							{$i18n.t('You can attach up to {{count}} images', {
 								count: MAX_FILES
 							})}
 						</p>
