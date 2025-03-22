@@ -51,13 +51,29 @@
 	const handleFileChange = (event: Event) => {
 		const input = event.target as HTMLInputElement;
 		if (input.files && input.files.length > MAX_FILES) {
-			submitError = $i18n.t(`You can only upload up to ${MAX_FILES} files`);
+			submitError = $i18n.t('You can only upload up to {{maxCount}} files', {
+				maxCount: MAX_FILES
+			});
 			input.value = ''; // Clear the selection
 			files = null;
-		} else {
-			submitError = '';
-			files = input.files;
+			return;
 		}
+
+		// Validate file types
+		if (input.files) {
+			const invalidFiles = Array.from(input.files).filter(
+				(file) => !file.type.startsWith('image/')
+			);
+			if (invalidFiles.length > 0) {
+				submitError = $i18n.t('Only image files are allowed.');
+				input.value = '';
+				files = null;
+				return;
+			}
+		}
+
+		submitError = '';
+		files = input.files;
 	};
 
 	const closeModal = () => {
