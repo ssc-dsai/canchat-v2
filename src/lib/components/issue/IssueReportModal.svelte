@@ -345,7 +345,10 @@
 								>
 									{$i18n.t('Choose Files')}
 								</span>
-								<span class="ml-3" title={$i18n.t('No file chosen')}>
+								<span
+									class="ml-3 text-gray-700 dark:text-gray-300"
+									title={$i18n.t('No file chosen')}
+								>
 									{fileInputText(files)}
 								</span>
 							</div>
