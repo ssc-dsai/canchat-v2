@@ -127,8 +127,6 @@
 				}
 			}
 
-			console.log('Submitting incident report...');
-
 			// Send to our API endpoint
 			const response = await fetch('/api/incident-report', {
 				method: 'POST',
@@ -138,13 +136,9 @@
 			const responseData = await response.json();
 
 			if (!response.ok) {
-				console.error('Error response:', responseData);
 				throw new Error(responseData.error || `Error: ${response.status}`);
 			}
 
-			console.log('Report submitted successfully:', responseData);
-
-			// Show error if the server reported one despite 200 status
 			if (responseData.success === false) {
 				throw new Error(responseData.error || 'Failed to create ticket in Jira');
 			}
@@ -156,7 +150,6 @@
 				closeModal();
 			}, 2000);
 		} catch (error) {
-			console.error('Error submitting incident report:', error);
 			submitError =
 				error instanceof Error
 					? error.message
@@ -287,7 +280,7 @@
 								rows="5"
 								required
 								placeholder={$i18n.t('Please describe what happened')}
-								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
 							></textarea>
 						</div>
 
@@ -305,7 +298,7 @@
 								rows="5"
 								required
 								placeholder={$i18n.t('Please list the steps to reproduce this issue')}
-								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
 							></textarea>
 						</div>
 					{:else}
@@ -364,14 +357,14 @@
 						<button
 							type="button"
 							on:click={closeModal}
-							class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600"
+							class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
 						>
 							{$i18n.t('Cancel')}
 						</button>
 						<button
 							type="submit"
 							disabled={isSubmitting}
-							class="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-indigo-700 dark:hover:bg-indigo-800"
+							class="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-800"
 						>
 							{#if isSubmitting}
 								<svg
