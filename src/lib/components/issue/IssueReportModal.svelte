@@ -182,7 +182,7 @@
 
 <Modal bind:show maxWidth="max-w-xl" on:close={closeModal} disableClose={isSubmitting}>
 	<div class="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-		<h3 class="text-2xl font-medium font-primary">
+		<h3 class="text-2xl font-medium font-primary text-gray-900 dark:text-gray-100">
 			{#if !issueType}
 				{$i18n.t('Issue and Suggestion Form')}
 			{:else if issueType === ISSUE_TYPE}
@@ -239,13 +239,15 @@
 
 				<form on:submit|preventDefault={submitReport} class="space-y-4">
 					<div>
-						<label for="issueType" class="text-sm mb-2">{$i18n.t('Type')} *</label>
+						<label for="issueType" class="text-sm mb-2 block text-gray-900 dark:text-gray-100"
+							>{$i18n.t('Type')} *</label
+						>
 						<select
 							id="issueType"
 							bind:value={issueType}
 							required
 							title={$i18n.t('Please select an item in the list')}
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850 dark:text-gray-300 outline-none border-0"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-300 dark:bg-gray-850 outline-none border-0"
 						>
 							<option value="" disabled selected>{$i18n.t('Select a type...')}</option>
 							{#each issueTypes as type}
@@ -262,7 +264,9 @@
 						{/if}
 
 						<div>
-							<label for="email" class="text-sm mb-2">{$i18n.t('Email')}</label>
+							<label for="email" class="text-sm mb-2 block text-gray-900 dark:text-gray-100"
+								>{$i18n.t('Email')}</label
+							>
 							<input
 								type="email"
 								id="email"
@@ -270,25 +274,29 @@
 								readonly
 								disabled
 								aria-label={$i18n.t('Email')}
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 opacity-75 cursor-not-allowed dark:bg-gray-850 dark:text-gray-400 outline-none"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-300 dark:bg-gray-850 outline-none opacity-75 cursor-not-allowed"
 							/>
 						</div>
 
 						{#if issueType === ISSUE_TYPE}
 							<div>
-								<label for="description" class="text-sm mb-2">{$i18n.t('Description')} *</label>
+								<label for="description" class="text-sm mb-2 block text-gray-900 dark:text-gray-100"
+									>{$i18n.t('Description')} *</label
+								>
 								<textarea
 									id="description"
 									bind:value={description}
 									rows="4"
 									required
 									placeholder={$i18n.t('Please describe what happened')}
-									class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850 dark:text-gray-300 outline-none"
+									class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-300 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
 								></textarea>
 							</div>
 
 							<div>
-								<label for="stepsToReproduce" class="text-sm mb-2"
+								<label
+									for="stepsToReproduce"
+									class="text-sm mb-2 block text-gray-900 dark:text-gray-100"
 									>{$i18n.t('Steps to Reproduce')} *</label
 								>
 								<textarea
@@ -297,25 +305,27 @@
 									rows="4"
 									required
 									placeholder={$i18n.t('Please list the steps to reproduce this issue')}
-									class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850 dark:text-gray-300 outline-none"
+									class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-300 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
 								></textarea>
 							</div>
 						{:else}
 							<div>
-								<label for="description" class="text-sm mb-2">{$i18n.t('Suggestion')} *</label>
+								<label for="description" class="text-sm mb-2 block text-gray-900 dark:text-gray-100"
+									>{$i18n.t('Suggestion')} *</label
+								>
 								<textarea
 									id="description"
 									bind:value={description}
 									rows="4"
 									required
 									placeholder={$i18n.t('Please describe your suggestion in detail')}
-									class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850 dark:text-gray-300 outline-none"
+									class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-300 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
 								></textarea>
 							</div>
 						{/if}
 
 						<div>
-							<label for="files" class="text-sm mb-2">
+							<label for="files" class="text-sm mb-2 block text-gray-900 dark:text-gray-100">
 								{$i18n.t('Attach images')} ({$i18n.t('max')}
 								{MAX_FILES})
 							</label>
@@ -331,7 +341,7 @@
 								/>
 								<div class="text-sm text-gray-600 dark:text-gray-400 flex items-center">
 									<span
-										class="inline-flex items-center px-4 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-300"
+										class="inline-flex items-center px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-300"
 									>
 										{$i18n.t('Choose Files')}
 									</span>
