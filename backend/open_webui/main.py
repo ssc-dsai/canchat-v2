@@ -1197,30 +1197,30 @@ else:
 async def create_incident_report(request: Request, user=Depends(get_verified_user)):
     try:
         log.info("Processing incident report submission")
-        
+
         # Get environment from HOSTNAME env var
-        hostname = os.environ.get('HOSTNAME', '')
-        environment = 'local'
+        hostname = os.environ.get("HOSTNAME", "")
+        environment = "local"
         if hostname:
-            if 'prod' in hostname:
-                environment = 'prod'
-            elif 'uat' in hostname:
-                environment = 'uat'
-            elif 'dev' in hostname:
-                environment = 'dev'
-        
+            if "prod" in hostname:
+                environment = "prod"
+            elif "uat" in hostname:
+                environment = "uat"
+            elif "dev" in hostname:
+                environment = "dev"
+
         # Get form data
         form = await request.form()
-        
+
         # Process file uploads
         files = []
         for key, value in form.items():
-            if key.startswith('file'):
+            if key.startswith("file"):
                 try:
                     files.append(value)
                 except Exception as e:
                     log.error(f"Error processing file {key}: {str(e)}")
-        
+
         # Get config and validate
         jira_config = {
             "apiUrl": request.app.state.config.JIRA_API_URL,
@@ -1228,13 +1228,13 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
             "apiToken": request.app.state.config.JIRA_API_TOKEN,
             "projectKey": request.app.state.config.JIRA_PROJECT_KEY,
         }
-        
+
         # Get form data
         form = await request.form()
-        issue_type = form.get('issueType', 'Bug')
-        
+        issue_type = form.get("issueType", "Bug")
+
         # Create description based on issue type
-        if issue_type == 'Bug':
+        if issue_type == "Bug":
             description = (
                 f"Environment: {environment.upper()}\n"
                 f"Type: Issue/Bug\n"
@@ -1260,8 +1260,8 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
                 "issuetype": {"name": issue_type},
                 "labels": [
                     "client-issue" if issue_type == "Bug" else "client-suggestion",
-                    f"env-{environment}"
-                ]
+                    f"env-{environment}",
+                ],
             }
         }
 
@@ -1270,53 +1270,60 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
             async with session.post(
                 f"{jira_config['apiUrl'].rstrip('/')}/rest/api/2/issue",
                 json=issue_data,
-                auth=aiohttp.BasicAuth(jira_config["username"], jira_config["apiToken"]),
-                headers={"Content-Type": "application/json"}
+                auth=aiohttp.BasicAuth(
+                    jira_config["username"], jira_config["apiToken"]
+                ),
+                headers={"Content-Type": "application/json"},
             ) as response:
                 if not response.ok:
                     error_text = await response.text()
                     log.error(f"Jira API error: {error_text}")
                     raise HTTPException(status_code=response.status, detail=error_text)
-                
+
                 result = await response.json()
                 issue_key = result.get("key")
-                
+
                 if not issue_key:
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="No issue key in Jira response"
+                        detail="No issue key in Jira response",
                     )
 
                 # Process file attachments
                 if files:
                     attachment_url = f"{jira_config['apiUrl'].rstrip('/')}/rest/api/2/issue/{issue_key}/attachments"
-                    
+
                     for file in files:
                         try:
                             await file.seek(0)
                             content = await file.read()
-                            
+
                             if not content:
                                 log.error(f"Empty content for file {file.filename}")
                                 continue
-                                
+
                             jira_form = aiohttp.FormData()
                             jira_form.add_field(
-                                'file', 
+                                "file",
                                 content,
                                 filename=file.filename,
-                                content_type=file.content_type or 'application/octet-stream'
+                                content_type=file.content_type
+                                or "application/octet-stream",
                             )
-                            
+
                             async with session.post(
                                 attachment_url,
                                 data=jira_form,
-                                headers={'X-Atlassian-Token': 'no-check'},
-                                auth=aiohttp.BasicAuth(jira_config["username"], jira_config["apiToken"])
+                                headers={"X-Atlassian-Token": "no-check"},
+                                auth=aiohttp.BasicAuth(
+                                    jira_config["username"], jira_config["apiToken"]
+                                ),
                             ) as attach_response:
                                 if not attach_response.ok:
                                     error_text = await attach_response.text()
-                                    log.error(f"Failed to attach file {file.filename}: {error_text}")
+                                    log.error(
+                                        f"Failed to attach file {file.filename}: {error_text}"
+                                    )
                         except Exception as e:
                             log.error(f"Error attaching file: {str(e)}")
                             continue
@@ -1329,6 +1336,5 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
     except Exception as e:
         log.error(f"Error creating incident report: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
