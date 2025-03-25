@@ -1231,8 +1231,6 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
             "projectKey": request.app.state.config.JIRA_PROJECT_KEY,
         }
 
-        # Get form data
-        form = await request.form()
         issue_type = form.get("issueType", "Bug")
 
         # Create description based on issue type

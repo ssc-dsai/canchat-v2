@@ -366,7 +366,7 @@
 								type="submit"
 								disabled={isSubmitting}
 								class="text-sm px-4 py-2 transition rounded-lg {isSubmitting
-									? 'cursor-not-allowed bg-gray-900 dark:bg-gray-100'
+									? 'cursor-not-allowed bg-gray-400 text-white dark:bg-gray-100 dark:text-gray-800'
 									: 'bg-gray-900 hover:bg-gray-850 text-white dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800'} flex"
 							>
 								<div class="self-center font-medium">
