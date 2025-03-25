@@ -101,16 +101,17 @@
 	}
 
 	const submitReport = async () => {
-		if (!issueType || !email || !description || (issueType === ISSUE_TYPE && !stepsToReproduce)) {
-			submitError = $i18n.t('Please fill out all required fields');
-			return;
-		}
-
-		isSubmitting = true;
-		submitError = '';
+		if (isSubmitting) return; // Guard against multiple submissions
 
 		try {
-			// Prepare form data for file uploads
+			if (!issueType || !email || !description || (issueType === ISSUE_TYPE && !stepsToReproduce)) {
+				submitError = $i18n.t('Please fill out all required fields');
+				return;
+			}
+
+			isSubmitting = true;
+			submitError = '';
+
 			const formData = new FormData();
 			formData.append('email', email);
 			formData.append('description', description);
@@ -120,33 +121,44 @@
 			formData.append('username', $user?.name || email); // it has to be one of these two if they are a user
 			formData.append('issueType', getJiraIssueType(issueType));
 
-			// Add files if any
+			// Get hostname for environment detection
+			const hostname = window.location.hostname;
+			let apiUrl;
+
+			if (hostname === 'localhost' || hostname === '127.0.0.1') {
+				apiUrl = 'http://localhost:8080';
+			} else {
+				// In production, use the same origin
+				apiUrl = window.location.origin;
+			}
+
+			// Add files if present
 			if (files) {
 				for (let i = 0; i < files.length; i++) {
 					formData.append('files', files[i]);
 				}
 			}
 
-			// Send to our API endpoint
-			const response = await fetch('/api/incident-report', {
+			const response = await fetch(`${apiUrl}/api/incident-report`, {
 				method: 'POST',
+				credentials: 'include',
 				body: formData
 			});
 
-			const responseData = await response.json();
-
 			if (!response.ok) {
-				throw new Error(responseData.error || `Error: ${response.status}`);
+				const error = await response.json();
+				throw new Error(error.detail || 'Failed to submit report');
 			}
 
-			if (responseData.success === false) {
-				throw new Error(responseData.error || 'Failed to create ticket in Jira');
+			const data = await response.json();
+
+			if (!data.success) {
+				throw new Error(data.error || 'Failed to create ticket');
 			}
 
 			submitSuccess = true;
-			// Don't reset form immediately, let the success message show
 			setTimeout(() => {
-				resetForm();
+				isSubmitting = false; // Set this before closing
 				closeModal();
 			}, 2000);
 		} catch (error) {
@@ -154,8 +166,7 @@
 				error instanceof Error
 					? error.message
 					: $i18n.t('Failed to submit report. Please try again later.');
-		} finally {
-			isSubmitting = false;
+			isSubmitting = false; // Make sure to reset on error
 		}
 	};
 

@@ -263,6 +263,11 @@ from open_webui.config import (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     AppConfig,
     reset_config,
+    # Jira
+    JIRA_API_URL,
+    JIRA_USERNAME,
+    JIRA_API_TOKEN,
+    JIRA_PROJECT_KEY,
 )
 from open_webui.env import (
     CHANGELOG,
@@ -661,6 +666,18 @@ app.state.config.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = (
 app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
 )
+
+
+########################################
+#
+# Jira Integration
+#
+########################################
+
+app.state.config.JIRA_API_URL = JIRA_API_URL
+app.state.config.JIRA_USERNAME = JIRA_USERNAME
+app.state.config.JIRA_API_TOKEN = JIRA_API_TOKEN
+app.state.config.JIRA_PROJECT_KEY = JIRA_PROJECT_KEY
 
 
 ########################################
@@ -1174,3 +1191,126 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
+
+
+@app.post("/api/incident-report")
+async def create_incident_report(request: Request, user=Depends(get_verified_user)):
+    try:
+        log.info("Processing incident report submission")
+        
+        # Get environment from HOSTNAME env var
+        hostname = os.environ.get('HOSTNAME', '')
+        environment = 'local'
+        if hostname:
+            if 'prod' in hostname:
+                environment = 'prod'
+            elif 'uat' in hostname:
+                environment = 'uat'
+            elif 'dev' in hostname:
+                environment = 'dev'
+
+        log.info(f"Detected environment from HOSTNAME: {environment}")
+        
+        # Get config and validate
+        jira_config = {
+            "apiUrl": request.app.state.config.JIRA_API_URL,
+            "username": request.app.state.config.JIRA_USERNAME,
+            "apiToken": request.app.state.config.JIRA_API_TOKEN,
+            "projectKey": request.app.state.config.JIRA_PROJECT_KEY,
+        }
+        
+        if not all(jira_config.values()):
+            log.error("Missing Jira configuration")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Jira configuration is incomplete"
+            )
+
+        # Get form data
+        form = await request.form()
+        issue_type = form.get('issueType', 'Bug')
+        
+        # Create description based on issue type
+        if issue_type == 'Bug':
+            description = (
+                f"Environment: {environment.upper()}\n"
+                f"Type: Issue/Bug\n"
+                f"Reporter: {form.get('username', 'email')}\n"
+                f"Email: {form.get('email', 'N/A')}\n\n"
+                f"Description:\n{form.get('description', 'N/A')}\n\n"
+                f"Steps to Reproduce:\n{form.get('stepsToReproduce', 'N/A')}"
+            )
+        else:  # Suggestion
+            description = (
+                f"Environment: {environment.upper()}\n"
+                f"Type: Feature Suggestion\n"
+                f"Reporter: {form.get('username', 'email')}\n"
+                f"Email: {form.get('email', 'N/A')}\n\n"
+                f"Suggestion:\n{form.get('description', 'N/A')}"
+            )
+
+        # Create Jira issue
+        issue_data = {
+            "fields": {
+                "project": {"key": jira_config["projectKey"]},
+                "summary": f"[{environment.upper()}] {issue_type} from {form.get('username', 'Anonymous')}",
+                "description": description,
+                "issuetype": {"name": issue_type},
+                "labels": [
+                    "client-issue" if issue_type == "Bug" else "client-suggestion",
+                    f"env-{environment}"
+                ]
+            }
+        }
+
+        # Send to Jira
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{jira_config['apiUrl'].rstrip('/')}/rest/api/2/issue",
+                json=issue_data,
+                auth=aiohttp.BasicAuth(jira_config["username"], jira_config["apiToken"]),
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if not response.ok:
+                    error_text = await response.text()
+                    log.error(f"Jira API error: {error_text}")
+                    raise HTTPException(status_code=response.status, detail=error_text)
+                
+                result = await response.json()
+                issue_key = result.get("key")
+                
+                if not issue_key:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="No issue key in Jira response"
+                    )
+
+                # Handle file attachments if present
+                if "files" in form:
+                    attachment_url = f"{jira_config['apiUrl'].rstrip('/')}/rest/api/2/issue/{issue_key}/attachments"
+                    for file in form.getlist('files'):
+                        if isinstance(file, UploadFile):
+                            form_data = aiohttp.FormData()
+                            content = await file.read()
+                            form_data.add_field('file', content, filename=file.filename)
+                            
+                            async with session.post(
+                                attachment_url,
+                                data=form_data,
+                                headers={'X-Atlassian-Token': 'no-check'},
+                                auth=aiohttp.BasicAuth(jira_config["username"], jira_config["apiToken"])
+                            ) as attach_response:
+                                if not attach_response.ok:
+                                    log.warning(f"Failed to attach file {file.filename}")
+
+                log.info(f"Created Jira issue: {issue_key}")
+                return {"success": True, "ticketId": issue_key}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error creating incident report: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
