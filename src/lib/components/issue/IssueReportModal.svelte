@@ -121,6 +121,13 @@
 			formData.append('username', $user?.name || email); // it has to be one of these two if they are a user
 			formData.append('issueType', getJiraIssueType(issueType));
 
+			// Handle files properly
+			if (files) {
+				for (let i = 0; i < files.length; i++) {
+					formData.append(`file${i}`, files[i]);
+				}
+			}
+
 			// Get hostname for environment detection
 			const hostname = window.location.hostname;
 			let apiUrl;
@@ -130,13 +137,6 @@
 			} else {
 				// In production, use the same origin
 				apiUrl = window.location.origin;
-			}
-
-			// Add files if present
-			if (files) {
-				for (let i = 0; i < files.length; i++) {
-					formData.append('files', files[i]);
-				}
 			}
 
 			const response = await fetch(`${apiUrl}/api/incident-report`, {
@@ -181,9 +181,8 @@
 </script>
 
 <Modal bind:show maxWidth="max-w-xl" on:close={closeModal} disableClose={isSubmitting}>
-	<!-- Add custom header -->
-	<div class="flex justify-between items-center p-4">
-		<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+	<div class="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+		<h3 class="text-2xl font-medium font-primary">
 			{#if !issueType}
 				{$i18n.t('Issue and Suggestion Form')}
 			{:else if issueType === ISSUE_TYPE}
@@ -213,202 +212,195 @@
 
 	<div class="p-4">
 		{#if submitSuccess}
-			<div class="bg-green-50 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+			<div class="bg-green-50 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
 				<p>{$i18n.t('Thank you! Your issue report has been submitted successfully.')}</p>
 			</div>
 		{:else}
-			{#if !issueType}
-				<p class="text-gray-600 dark:text-gray-300 mb-4">
-					{$i18n.t(
-						'Share your feedback to help us improve - report issues or suggest new features.'
-					)}
-				</p>
-			{:else if issueType === ISSUE_TYPE}
-				<p class="text-gray-600 dark:text-gray-300 mb-4">
-					{$i18n.t('Report any problems or bugs you encounter to help us improve the application.')}
-				</p>
-			{:else}
-				<p class="text-gray-600 dark:text-gray-300 mb-4">
-					{$i18n.t(
-						'Share your ideas for new features or improvements to make the application better.'
-					)}
-				</p>
-			{/if}
-			<form on:submit|preventDefault={submitReport} class="space-y-4">
-				<div>
-					<label for="issueType" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-						{$i18n.t('Type')} *
-					</label>
-					<select
-						id="issueType"
-						bind:value={issueType}
-						required
-						title={$i18n.t('Please select an item in the list')}
-						class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
-					>
-						<option value="" disabled selected>{$i18n.t('Select a type...')}</option>
-						{#each issueTypes as type}
-							<option value={type.value}>{$i18n.t(type.label)}</option>
-						{/each}
-					</select>
-				</div>
+			<div class="w-full">
+				{#if !issueType}
+					<p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+						{$i18n.t(
+							'Share your feedback to help us improve - report issues or suggest new features.'
+						)}
+					</p>
+				{:else if issueType === ISSUE_TYPE}
+					<p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+						{$i18n.t(
+							'Report any problems or bugs you encounter to help us improve the application.'
+						)}
+					</p>
+				{:else}
+					<p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+						{$i18n.t(
+							'Share your ideas for new features or improvements to make the application better.'
+						)}
+					</p>
+				{/if}
 
-				{#if issueType}
-					{#if submitError}
-						<div class="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-							<p>{submitError}</p>
-						</div>
-					{/if}
-
-					<!-- Email field -->
+				<form on:submit|preventDefault={submitReport} class="space-y-4">
 					<div>
-						<label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-							{$i18n.t('Email')}
-						</label>
-						<input
-							type="email"
-							id="email"
-							bind:value={email}
-							readonly
-							disabled
-							class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 cursor-not-allowed shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
-						/>
+						<label for="issueType" class="text-sm mb-2">{$i18n.t('Type')} *</label>
+						<select
+							id="issueType"
+							bind:value={issueType}
+							required
+							title={$i18n.t('Please select an item in the list')}
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850 dark:text-gray-300 outline-none border-0"
+						>
+							<option value="" disabled selected>{$i18n.t('Select a type...')}</option>
+							{#each issueTypes as type}
+								<option value={type.value}>{$i18n.t(type.label)}</option>
+							{/each}
+						</select>
 					</div>
 
-					<!-- Different fields based on issue type -->
-					{#if issueType === ISSUE_TYPE}
-						<!-- Description field for Issue -->
-						<div>
-							<label
-								for="description"
-								class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-							>
-								{$i18n.t('Description')} *
-							</label>
-							<textarea
-								id="description"
-								bind:value={description}
-								rows="5"
-								required
-								placeholder={$i18n.t('Please describe what happened')}
-								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
-							></textarea>
-						</div>
+					{#if issueType}
+						{#if submitError}
+							<div class="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+								<p>{submitError}</p>
+							</div>
+						{/if}
 
-						<!-- Steps to reproduce field -->
 						<div>
-							<label
-								for="stepsToReproduce"
-								class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-							>
-								{$i18n.t('Steps to Reproduce')} *
-							</label>
-							<textarea
-								id="stepsToReproduce"
-								bind:value={stepsToReproduce}
-								rows="5"
-								required
-								placeholder={$i18n.t('Please list the steps to reproduce this issue')}
-								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
-							></textarea>
-						</div>
-					{:else}
-						<!-- Suggestion field -->
-						<div>
-							<label
-								for="description"
-								class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-							>
-								{$i18n.t('Suggestion')} *
-							</label>
-							<textarea
-								id="description"
-								bind:value={description}
-								rows="5"
-								required
-								placeholder={$i18n.t('Please describe your suggestion in detail')}
-								class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
-							></textarea>
-						</div>
-					{/if}
-
-					<!-- File attachment field -->
-					<div>
-						<label for="files" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-							{$i18n.t('Attach images')} ({$i18n.t('max')}
-							{MAX_FILES})
-						</label>
-						<div class="relative mt-1">
+							<label for="email" class="text-sm mb-2">{$i18n.t('Email')}</label>
 							<input
-								type="file"
-								id="files"
-								on:change={handleFileChange}
-								multiple
-								accept="image/*"
-								class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-								aria-label={$i18n.t('Choose Files')}
-								title={$i18n.t('Choose Files')}
+								type="email"
+								id="email"
+								bind:value={email}
+								readonly
+								disabled
+								aria-label={$i18n.t('Email')}
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 opacity-75 cursor-not-allowed dark:bg-gray-850 dark:text-gray-400 outline-none"
 							/>
-							<div class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
-								<span
-									class="inline-flex items-center px-4 py-2 rounded-md border-0 text-sm font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-gray-700 dark:text-gray-300"
-									title={$i18n.t('Choose Files')}
+						</div>
+
+						{#if issueType === ISSUE_TYPE}
+							<div>
+								<label for="description" class="text-sm mb-2">{$i18n.t('Description')} *</label>
+								<textarea
+									id="description"
+									bind:value={description}
+									rows="4"
+									required
+									placeholder={$i18n.t('Please describe what happened')}
+									class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850 dark:text-gray-300 outline-none"
+								></textarea>
+							</div>
+
+							<div>
+								<label for="stepsToReproduce" class="text-sm mb-2"
+									>{$i18n.t('Steps to Reproduce')} *</label
 								>
-									{$i18n.t('Choose Files')}
-								</span>
-								<span
-									class="ml-3 text-gray-700 dark:text-gray-300"
-									title={$i18n.t('No file chosen')}
-								>
-									{fileInputText(files)}
-								</span>
+								<textarea
+									id="stepsToReproduce"
+									bind:value={stepsToReproduce}
+									rows="4"
+									required
+									placeholder={$i18n.t('Please list the steps to reproduce this issue')}
+									class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850 dark:text-gray-300 outline-none"
+								></textarea>
+							</div>
+						{:else}
+							<div>
+								<label for="description" class="text-sm mb-2">{$i18n.t('Suggestion')} *</label>
+								<textarea
+									id="description"
+									bind:value={description}
+									rows="4"
+									required
+									placeholder={$i18n.t('Please describe your suggestion in detail')}
+									class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:bg-gray-850 dark:text-gray-300 outline-none"
+								></textarea>
+							</div>
+						{/if}
+
+						<div>
+							<label for="files" class="text-sm mb-2">
+								{$i18n.t('Attach images')} ({$i18n.t('max')}
+								{MAX_FILES})
+							</label>
+							<div class="relative mt-1">
+								<input
+									type="file"
+									id="files"
+									on:change={handleFileChange}
+									multiple
+									accept="image/*"
+									aria-label={$i18n.t('Choose files to upload')}
+									class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+								/>
+								<div class="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+									<span
+										class="inline-flex items-center px-4 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-300"
+									>
+										{$i18n.t('Choose Files')}
+									</span>
+									<span class="ml-3 text-gray-700 dark:text-gray-400">
+										{fileInputText(files)}
+									</span>
+								</div>
 							</div>
 						</div>
-					</div>
 
-					<!-- Submit buttons -->
-					<div class="flex justify-end space-x-3 pt-4">
-						<button
-							type="button"
-							on:click={closeModal}
-							class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-						>
-							{$i18n.t('Cancel')}
-						</button>
-						<button
-							type="submit"
-							disabled={isSubmitting}
-							class="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-800"
-						>
-							{#if isSubmitting}
-								<svg
-									class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-								>
-									<circle
-										class="opacity-25"
-										cx="12"
-										cy="12"
-										r="10"
-										stroke="currentColor"
-										stroke-width="4"
-									></circle>
-									<path
-										class="opacity-75"
-										fill="currentColor"
-										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-									></path>
-								</svg>
-								{$i18n.t('Submitting...')}
-							{:else}
-								{$i18n.t('Submit Report')}
-							{/if}
-						</button>
-					</div>
-				{/if}
-			</form>
+						<div class="flex justify-end space-x-3 pt-4">
+							<button
+								type="button"
+								on:click={closeModal}
+								class="text-sm px-4 py-2 transition rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white"
+							>
+								<div class="self-center font-medium">
+									{$i18n.t('Cancel')}
+								</div>
+							</button>
+							<button
+								type="submit"
+								disabled={isSubmitting}
+								class="text-sm px-4 py-2 transition rounded-lg {isSubmitting
+									? 'cursor-not-allowed bg-gray-900 dark:bg-gray-100'
+									: 'bg-gray-900 hover:bg-gray-850 text-white dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800'} flex"
+							>
+								<div class="self-center font-medium">
+									{#if isSubmitting}
+										{$i18n.t('Submitting...')}
+									{:else}
+										{$i18n.t('Submit Report')}
+									{/if}
+								</div>
+								{#if isSubmitting}
+									<div class="ml-1.5 self-center">
+										<svg
+											class="w-4 h-4"
+											viewBox="0 0 24 24"
+											fill="currentColor"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<style>
+												.spinner_ajPY {
+													transform-origin: center;
+													animation: spinner_AtaB 0.75s infinite linear;
+												}
+												@keyframes spinner_AtaB {
+													100% {
+														transform: rotate(360deg);
+													}
+												}
+											</style>
+											<path
+												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+												opacity=".25"
+											/>
+											<path
+												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+												class="spinner_ajPY"
+											/>
+										</svg>
+									</div>
+								{/if}
+							</button>
+						</div>
+					{/if}
+				</form>
+			</div>
 		{/if}
 	</div>
 </Modal>

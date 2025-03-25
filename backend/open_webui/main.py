@@ -1208,8 +1208,18 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
                 environment = 'uat'
             elif 'dev' in hostname:
                 environment = 'dev'
-
-        log.info(f"Detected environment from HOSTNAME: {environment}")
+        
+        # Get form data
+        form = await request.form()
+        
+        # Process file uploads
+        files = []
+        for key, value in form.items():
+            if key.startswith('file'):
+                try:
+                    files.append(value)
+                except Exception as e:
+                    log.error(f"Error processing file {key}: {str(e)}")
         
         # Get config and validate
         jira_config = {
@@ -1219,13 +1229,6 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
             "projectKey": request.app.state.config.JIRA_PROJECT_KEY,
         }
         
-        if not all(jira_config.values()):
-            log.error("Missing Jira configuration")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Jira configuration is incomplete"
-            )
-
         # Get form data
         form = await request.form()
         issue_type = form.get('issueType', 'Bug')
@@ -1249,7 +1252,6 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
                 f"Suggestion:\n{form.get('description', 'N/A')}"
             )
 
-        # Create Jira issue
         issue_data = {
             "fields": {
                 "project": {"key": jira_config["projectKey"]},
@@ -1263,8 +1265,8 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
             }
         }
 
-        # Send to Jira
         async with aiohttp.ClientSession() as session:
+            # Create the Jira issue
             async with session.post(
                 f"{jira_config['apiUrl'].rstrip('/')}/rest/api/2/issue",
                 json=issue_data,
@@ -1285,23 +1287,39 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
                         detail="No issue key in Jira response"
                     )
 
-                # Handle file attachments if present
-                if "files" in form:
+                # Process file attachments
+                if files:
                     attachment_url = f"{jira_config['apiUrl'].rstrip('/')}/rest/api/2/issue/{issue_key}/attachments"
-                    for file in form.getlist('files'):
-                        if isinstance(file, UploadFile):
-                            form_data = aiohttp.FormData()
+                    
+                    for file in files:
+                        try:
+                            await file.seek(0)
                             content = await file.read()
-                            form_data.add_field('file', content, filename=file.filename)
+                            
+                            if not content:
+                                log.error(f"Empty content for file {file.filename}")
+                                continue
+                                
+                            jira_form = aiohttp.FormData()
+                            jira_form.add_field(
+                                'file', 
+                                content,
+                                filename=file.filename,
+                                content_type=file.content_type or 'application/octet-stream'
+                            )
                             
                             async with session.post(
                                 attachment_url,
-                                data=form_data,
+                                data=jira_form,
                                 headers={'X-Atlassian-Token': 'no-check'},
                                 auth=aiohttp.BasicAuth(jira_config["username"], jira_config["apiToken"])
                             ) as attach_response:
                                 if not attach_response.ok:
-                                    log.warning(f"Failed to attach file {file.filename}")
+                                    error_text = await attach_response.text()
+                                    log.error(f"Failed to attach file {file.filename}: {error_text}")
+                        except Exception as e:
+                            log.error(f"Error attaching file: {str(e)}")
+                            continue
 
                 log.info(f"Created Jira issue: {issue_key}")
                 return {"success": True, "ticketId": issue_key}
