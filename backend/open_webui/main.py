@@ -1257,7 +1257,7 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
         issue_data = {
             "fields": {
                 "project": {"key": jira_config["projectKey"]},
-                "summary": f"[{environment.upper()}] {issue_type} from {form.get('username', 'Anonymous')}",
+                "summary": f"[{environment.upper()}] {issue_type} from {form.get('username', 'email')}",
                 "description": description,
                 "issuetype": {"name": issue_type},
                 "labels": [
