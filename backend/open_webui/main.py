@@ -1208,6 +1208,8 @@ async def create_incident_report(request: Request, user=Depends(get_verified_use
                 environment = "uat"
             elif "dev" in hostname:
                 environment = "dev"
+            elif "pilot" in hostname:
+                environment = "pilot"
 
         # Get form data
         form = await request.form()
