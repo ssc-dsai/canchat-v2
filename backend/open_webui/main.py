@@ -72,6 +72,7 @@ from open_webui.routers import (
     evaluations,
     tools,
     users,
+    incidents,
     utils,
 )
 
@@ -794,6 +795,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(incidents.router, prefix="/api/v1/incidents", tags=["indicents"])
 
 
 ##################################
@@ -1191,150 +1193,3 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
-
-
-@app.post("/api/incident-report")
-async def create_incident_report(request: Request, user=Depends(get_verified_user)):
-    try:
-        log.info("Processing incident report submission")
-
-        # Get environment from HOSTNAME env var
-        hostname = os.environ.get("HOSTNAME", "")
-        environment = "local"
-        if hostname:
-            if "prod" in hostname:
-                environment = "prod"
-            elif "uat" in hostname:
-                environment = "uat"
-            elif "dev" in hostname:
-                environment = "dev"
-            elif "pilot" in hostname:
-                environment = "pilot"
-
-        # Get form data
-        form = await request.form()
-
-        # Process file uploads
-        files = []
-        for key, value in form.items():
-            if key.startswith("file"):
-                try:
-                    files.append(value)
-                except Exception as e:
-                    log.error(f"Error processing file {key}: {str(e)}")
-
-        # Get config and validate
-        jira_config = {
-            "apiUrl": request.app.state.config.JIRA_API_URL,
-            "username": request.app.state.config.JIRA_USERNAME,
-            "apiToken": request.app.state.config.JIRA_API_TOKEN,
-            "projectKey": request.app.state.config.JIRA_PROJECT_KEY,
-        }
-
-        issue_type = form.get("issueType", "Bug")
-
-        # Create description based on issue type
-        if issue_type == "Bug":
-            description = (
-                f"Environment: {environment.upper()}\n"
-                f"Type: Issue/Bug\n"
-                f"Reporter: {form.get('username', 'email')}\n"
-                f"Email: {form.get('email', 'N/A')}\n\n"
-                f"Description:\n{form.get('description', 'N/A')}\n\n"
-                f"Steps to Reproduce:\n{form.get('stepsToReproduce', 'N/A')}"
-            )
-        else:  # Suggestion
-            description = (
-                f"Environment: {environment.upper()}\n"
-                f"Type: Feature Suggestion\n"
-                f"Reporter: {form.get('username', 'email')}\n"
-                f"Email: {form.get('email', 'N/A')}\n\n"
-                f"Suggestion:\n{form.get('description', 'N/A')}"
-            )
-
-        issue_data = {
-            "fields": {
-                "project": {"key": jira_config["projectKey"]},
-                "summary": f"[{environment.upper()}] {issue_type} from {form.get('username', 'email')}",
-                "description": description,
-                "issuetype": {"name": issue_type},
-                "labels": [
-                    "client-issue" if issue_type == "Bug" else "client-suggestion",
-                    f"env-{environment}",
-                ],
-            }
-        }
-
-        async with aiohttp.ClientSession() as session:
-            # Create the Jira issue
-            async with session.post(
-                f"{jira_config['apiUrl'].rstrip('/')}/rest/api/2/issue",
-                json=issue_data,
-                auth=aiohttp.BasicAuth(
-                    jira_config["username"], jira_config["apiToken"]
-                ),
-                headers={"Content-Type": "application/json"},
-            ) as response:
-                if not response.ok:
-                    error_text = await response.text()
-                    log.error(f"Jira API error: {error_text}")
-                    raise HTTPException(status_code=response.status, detail=error_text)
-
-                result = await response.json()
-                issue_key = result.get("key")
-
-                if not issue_key:
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="No issue key in Jira response",
-                    )
-
-                # Process file attachments
-                if files:
-                    attachment_url = f"{jira_config['apiUrl'].rstrip('/')}/rest/api/2/issue/{issue_key}/attachments"
-
-                    for file in files:
-                        try:
-                            await file.seek(0)
-                            content = await file.read()
-
-                            if not content:
-                                log.error(f"Empty content for file {file.filename}")
-                                continue
-
-                            jira_form = aiohttp.FormData()
-                            jira_form.add_field(
-                                "file",
-                                content,
-                                filename=file.filename,
-                                content_type=file.content_type
-                                or "application/octet-stream",
-                            )
-
-                            async with session.post(
-                                attachment_url,
-                                data=jira_form,
-                                headers={"X-Atlassian-Token": "no-check"},
-                                auth=aiohttp.BasicAuth(
-                                    jira_config["username"], jira_config["apiToken"]
-                                ),
-                            ) as attach_response:
-                                if not attach_response.ok:
-                                    error_text = await attach_response.text()
-                                    log.error(
-                                        f"Failed to attach file {file.filename}: {error_text}"
-                                    )
-                        except Exception as e:
-                            log.error(f"Error attaching file: {str(e)}")
-                            continue
-
-                log.info(f"Created Jira issue: {issue_key}")
-                return {"success": True, "ticketId": issue_key}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error creating incident report: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )

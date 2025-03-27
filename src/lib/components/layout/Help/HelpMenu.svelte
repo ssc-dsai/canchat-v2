@@ -15,7 +15,7 @@
 	export let showShortcutsHandler: Function;
 	export let showSurveyHandler: Function;
 	export let showDocsHandler: Function;
-	export let showIssueReportHandler: Function;
+	export let showIncidentHandler: Function;
 
 	export let onClose: Function = () => {};
 
@@ -53,13 +53,13 @@
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="chat-share-button"
+				id="incident-button"
 				on:click={() => {
-					showShortcutsHandler();
+					showIncidentHandler();
 				}}
 			>
-				<Keyboard className="size-5" />
-				<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
+				<ExclamationCircle className="size-5" />
+				<div class="flex items-center">{$i18n.t('Report an Incident')}</div>
 			</DropdownMenu.Item>
 
 			{#if $showSurvey}
@@ -77,13 +77,13 @@
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="incident-report-button"
+				id="chat-share-button"
 				on:click={() => {
-					showIssueReportHandler();
+					showShortcutsHandler();
 				}}
 			>
-				<ExclamationCircle className="size-5" />
-				<div class="flex items-center">{$i18n.t('Report an Issue')}</div>
+				<Keyboard className="size-5" />
+				<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>
