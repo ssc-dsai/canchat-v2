@@ -72,7 +72,7 @@ from open_webui.routers import (
     evaluations,
     tools,
     users,
-    incidents,
+    jira,
     utils,
 )
 
@@ -795,7 +795,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
-app.include_router(incidents.router, prefix="/api/v1/incidents", tags=["indicents"])
+app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
 
 
 ##################################

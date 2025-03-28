@@ -2,7 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import Modal from './Modal.svelte';
 	import { user } from '$lib/stores';
-	import { createIncident } from '$lib/apis/incidents';
+	import { createSuggestion } from '$lib/apis/suggestions';
 	import { toast } from 'svelte-sonner';
 
 	export let show = false;
@@ -10,7 +10,6 @@
 	const i18n = getContext('i18n');
 
 	let description = '';
-	let stepsToReproduce = '';
 	let files: FileList | null = null;
 	let loading = false;
 	let error = '';
@@ -24,7 +23,6 @@
 
 	const resetForm = () => {
 		description = '';
-		stepsToReproduce = '';
 		files = null;
 		error = '';
 	};
@@ -70,7 +68,7 @@
 		if (loading) return;
 
 		try {
-			if (!description || !stepsToReproduce) {
+			if (!description) {
 				error = $i18n.t('Please fill out all required fields');
 				return;
 			}
@@ -78,18 +76,17 @@
 			loading = true;
 			error = '';
 
-			await createIncident(localStorage.token, {
+			await createSuggestion(localStorage.token, {
 				email: $user?.email || '',
 				description,
-				stepsToReproduce,
 				files
 			});
 
-			toast.success($i18n.t('Thank you! Your incident has been submitted successfully.'));
+			toast.success($i18n.t('Thank you! Your suggestion has been submitted successfully.'));
 			closeModal();
 		} catch (err) {
 			console.error(err);
-			toast.error($i18n.t('Failed to submit incident. Please try again later.'));
+			toast.error($i18n.t('Failed to submit suggestion. Please try again later.'));
 		} finally {
 			loading = false;
 		}
@@ -108,7 +105,7 @@
 <Modal bind:show on:close={closeModal} disableClose={loading}>
 	<div class="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
 		<h3 class="text-2xl font-medium font-primary text-gray-900 dark:text-gray-100">
-			{$i18n.t('Incident Form')}
+			{$i18n.t('Suggestion Form')}
 		</h3>
 		<button
 			on:click={() => !loading && (show = false)}
@@ -132,7 +129,7 @@
 	<div class="p-4">
 		<div class="w-full">
 			<p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
-				{$i18n.t('Report any problems or bugs you encounter to help us improve the application.')}
+				{$i18n.t('Share your feedback to help us improve.')}
 			</p>
 			<form on:submit|preventDefault={submit} class="space-y-4">
 				{#if error}
@@ -142,28 +139,14 @@
 				{/if}
 				<div>
 					<label for="description" class="text-sm mb-2 block text-gray-900 dark:text-gray-100"
-						>{$i18n.t('Description')} *</label
+						>{$i18n.t('Suggestion')} *</label
 					>
 					<textarea
 						id="description"
 						bind:value={description}
 						rows="4"
 						required
-						placeholder={$i18n.t('Please describe what happened')}
-						class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-300 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
-					></textarea>
-				</div>
-
-				<div>
-					<label for="stepsToReproduce" class="text-sm mb-2 block text-gray-900 dark:text-gray-100"
-						>{$i18n.t('Steps to Reproduce')} *</label
-					>
-					<textarea
-						id="stepsToReproduce"
-						bind:value={stepsToReproduce}
-						rows="4"
-						required
-						placeholder={$i18n.t('Please list the steps to reproduce this issue')}
+						placeholder={$i18n.t('Please describe your suggestion in detail')}
 						class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-300 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700"
 					></textarea>
 				</div>

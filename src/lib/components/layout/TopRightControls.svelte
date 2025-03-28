@@ -19,6 +19,7 @@
 	import HelpMenu from './Help/HelpMenu.svelte';
 	import ShortcutsModal from '../chat/ShortcutsModal.svelte';
 	import IncidentModal from '../common/IncidentModal.svelte';
+	import SuggestionModal from '../common/SuggestionModal.svelte';
 
 	export let shareEnabled = false;
 	export let chat = null;
@@ -44,6 +45,7 @@
 	// Help functionality
 	let showShortcuts = false;
 	let showIncident = false;
+	let showSuggestion = false;
 
 	const getSurveyUrl = () => {
 		const locale = localStorage.getItem('locale') || 'en-GB';
@@ -114,6 +116,9 @@
 				showIncidentHandler={() => {
 					showIncident = true;
 				}}
+				showSuggestionHandler={() => {
+					showSuggestion = true;
+				}}
 			>
 				<Tooltip content={$i18n.t('Help')} placement="bottom">
 					<div
@@ -157,3 +162,4 @@
 
 <ShortcutsModal bind:show={showShortcuts} />
 <IncidentModal bind:show={showIncident} />
+<SuggestionModal bind:show={showSuggestion} />

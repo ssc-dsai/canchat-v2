@@ -92,7 +92,7 @@ log_sources = [
     "RAG",
     "WEBHOOK",
     "SOCKET",
-    "INCIDENTS",
+    "JIRA",
 ]
 
 SRC_LOG_LEVELS = {}

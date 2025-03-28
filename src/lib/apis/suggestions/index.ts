@@ -1,26 +1,24 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-type IncidentItem = {
+type SuggestionItem = {
 	email: string;
 	description: string;
-	stepsToReproduce: string;
 	files?: null | FileList;
 };
 
-export const createIncident = async (token: string, incident: IncidentItem) => {
+export const createSuggestion = async (token: string, suggestion: SuggestionItem) => {
 	const formData = new FormData();
 
-	formData.append('email', incident.email);
-	formData.append('description', incident.description);
-	formData.append('stepsToReproduce', incident.stepsToReproduce);
+	formData.append('email', suggestion.email);
+	formData.append('description', suggestion.description);
 
-	if (incident.files) {
-		Array.from(incident.files).forEach((file) => {
+	if (suggestion.files) {
+		Array.from(suggestion.files).forEach((file) => {
 			formData.append('files', file);
 		});
 	}
 
-	return await fetch(`${WEBUI_API_BASE_URL}/jira/bug`, {
+	return await fetch(`${WEBUI_API_BASE_URL}/jira/task`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -31,7 +29,7 @@ export const createIncident = async (token: string, incident: IncidentItem) => {
 		.then(async (res) => {
 			if (!res.ok) {
 				const error = await res.json();
-				throw new Error(error.detail || 'Failed to create incident');
+				throw new Error(error.detail || 'Failed to create suggestion');
 			}
 			return res.json();
 		})
