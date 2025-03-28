@@ -1,5 +1,14 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Form, UploadFile, File
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+    Request,
+    Form,
+    UploadFile,
+    File,
+)
 import logging
 import aiohttp
 
@@ -15,6 +24,7 @@ router = APIRouter()
 # Create Bug
 ############################
 
+
 @router.post("/bug", tags=["jira"])
 async def create_bug(
     request: Request,
@@ -22,7 +32,7 @@ async def create_bug(
     description: str = Form(...),
     stepsToReproduce: str = Form(...),
     files: List[UploadFile] = File(None),
-    user=Depends(get_verified_user)
+    user=Depends(get_verified_user),
 ):
     log.info("Processing Jira Bug submission")
 
@@ -65,7 +75,7 @@ async def create_bug(
                     log.error(f"Jira API error: {error_text}")
                     raise HTTPException(
                         status_code=response.status,
-                        detail=f"Failed to create Jira issue: {error_text}"
+                        detail=f"Failed to create Jira issue: {error_text}",
                     )
 
                 result = await response.json()
@@ -75,7 +85,7 @@ async def create_bug(
                     log.error("No issue key in Jira response")
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="Jira API did not return an issue key"
+                        detail="Jira API did not return an issue key",
                     )
 
                 # Process file attachments
@@ -96,7 +106,8 @@ async def create_bug(
                                 "file",
                                 content,
                                 filename=file.filename,
-                                content_type=file.content_type or "application/octet-stream",
+                                content_type=file.content_type
+                                or "application/octet-stream",
                             )
 
                             async with session.post(
@@ -107,9 +118,13 @@ async def create_bug(
                             ) as attach_response:
                                 if not attach_response.ok:
                                     error_text = await attach_response.text()
-                                    log.error(f"Failed to attach file {file.filename}: {error_text}")
+                                    log.error(
+                                        f"Failed to attach file {file.filename}: {error_text}"
+                                    )
                         except Exception as e:
-                            log.exception(f"Unexpected error while attaching file {file.filename}: {str(e)}")
+                            log.exception(
+                                f"Unexpected error while attaching file {file.filename}: {str(e)}"
+                            )
                             continue
 
                 log.info(f"Successfully created Jira issue: {issue_key}")
@@ -122,12 +137,14 @@ async def create_bug(
         log.error(f"Unexpected error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your request."
+            detail="An unexpected error occurred while processing your request.",
         )
+
 
 ############################
 # Create Task
 ############################
+
 
 @router.post("/task", tags=["jira"])
 async def create_task(
@@ -135,7 +152,7 @@ async def create_task(
     email: str = Form(...),
     description: str = Form(...),
     files: List[UploadFile] = File(None),
-    user=Depends(get_verified_user)
+    user=Depends(get_verified_user),
 ):
     log.info("Processing Jira Task submission")
 
@@ -176,7 +193,7 @@ async def create_task(
                     log.error(f"Jira API error: {error_text}")
                     raise HTTPException(
                         status_code=response.status,
-                        detail=f"Failed to create Jira issue: {error_text}"
+                        detail=f"Failed to create Jira issue: {error_text}",
                     )
 
                 result = await response.json()
@@ -186,7 +203,7 @@ async def create_task(
                     log.error("No issue key in Jira response")
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="Jira API did not return an issue key"
+                        detail="Jira API did not return an issue key",
                     )
 
                 # Process file attachments
@@ -207,7 +224,8 @@ async def create_task(
                                 "file",
                                 content,
                                 filename=file.filename,
-                                content_type=file.content_type or "application/octet-stream",
+                                content_type=file.content_type
+                                or "application/octet-stream",
                             )
 
                             async with session.post(
@@ -218,9 +236,13 @@ async def create_task(
                             ) as attach_response:
                                 if not attach_response.ok:
                                     error_text = await attach_response.text()
-                                    log.error(f"Failed to attach file {file.filename}: {error_text}")
+                                    log.error(
+                                        f"Failed to attach file {file.filename}: {error_text}"
+                                    )
                         except Exception as e:
-                            log.error(f"Unexpected error while attaching file {file.filename}: {str(e)}")
+                            log.error(
+                                f"Unexpected error while attaching file {file.filename}: {str(e)}"
+                            )
                             continue
 
                 log.info(f"Successfully created Jira issue: {issue_key}")
@@ -233,5 +255,5 @@ async def create_task(
         log.error(f"Unexpected error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your request."
+            detail="An unexpected error occurred while processing your request.",
         )
