@@ -697,6 +697,18 @@ app.state.config.JIRA_PROJECT_KEY = JIRA_PROJECT_KEY
 
 ########################################
 #
+# Jira Integration
+#
+########################################
+
+app.state.config.JIRA_API_URL = JIRA_API_URL
+app.state.config.JIRA_USERNAME = JIRA_USERNAME
+app.state.config.JIRA_API_TOKEN = JIRA_API_TOKEN
+app.state.config.JIRA_PROJECT_KEY = JIRA_PROJECT_KEY
+
+
+########################################
+#
 # WEBUI
 #
 ########################################

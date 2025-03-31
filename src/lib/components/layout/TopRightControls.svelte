@@ -111,6 +111,12 @@
 				showSuggestionHandler={() => {
 					showSuggestion = true;
 				}}
+				showIncidentHandler={() => {
+					showIncident = true;
+				}}
+				showSuggestionHandler={() => {
+					showSuggestion = true;
+				}}
 			>
 				<Tooltip content={$i18n.t('Help')} placement="bottom">
 					<div

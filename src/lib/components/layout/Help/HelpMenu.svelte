@@ -62,7 +62,7 @@
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="incident-button"
+				id="suggestion-button"
 				on:click={() => {
 					showSuggestionHandler();
 				}}
@@ -86,11 +86,22 @@
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				id="chat-share-button"
 				on:click={() => {
-					showShortcutsHandler();
+					showIncidentHandler();
 				}}
 			>
-				<Keyboard className="size-5" />
-				<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
+				<ExclamationCircle className="size-5" />
+				<div class="flex items-center">{$i18n.t('Report an Incident')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="incident-button"
+				on:click={() => {
+					showSuggestionHandler();
+				}}
+			>
+				<LightBlub className="size-5" />
+				<div class="flex items-center">{$i18n.t('Suggestion Box')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>
