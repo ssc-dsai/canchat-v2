@@ -8,7 +8,8 @@
 		showControls,
 		showArchivedChats,
 		showSidebar,
-		suggestionCycle
+		suggestionCycle,
+		config
 	} from '$lib/stores';
 	import Tooltip from '../common/Tooltip.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
@@ -47,18 +48,9 @@
 	let showIssue = false;
 	let showSuggestion = false;
 
-	const getSurveyUrl = () => {
-		const locale = localStorage.getItem('locale') || 'en-GB';
-		const langPrefix = locale.startsWith('fr') ? 'fr' : 'en';
-		return `https://forms-formulaires.alpha.canada.ca/${langPrefix}/id/cm6tm7j9h005cyr69fq8g86xd`;
-	};
+	$: SurveyUrl = $i18n.language === 'fr-CA' ? $config?.survey_url_fr : $config?.survey_url;
 
-	const getDocsUrl = () => {
-		const locale = localStorage.getItem('locale') || 'en-GB';
-		return locale.startsWith('fr')
-			? 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx'
-			: 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat.aspx';
-	};
+	$: DocsUrl = $i18n.language === 'fr-CA' ? $config?.docs_url_fr : $config?.docs_url;
 </script>
 
 <div class="fixed top-0 right-0 px-2 py-[7px] z-50 flex items-center gap-1">
@@ -105,13 +97,13 @@
 			/>
 			<HelpMenu
 				showDocsHandler={() => {
-					window.open(getDocsUrl(), '_blank');
+					window.open(DocsUrl, '_blank');
 				}}
 				showShortcutsHandler={() => {
 					showShortcuts = !showShortcuts;
 				}}
 				showSurveyHandler={() => {
-					window.open(getSurveyUrl(), '_blank');
+					window.open(SurveyUrl, '_blank');
 				}}
 				showIssueHandler={() => {
 					showIssue = true;

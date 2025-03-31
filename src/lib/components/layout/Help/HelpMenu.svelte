@@ -2,7 +2,6 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { getContext } from 'svelte';
 
-	import { showSurvey } from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -20,9 +19,6 @@
 	export let showSuggestionHandler: Function;
 
 	export let onClose: Function = () => {};
-
-	// Show survey
-	//showSurvey.set(true);
 </script>
 
 <Dropdown
@@ -75,18 +71,16 @@
 				<div class="flex items-center">{$i18n.t('Suggestion Box')}</div>
 			</DropdownMenu.Item>
 
-			{#if $showSurvey}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-					id="chat-share-button"
-					on:click={() => {
-						showSurveyHandler();
-					}}
-				>
-					<Lifebuoy className="size-5" />
-					<div class="flex items-center">{$i18n.t('Survey')}</div>
-				</DropdownMenu.Item>
-			{/if}
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="chat-share-button"
+				on:click={() => {
+					showSurveyHandler();
+				}}
+			>
+				<Lifebuoy className="size-5" />
+				<div class="flex items-center">{$i18n.t('User Survey')}</div>
+			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
