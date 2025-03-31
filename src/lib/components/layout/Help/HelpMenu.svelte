@@ -16,7 +16,7 @@
 	export let showShortcutsHandler: Function;
 	export let showSurveyHandler: Function;
 	export let showDocsHandler: Function;
-	export let showIncidentHandler: Function;
+	export let showIssueHandler: Function;
 	export let showSuggestionHandler: Function;
 
 	export let onClose: Function = () => {};
@@ -55,13 +55,13 @@
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="incident-button"
+				id="issue-button"
 				on:click={() => {
-					showIncidentHandler();
+					showIssueHandler();
 				}}
 			>
 				<ExclamationCircle className="size-5" />
-				<div class="flex items-center">{$i18n.t('Report an Incident')}</div>
+				<div class="flex items-center">{$i18n.t('Report an Issue')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item

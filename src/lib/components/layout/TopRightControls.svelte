@@ -18,7 +18,7 @@
 	import { goto } from '$app/navigation';
 	import HelpMenu from './Help/HelpMenu.svelte';
 	import ShortcutsModal from '../chat/ShortcutsModal.svelte';
-	import IncidentModal from '../common/IncidentModal.svelte';
+	import IssueModal from '../common/IssueModal.svelte';
 	import SuggestionModal from '../common/SuggestionModal.svelte';
 
 	export let shareEnabled = false;
@@ -44,7 +44,7 @@
 
 	// Help functionality
 	let showShortcuts = false;
-	let showIncident = false;
+	let showIssue = false;
 	let showSuggestion = false;
 
 	const getSurveyUrl = () => {
@@ -113,8 +113,8 @@
 				showSurveyHandler={() => {
 					window.open(getSurveyUrl(), '_blank');
 				}}
-				showIncidentHandler={() => {
-					showIncident = true;
+				showIssueHandler={() => {
+					showIssue = true;
 				}}
 				showSuggestionHandler={() => {
 					showSuggestion = true;
@@ -161,5 +161,5 @@
 </div>
 
 <ShortcutsModal bind:show={showShortcuts} />
-<IncidentModal bind:show={showIncident} />
+<IssueModal bind:show={showIssue} />
 <SuggestionModal bind:show={showSuggestion} />

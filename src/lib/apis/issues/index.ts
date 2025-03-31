@@ -7,7 +7,7 @@ type IncidentItem = {
 	files?: null | FileList;
 };
 
-export const createIncident = async (token: string, incident: IncidentItem) => {
+export const createIssue = async (token: string, incident: IncidentItem) => {
 	const formData = new FormData();
 
 	formData.append('email', incident.email);
