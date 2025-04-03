@@ -472,6 +472,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             form_data.name,
             form_data.profile_image_url,
             role,
+            form_data.email.split("@")[1],
         )
 
         if user:
@@ -527,6 +528,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
                 "permissions": user_permissions,
+                "domain": user.domain,
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
@@ -592,6 +594,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             form_data.name,
             form_data.profile_image_url,
             form_data.role,
+            form_data.email.split("@")[1],
         )
 
         if user:
@@ -603,6 +606,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
                 "email": user.email,
                 "name": user.name,
                 "role": user.role,
+                "domain": user.domain,
                 "profile_image_url": user.profile_image_url,
             }
         else:
