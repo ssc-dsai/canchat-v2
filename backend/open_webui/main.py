@@ -66,6 +66,7 @@ from open_webui.routers import (
     files,
     functions,
     memories,
+    metrics,
     models,
     knowledge,
     prompts,
@@ -822,6 +823,7 @@ app.include_router(
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
+app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
 
 
 ##################################
@@ -934,9 +936,11 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
-        return await process_chat_response(
+        final_response = await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )
+        print(f"Chat completion response: {final_response}")
+        return final_response
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -954,7 +958,9 @@ async def chat_completed(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
     try:
-        return await chat_completed_handler(request, form_data, user)
+        chat_completed = await chat_completed_handler(request, form_data, user)
+        print(f"Chat completed response: {chat_completed}")
+        return chat_completed
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
