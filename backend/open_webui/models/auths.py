@@ -122,7 +122,13 @@ class AuthsTable:
             db.add(result)
 
             user = Users.insert_new_user(
-                id, name, email, profile_image_url, role, oauth_sub, domain,
+                id,
+                name,
+                email,
+                profile_image_url,
+                role,
+                oauth_sub,
+                domain,
             )
 
             db.commit()

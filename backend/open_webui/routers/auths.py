@@ -503,7 +503,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
                 "permissions": user_permissions,
-                "domain": user.domain
+                "domain": user.domain,
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
