@@ -1106,7 +1106,11 @@ async def process_chat_response(
                         data = json.loads(data)
 
                         if "usage" in data:
-                            model_used = data["model"] or metadata["selected_model_id"] or form_data["model"]
+                            model_used = (
+                                data["model"]
+                                or metadata["selected_model_id"]
+                                or form_data["model"]
+                            )
                             MessageMetrics.insert_new_metrics(
                                 user,
                                 model_used,

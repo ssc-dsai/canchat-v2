@@ -183,7 +183,7 @@ class UsersTable:
         with get_db() as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
-        
+
     def get_user_domains(self) -> list[str]:
         with get_db() as db:
             return [domain[0] for domain in db.query(User.domain).distinct().all()]
@@ -255,8 +255,10 @@ class UsersTable:
                 return UserModel.model_validate(user)
         except Exception:
             return None
-    
-    def get_daily_users_number(self, days: int = 1, domain: Optional[str] = None) -> Optional[int]:
+
+    def get_daily_users_number(
+        self, days: int = 1, domain: Optional[str] = None
+    ) -> Optional[int]:
         try:
             with get_db() as db:
                 start_time = int(time.time()) - (days * 24 * 60 * 60)
@@ -268,7 +270,7 @@ class UsersTable:
                 return query.count()
         except Exception:
             return None
-        
+
     def update_user_oauth_sub_by_id(
         self, id: str, oauth_sub: str
     ) -> Optional[UserModel]:

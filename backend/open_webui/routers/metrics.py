@@ -21,6 +21,7 @@ router = APIRouter()
 # GetDomains
 ############################
 
+
 @router.get("/domains")
 async def get_total_users_by_domain(user=Depends(get_verified_user)):
     if user.role != "admin":
@@ -32,9 +33,11 @@ async def get_total_users_by_domain(user=Depends(get_verified_user)):
     domains = Users.get_user_domains() or []
     return {"domains": domains}
 
+
 ############################
 # GetTotalUsers
 ############################
+
 
 @router.get("/users")
 async def get_total_users(domain: str = None, user=Depends(get_verified_user)):
@@ -43,13 +46,15 @@ async def get_total_users(domain: str = None, user=Depends(get_verified_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    
+
     total_users = Users.get_num_users(domain) if domain else Users.get_num_users()
     return {"total_users": total_users}
+
 
 ############################
 # GetDailyUsers
 ############################
+
 
 @router.get("/daily/users")
 async def get_daily_users_number(domain: str = None, user=Depends(get_verified_user)):
@@ -58,17 +63,19 @@ async def get_daily_users_number(domain: str = None, user=Depends(get_verified_u
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    
+
     total_daily_users = (
-        Users.get_daily_users_number(domain=domain) 
-        if domain 
+        Users.get_daily_users_number(domain=domain)
+        if domain
         else Users.get_daily_users_number()
     )
     return {"total_daily_users": total_daily_users}
 
+
 ############################
 # GetTotalPrompts
 ############################
+
 
 @router.get("/prompts")
 async def get_total_prompts(domain: str = None, user=Depends(get_verified_user)):
@@ -89,12 +96,14 @@ async def get_total_prompts(domain: str = None, user=Depends(get_verified_user))
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No prompts found.",
         )
-    
+
     return {"total_prompts": total_prompts}
+
 
 ############################
 # GetDailyUsers
 ############################
+
 
 @router.get("/daily/prompts")
 async def get_daily_prompts_number(domain: str = None, user=Depends(get_verified_user)):
@@ -103,17 +112,19 @@ async def get_daily_prompts_number(domain: str = None, user=Depends(get_verified
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    
+
     total_daily_prompts = (
-        MessageMetrics.get_daily_messages_number(domain=domain) 
-        if domain 
+        MessageMetrics.get_daily_messages_number(domain=domain)
+        if domain
         else MessageMetrics.get_daily_messages_number()
     )
     return {"total_daily_prompts": total_daily_prompts}
 
+
 ############################
 # GetTotalTokens
 ############################
+
 
 @router.get("/tokens")
 async def get_total_tokens(domain: str = None, user=Depends(get_verified_user)):
@@ -128,12 +139,14 @@ async def get_total_tokens(domain: str = None, user=Depends(get_verified_user)):
         if domain
         else MessageMetrics.get_message_tokens_sum()
     )
-    
+
     return {"total_tokens": total_tokens}
+
 
 ############################
 # GetDailyTokens
 ############################
+
 
 @router.get("/daily/tokens")
 async def get_daily_tokens(domain: str = None, user=Depends(get_verified_user)):
@@ -142,10 +155,10 @@ async def get_daily_tokens(domain: str = None, user=Depends(get_verified_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    
+
     total_daily_tokens = (
         MessageMetrics.get_daily_message_tokens_sum(domain=domain)
-        if domain 
+        if domain
         else MessageMetrics.get_daily_message_tokens_sum()
     )
     return {"total_daily_tokens": total_daily_tokens}
