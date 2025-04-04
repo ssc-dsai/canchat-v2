@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📊 Usage Metrics Admin Dashboard**: Added an admin dashboard to track usage metrics.
 
 ### Fixed
+
 - **🔧 Saving Models Groups RBAC Issue**: Fixed an issue with saving models related to Groups RBAC.
 - **🔧 PWA Manifest**: Fixed an issue with the Progressive Web App (PWA) manifest to ensure proper functionality and compatibility across devices.
 
