@@ -188,13 +188,11 @@ class UsersTable:
         with get_db() as db:
             return [domain[0] for domain in db.query(User.domain).distinct().all()]
 
-    def get_num_users(self) -> Optional[int]:
+    def get_num_users(self, domain: Optional[str] = None) -> Optional[int]:
         with get_db() as db:
+            if domain:
+                return db.query(User).filter_by(domain=domain).count()
             return db.query(User).count()
-    
-    def get_num_users_by_domain(self, domain: str) -> Optional[int]:
-        with get_db() as db:
-            return db.query(User).filter_by(domain=domain).count()
 
     def get_first_user(self) -> UserModel:
         try:
@@ -258,27 +256,16 @@ class UsersTable:
         except Exception:
             return None
     
-    def get_daily_active_users_number(self, days: int = 1) -> Optional[int]:
+    def get_daily_users_number(self, days: int = 1, domain: Optional[str] = None) -> Optional[int]:
         try:
             with get_db() as db:
-                # Get the timestamp for the start of the day 'days' days ago
                 start_time = int(time.time()) - (days * 24 * 60 * 60)
+                query = db.query(User).filter(User.last_active_at >= start_time)
 
-                # Count users who were active after that time
-                count = db.query(User).filter(User.last_active_at >= start_time).count()
-                return count
-        except Exception:
-            return None
-        
-    def get_daily_active_users_number_by_domain(self, days: int = 1, domain: str = "*") -> Optional[int]:
-        try:
-            with get_db() as db:
-                # Get the timestamp for the start of the day 'days' days ago
-                start_time = int(time.time()) - (days * 24 * 60 * 60)
+                if domain:
+                    query = query.filter(User.domain == domain)
 
-                # Count users who were active after that time
-                count = db.query(User).filter(User.last_active_at >= start_time, domain == domain).count()
-                return count
+                return query.count()
         except Exception:
             return None
         

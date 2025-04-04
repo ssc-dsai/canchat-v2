@@ -936,11 +936,9 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
-        final_response = await process_chat_response(
+        return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )
-        print(f"Chat completion response: {final_response}")
-        return final_response
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -958,9 +956,7 @@ async def chat_completed(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
     try:
-        chat_completed = await chat_completed_handler(request, form_data, user)
-        print(f"Chat completed response: {chat_completed}")
-        return chat_completed
+        return await chat_completed_handler(request, form_data, user)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
