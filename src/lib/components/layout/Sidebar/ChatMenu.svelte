@@ -37,6 +37,8 @@
 	export let renameHandler: Function;
 	export let deleteHandler: Function;
 	export let onClose: Function;
+	export let buttonClass = '';
+	export let ariaLabel = '';
 
 	export let chatId = '';
 
@@ -162,10 +164,10 @@
 			onClose();
 		}
 	}}
+	{buttonClass}
+	{ariaLabel}
 >
-	<Tooltip content={$i18n.t('More')}>
-		<slot />
-	</Tooltip>
+	<slot />
 
 	<div slot="content">
 		<DropdownMenu.Content
