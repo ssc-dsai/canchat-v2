@@ -145,7 +145,7 @@
 							/>
 						{/if}
 					{:else}
-						{title}
+						<h3>{title}</h3>
 					{/if}
 				</div>
 
