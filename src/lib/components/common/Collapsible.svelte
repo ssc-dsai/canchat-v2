@@ -88,8 +88,15 @@
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div
 			class="{buttonClassName} cursor-pointer"
+			tabindex="0"
 			on:pointerup={() => {
 				if (!disabled) {
+					open = !open;
+				}
+			}}
+			on:keydown={(e) => {
+				if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+					e.preventDefault();
 					open = !open;
 				}
 			}}
@@ -163,8 +170,15 @@
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div
 			class="{buttonClassName} cursor-pointer"
+			tabindex="0"
 			on:pointerup={() => {
 				if (!disabled) {
+					open = !open;
+				}
+			}}
+			on:keydown={(e) => {
+				if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+					e.preventDefault();
 					open = !open;
 				}
 			}}
@@ -253,3 +267,4 @@
 		{/if}
 	{/if}
 </div>
+
