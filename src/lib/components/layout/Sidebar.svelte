@@ -894,7 +894,7 @@
 		</div>
 
 		<div class="px-2">
-			<div class="flex flex-col font-primary">
+			<div class="flex flex-col font-primary" id="user-menu">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
 						role={$user?.role}

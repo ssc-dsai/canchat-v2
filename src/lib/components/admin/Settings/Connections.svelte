@@ -203,6 +203,7 @@
 </script>
 
 <AddConnectionModal
+	id="add-connection"
 	bind:show={showAddOpenAIConnectionModal}
 	onSubmit={addOpenAIConnectionHandler}
 />

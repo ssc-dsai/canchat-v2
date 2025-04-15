@@ -303,6 +303,7 @@
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
+		id="chat-menu"
 		class="
         {id === $chatId || confirmEdit
 			? 'from-gray-200 dark:from-gray-900'
