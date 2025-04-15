@@ -325,7 +325,7 @@
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
 					<button
-						class=" text-xs font-medium text-gray-500"
+						class=" text-xs font-medium text-gray-600 dark:text-grey-100"
 						type="button"
 						on:click={() => {
 							showAdvanced = !showAdvanced;
