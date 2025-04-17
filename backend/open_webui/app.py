@@ -80,19 +80,12 @@ class MessageMetricsTable:
     ) -> Optional[int]:
         try:
             with get_db() as db:
-                # Use the same time calculation as historical data for consistency
-                current_time = int(time.time())
-                end_time = current_time
-                start_time = end_time - (24 * 60 * 60)
-                
-                # Convert to nanoseconds for consistency with historical queries
-                start_time_ns = start_time * 1_000_000_000
-                end_time_ns = end_time * 1_000_000_000
+                # Get the timestamp for the start of the day 'days' days ago
+                start_time = int(time.time()) - (days * 24 * 60 * 60)
 
-                # Build the query to count messages for the current day
+                # Build the query to count users active after the start time
                 query = db.query(MessageMetric).filter(
-                    MessageMetric.created_at >= start_time_ns,
-                    MessageMetric.created_at < end_time_ns
+                    MessageMetric.created_at >= start_time
                 )
 
                 if domain:
@@ -122,18 +115,10 @@ class MessageMetricsTable:
     ) -> Optional[int]:
         try:
             with get_db() as db:
-                # Use the same time calculation as historical data for consistency
-                current_time = int(time.time())
-                end_time = current_time
-                start_time = end_time - (24 * 60 * 60)
-                
-                # Convert to nanoseconds for consistency with historical queries
-                start_time_ns = start_time * 1_000_000_000
-                end_time_ns = end_time * 1_000_000_000
+                start_time = int(time.time()) - (days * 24 * 60 * 60)
 
                 query = db.query(MessageMetric).filter(
-                    MessageMetric.created_at >= start_time_ns,
-                    MessageMetric.created_at < end_time_ns
+                    MessageMetric.created_at >= start_time
                 )
 
                 if domain:
@@ -142,10 +127,9 @@ class MessageMetricsTable:
                 result = query.with_entities(
                     func.sum(MessageMetric.total_tokens),
                 ).first()
-                
                 return round(result[0], 2) if result and result[0] else 0
         except Exception as e:
-            logger.error(f"Failed to get daily message tokens number: {e}")
+            logger.error(f"Failed to get message tokens number: {e}")
             return 0  # Return 0 instead of None
 
     def get_historical_messages_data(
@@ -155,32 +139,16 @@ class MessageMetricsTable:
             result = []
             current_time = int(time.time())
             
-            # Calculate today's date at midnight for proper day boundary
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
-            today_midnight = int(time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S")))
+            # Debug logging
+            logger.info(f"Fetching historical messages for domain: {domain}, days: {days}")
             
-            # Generate all date strings first to ensure no gaps
-            date_strings = []
-            dates_timestamps = []
             for day in range(days):
-                # Calculate day start (midnight) for each day in the past
-                day_start = today_midnight - (day * 24 * 60 * 60)
-                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
-                date_strings.append(date_str)
-                dates_timestamps.append(day_start)
-            
-            # Sort date strings to ensure chronological order
-            date_pairs = sorted(zip(date_strings, dates_timestamps))
-            date_strings = [pair[0] for pair in date_pairs]
-            dates_timestamps = [pair[1] for pair in date_pairs]
-            
-            # Process each day individually
-            for i, (date_str, day_start) in enumerate(zip(date_strings, dates_timestamps)):
-                # Calculate day boundaries (midnight to midnight)
-                start_time = day_start
-                end_time = start_time + (24 * 60 * 60)
+                # Calculate start and end time for this day
+                end_time = current_time - (day * 24 * 60 * 60)
+                start_time = end_time - (24 * 60 * 60)
                 
                 # Convert seconds to nanoseconds for comparison with created_at
+                # MessageMetric.created_at is stored in nanoseconds (time.time_ns())
                 start_time_ns = start_time * 1_000_000_000
                 end_time_ns = end_time * 1_000_000_000
                 
@@ -194,27 +162,21 @@ class MessageMetricsTable:
                         query = query.filter(MessageMetric.user_domain == domain)
                     
                     count = query.count()
+                    # Format date as YYYY-MM-DD
+                    date_str = time.strftime("%Y-%m-%d", time.localtime(start_time))
+                    
+                    logger.debug(f"Domain: {domain}, Date: {date_str}, Count: {count}")
                     
                     result.append({
                         "date": date_str,
                         "count": count
                     })
             
-            # Return in chronological order
-            return result
+            # Return in chronological order (oldest first)
+            return list(reversed(result))
         except Exception as e:
             logger.error(f"Failed to get historical messages data: {e}")
-            # Generate continuous date range as fallback
-            fallback = []
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
-            today_midnight = int(time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S")))
-            
-            for day in range(days):
-                day_start = today_midnight - (day * 24 * 60 * 60)
-                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
-                fallback.append({"date": date_str, "count": 0})
-            
-            return sorted(fallback, key=lambda x: x["date"])
+            return [{"date": time.strftime("%Y-%m-%d", time.localtime(int(time.time()) - (i * 24 * 60 * 60))), "count": 0} for i in range(days)]
 
     def get_historical_tokens_data(
         self, days: int = 7, domain: Optional[str] = None
@@ -223,30 +185,13 @@ class MessageMetricsTable:
             result = []
             current_time = int(time.time())
             
-            # Calculate today's date at midnight for proper day boundary
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
-            today_midnight = int(time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S")))
+            # Debug logging
+            logger.info(f"Fetching historical tokens for domain: {domain}, days: {days}")
             
-            # Generate all date strings first to ensure no gaps
-            date_strings = []
-            dates_timestamps = []
             for day in range(days):
-                # Calculate day start (midnight) for each day in the past
-                day_start = today_midnight - (day * 24 * 60 * 60)
-                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
-                date_strings.append(date_str)
-                dates_timestamps.append(day_start)
-            
-            # Sort date strings to ensure chronological order
-            date_pairs = sorted(zip(date_strings, dates_timestamps))
-            date_strings = [pair[0] for pair in date_pairs]
-            dates_timestamps = [pair[1] for pair in date_pairs]
-            
-            # Process each day individually
-            for i, (date_str, day_start) in enumerate(zip(date_strings, dates_timestamps)):
-                # Calculate day boundaries (midnight to midnight)
-                start_time = day_start
-                end_time = start_time + (24 * 60 * 60)
+                # Calculate start and end time for this day
+                end_time = current_time - (day * 24 * 60 * 60)
+                start_time = end_time - (24 * 60 * 60)
                 
                 # Convert seconds to nanoseconds for comparison with created_at
                 start_time_ns = start_time * 1_000_000_000
@@ -266,28 +211,22 @@ class MessageMetricsTable:
                         func.sum(MessageMetric.total_tokens),
                     ).first()
                     
+                    # Format date as YYYY-MM-DD
+                    date_str = time.strftime("%Y-%m-%d", time.localtime(start_time))
+                    
                     count = round(tokens_sum[0], 2) if tokens_sum and tokens_sum[0] else 0
+                    logger.debug(f"Domain: {domain}, Date: {date_str}, Token Sum: {count}")
                     
                     result.append({
                         "date": date_str,
                         "count": count
                     })
             
-            # Return in chronological order
-            return result
+            # Return in chronological order (oldest first)
+            return list(reversed(result))
         except Exception as e:
             logger.error(f"Failed to get historical tokens data: {e}")
-            # Generate continuous date range as fallback
-            fallback = []
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
-            today_midnight = int(time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S")))
-            
-            for day in range(days):
-                day_start = today_midnight - (day * 24 * 60 * 60)
-                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
-                fallback.append({"date": date_str, "count": 0})
-            
-            return sorted(fallback, key=lambda x: x["date"])
+            return [{"date": time.strftime("%Y-%m-%d", time.localtime(int(time.time()) - (i * 24 * 60 * 60))), "count": 0} for i in range(days)]
 
 
 MessageMetrics = MessageMetricsTable()
