@@ -173,13 +173,13 @@ async def get_historical_users(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    
+
     # Handle both None and empty string for domain
     if domain == "":
         domain = None
-        
+
     historical_data = Users.get_historical_users_data(days, domain)
-    
+
     return {"historical_users": historical_data}
 
 
@@ -197,13 +197,13 @@ async def get_historical_prompts(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    
+
     # Handle both None and empty string for domain
     if domain == "":
         domain = None
-        
+
     historical_data = MessageMetrics.get_historical_messages_data(days, domain)
-    
+
     return {"historical_prompts": historical_data}
 
 
@@ -221,11 +221,11 @@ async def get_historical_tokens(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    
+
     # Handle both None and empty string for domain
     if domain == "":
         domain = None
-        
+
     historical_data = MessageMetrics.get_historical_tokens_data(days, domain)
-    
+
     return {"historical_tokens": historical_data}

@@ -351,11 +351,13 @@ class UsersTable:
         try:
             result = []
             current_time = int(time.time())
-            
+
             # Calculate today's date at midnight for proper day boundary
             today = time.strftime("%Y-%m-%d", time.localtime(current_time))
-            today_midnight = int(time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S")))
-            
+            today_midnight = int(
+                time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
+            )
+
             # Generate all date strings first to ensure no gaps
             date_strings = []
             dates_timestamps = []
@@ -365,34 +367,33 @@ class UsersTable:
                 date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
                 date_strings.append(date_str)
                 dates_timestamps.append(day_start)
-            
+
             # Sort date strings to ensure chronological order
             date_pairs = sorted(zip(date_strings, dates_timestamps))
             date_strings = [pair[0] for pair in date_pairs]
             dates_timestamps = [pair[1] for pair in date_pairs]
-            
+
             # Process each day individually
-            for i, (date_str, day_start) in enumerate(zip(date_strings, dates_timestamps)):
+            for i, (date_str, day_start) in enumerate(
+                zip(date_strings, dates_timestamps)
+            ):
                 # Calculate day boundaries (midnight to midnight)
                 start_time = day_start
                 end_time = start_time + (24 * 60 * 60)
-                
+
                 with get_db() as db:
                     query = db.query(User).filter(
                         User.last_active_at >= start_time,
-                        User.last_active_at < end_time
+                        User.last_active_at < end_time,
                     )
-                    
+
                     if domain:
                         query = query.filter(User.domain == domain)
-                    
+
                     count = query.count()
-                    
-                    result.append({
-                        "date": date_str,
-                        "count": count
-                    })
-            
+
+                    result.append({"date": date_str, "count": count})
+
             # Return in chronological order
             return result
         except Exception as e:
@@ -400,13 +401,15 @@ class UsersTable:
             # Generate continuous date range as fallback
             fallback = []
             today = time.strftime("%Y-%m-%d", time.localtime(current_time))
-            today_midnight = int(time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S")))
-            
+            today_midnight = int(
+                time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
+            )
+
             for day in range(days):
                 day_start = today_midnight - (day * 24 * 60 * 60)
                 date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
-            
+
             return sorted(fallback, key=lambda x: x["date"])
 
 
