@@ -387,7 +387,9 @@
 					{/if}
 				</div>
 
-				<h3 class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1 text-gray-900 dark:text-gray-100 font-semibold">
+				<h3
+					class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1 text-gray-900 dark:text-gray-100 font-semibold"
+				>
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"
@@ -428,6 +430,7 @@
 					<FolderMenu
 						buttonClass="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
 						ariaLabel={$i18n.t('Folder Menu')}
+						buttonID={`${folderId}`}
 						on:rename={() => {
 							// Requires a timeout to prevent the click event from closing the dropdown
 							setTimeout(() => {

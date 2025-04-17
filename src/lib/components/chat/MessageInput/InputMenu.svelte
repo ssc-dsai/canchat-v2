@@ -33,6 +33,7 @@
 
 	export let buttonClass = '';
 	export let ariaLabel = '';
+	export let buttonID = '';
 
 	let tools = {};
 	let show = false;
@@ -92,6 +93,7 @@
 	}}
 	{buttonClass}
 	{ariaLabel}
+	{buttonID}
 >
 	<slot />
 

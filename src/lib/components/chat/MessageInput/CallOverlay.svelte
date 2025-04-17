@@ -884,6 +884,8 @@
 				{#if camera}
 					<VideoInputMenu
 						devices={videoInputDevices}
+						buttonID="video-input-menu-button"
+						buttonClass="p-3 rounded-full bg-gray-50 dark:bg-gray-900"
 						on:change={async (e) => {
 							console.log(e.detail);
 							selectedVideoInputDeviceId = e.detail;
@@ -891,7 +893,7 @@
 							await startVideoStream();
 						}}
 					>
-						<button class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900" type="button">
+						<div>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
@@ -904,7 +906,7 @@
 									clip-rule="evenodd"
 								/>
 							</svg>
-						</button>
+						</div>
 					</VideoInputMenu>
 				{:else}
 					<Tooltip content={$i18n.t('Camera')}>
