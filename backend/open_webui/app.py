@@ -138,45 +138,53 @@ class MessageMetricsTable:
         try:
             result = []
             current_time = int(time.time())
-            
+
             # Debug logging
-            logger.info(f"Fetching historical messages for domain: {domain}, days: {days}")
-            
+            logger.info(
+                f"Fetching historical messages for domain: {domain}, days: {days}"
+            )
+
             for day in range(days):
                 # Calculate start and end time for this day
                 end_time = current_time - (day * 24 * 60 * 60)
                 start_time = end_time - (24 * 60 * 60)
-                
+
                 # Convert seconds to nanoseconds for comparison with created_at
                 # MessageMetric.created_at is stored in nanoseconds (time.time_ns())
                 start_time_ns = start_time * 1_000_000_000
                 end_time_ns = end_time * 1_000_000_000
-                
+
                 with get_db() as db:
                     query = db.query(MessageMetric).filter(
                         MessageMetric.created_at >= start_time_ns,
-                        MessageMetric.created_at < end_time_ns
+                        MessageMetric.created_at < end_time_ns,
                     )
-                    
+
                     if domain:
                         query = query.filter(MessageMetric.user_domain == domain)
-                    
+
                     count = query.count()
                     # Format date as YYYY-MM-DD
                     date_str = time.strftime("%Y-%m-%d", time.localtime(start_time))
-                    
+
                     logger.debug(f"Domain: {domain}, Date: {date_str}, Count: {count}")
-                    
-                    result.append({
-                        "date": date_str,
-                        "count": count
-                    })
-            
+
+                    result.append({"date": date_str, "count": count})
+
             # Return in chronological order (oldest first)
             return list(reversed(result))
         except Exception as e:
             logger.error(f"Failed to get historical messages data: {e}")
-            return [{"date": time.strftime("%Y-%m-%d", time.localtime(int(time.time()) - (i * 24 * 60 * 60))), "count": 0} for i in range(days)]
+            return [
+                {
+                    "date": time.strftime(
+                        "%Y-%m-%d",
+                        time.localtime(int(time.time()) - (i * 24 * 60 * 60)),
+                    ),
+                    "count": 0,
+                }
+                for i in range(days)
+            ]
 
     def get_historical_tokens_data(
         self, days: int = 7, domain: Optional[str] = None
@@ -184,49 +192,61 @@ class MessageMetricsTable:
         try:
             result = []
             current_time = int(time.time())
-            
+
             # Debug logging
-            logger.info(f"Fetching historical tokens for domain: {domain}, days: {days}")
-            
+            logger.info(
+                f"Fetching historical tokens for domain: {domain}, days: {days}"
+            )
+
             for day in range(days):
                 # Calculate start and end time for this day
                 end_time = current_time - (day * 24 * 60 * 60)
                 start_time = end_time - (24 * 60 * 60)
-                
+
                 # Convert seconds to nanoseconds for comparison with created_at
                 start_time_ns = start_time * 1_000_000_000
                 end_time_ns = end_time * 1_000_000_000
-                
+
                 with get_db() as db:
                     query = db.query(MessageMetric).filter(
                         MessageMetric.created_at >= start_time_ns,
-                        MessageMetric.created_at < end_time_ns
+                        MessageMetric.created_at < end_time_ns,
                     )
-                    
+
                     if domain:
                         query = query.filter(MessageMetric.user_domain == domain)
-                    
+
                     # Sum tokens for this day
                     tokens_sum = query.with_entities(
                         func.sum(MessageMetric.total_tokens),
                     ).first()
-                    
+
                     # Format date as YYYY-MM-DD
                     date_str = time.strftime("%Y-%m-%d", time.localtime(start_time))
-                    
-                    count = round(tokens_sum[0], 2) if tokens_sum and tokens_sum[0] else 0
-                    logger.debug(f"Domain: {domain}, Date: {date_str}, Token Sum: {count}")
-                    
-                    result.append({
-                        "date": date_str,
-                        "count": count
-                    })
-            
+
+                    count = (
+                        round(tokens_sum[0], 2) if tokens_sum and tokens_sum[0] else 0
+                    )
+                    logger.debug(
+                        f"Domain: {domain}, Date: {date_str}, Token Sum: {count}"
+                    )
+
+                    result.append({"date": date_str, "count": count})
+
             # Return in chronological order (oldest first)
             return list(reversed(result))
         except Exception as e:
             logger.error(f"Failed to get historical tokens data: {e}")
-            return [{"date": time.strftime("%Y-%m-%d", time.localtime(int(time.time()) - (i * 24 * 60 * 60))), "count": 0} for i in range(days)]
+            return [
+                {
+                    "date": time.strftime(
+                        "%Y-%m-%d",
+                        time.localtime(int(time.time()) - (i * 24 * 60 * 60)),
+                    ),
+                    "count": 0,
+                }
+                for i in range(days)
+            ]
 
 
 MessageMetrics = MessageMetricsTable()

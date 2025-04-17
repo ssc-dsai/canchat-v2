@@ -67,7 +67,7 @@
 					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937'
 				},
 				onClick: null, // Disable the default click behavior
-				onHover: null  // Also disable hover state changes
+				onHover: null // Also disable hover state changes
 			},
 			tooltip: {
 				mode: 'index',
