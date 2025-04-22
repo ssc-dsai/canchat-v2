@@ -41,6 +41,7 @@
 	export let ariaLabel = '';
 
 	export let chatId = '';
+	export let buttonID = '';
 
 	let show = false;
 	let pinned = false;

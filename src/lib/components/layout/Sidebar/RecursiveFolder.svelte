@@ -51,6 +51,8 @@
 
 	let name = '';
 
+	let buttonID = `${folderId}`;
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -326,6 +328,7 @@
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
+	returnFocusSelector={'#' + buttonID}
 	title={$i18n.t('Delete folder?')}
 	on:confirm={() => {
 		deleteHandler();
@@ -430,7 +433,7 @@
 					<FolderMenu
 						buttonClass="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
 						ariaLabel={$i18n.t('Folder Menu')}
-						buttonID={`${folderId}`}
+						{buttonID}
 						on:rename={() => {
 							// Requires a timeout to prevent the click event from closing the dropdown
 							setTimeout(() => {
