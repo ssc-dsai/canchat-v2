@@ -305,6 +305,7 @@
 		clearTimeout(searchDebounceTimeout);
 		searchDebounceTimeout = setTimeout(() => {
 			visibleTabs = searchSettings(search);
+			toast.announce(visibleTabs.length + ' visible tabs found');
 			if (visibleTabs.length > 0 && !visibleTabs.includes(selectedTab)) {
 				selectedTab = visibleTabs[0];
 			}
@@ -350,11 +351,21 @@
 			settingsTabsContainer.removeEventListener('wheel', scrollHandler);
 		}
 	};
+	const announceSelectedTab = async () => {
+		const title = $i18n.t(selectedTab);
+		toast.announce($i18n.t('settingsTab', { title }));
+	};
 
 	$: if (show) {
 		addScrollListener();
+		setTimeout(() => {
+			announceSelectedTab();
+		}, 100);
 	} else {
 		removeScrollListener();
+	}
+	$: if (selectedTab) {
+		announceSelectedTab();
 	}
 </script>
 
@@ -364,6 +375,7 @@
 <Modal
 	size="xl"
 	bind:show
+	title={$i18n.t('Settings')}
 	returnFocusSelector={$returnFocusButtonID ? '#' + $returnFocusButtonID : ''}
 >
 >>>>>>> eb0e6ec2b (Merged PR 203: Accessibility: Add permanent message button, disable generate prompt key, remove call, and fix settings)

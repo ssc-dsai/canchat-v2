@@ -155,6 +155,7 @@
 			files = [...files, { type: 'image', url: imageUrl }];
 			// Clean memory: Clear video srcObject
 			video.srcObject = null;
+			toast.success('Screen capture completed');
 		} catch (error) {
 			// Handle any errors (e.g., user cancels screen sharing)
 			console.error('Error capturing screen:', error);
@@ -203,6 +204,8 @@
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
+				} else {
+					toast.success('File uploaded successfully');
 				}
 
 				fileItem.status = 'uploaded';
@@ -488,12 +491,14 @@
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
+								toast.announce($i18n.t('Voice recording cancelled'));
 							}}
 							on:confirm={async (e) => {
 								const { text, filename } = e.detail;
 								prompt = `${prompt}${text} `;
 
 								recording = false;
+								toast.announce($i18n.t('Voice recording transcription completed'));
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
@@ -1438,6 +1443,7 @@
 
 															if (stream) {
 																recording = true;
+																toast.announce($i18n.t('Voice recording started'));
 																const tracks = stream.getTracks();
 																tracks.forEach((track) => track.stop());
 															}

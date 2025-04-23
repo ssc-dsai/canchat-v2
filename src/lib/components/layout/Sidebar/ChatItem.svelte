@@ -109,6 +109,7 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+			toast.success($i18n.t('Chat cloned successfully. You are now in the new chat.'));
 		}
 	};
 
@@ -134,6 +135,7 @@
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
 		dispatch('change');
+		toast.success($i18n.t('Chat archived successfully'));
 	};
 
 	const focusEdit = async (node: HTMLInputElement) => {
@@ -223,7 +225,7 @@
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
 	returnFocusSelector={'#' + buttonID}
-	title={$i18n.t('Delete chat?') + buttonID}
+	title={$i18n.t('Delete chat?')}
 	on:confirm={() => {
 		deleteChatHandler(id);
 	}}
@@ -337,6 +339,7 @@
 							editChatTitle(id, chatTitle);
 							confirmEdit = false;
 							chatTitle = '';
+							toast.success($i18n.t('Chat title saved.'));
 						}}
 					>
 						<Check className=" size-3.5" strokeWidth="2.5" />
@@ -349,6 +352,7 @@
 						on:click={() => {
 							confirmEdit = false;
 							chatTitle = '';
+							toast.success($i18n.t('Chat title rename cancelled'));
 						}}
 					>
 						<XMark strokeWidth="2.5" />
