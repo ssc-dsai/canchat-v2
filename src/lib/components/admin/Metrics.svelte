@@ -432,7 +432,8 @@
 		</div>
 	</div>
 
-	<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+	<!-- Summary cards - kept as is for better readability -->
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
 		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
 			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
 				{$i18n.t('Total Users')}
@@ -453,67 +454,31 @@
 		</div>
 	</div>
 
-	<div class="mb-10">
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-					{$i18n.t('Daily Users')}
-				</h5>
-				<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</h4>
-			</div>
-			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-					{$i18n.t('Daily Prompts')}
-				</h5>
-				<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{dailyPrompts}</h4>
-			</div>
-			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-					{$i18n.t('Daily Tokens')}
-				</h5>
-				<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{dailyTokens}</h4>
-			</div>
+	<!-- Daily metrics cards -->
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+				{$i18n.t('Daily Users')}
+			</h5>
+			<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</h4>
+		</div>
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+				{$i18n.t('Daily Prompts')}
+			</h5>
+			<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{dailyPrompts}</h4>
+		</div>
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+				{$i18n.t('Daily Tokens')}
+			</h5>
+			<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{dailyTokens}</h4>
 		</div>
 	</div>
 
-	<hr class="border-gray-400 dark:border-gray-600 my-8" />
-
-	<div class="space-y-8">
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Active Users')}
-			</h5>
-			<div class="h-64">
-				<canvas id="dailyActiveUsersChart"></canvas>
-			</div>
-		</div>
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Prompts Sent')}
-			</h5>
-			<div class="h-64">
-				<canvas id="dailyPromptsChart"></canvas>
-			</div>
-		</div>
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Tokens Used')}
-			</h5>
-			<div class="h-64">
-				<canvas id="dailyTokensChart"></canvas>
-			</div>
-		</div>
-	</div>
-
-	<!-- Model usage section (only shown when a model is selected) -->
+	<!-- Model usage summary cards - only shown when a model is selected -->
 	{#if selectedModel}
-		<hr class="border-gray-400 dark:border-gray-600 my-8" />
-
-		<h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-			{$i18n.t('Model Usage')} - {selectedModel}
-		</h3>
-
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
 			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
 				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
 					{$i18n.t('Total Model Prompts')}
@@ -527,13 +492,72 @@
 				<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">{modelDailyPrompts}</h4>
 			</div>
 		</div>
+	{/if}
 
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 mb-8">
+	<hr class="border-gray-400 dark:border-gray-600 my-8" />
+
+	<!-- New tabular chart layout -->
+	<h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+		{$i18n.t('Metrics Over Time')}
+	</h3>
+
+	<!-- Historical data charts in a grid layout -->
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+		<!-- Daily Active Users Chart -->
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
 			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Model Prompts')}
+				{$i18n.t('Daily Active Users')}
 			</h5>
 			<div class="h-64">
-				<canvas id="modelPromptsChart"></canvas>
+				<canvas id="dailyActiveUsersChart"></canvas>
+			</div>
+		</div>
+
+		<!-- Daily Prompts Chart -->
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+				{$i18n.t('Daily Prompts Sent')}
+			</h5>
+			<div class="h-64">
+				<canvas id="dailyPromptsChart"></canvas>
+			</div>
+		</div>
+
+		<!-- Daily Tokens Chart -->
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+				{$i18n.t('Daily Tokens Used')}
+			</h5>
+			<div class="h-64">
+				<canvas id="dailyTokensChart"></canvas>
+			</div>
+		</div>
+
+		<!-- Daily Model Prompts Chart (conditional) -->
+		{#if selectedModel}
+			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+					{$i18n.t('Daily Model Prompts')} - {selectedModel}
+				</h5>
+				<div class="h-64">
+					<canvas id="modelPromptsChart"></canvas>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Add placeholder for future charts (helps with layout balance) -->
+	{#if !selectedModel}
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 opacity-50">
+				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+					{$i18n.t('Select a model to view model-specific metrics')}
+				</h5>
+				<div class="h-64 flex items-center justify-center">
+					<span class="text-gray-500 dark:text-gray-400">
+						{$i18n.t('No model selected')}
+					</span>
+				</div>
 			</div>
 		</div>
 	{/if}
