@@ -610,7 +610,224 @@
 											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
+<<<<<<< HEAD
 											<RichTextInput
+=======
+											<Tooltip
+												content={placeholder ? placeholder : $i18n.t('Send a Message')}
+												placement="top-start"
+											>
+												<RichTextInput
+													bind:this={chatInputElement}
+													bind:value={prompt}
+													id="chat-input"
+													placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+													messageInput={true}
+													shiftEnter={!$mobile ||
+														!(
+															'ontouchstart' in window ||
+															navigator.maxTouchPoints > 0 ||
+															navigator.msMaxTouchPoints > 0
+														)}
+													largeTextAsFile={$settings?.largeTextAsFile ?? false}
+													autocomplete={true}
+													generateAutoCompletion={async (text) => {
+														if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
+															toast.error($i18n.t('Please select a model first.'));
+														}
+
+														const res = await generateAutoCompletion(
+															localStorage.token,
+															selectedModelIds.at(0),
+															text,
+															history?.currentId
+																? createMessagesList(history, history.currentId)
+																: null
+														).catch((error) => {
+															return null;
+														});
+														return res;
+													}}
+													on:keydown={async (e) => {
+														e = e.detail.event;
+
+														const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+														const commandsContainerElement =
+															document.getElementById('commands-container');
+
+														if (e.key === 'Escape') {
+															stopResponse();
+														}
+
+														// Command/Ctrl + Shift + Enter to submit a message pair
+														// if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+														// 	e.preventDefault();
+														// 	createMessagePair(prompt);
+														// }
+
+														// Check if Ctrl + R is pressed
+														if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+															e.preventDefault();
+															const regenerateButton = [
+																...document.getElementsByClassName('regenerate-response-button')
+															]?.at(-1);
+
+															regenerateButton?.click();
+														}
+
+														if (prompt === '' && e.key == 'ArrowUp') {
+															e.preventDefault();
+
+															const userMessageElement = [
+																...document.getElementsByClassName('user-message')
+															]?.at(-1);
+
+															if (userMessageElement) {
+																userMessageElement.scrollIntoView({ block: 'center' });
+																const editButton = [
+																	...document.getElementsByClassName('edit-user-message-button')
+																]?.at(-1);
+
+																editButton?.click();
+															}
+														}
+
+														if (commandsContainerElement) {
+															if (commandsContainerElement && e.key === 'ArrowUp') {
+																e.preventDefault();
+																commandsElement.selectUp();
+
+																const commandOptionButton = [
+																	...document.getElementsByClassName(
+																		'selected-command-option-button'
+																	)
+																]?.at(-1);
+																commandOptionButton.scrollIntoView({ block: 'center' });
+															}
+
+															if (commandsContainerElement && e.key === 'ArrowDown') {
+																e.preventDefault();
+																commandsElement.selectDown();
+
+																const commandOptionButton = [
+																	...document.getElementsByClassName(
+																		'selected-command-option-button'
+																	)
+																]?.at(-1);
+																commandOptionButton.scrollIntoView({ block: 'center' });
+															}
+
+															if (commandsContainerElement && e.key === 'Tab') {
+																e.preventDefault();
+
+																const commandOptionButton = [
+																	...document.getElementsByClassName(
+																		'selected-command-option-button'
+																	)
+																]?.at(-1);
+
+																commandOptionButton?.click();
+															}
+
+															if (commandsContainerElement && e.key === 'Enter') {
+																e.preventDefault();
+
+																const commandOptionButton = [
+																	...document.getElementsByClassName(
+																		'selected-command-option-button'
+																	)
+																]?.at(-1);
+
+																if (commandOptionButton) {
+																	commandOptionButton?.click();
+																} else {
+																	document.getElementById('send-message-button')?.click();
+																}
+															}
+														} else {
+															if (
+																!$mobile ||
+																!(
+																	'ontouchstart' in window ||
+																	navigator.maxTouchPoints > 0 ||
+																	navigator.msMaxTouchPoints > 0
+																)
+															) {
+																// Prevent Enter key from creating a new line
+																// Uses keyCode '13' for Enter key for chinese/japanese keyboards
+																if (e.keyCode === 13 && !e.shiftKey) {
+																	e.preventDefault();
+																}
+
+																// Submit the prompt when Enter key is pressed
+																if (prompt !== '' && e.keyCode === 13 && !e.shiftKey) {
+																	dispatch('submit', prompt);
+																}
+															}
+														}
+
+														if (e.key === 'Escape') {
+															atSelectedModel = undefined;
+															selectedToolIds = [];
+															webSearchEnabled = false;
+															imageGenerationEnabled = false;
+														}
+													}}
+													on:paste={async (e) => {
+														e = e.detail.event;
+														const clipboardData = e.clipboardData || window.clipboardData;
+
+														if (clipboardData && clipboardData.items) {
+															for (const item of clipboardData.items) {
+																if (item.type.indexOf('image') !== -1) {
+																	const blob = item.getAsFile();
+																	const reader = new FileReader();
+
+																	reader.onload = function (e) {
+																		files = [
+																			...files,
+																			{
+																				type: 'image',
+																				url: `${e.target.result}`
+																			}
+																		];
+																	};
+
+																	reader.readAsDataURL(blob);
+																} else if (item.type === 'text/plain') {
+																	if ($settings?.largeTextAsFile ?? false) {
+																		const text = clipboardData.getData('text/plain');
+
+																		if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																			e.preventDefault();
+																			const blob = new Blob([text], { type: 'text/plain' });
+																			const file = new File(
+																				[blob],
+																				`Pasted_Text_${Date.now()}.txt`,
+																				{
+																					type: 'text/plain'
+																				}
+																			);
+
+																			await uploadFileHandler(file, true);
+																		}
+																	}
+																}
+															}
+														}
+													}}
+												/>
+											</Tooltip>
+										</div>
+									{:else}
+										<Tooltip
+											content={placeholder ? placeholder : $i18n.t('Send a Message')}
+											placement="top-start"
+										>
+											<textarea
+												id="chat-input"
+												dir="auto"
+>>>>>>> eb0e6ec2b (Merged PR 203: Accessibility: Add permanent message button, disable generate prompt key, remove call, and fix settings)
 												bind:this={chatInputElement}
 												bind:value={prompt}
 												id="chat-input"
@@ -1246,7 +1463,91 @@
 											</Tooltip>
 										{/if}
 
+<<<<<<< HEAD
 										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true)}
+=======
+										{#if !history.currentId || history.messages[history.currentId]?.done == true}
+											{#if prompt === ''}
+												<div class=" flex items-center">
+													<Tooltip content={$i18n.t('Call')}>
+														<button
+															class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-2 self-center"
+															type="button"
+															on:click={async () => {
+																if (selectedModels.length > 1) {
+																	toast.error($i18n.t('Select only one model to call'));
+
+																	return;
+																}
+
+																if ($config.audio.stt.engine === 'web') {
+																	toast.error(
+																		$i18n.t(
+																			'Call feature is not supported when using Web STT engine'
+																		)
+																	);
+
+																	return;
+																}
+																// check if user has access to getUserMedia
+																try {
+																	let stream = await navigator.mediaDevices.getUserMedia({
+																		audio: true
+																	});
+																	// If the user grants the permission, proceed to show the call overlay
+
+																	if (stream) {
+																		const tracks = stream.getTracks();
+																		tracks.forEach((track) => track.stop());
+																	}
+
+																	stream = null;
+
+																	showCallOverlay.set(true);
+																	showControls.set(true);
+																} catch (err) {
+																	// If the user denies the permission or an error occurs, show an error message
+																	toast.error(
+																		$i18n.t('Permission denied when accessing media devices')
+																	);
+																}
+															}}
+															aria-label="Call"
+														>
+															<Headphone className="size-5" />
+														</button>
+													</Tooltip>
+												</div>
+											{:else}
+												<div class=" flex items-center">
+													<Tooltip content={$i18n.t('Send message')}>
+														<button
+															id="send-message-button"
+															aria-label={$i18n.t('Send message')}
+															class="{prompt !== ''
+																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+															type="submit"
+															disabled={prompt === ''}
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 16 16"
+																fill="currentColor"
+																class="size-6"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																	clip-rule="evenodd"
+																/>
+															</svg>
+														</button>
+													</Tooltip>
+												</div>
+											{/if}
+										{:else}
+>>>>>>> eb0e6ec2b (Merged PR 203: Accessibility: Add permanent message button, disable generate prompt key, remove call, and fix settings)
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
