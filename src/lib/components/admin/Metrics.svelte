@@ -454,6 +454,7 @@
 							: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
 					}`}
 					on:click={() => setActiveTab('users')}>{$i18n.t('Users')}</button
+
 				>
 			</li>
 			<li class="mr-2">
@@ -613,6 +614,7 @@
 				{/each}
 			</select>
 		</div>
+    
 		{#if selectedModel}
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 				<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
