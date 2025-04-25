@@ -844,6 +844,7 @@
 	"Select Engine": "",
 	"Select Knowledge": "",
 	"Select model": "",
+	"Select Model:": "",
 	"Select only one model to call": "",
 	"Selected model(s) do not support image inputs": "",
 	"Semantic distance to query": "",

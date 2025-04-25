@@ -844,6 +844,7 @@
 	"Select Engine": "Sélectionnez Moteur",
 	"Select Knowledge": "Sélectionnez Connaissances",
 	"Select model": "Sélectionnez un modèle",
+	"Select Model:": "Sélectionnez le modèle :",
 	"Select only one model to call": "Sélectionnez seulement un modèle pour appeler",
 	"Selected model(s) do not support image inputs": "Les modèle(s) sélectionné(s) ne prennent pas en charge les entrées d'images",
 	"Semantic distance to query": "Distance sémantique à la requête",

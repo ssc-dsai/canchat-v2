@@ -438,6 +438,26 @@
 					{/each}
 				</select>
 			</div>
+
+			{#if activeTab === 'models'}
+				<div>
+					<label
+						for="model-select"
+						class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
+						>{$i18n.t('Select Model:')}</label
+					>
+					<select
+						id="model-select"
+						bind:value={selectedModel}
+						on:change={handleModelChange}
+						class="block w-48 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+					>
+						{#each models as model}
+							<option value={model}>{model}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
 		</div>
 	</div>
 
@@ -601,19 +621,7 @@
 	<div
 		class={`${activeTab === 'models' ? 'block' : 'hidden'} h-[calc(100vh-210px)] overflow-auto px-1`}
 	>
-		<div class="p-1 mb-4 flex justify-between items-center">
-			<select
-				id="model-select"
-				bind:value={selectedModel}
-				on:change={handleModelChange}
-				class="ml-auto w-48 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-			>
-				{#each models as model}
-					<option value={model}>{model}</option>
-				{/each}
-			</select>
-		</div>
-
+		<!-- Remove the dropdown here since we now have it in the header -->
 		{#if selectedModel}
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 				<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
