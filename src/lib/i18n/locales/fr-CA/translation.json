@@ -1013,7 +1013,7 @@
 	"Total number of registered users": "Nombre total d’utilisateurs enregistrés",
 	"Total number of tokens used": "Nombre total de tokens utilisés",
 	"Total Prompts": "Total des invites",
-	"Total prompts processed by this model": "Total prompts processed by this model",
+	"Total prompts processed by this model": "Nombre total d’invites traitées par ce modèle",
 	"Total Tokens": "Total des jetons",
 	"Total Users": "Total des utilisateurs",
 	"Transformers": "Transformers",
