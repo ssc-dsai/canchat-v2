@@ -157,6 +157,7 @@
 				<div class="flex flex-col">
 					<div class="self-center mt-2">
 						<button
+							id="profile-image"
 							class="relative rounded-full dark:bg-gray-700"
 							type="button"
 							on:click={() => {
