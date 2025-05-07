@@ -33,8 +33,7 @@
 	onOpenChange={(state) => {
 		dispatch('change', state);
 		changeFocus(buttonID);
-		toast.announce(`${$i18n.t('Active Users')}: ${$activeUserIds?.length}`)
-
+		toast.announce(`${$i18n.t('Active Users')}: ${$activeUserIds?.length}`);
 	}}
 >
 	<DropdownMenu.Trigger class={buttonClass} aria-label={ariaLabel}>
@@ -84,7 +83,6 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item>
-
 			<DropdownMenu.Item
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={() => {
@@ -99,7 +97,7 @@
 				<div class=" self-center mr-3">
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
+				<div class=" self-center">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
 
 			{#if role === 'admin'}
@@ -132,7 +130,6 @@
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
 				</DropdownMenu.Item>
-
 				<DropdownMenu.Item
 					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 					href="/admin"
@@ -160,7 +157,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+					<div class=" self-center">{$i18n.t('Admin Panel')}</div>
 				</DropdownMenu.Item>
 			{/if}
 
