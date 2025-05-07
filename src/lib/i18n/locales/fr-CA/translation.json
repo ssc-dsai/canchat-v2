@@ -618,7 +618,7 @@
 	"Mirostat": "Mirostat",
 	"Mirostat Eta": "Mirostat Eta",
 	"Mirostat Tau": "Mirostat Tau",
-	"MMM D, YYYY h:mm A": "MMM J, AAAA h :mm A",
+	"MMM D, YYYY h:mm A": "D MMM YYYY HH:mm",
 	"MMMM DD, YYYY": "DD MMMM YYYY",
 	"MMMM DD, YYYY HH:mm": "DD MMMM YYYY HH:mm",
 	"MMMM DD, YYYY hh:mm:ss A": "DD MMMM YYYY HH:mm:ss",
