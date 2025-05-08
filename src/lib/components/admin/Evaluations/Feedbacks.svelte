@@ -249,9 +249,13 @@
 			<thead
 				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
 			>
-					<tr>
+				<tr>
 					<!-- User column - wider to accommodate French translation -->
-					<th scope="col" class="px-2 py-1.5 w-16 text-center" on:click={() => setSortKey('user.name')}>
+					<th
+						scope="col"
+						class="px-2 py-1.5 w-16 text-center"
+						on:click={() => setSortKey('user.name')}
+					>
 						<div class="flex items-center justify-center">
 							<span class="whitespace-nowrap mx-auto">{$i18n.t('User')}</span>
 							{#if sortKey === 'user.name'}
@@ -266,8 +270,8 @@
 						</div>
 					</th>
 
-						<!-- Model column - compact -->
-						<th
+					<!-- Model column - compact -->
+					<th
 						scope="col"
 						class="px-3 py-1.5 w-[12%] cursor-pointer select-none"
 						on:click={() => setSortKey('data.model_id')}
@@ -319,7 +323,7 @@
 						</div>
 					</th>
 
-						<!-- Rating column - left aligned like other columns -->
+					<!-- Rating column - left aligned like other columns -->
 					<th
 						scope="col"
 						class="px-1 py-1.5 w-16 cursor-pointer select-none"
@@ -343,7 +347,7 @@
 						</div>
 					</th>
 
-						<!-- Reason column - reduced width -->
+					<!-- Reason column - reduced width -->
 					<th
 						scope="col"
 						class="px-3 py-1.5 w-[13%] cursor-pointer select-none"
@@ -424,7 +428,9 @@
 			<tbody>
 				{#each paginatedFeedbacks as feedback (feedback.id)}
 					{@const conversation = extractConversation(feedback)}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs hover:bg-gray-50 dark:hover:bg-gray-850">
+					<tr
+						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs hover:bg-gray-50 dark:hover:bg-gray-850"
+					>
 						<!-- User cell - explicitly centered to match header -->
 						<td class="px-2 py-1.5 text-center">
 							<div class="flex items-center justify-center">
@@ -443,7 +449,9 @@
 						<!-- Model cell - ensure left alignment to match header -->
 						<td class="px-3 py-1.5">
 							<div class="flex flex-col overflow-hidden">
-								<div class="font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap overflow-hidden text-ellipsis">
+								<div
+									class="font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap overflow-hidden text-ellipsis"
+								>
 									{feedback.data?.model_id || '-'}
 								</div>
 								{#if feedback.data?.sibling_model_ids?.length}
