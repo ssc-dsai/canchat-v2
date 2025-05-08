@@ -51,9 +51,11 @@ async def get_users(
 async def get_user_groups(user=Depends(get_verified_user)):
     return Groups.get_groups_by_member_id(user.id)
 
+
 ############################
 # User Domains
 ############################
+
 
 @router.get("/domains")
 async def get_user_domains(user=Depends(get_verified_user)):
@@ -80,9 +82,11 @@ async def get_user_permissisions(request: Request, user=Depends(get_verified_use
 
     return user_permissions
 
+
 ############################
 # Get Users Count
 ############################
+
 
 @router.get("/count")
 async def get_users_count(domain: str = None, user=Depends(get_verified_user)):
@@ -94,9 +98,11 @@ async def get_users_count(domain: str = None, user=Depends(get_verified_user)):
 
     return Users.get_num_users(domain) if domain else Users.get_num_users()
 
+
 ############################
 # Get Daily Users Count
 ############################
+
 
 @router.get("/daily/count")
 async def get_daily_users_count(domain: str = None, user=Depends(get_verified_user)):
@@ -106,7 +112,11 @@ async def get_daily_users_count(domain: str = None, user=Depends(get_verified_us
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    return Users.get_daily_users_number(domain=domain) if domain else Users.get_daily_users_number()
+    return (
+        Users.get_daily_users_number(domain=domain)
+        if domain
+        else Users.get_daily_users_number()
+    )
 
 
 ############################
@@ -394,9 +404,11 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
     )
 
+
 ############################
 # Get Historical Enrolled Users
 ############################
+
 
 @router.get("/enrollment/historical")
 async def get_users_enrollment_historical(
@@ -416,9 +428,11 @@ async def get_users_enrollment_historical(
     print(f"historical_data: {historical_data}")
     return {"historical_users": historical_data}
 
+
 ############################
 # GetHistoricalDailyUsers
 ############################
+
 
 @router.get("/daily/historical")
 async def get_historical_daily_users(
