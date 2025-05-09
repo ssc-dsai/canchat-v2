@@ -496,10 +496,58 @@
 					// If we reach here, attempt to reload again after a delay if under the attempt limit
 					if (reloadAttempts < MAX_RELOAD_ATTEMPTS) {
 						showSkeletonTimeout = setTimeout(async () => {
-							// Retry same process again
+							// Retry the same recovery process
 							if (message.content === '' && !message.error) {
-								// Only attempt reload if still needed
-								// [retry logic from above would repeat here]
+								try {
+									const chatResponse = await getChatById(localStorage.token, chatId).catch(
+										(error) => {
+											console.error('Error fetching chat on retry:', error);
+											return null;
+										}
+									);
+
+									if (
+										chatResponse &&
+										chatResponse.chat &&
+										chatResponse.chat.history &&
+										chatResponse.chat.history.messages
+									) {
+										const serverMessage = chatResponse.chat.history.messages[message.id];
+										if (serverMessage && serverMessage.content && serverMessage.content !== '') {
+											saveMessage(message.id, {
+												...message,
+												content: serverMessage.content,
+												done: serverMessage.done || true
+											});
+
+											console.debug('Successfully recovered message content from server on retry');
+											if (showSkeletonTimeout) clearTimeout(showSkeletonTimeout);
+											return;
+										}
+									}
+
+									// If still not successful after final retry, show error
+									const updatedMessage = {
+										...message,
+										error: {
+											content: $i18n.t(
+												'Response streaming was interrupted. The model may have generated a response but it did not reach your browser. Try regenerating or refreshing the page.'
+											)
+										}
+									};
+									saveMessage(message.id, updatedMessage);
+								} catch (error) {
+									console.error('Error recovering message on retry:', error);
+									const updatedMessage = {
+										...message,
+										error: {
+											content: $i18n.t(
+												'Response generation timeout. Please try regenerating or refreshing the page.'
+											)
+										}
+									};
+									saveMessage(message.id, updatedMessage);
+								}
 							}
 						}, 10000); // Wait 10 seconds before retry
 					} else {
@@ -564,7 +612,7 @@
 </script>
 
 {#key message.id}
-	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
+	<div class="flex w-full message-{message.id}" id="message-{message.id}">
 		<div class="flex-shrink-0 mr-3">
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
@@ -574,7 +622,7 @@
 		</div>
 
 		<div class="flex-auto w-0 pl-1">
-			<Name>
+			<div>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
 					<span class="line-clamp-1">
 						{model?.name ?? message.model}
@@ -583,14 +631,14 @@
 
 				{#if message.timestamp}
 					<div
-						class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+						class="self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
 							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
 						</Tooltip>
 					</div>
 				{/if}
-			</Name>
+			</div>
 
 			<div>
 				{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
@@ -627,10 +675,6 @@
 														? 'shimmer'
 														: ''} text-base line-clamp-1 text-wrap"
 												>
-													<!-- $i18n.t("Generating search query") -->
-													<!-- $i18n.t("No search query generated") -->
-
-													<!-- $i18n.t('Searched {{count}} sites') -->
 													{#if status?.description.includes('{{count}}')}
 														{$i18n.t(status?.description, {
 															count: status?.urls.length
@@ -664,7 +708,6 @@
 													? 'shimmer'
 													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
 											>
-												<!-- $i18n.t(`Searching "{{searchQuery}}"`) -->
 												{#if status?.description.includes('{{searchQuery}}')}
 													{$i18n.t(status?.description, {
 														searchQuery: status?.query
@@ -688,7 +731,7 @@
 								<textarea
 									id="message-edit-{message.id}"
 									bind:this={editTextAreaElement}
-									class=" bg-transparent outline-none w-full resize-none"
+									class="bg-transparent outline-none w-full resize-none"
 									bind:value={editedContent}
 									on:input={(e) => {
 										e.target.style.height = '';
@@ -708,11 +751,11 @@
 									}}
 								/>
 
-								<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
+								<div class="mt-2 mb-1 flex justify-between text-sm font-medium">
 									<div>
 										<button
 											id="save-new-message-button"
-											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											class="px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -734,7 +777,7 @@
 
 										<button
 											id="confirm-edit-message-button"
-											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+											class="px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 											on:click={() => {
 												editMessageConfirmHandler();
 											}}
@@ -749,8 +792,6 @@
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
-									<!-- always show message contents even if there's an error -->
-									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<ContentRenderer
 										id={message.id}
 										{history}
@@ -813,7 +854,7 @@
 				{#if !edit}
 					{#if message.done || siblings.length > 1}
 						<div
-							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+							class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
 						>
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit">
