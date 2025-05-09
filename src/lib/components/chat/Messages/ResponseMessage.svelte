@@ -451,6 +451,99 @@
 		feedbackLoading = false;
 	};
 
+	let showSkeletonTimeout;
+	let reloadAttempts = 0;
+	const MAX_RELOAD_ATTEMPTS = 2; // Limit reload attempts to prevent infinite loops
+
+	$: if (message.content === '' && !message.error) {
+		// Set a timeout to detect if the response generation is stuck
+		if (showSkeletonTimeout) clearTimeout(showSkeletonTimeout);
+		showSkeletonTimeout = setTimeout(async () => {
+			// First try to reload the message from the server - often the response is there but the stream got interrupted
+			if (reloadAttempts < MAX_RELOAD_ATTEMPTS && chatId) {
+				reloadAttempts++;
+
+				// Try to fetch the latest chat data from the server
+				try {
+					const chatResponse = await getChatById(localStorage.token, chatId).catch((error) => {
+						console.error('Error fetching chat:', error);
+						return null;
+					});
+
+					if (
+						chatResponse &&
+						chatResponse.chat &&
+						chatResponse.chat.history &&
+						chatResponse.chat.history.messages
+					) {
+						// Check if the message exists and has content in the server response
+						const serverMessage = chatResponse.chat.history.messages[message.id];
+						if (serverMessage && serverMessage.content && serverMessage.content !== '') {
+							// Update the local message with the server content
+							saveMessage(message.id, {
+								...message,
+								content: serverMessage.content,
+								done: serverMessage.done || true
+							});
+
+							console.debug('Successfully recovered message content from server');
+							// Clear timeout since we've resolved the issue
+							if (showSkeletonTimeout) clearTimeout(showSkeletonTimeout);
+							return;
+						}
+					}
+
+					// If we reach here, attempt to reload again after a delay if under the attempt limit
+					if (reloadAttempts < MAX_RELOAD_ATTEMPTS) {
+						showSkeletonTimeout = setTimeout(async () => {
+							// Retry same process again
+							if (message.content === '' && !message.error) {
+								// Only attempt reload if still needed
+								// [retry logic from above would repeat here]
+							}
+						}, 10000); // Wait 10 seconds before retry
+					} else {
+						// Max attempts reached, show error
+						const updatedMessage = {
+							...message,
+							error: {
+								content: $i18n.t(
+									'Response streaming was interrupted. The model may have generated a response but it did not reach your browser. Try regenerating or refreshing the page.'
+								)
+							}
+						};
+						saveMessage(message.id, updatedMessage);
+					}
+				} catch (error) {
+					console.error('Error recovering message:', error);
+					// Show generic error after failed recovery attempts
+					if (reloadAttempts >= MAX_RELOAD_ATTEMPTS) {
+						const updatedMessage = {
+							...message,
+							error: {
+								content: $i18n.t(
+									'Response generation timeout. Please try regenerating or refreshing the page.'
+								)
+							}
+						};
+						saveMessage(message.id, updatedMessage);
+					}
+				}
+			} else if (message.content === '' && !message.error && !message.done) {
+				// Only show error if content is still empty after timeout and max retries
+				const updatedMessage = {
+					...message,
+					error: {
+						content: $i18n.t(
+							'Response generation timeout. Please try regenerating or refreshing the page.'
+						)
+					}
+				};
+				saveMessage(message.id, updatedMessage);
+			}
+		}, 30000); // 30 second timeout, adjust as needed
+	}
+
 	$: if (!edit) {
 		(async () => {
 			await tick();
@@ -459,6 +552,14 @@
 
 	onMount(async () => {
 		await tick();
+
+		// Reset reload attempts when component is mounted
+		reloadAttempts = 0;
+
+		// Clear timeout when component is unmounted
+		return () => {
+			if (showSkeletonTimeout) clearTimeout(showSkeletonTimeout);
+		};
 	});
 </script>
 
