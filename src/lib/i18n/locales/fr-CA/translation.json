@@ -842,8 +842,6 @@
 	"Search Tools": "Outils de recherche",
 	"SearchApi API Key": "Clé API SearchApi",
 	"SearchApi Engine": "Moteur SearchApi",
-	"Searched {{count}} sites": "Recherché {{count}} sites",
-	"Searching \"{{searchQuery}}\"": "Recherche de « {{searchQuery}} »",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Recherche de connaissances pour « {{searchQuery}} »",
 	"Searxng Query URL": "URL de requête Searxng",
 	"See readme.md for instructions": "Voir le fichier readme.md pour les instructions",
