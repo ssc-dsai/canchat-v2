@@ -15,6 +15,7 @@
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
+	import ChartBar from '../icons/ChartBar.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import HelpMenu from './Help/HelpMenu.svelte';
@@ -43,6 +44,11 @@
 		goto('/');
 	};
 
+	// Navigate to metrics dashboard
+	const handleGoToMetrics = () => {
+		goto('/analyst/metrics');
+	};
+
 	// Help functionality
 	let showShortcuts = false;
 	let showIssue = false;
@@ -66,6 +72,22 @@
 				>
 					<div class="m-auto self-center">
 						<AdjustmentsHorizontal className="size-5" strokeWidth="0.5" />
+					</div>
+				</button>
+			</Tooltip>
+		{/if}
+
+		<!-- Metrics Button for Analyst Users -->
+		{#if $user && $user.role === 'analyst'}
+			<Tooltip content={$i18n.t('Metrics')}>
+				<button
+					id="metrics-button"
+					class="flex cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+					on:click={handleGoToMetrics}
+					aria-label="Metrics"
+				>
+					<div class="m-auto self-center">
+						<ChartBar className="size-5" strokeWidth="2" />
 					</div>
 				</button>
 			</Tooltip>

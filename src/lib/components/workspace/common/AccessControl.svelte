@@ -98,7 +98,7 @@
 					class="outline-none bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
 					value={accessControl !== null ? 'private' : 'public'}
 					on:change={(e) => {
-						if ($user?.role === 'admin') {
+						if ($user?.role === 'admin' || $user?.role === 'analyst') {
 							if (e.target.value === 'public') {
 								accessControl = null;
 							} else {

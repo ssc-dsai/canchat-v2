@@ -62,6 +62,7 @@
 	"Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out. (Default: 0.0)": "",
 	"Amazing": "",
 	"an assistant": "",
+	"analyst": "",
 	"Analyze AI spending patterns and model efficiency": "",
 	"and": "",
 	"and {{COUNT}} more": "",
@@ -581,6 +582,7 @@
 	"Listening...": "",
 	"Llama.cpp": "",
 	"LLMs can make mistakes. Verify important information.": "",
+	"Loading...": "",
 	"Local": "",
 	"Local Models": "",
 	"Lost": "",
@@ -1139,6 +1141,7 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "",
 	"You're now logged in.": "",
+	"Your Domain:": "",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "",
 	"Youtube Loader Settings": ""
