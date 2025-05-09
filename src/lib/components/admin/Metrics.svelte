@@ -19,6 +19,7 @@
 		getRangeMetrics
 	} from '$lib/apis/metrics';
 	import { Chart, registerables } from 'chart.js';
+	import { user } from '$lib/stores';
 
 	// Replace date-fns with native date formatting
 	function formatDate(date) {
@@ -546,7 +547,21 @@
 			});
 
 			domains = await getDomains(localStorage.token);
+
+			// For analyst users, automatically select their domain and don't allow changing it
+			if ($user?.role === 'analyst' && $user?.domain) {
+				selectedDomain = $user.domain;
+			}
+
+			// Get models based on user role
 			models = await getModels(localStorage.token);
+
+			// Filter models if user is an analyst
+			if ($user?.role === 'analyst') {
+				// Get only models that have usage data for this domain
+				// This ensures analysts only see models used in their domain
+				models = models.filter((model) => model.includes(selectedDomain));
+			}
 
 			// Set the first model as the selected model if available
 			if (models.length > 0) {
@@ -593,7 +608,7 @@
 </script>
 
 <div class="flex flex-col h-screen">
-	<div class="p-4 lg:p-6 flex-shrink-0">
+	<div class="p-4 pt-16 lg:p-6 lg:pt-20 flex-shrink-0">
 		<div class="mb-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
 			<h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">
 				{$i18n.t('Metrics Dashboard')}
@@ -655,28 +670,46 @@
 						/>
 					</div>
 				{/if}
-				<!-- Domain Selector -->
+				<!-- Domain Selector with better visibility for analyst's domain -->
 				<div>
 					<label
 						class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
 						for="domain-select"
 					>
-						{$i18n.t('Select Domain:')}
+						{#if $user?.role === 'analyst'}
+							{$i18n.t('Your Domain:')}
+						{:else}
+							{$i18n.t('Select Domain:')}
+						{/if}
 					</label>
-					<select
-						id="domain-select"
-						bind:value={selectedDomain}
-						on:change={(e) => {
-							handleDomainChange(e);
-							updateRangeMetrics();
-						}}
-						class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-					>
-						<option value={null}>{$i18n.t('All')}</option>
-						{#each domains as domain}
-							<option value={domain}>{domain}</option>
-						{/each}
-					</select>
+					{#if $user?.role === 'analyst'}
+						<!-- For analysts, show a static display with their domain -->
+						<div
+							class="block w-52 p-2 text-sm border border-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md shadow-sm dark:text-gray-200"
+						>
+							{$user?.domain || $user?.email?.split('@')[1] || $i18n.t('Loading...')}
+						</div>
+					{:else}
+						<!-- For admins, show the domain selector -->
+						<select
+							id="domain-select"
+							bind:value={selectedDomain}
+							on:change={(e) => {
+								handleDomainChange(e);
+								updateRangeMetrics();
+							}}
+							class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+						>
+							{#if $user?.role === 'admin'}
+								<option value={null}>{$i18n.t('All')}</option>
+							{/if}
+							{#each domains as domain}
+								<option value={domain}>
+									{domain}
+								</option>
+							{/each}
+						</select>
+					{/if}
 				</div>
 				<!-- Model Selector (shown only on models tab) -->
 				{#if activeTab === 'models'}
