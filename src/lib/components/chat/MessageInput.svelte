@@ -830,6 +830,7 @@
 											placement="top-start"
 										>
 											<textarea
+												aria-label={$i18n.t('Message Input')}
 												id="chat-input"
 												dir="auto"
 >>>>>>> eb0e6ec2b (Merged PR 203: Accessibility: Add permanent message button, disable generate prompt key, remove call, and fix settings)
