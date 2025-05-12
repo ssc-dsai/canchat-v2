@@ -1,4 +1,5 @@
 import time
+import datetime
 from typing import Optional
 import uuid
 from pydantic import BaseModel
@@ -43,7 +44,7 @@ class MessageMetricsTable:
     def insert_new_metrics(self, user: dict, model: str, usage: dict):
         with get_db() as db:
             id = str(uuid.uuid4())
-            ts = int(time.time_ns())
+            ts = int(time.time())
             tokens = UsageModel(**usage)
 
             metrics = MessageMetricsModel(
@@ -98,14 +99,10 @@ class MessageMetricsTable:
                 end_time = current_time
                 start_time = end_time - (24 * 60 * 60)
 
-                # Convert to nanoseconds for consistency with historical queries
-                start_time_ns = start_time * 1_000_000_000
-                end_time_ns = end_time * 1_000_000_000
-
                 # Build the query to count messages for the current day
                 query = db.query(MessageMetric).filter(
-                    MessageMetric.created_at >= start_time_ns,
-                    MessageMetric.created_at < end_time_ns,
+                    MessageMetric.created_at >= start_time,
+                    MessageMetric.created_at < end_time,
                 )
 
                 if domain:
@@ -142,13 +139,9 @@ class MessageMetricsTable:
                 end_time = current_time
                 start_time = end_time - (24 * 60 * 60)
 
-                # Convert to nanoseconds for consistency with historical queries
-                start_time_ns = start_time * 1_000_000_000
-                end_time_ns = end_time * 1_000_000_000
-
                 query = db.query(MessageMetric).filter(
-                    MessageMetric.created_at >= start_time_ns,
-                    MessageMetric.created_at < end_time_ns,
+                    MessageMetric.created_at >= start_time,
+                    MessageMetric.created_at < end_time,
                 )
 
                 if domain:
@@ -199,14 +192,10 @@ class MessageMetricsTable:
                 start_time = day_start
                 end_time = start_time + (24 * 60 * 60)
 
-                # Convert seconds to nanoseconds for comparison with created_at
-                start_time_ns = start_time * 1_000_000_000
-                end_time_ns = end_time * 1_000_000_000
-
                 with get_db() as db:
                     query = db.query(MessageMetric).filter(
-                        MessageMetric.created_at >= start_time_ns,
-                        MessageMetric.created_at < end_time_ns,
+                        MessageMetric.created_at >= start_time,
+                        MessageMetric.created_at < end_time,
                     )
 
                     if domain:
@@ -272,14 +261,10 @@ class MessageMetricsTable:
                 start_time = day_start
                 end_time = start_time + (24 * 60 * 60)
 
-                # Convert seconds to nanoseconds for comparison with created_at
-                start_time_ns = start_time * 1_000_000_000
-                end_time_ns = end_time * 1_000_000_000
-
                 with get_db() as db:
                     query = db.query(MessageMetric).filter(
-                        MessageMetric.created_at >= start_time_ns,
-                        MessageMetric.created_at < end_time_ns,
+                        MessageMetric.created_at >= start_time,
+                        MessageMetric.created_at < end_time,
                     )
 
                     if domain:
@@ -308,7 +293,7 @@ class MessageMetricsTable:
             )
 
             for day in range(days):
-                day_start = today_midnight - (day * 24 * 60 * 60)
+                day_start = today_midnight - timedelta
                 date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
 
@@ -370,8 +355,8 @@ class MessageMetricsTable:
                         func.sum(MessageMetric.total_tokens).label("tokens"),
                     )
                     .filter(
-                        MessageMetric.created_at >= start_timestamp * 1_000_000_000,
-                        MessageMetric.created_at < end_timestamp * 1_000_000_000,
+                        MessageMetric.created_at >= start_timestamp,
+                        MessageMetric.created_at < end_timestamp,
                     )
                     .group_by(MessageMetric.model)
                 )
@@ -412,8 +397,8 @@ class MessageMetricsTable:
 
                 with get_db() as db:
                     query = db.query(MessageMetric).filter(
-                        MessageMetric.created_at >= current_day * 1_000_000_000,
-                        MessageMetric.created_at < next_day * 1_000_000_000,
+                        MessageMetric.created_at >= current_day,
+                        MessageMetric.created_at < next_day,
                     )
 
                     if domain:
@@ -452,8 +437,8 @@ class MessageMetricsTable:
 
                 with get_db() as db:
                     query = db.query(func.sum(MessageMetric.total_tokens)).filter(
-                        MessageMetric.created_at >= current_day * 1_000_000_000,
-                        MessageMetric.created_at < next_day * 1_000_000_000,
+                        MessageMetric.created_at >= current_day,
+                        MessageMetric.created_at < next_day,
                     )
 
                     if domain:
