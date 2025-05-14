@@ -30,6 +30,8 @@ async def get_total_prompts(domain: str = None, user=Depends(get_metrics_user)):
         # Force domain to user's domain for analysts
         domain = user.domain
 
+    # Admin and global_analyst can see all domains or filter by domain
+
     total_prompts = (
         MessageMetrics.get_messages_number(domain)
         if domain
@@ -52,6 +54,8 @@ async def get_daily_prompts_number(domain: str = None, user=Depends(get_metrics_
         # Force domain to user's domain for analysts
         domain = user.domain
 
+    # Admin and global_analyst can see all domains or filter by domain
+
     total_daily_prompts = (
         MessageMetrics.get_daily_messages_number(domain=domain)
         if domain
@@ -71,6 +75,8 @@ async def get_total_tokens(domain: str = None, user=Depends(get_metrics_user)):
     if user.role == "analyst":
         # Force domain to user's domain for analysts
         domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     total_tokens = (
         MessageMetrics.get_message_tokens_sum(domain)
@@ -93,6 +99,8 @@ async def get_daily_tokens(domain: str = None, user=Depends(get_metrics_user)):
         # Force domain to user's domain for analysts
         domain = user.domain
 
+    # Admin and global_analyst can see all domains or filter by domain
+
     total_daily_tokens = (
         MessageMetrics.get_daily_message_tokens_sum(domain=domain)
         if domain
@@ -114,6 +122,8 @@ async def get_historical_prompts(
     if user.role == "analyst":
         # Force domain to user's domain for analysts
         domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     # Handle both None and empty string for domain
     if domain == "":
@@ -138,6 +148,8 @@ async def get_historical_tokens(
         # Force domain to user's domain for analysts
         domain = user.domain
 
+    # Admin and global_analyst can see all domains or filter by domain
+
     # Handle both None and empty string for domain
     if domain == "":
         domain = None
@@ -154,8 +166,6 @@ async def get_historical_tokens(
 
 @router.get("/models")
 async def get_models(user=Depends(get_metrics_user)):
-    # Analyst role has access to models, no domain restriction needed here
-    # since this endpoint only returns the list of available models
     models = MessageMetrics.get_used_models() or []
     return {"models": models}
 
@@ -174,6 +184,8 @@ async def get_model_prompts(
         # Force domain to user's domain for analysts
         domain = user.domain
 
+    # Admin and global_analyst can see all domains or filter by domain
+
     total_prompts = MessageMetrics.get_messages_number(domain, model)
     return {"total_prompts": total_prompts or 0}
 
@@ -191,6 +203,8 @@ async def get_model_daily_prompts(
     if user.role == "analyst":
         # Force domain to user's domain for analysts
         domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     total_daily_prompts = MessageMetrics.get_daily_messages_number(
         domain=domain, model=model
@@ -214,6 +228,8 @@ async def get_model_historical_prompts(
     if user.role == "analyst":
         # Force domain to user's domain for analysts
         domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     # Handle both None and empty string
     if domain == "":
@@ -244,6 +260,8 @@ async def get_range_metrics(
     if user.role == "analyst":
         # Force domain to user's domain for analysts
         domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     try:
         # Convert dates to timestamps

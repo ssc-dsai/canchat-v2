@@ -330,6 +330,8 @@
 								if (user.role === 'user') {
 									updateRoleHandler(user.id, 'analyst');
 								} else if (user.role === 'analyst') {
+									updateRoleHandler(user.id, 'global_analyst');
+								} else if (user.role === 'global_analyst') {
 									updateRoleHandler(user.id, 'admin');
 								} else if (user.role === 'pending') {
 									updateRoleHandler(user.id, 'user');
@@ -341,11 +343,13 @@
 							<Badge
 								type={user.role === 'admin'
 									? 'info'
-									: user.role === 'analyst'
-										? 'warning'
-										: user.role === 'user'
-											? 'success'
-											: 'muted'}
+									: user.role === 'global_analyst'
+										? 'primary'
+										: user.role === 'analyst'
+											? 'warning'
+											: user.role === 'user'
+												? 'success'
+												: 'muted'}
 								content={$i18n.t(user.role)}
 							/>
 						</button>

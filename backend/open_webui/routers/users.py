@@ -22,7 +22,6 @@ from open_webui.utils.auth import (
     get_current_user,
     get_password_hash,
     get_verified_user,
-    get_metrics_user,
 )
 
 log = logging.getLogger(__name__)
@@ -61,17 +60,19 @@ async def get_user_groups(user=Depends(get_verified_user)):
 
 @router.get("/domains")
 async def get_user_domains(user=Depends(get_verified_user)):
-    if user.role == "admin":
-        domains = Users.get_user_domains() or []
-        return {"domains": domains}
-    elif user.role == "analyst":
-        # Analysts can only see their own domain
-        return {"domains": [user.domain] if user.domain else []}
-    else:
+    if not user.role in ["admin", "analyst", "global_analyst"]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+    # If user is analyst, only return their domain
+    if user.role == "analyst":
+        return {"domains": [user.domain] if user.domain else []}
+
+    # For admins and global_analysts, return all domains
+    domains = Users.get_user_domains() or []
+    return {"domains": domains}
 
 
 ############################
@@ -90,13 +91,18 @@ async def get_user_permissisions(user=Depends(get_verified_user)):
 
 
 @router.get("/count")
-async def get_users_count(domain: str = None, user=Depends(get_metrics_user)):
-    # For analyst role, enforce domain restriction
-    if user.role == "analyst":
-        # Force domain to user's domain for analysts
-        domain = user.domain
+async def get_users_count(domain: str = None, user=Depends(get_verified_user)):
+    if user.role in ["admin", "global_analyst"]:
+        domain_to_use = domain
+    elif user.role == "analyst":
+        domain_to_use = user.domain
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
-    return Users.get_num_users(domain) if domain else Users.get_num_users()
+    return Users.get_num_users(domain_to_use)
 
 
 ############################
@@ -105,17 +111,18 @@ async def get_users_count(domain: str = None, user=Depends(get_metrics_user)):
 
 
 @router.get("/daily/count")
-async def get_daily_users_count(domain: str = None, user=Depends(get_metrics_user)):
-    # For analyst role, enforce domain restriction
-    if user.role == "analyst":
-        # Force domain to user's domain for analysts
-        domain = user.domain
+async def get_daily_users_count(domain: str = None, user=Depends(get_verified_user)):
+    if user.role in ["admin", "global_analyst"]:
+        domain_to_use = domain
+    elif user.role == "analyst":
+        domain_to_use = user.domain
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
-    return (
-        Users.get_daily_users_number(domain=domain)
-        if domain
-        else Users.get_daily_users_number()
-    )
+    return Users.get_daily_users_number(domain=domain_to_use)
 
 
 ############################
@@ -410,17 +417,19 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
 
 @router.get("/enrollment/historical")
 async def get_users_enrollment_historical(
-    days: int = 7, domain: str = None, user=Depends(get_metrics_user)
+    days: int = 7, domain: str = None, user=Depends(get_verified_user)
 ):
-    # For analyst role, enforce domain restriction
-    if user.role == "analyst":
-        # Force domain to user's domain for analysts
-        domain = user.domain
+    if user.role in ["admin", "global_analyst"]:
+        domain_to_use = domain if domain != "" else None
+    elif user.role == "analyst":
+        domain_to_use = user.domain
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
-    # Handle both None and empty string for domain
-    if domain == "":
-        domain = None
-    historical_data = Users.get_historical_users_data(days, domain)
+    historical_data = Users.get_historical_users_data(days, domain_to_use)
     return {"historical_users": historical_data}
 
 
@@ -431,17 +440,18 @@ async def get_users_enrollment_historical(
 
 @router.get("/daily/historical")
 async def get_historical_daily_users(
-    days: int = 7, domain: str = None, user=Depends(get_metrics_user)
+    days: int = 7, domain: str = None, user=Depends(get_verified_user)
 ):
-    # For analyst role, enforce domain restriction
-    if user.role == "analyst":
-        # Force domain to user's domain for analysts
-        domain = user.domain
+    if user.role in ["admin", "global_analyst"]:
+        domain_to_use = domain if domain != "" else None
+    elif user.role == "analyst":
+        domain_to_use = user.domain
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
-    # Handle both None and empty string for domain
-    if domain == "":
-        domain = None
-
-    historical_daily_data = Users.get_historical_daily_users_data(days, domain)
+    historical_daily_data = Users.get_historical_daily_users_data(days, domain_to_use)
 
     return {"historical_daily_users": historical_daily_data}
