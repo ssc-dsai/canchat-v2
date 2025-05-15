@@ -71,13 +71,13 @@
 
 						{#if item?.file?.data?.content}
 							<div class="capitalize shrink-0">
-								{getLineCount(item?.file?.data?.content ?? '')} extracted lines
+								{getLineCount(item?.file?.data?.content ?? '')}
+								{$i18n.t('Extracted lines')}
 							</div>
 
 							<div class="flex items-center gap-1 shrink-0">
 								<Info />
-
-								Formatting may be inconsistent from source.
+								{$i18n.t('Formatting may be inconsistent from source.')}
 							</div>
 						{/if}
 					</div>
@@ -87,7 +87,11 @@
 							<Tooltip
 								content={enableFullContent
 									? $i18n.t(
+<<<<<<< HEAD
 											'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
+=======
+											'Inject the entire document as context for comprehensive processing, this is recommended for complex queries.'
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 										)
 									: $i18n.t(
 											'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
@@ -95,9 +99,9 @@
 							>
 								<div class="flex items-center gap-1.5 text-xs">
 									{#if enableFullContent}
-										Using Entire Document
+										{$i18n.t('Using Entire Document')}
 									{:else}
-										Using Focused Retrieval
+										{$i18n.t('Using Focused Retrieval')}
 									{/if}
 									<Switch
 										bind:state={enableFullContent}

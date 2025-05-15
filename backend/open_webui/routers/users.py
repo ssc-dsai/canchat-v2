@@ -75,6 +75,23 @@ async def get_user_domains(user=Depends(get_verified_user)):
 
 
 ############################
+# User Domains
+############################
+
+
+@router.get("/domains")
+async def get_user_domains(user=Depends(get_verified_user)):
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    domains = Users.get_user_domains() or []
+    return {"domains": domains}
+
+
+############################
 # User Permissions
 ############################
 
@@ -126,6 +143,42 @@ async def get_daily_users_count(domain: str = None, user=Depends(get_verified_us
         )
 
     return Users.get_daily_users_number(domain=domain_to_use)
+
+
+############################
+# Get Users Count
+############################
+
+
+@router.get("/count")
+async def get_users_count(domain: str = None, user=Depends(get_verified_user)):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    return Users.get_num_users(domain) if domain else Users.get_num_users()
+
+
+############################
+# Get Daily Users Count
+############################
+
+
+@router.get("/daily/count")
+async def get_daily_users_count(domain: str = None, user=Depends(get_verified_user)):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    return (
+        Users.get_daily_users_number(domain=domain)
+        if domain
+        else Users.get_daily_users_number()
+    )
 
 
 ############################
@@ -423,15 +476,51 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
 async def get_users_enrollment_historical(
     days: int = 7, domain: str = None, user=Depends(get_verified_user)
 ):
+<<<<<<< HEAD
     if user.role in ["admin", "global_analyst"]:
         domain_to_use = domain if domain != "" else None
     elif user.role == "analyst":
         domain_to_use = user.domain
     else:
+=======
+    if not user.role == "admin":
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+<<<<<<< HEAD
     historical_data = Users.get_historical_users_data(days, domain_to_use)
     return {"historical_users": historical_data}
+=======
+    # Handle both None and empty string for domain
+    if domain == "":
+        domain = None
+    historical_data = Users.get_historical_users_data(days, domain)
+    return {"historical_users": historical_data}
+
+
+############################
+# GetHistoricalDailyUsers
+############################
+
+
+@router.get("/daily/historical")
+async def get_historical_daily_users(
+    days: int = 7, domain: str = None, user=Depends(get_verified_user)
+):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Handle both None and empty string for domain
+    if domain == "":
+        domain = None
+
+    historical_daily_data = Users.get_historical_daily_users_data(days, domain)
+
+    return {"historical_daily_users": historical_daily_data}
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))

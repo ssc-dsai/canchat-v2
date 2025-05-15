@@ -78,8 +78,12 @@
 	"Always Expand Details": "",
 	"Amazing": "",
 	"an assistant": "un assistant",
+<<<<<<< HEAD
 	"Analyzed": "",
 	"Analyzing...": "",
+=======
+	"Analyze AI spending patterns and model efficiency": "Analyser les modèles de dépenses d'IA et l'efficacité des modèles",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"and": "et",
 	"and {{COUNT}} more": "",
 	"and create a new shared link.": "et créer un nouveau lien partagé.",
@@ -144,9 +148,16 @@
 	"Bocha Search API Key": "",
 	"Boosting or penalizing specific tokens for constrained responses. Bias values will be clamped between -100 and 100 (inclusive). (Default: none)": "",
 	"Brave Search API Key": "Clé API Brave Search",
+<<<<<<< HEAD
 	"By {{name}}": "",
 	"Bypass Embedding and Retrieval": "",
 	"Calendar": "",
+=======
+	"Business Insights": "Aperçus commerciaux",
+	"Business Intelligence": "Intelligence d'affaires",
+	"By {{name}}": "Par {{name}}",
+	"Bypass SSL verification for Websites": "Contourner la vérification SSL pour les sites web",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Call": "Appeler",
 	"Call feature is not supported when using Web STT engine": "La fonction d'appel n'est pas prise en charge lors de l'utilisation du moteur Web STT",
 	"Camera": "Appareil photo",
@@ -212,8 +223,14 @@
 	"ComfyUI API Key": "",
 	"ComfyUI Base URL": "URL de base ComfyUI",
 	"ComfyUI Base URL is required.": "L'URL de base ComfyUI est requise.",
+<<<<<<< HEAD
 	"ComfyUI Workflow": "",
 	"ComfyUI Workflow Nodes": "",
+=======
+	"ComfyUI Workflow": "Workflow ComfyUI",
+	"ComfyUI Workflow Nodes": "Nœuds de workflow ComfyUI",
+	"Coming Soon": "Bientôt disponible",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Command": "Commande",
 	"Completions": "",
 	"Concurrent Requests": "Demandes concurrentes",
@@ -251,9 +268,15 @@
 	"Copy Link": "Copier le lien",
 	"Copy to clipboard": "",
 	"Copying to clipboard was successful!": "La copie dans le presse-papiers a réussi !",
+<<<<<<< HEAD
 	"CORS must be properly configured by the provider to allow requests from Open WebUI.": "",
 	"Create": "",
 	"Create a knowledge base": "",
+=======
+	"Cost Analysis": "Analyse des coûts",
+	"Create": "Créer",
+	"Create a knowledge base": "Créer une base de connaissances",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Create a model": "Créer un modèle",
 	"Create Account": "Créer un compte",
 	"Create Admin Account": "",
@@ -270,9 +293,23 @@
 	"Current Model": "Modèle actuel amélioré",
 	"Current Password": "Mot de passe actuel",
 	"Custom": "Sur mesure",
+<<<<<<< HEAD
 	"Danger Zone": "",
 	"Dark": "Obscur",
+=======
+	"Custom Range": "Plage personnalisée",
+	"Daily Active Users": "Utilisateurs actifs quotidiens",
+	"Daily Active Users Over Time": "Utilisateurs actifs quotidiens au fil du temps",
+	"Daily Model Prompts": "Invites quotidiennes du modèle",
+	"Daily Model Usage": "Utilisation quotidienne du modèle",
+	"Daily Prompts": "Invites quotidiennes",
+	"Daily Prompts Over Time": "Invites quotidiennes au fil du temps",
+	"Daily Tokens": "Jetons quotidiens",
+	"Daily Tokens Over Time": "Utilisation quotidienne des jetons au fil du temps",
+	"Dark": "Foncé",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Database": "Base de données",
+	"Date Range": "Plage de dates",
 	"December": "Décembre",
 	"Default": "Par défaut",
 	"Default (Open AI)": "",
@@ -280,6 +317,7 @@
 	"Default mode works with a wider range of models by calling tools once before execution. Native mode leverages the model’s built-in tool-calling capabilities, but requires the model to inherently support this feature.": "",
 	"Default Model": "Modèle standard",
 	"Default model updated": "Modèle par défaut mis à jour",
+<<<<<<< HEAD
 	"Default Models": "",
 	"Default permissions": "",
 	"Default permissions updated successfully": "",
@@ -287,6 +325,15 @@
 	"Default to 389 or 636 if TLS is enabled": "",
 	"Default to ALL": "",
 	"Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.": "",
+=======
+	"Default Models": "Modèles par défaut",
+	"Default permissions": "Autorisations par défaut",
+	"Default permissions updated successfully": "Autorisations par défaut mises à jour avec succès",
+	"Default Prompt Suggestions": "Suggestions d’invites par défaut",
+	"Default to 389 or 636 if TLS is enabled": "Par défaut à 389 ou 636 si TLS est activé",
+	"Default to ALL": "Par défaut à TOUS",
+	"Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.": "Par défaut à la récupération segmentée pour une extraction de contenu ciblée et pertinente, ceci est recommandé dans la plupart des cas.",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Default User Role": "Rôle utilisateur par défaut",
 	"Delete": "Supprimer",
 	"Delete a model": "Supprimer un modèle",
@@ -391,8 +438,16 @@
 	"Enable Message Rating": "",
 	"Enable Mirostat sampling for controlling perplexity.": "",
 	"Enable New Sign Ups": "Activer les nouvelles inscriptions",
+<<<<<<< HEAD
 	"Enabled": "",
 	"Enforce Temporary Chat": "",
+=======
+	"Enable Web Search": "Activer la recherche sur le Web",
+	"Enabled": "Activé",
+	"End Date": "Date de fin",
+	"Engine": "Moteur",
+	"Enrolled Users": "Utilisateurs inscrits",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "Vérifiez que votre fichier CSV comprenne les 4 colonnes dans cet ordre : Name, Email, Password, Role.",
 	"Enter {{role}} message here": "Entrez le message {{role}} ici",
 	"Enter a detail about yourself for your LLMs to recall": "Saisissez un détail sur vous-même que vos LLMs pourront se rappeler",
@@ -511,10 +566,17 @@
 	"Export Tools": "Outils d'exportation",
 	"External": "",
 	"External Models": "Modèles externes",
+<<<<<<< HEAD
 	"Failed to add file.": "",
 	"Failed to connect to {{URL}} OpenAPI tool server": "",
 	"Failed to create API Key.": "Échec de la création de la clé API.",
 	"Failed to fetch models": "",
+=======
+	"Extracted lines": "Lignes extraites",
+	"Failed to add file.": "Échec de l'ajout du fichier.",
+	"Failed to fetch models": "Échec de la récupération des modèles",
+	"Failed to import V1 Prompts": "Échec de l'importation des invites V1",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Failed to read clipboard contents": "Échec de la lecture du contenu du presse-papiers",
 	"Failed to save connections": "",
 	"Failed to save models configuration": "",
@@ -550,8 +612,13 @@
 	"Followed instructions perfectly": "A parfaitement suivi les instructions",
 	"Forge new paths": "",
 	"Form": "Formulaire",
+<<<<<<< HEAD
 	"Format your variables using brackets like this:": "",
 	"Forwards system user session credentials to authenticate": "",
+=======
+	"Format your variables using brackets like this:": "Formatez vos variables en utilisant des crochets comme ceci :",
+	"Formatting may be inconsistent from source.": "Le formatage peut être incohérent par rapport à la source.",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Frequency Penalty": "Pénalité de fréquence",
 	"Full Context Mode": "",
 	"Function": "",
@@ -630,7 +697,11 @@
 	"Include `--api` flag when running stable-diffusion-webui": "Inclure le drapeau `--api` lorsque vous exécutez stable-diffusion-webui",
 	"Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive.": "",
 	"Info": "Info",
+<<<<<<< HEAD
 	"Inject the entire content as context for comprehensive processing, this is recommended for complex queries.": "",
+=======
+	"Inject the entire document as context for comprehensive processing, this is recommended for complex queries.": "Injecter le document entier comme contexte pour un traitement complet, ceci est recommandé pour les requêtes complexes.",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Input commands": "Entrez les commandes",
 	"Install from Github URL": "Installer depuis l'URL GitHub",
 	"Instant Auto-Send After Voice Transcription": "Envoi automatique instantané après transcription vocale",
@@ -667,7 +738,14 @@
 	"Label": "",
 	"Landing Page Mode": "",
 	"Language": "Langue",
+<<<<<<< HEAD
 	"Language Locales": "",
+=======
+	"Last 30 Days": "30 derniers jours",
+	"Last 60 Days": "60 derniers jours",
+	"Last 7 Days": "7 derniers jours",
+	"Last 90 Days": "90 derniers jours",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Last Active": "Dernière activité",
 	"Last Modified": "Dernière modification",
 	"Last reply": "",
@@ -1040,7 +1118,13 @@
 	"Speech Playback Speed": "",
 	"Speech recognition error: {{error}}": "Erreur de reconnaissance vocale\u00a0: {{error}}",
 	"Speech-to-Text Engine": "Moteur de reconnaissance vocale",
+<<<<<<< HEAD
 	"Stop": "",
+=======
+	"Start Date": "Date de début",
+	"Steps to Reproduce": "Étapes pour reproduire",
+	"Stop": "Arrêter",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Stop Sequence": "Séquence d'arrêt",
 	"Stream Chat Response": "",
 	"STT Model": "Modèle de STT",
@@ -1087,9 +1171,14 @@
 	"Theme": "Thème",
 	"Thinking...": "En train de réfléchir...",
 	"This action cannot be undone. Do you wish to continue?": "Cette action ne peut pas être annulée. Souhaitez-vous continuer ?",
+<<<<<<< HEAD
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "",
 	"This chat won’t appear in history and your messages will not be saved.": "",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "Cela garantit que vos conversations précieuses soient sauvegardées en toute sécurité dans votre base de données backend. Merci !",
+=======
+	"This ensures that your valuable chats are securely saved to your backend database. Thank you!": "Cela garantit que vos chats précieux soient sauvegardés en toute sécurité dans votre base de données. Merci !",
+	"This feature will provide detailed breakdowns by model, cost analysis, and usage trends to help manage your AI budget effectively.": "Cette fonctionnalité fournira des analyses détaillées par modèle, l'analyse des coûts et les tendances d'utilisation pour vous aider à gérer efficacement votre budget d'IA.",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Il s'agit d'une fonctionnalité expérimentale, elle peut ne pas fonctionner comme prévu et est sujette à modification à tout moment.",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "",
 	"This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.": "",
@@ -1148,7 +1237,20 @@
 	"Top K": "Top K",
 	"Top K Reranker": "",
 	"Top P": "Top P",
+<<<<<<< HEAD
 	"Transformers": "",
+=======
+	"Total Model Prompts": "Nombre total d’invites de modèle",
+	"Total number of prompts submitted": "Nombre total d’invites soumises",
+	"Total number of registered users": "Nombre total d’utilisateurs enregistrés",
+	"Total number of tokens used": "Nombre total de tokens utilisés",
+	"Total Prompts": "Total des invites",
+	"Total prompts processed by this model": "Nombre total d’invites traitées par ce modèle",
+	"Total Tokens": "Total des jetons",
+	"Total Users": "Total des utilisateurs",
+	"Track key performance indicators over time": "Suivre les indicateurs de performance clés au fil du temps",
+	"Transformers": "Transformers",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Trouble accessing Ollama?": "Rencontrez-vous des difficultés pour accéder à Ollama ?",
 	"Trust Proxy Environment": "",
 	"TTS Model": "Modèle de synthèse vocale",
@@ -1182,7 +1284,12 @@
 	"Upload Progress": "Progression de l'envoi",
 	"URL": "",
 	"URL Mode": "Mode d'URL",
+<<<<<<< HEAD
 	"Use '#' in the prompt input to load and include your knowledge.": "",
+=======
+	"Usage Trends": "Tendances d'utilisation",
+	"Use '#' in the prompt input to load and include your knowledge.": "Utilisez '#' dans l'entrée de l'invite pour charger et inclure vos connaissances.",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Use Gravatar": "Utilisez Gravatar",
 	"Use groups to group your users and assign permissions.": "",
 	"Use Initials": "Utiliser les initiales",
@@ -1191,17 +1298,32 @@
 	"use_mlock (Ollama)": "use_mlock (Ollama)",
 	"use_mmap (Ollama)": "utiliser mmap (Ollama)",
 	"user": "utilisateur",
+<<<<<<< HEAD
 	"User": "",
+=======
+	"User": "Utilisateur",
+	"User Enrollments Over Time": "Inscriptions des utilisateurs au fil du temps",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"User location successfully retrieved.": "L'emplacement de l'utilisateur a été récupéré avec succès.",
 	"User Webhooks": "",
 	"Username": "",
 	"Users": "Utilisateurs",
+<<<<<<< HEAD
 	"Using the default arena model with all models. Click the plus button to add custom models.": "",
 	"Utilize": "Utilisez",
 	"Valid time units:": "Unités de temps valides\u00a0:",
 	"Valves": "Vannes",
 	"Valves updated": "Vannes mises à jour",
 	"Valves updated successfully": "Les vannes ont été mises à jour avec succès",
+=======
+	"Using Entire Document": "Utilisation du document entier",
+	"Using Focused Retrieval": "Utilisation de la récupération ciblée",
+	"Using the default arena model with all models. Click the plus button to add custom models.": "Utilisation du modèle d'arène par défaut avec tous les modèles. Cliquez sur le bouton plus pour ajouter des modèles personnalisés.",
+	"Valid time units:": "Unités de temps valides :",
+	"Valves": "Valves",
+	"Valves updated": "Valves mises à jour",
+	"Valves updated successfully": "Les valves ont été mises à jour avec succès",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"variable": "variable",
 	"variable to have them replaced with clipboard content.": "variable pour qu'elles soient remplacées par le contenu du presse-papiers.",
 	"Verify Connection": "",
@@ -1214,10 +1336,17 @@
 	"Voice": "Voix",
 	"Voice Input": "",
 	"Warning": "Avertissement !",
+<<<<<<< HEAD
 	"Warning:": "",
 	"Warning: Enabling this will allow users to upload arbitrary code on the server.": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Avertissement : Si vous mettez à jour ou modifiez votre modèle d'encodage, vous devrez réimporter tous les documents.",
 	"Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.": "",
+=======
+	"Warning:": "Avertissement :",
+	"Warning: Enabling this will allow users to upload arbitrary code on the server.": "Avertissement : L'activation de cette option permettra aux utilisateurs de télécharger du code arbitraire sur le serveur.",
+	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Avertissement : si vous mettez à jour ou modifiez votre modèle d'intégration, vous devrez réimporter tous les documents.",
+	"We're working on advanced analytics features to help you understand and optimize your AI usage patterns.": "Nous travaillons sur des fonctionnalités d'analyse avancées pour vous aider à comprendre et à optimiser vos modèles d'utilisation de l'IA.",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 	"Web": "Web",
 	"Web API": "API Web",
 	"Web Loader Engine": "",

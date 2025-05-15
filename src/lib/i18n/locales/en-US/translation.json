@@ -78,8 +78,12 @@
 	"Always Expand Details": "",
 	"Amazing": "",
 	"an assistant": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
 	"Analyzed": "",
 	"Analyzing...": "",
+=======
+	"Analyze AI spending patterns and model efficiency": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"and": "",
 	"and {{COUNT}} more": "",
 	"and create a new shared link.": "",
@@ -144,6 +148,8 @@
 	"Bocha Search API Key": "",
 	"Boosting or penalizing specific tokens for constrained responses. Bias values will be clamped between -100 and 100 (inclusive). (Default: none)": "",
 	"Brave Search API Key": "",
+	"Business Insights": "",
+	"Business Intelligence": "",
 	"By {{name}}": "",
 	"Bypass Embedding and Retrieval": "",
 	"Calendar": "",
@@ -213,6 +219,7 @@
 	"ComfyUI Base URL is required.": "",
 	"ComfyUI Workflow": "",
 	"ComfyUI Workflow Nodes": "",
+	"Coming Soon": "",
 	"Command": "",
 	"Completions": "",
 	"Concurrent Requests": "",
@@ -250,7 +257,11 @@
 	"Copy Link": "",
 	"Copy to clipboard": "",
 	"Copying to clipboard was successful!": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
 	"CORS must be properly configured by the provider to allow requests from Open WebUI.": "",
+=======
+	"Cost Analysis": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"Create": "",
 	"Create a knowledge base": "",
 	"Create a model": "",
@@ -268,9 +279,22 @@
 	"Current Model": "",
 	"Current Password": "",
 	"Custom": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
 	"Danger Zone": "",
+=======
+	"Custom Range": "",
+	"Daily Active Users": "",
+	"Daily Active Users Over Time": "",
+	"Daily Model Prompts": "",
+	"Daily Model Usage": "",
+	"Daily Prompts": "",
+	"Daily Prompts Over Time": "",
+	"Daily Tokens": "",
+	"Daily Tokens Over Time": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"Dark": "",
 	"Database": "",
+	"Date Range": "",
 	"December": "",
 	"Default": "",
 	"Default (Open AI)": "",
@@ -390,7 +414,13 @@
 	"Enable Mirostat sampling for controlling perplexity.": "",
 	"Enable New Sign Ups": "",
 	"Enabled": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
 	"Enforce Temporary Chat": "",
+=======
+	"End Date": "",
+	"Engine": "",
+	"Enrolled Users": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "",
 	"Enter a detail about yourself for your LLMs to recall": "",
@@ -507,6 +537,7 @@
 	"Export Tools": "",
 	"External": "",
 	"External Models": "",
+	"Extracted lines": "",
 	"Failed to add file.": "",
 	"Failed to connect to {{URL}} OpenAPI tool server": "",
 	"Failed to create API Key.": "",
@@ -547,7 +578,11 @@
 	"Forge new paths": "",
 	"Form": "",
 	"Format your variables using brackets like this:": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
 	"Forwards system user session credentials to authenticate": "",
+=======
+	"Formatting may be inconsistent from source.": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"Frequency Penalty": "",
 	"Full Context Mode": "",
 	"Function": "",
@@ -625,7 +660,11 @@
 	"Include `--api` flag when running stable-diffusion-webui": "",
 	"Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive.": "",
 	"Info": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
 	"Inject the entire content as context for comprehensive processing, this is recommended for complex queries.": "",
+=======
+	"Inject the entire document as context for comprehensive processing, this is recommended for complex queries.": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"Input commands": "",
 	"Install from Github URL": "",
 	"Instant Auto-Send After Voice Transcription": "",
@@ -662,7 +701,14 @@
 	"Label": "",
 	"Landing Page Mode": "",
 	"Language": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
 	"Language Locales": "",
+=======
+	"Last 30 Days": "",
+	"Last 60 Days": "",
+	"Last 7 Days": "",
+	"Last 90 Days": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"Last Active": "",
 	"Last Modified": "",
 	"Last reply": "",
@@ -1035,6 +1081,11 @@
 	"Speech Playback Speed": "",
 	"Speech recognition error: {{error}}": "",
 	"Speech-to-Text Engine": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
+=======
+	"Start Date": "",
+	"Steps to Reproduce": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"Stop": "",
 	"Stop Sequence": "",
 	"Stream Chat Response": "",
@@ -1084,9 +1135,14 @@
 	"Theme": "",
 	"Thinking...": "",
 	"This action cannot be undone. Do you wish to continue?": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "",
 	"This chat won’t appear in history and your messages will not be saved.": "",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "",
+=======
+	"This ensures that your valuable chats are securely saved to your backend database. Thank you!": "",
+	"This feature will provide detailed breakdowns by model, cost analysis, and usage trends to help manage your AI budget effectively.": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "",
 	"This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.": "",
@@ -1144,6 +1200,18 @@
 	"Top K": "",
 	"Top K Reranker": "",
 	"Top P": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
+=======
+	"Total Model Prompts": "",
+	"Total number of prompts submitted": "",
+	"Total number of registered users": "",
+	"Total number of tokens used": "",
+	"Total Prompts": "",
+	"Total prompts processed by this model": "",
+	"Total Tokens": "",
+	"Total Users": "",
+	"Track key performance indicators over time": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"Transformers": "",
 	"Trouble accessing Ollama?": "",
 	"Trust Proxy Environment": "",
@@ -1180,6 +1248,7 @@
 	"Upload Progress": "",
 	"URL": "",
 	"URL Mode": "",
+	"Usage Trends": "",
 	"Use '#' in the prompt input to load and include your knowledge.": "",
 	"Use Gravatar": "",
 	"Use groups to group your users and assign permissions.": "",
@@ -1190,10 +1259,13 @@
 	"use_mmap (Ollama)": "",
 	"user": "",
 	"User": "",
+	"User Enrollments Over Time": "",
 	"User location successfully retrieved.": "",
 	"User Webhooks": "",
 	"Username": "",
 	"Users": "",
+	"Using Entire Document": "",
+	"Using Focused Retrieval": "",
 	"Using the default arena model with all models. Click the plus button to add custom models.": "",
 	"Utilize": "",
 	"Valid time units:": "",
@@ -1216,7 +1288,11 @@
 	"Warning:": "",
 	"Warning: Enabling this will allow users to upload arbitrary code on the server.": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
+<<<<<<< HEAD:src/lib/i18n/locales/en-US/translation.json
 	"Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.": "",
+=======
+	"We're working on advanced analytics features to help you understand and optimize your AI usage patterns.": "",
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131)):src/lib/i18n/locales/en-GB/translation.json
 	"Web": "",
 	"Web API": "",
 	"Web Loader Engine": "",

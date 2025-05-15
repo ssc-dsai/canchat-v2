@@ -265,6 +265,7 @@ async def get_model_historical_prompts(
 
 
 ############################
+<<<<<<< HEAD
 # GetHistoricalDailyUsers
 ############################
 
@@ -294,16 +295,23 @@ async def get_historical_daily_users(
 
 
 ############################
+=======
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 # Date Range Metrics
 ############################
 
 
+<<<<<<< HEAD
 @router.get("/range/metrics")
+=======
+@router.get("/range/users")
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 async def get_range_metrics(
     start_date: str,
     end_date: str,
     domain: str = None,
     model: str = None,
+<<<<<<< HEAD
     user=Depends(get_metrics_user),
 ):
     """Get metrics for a specific date range"""
@@ -313,6 +321,16 @@ async def get_range_metrics(
         domain = user.domain
 
     # Admin and global_analyst can see all domains or filter by domain
+=======
+    user=Depends(get_verified_user),
+):
+    """Get metrics for a specific date range"""
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+>>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 
     try:
         # Convert dates to timestamps
