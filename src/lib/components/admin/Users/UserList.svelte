@@ -365,7 +365,9 @@
 						>
 							<Badge
 								type={badgeType(user.role)}
-								content={user.role === 'global_analyst' ? $i18n.t('global analyst') : $i18n.t(user.role)}
+								content={user.role === 'global_analyst'
+									? $i18n.t('global analyst')
+									: $i18n.t(user.role)}
 							/>
 						</button>
 					</td>
