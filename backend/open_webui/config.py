@@ -1362,6 +1362,7 @@ class BannerModel(BaseModel):
     content: str
     dismissible: bool
     timestamp: int
+    lang: str
 
 
 try:
