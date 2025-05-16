@@ -198,9 +198,6 @@
 	// Check if user is an analyst with domain restrictions
 	$: isAnalyst = $user?.role === 'analyst';
 
-	// Check if user has global access (admin or global_analyst)
-	$: hasGlobalAccess = $user?.role === 'admin' || $user?.role === 'global_analyst';
-
 	// Function to update all charts with new data
 	async function updateCharts(selectedDomain: string | null, selectedModel: string | null) {
 		try {
@@ -614,7 +611,7 @@
 </script>
 
 <div class="flex flex-col h-screen">
-	<div class="p-4 pt-16 lg:p-6 lg:pt-20 flex-shrink-0">
+	<div class="p-4 lg:p-6 flex-shrink-0">
 		<div class="mb-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
 			<h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">
 				{$i18n.t('Metrics Dashboard')}

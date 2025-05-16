@@ -9,34 +9,12 @@
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { userSignOut } from '$lib/apis/auths';
-	import Badge from '$lib/components/common/Badge.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let role = '';
 	export let className = 'max-w-[240px]';
-
-	// Get role badge color based on user role
-	$: roleColor = getRoleBadgeColor(role);
-
-	function getRoleBadgeColor(role) {
-		switch (role) {
-			case 'admin':
-				return 'rose';
-			case 'global_analyst':
-				return 'amber';
-			case 'analyst':
-				return 'green';
-			default:
-				return 'info';
-		}
-	}
-
-	function getRoleDisplayName(role) {
-		// Use the i18n translations for role names
-		return $i18n.t(role);
-	}
 
 	const dispatch = createEventDispatcher();
 </script>
@@ -59,11 +37,6 @@
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
-			<!-- Role badge at the top of the dropdown -->
-			<div class="flex justify-center px-3 py-1 mb-1">
-				<Badge type={roleColor} content={getRoleDisplayName(role)} />
-			</div>
-
 			<button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
