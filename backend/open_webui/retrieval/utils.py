@@ -82,7 +82,7 @@ def query_doc(
         raise e
 
 
-def get_doc(collection_name: str, user=None):
+def get_doc(collection_name: str, user: UserModel = None):
     try:
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
