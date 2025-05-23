@@ -1248,7 +1248,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 
 
 @router.post("/process/web/search")
-def process_web_search(
+async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1298,7 +1298,7 @@ def process_web_search(
                 "loaded_count": len(docs),
             }
         else:
-            run_in_threadpool(
+            await run_in_threadpool(
                 save_docs_to_vector_db,
                 request,
                 docs,
