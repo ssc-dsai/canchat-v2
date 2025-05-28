@@ -108,12 +108,18 @@ DEFAULT_CONFIG = {
         "prompt_suggestions": [
             # English prompts
             {
-                "title": ["Translate text to French (Canada)", "conversion of text into French"],
+                "title": [
+                    "Translate text to French (Canada)",
+                    "conversion of text into French",
+                ],
                 "content": "Translate the following text in French (Canada): {{Text}}",
                 "lang": "en-GB",
             },
             {
-                "title": ["Translate text to English (Canada)", "conversion of text into English"],
+                "title": [
+                    "Translate text to English (Canada)",
+                    "conversion of text into English",
+                ],
                 "content": "Translate the following text in English (Canada): {{Text}}",
                 "lang": "en-GB",
             },
@@ -133,7 +139,10 @@ DEFAULT_CONFIG = {
                 "lang": "en-GB",
             },
             {
-                "title": ["Create a presentation outline", "structured for the public sector"],
+                "title": [
+                    "Create a presentation outline",
+                    "structured for the public sector",
+                ],
                 "content": "Create an outline for a presentation on {{paste topic text}} for a public sector audience.",
                 "lang": "en-GB",
             },
@@ -153,18 +162,27 @@ DEFAULT_CONFIG = {
                 "lang": "en-GB",
             },
             {
-                "title": ["Create risk list and mitigations", "risks with actionable solutions"],
+                "title": [
+                    "Create risk list and mitigations",
+                    "risks with actionable solutions",
+                ],
                 "content": "Create a list of potential risks and mitigation strategies for this {{paste project description text}}.",
                 "lang": "en-GB",
             },
             # French prompts
             {
-                "title": ["Traduisez en français (Canada)", "conversion du texte en français"],
+                "title": [
+                    "Traduisez en français (Canada)",
+                    "conversion du texte en français",
+                ],
                 "content": "Traduisez le texte suivant en français (Canada) : {{Texte}}.",
                 "lang": "fr-CA",
             },
             {
-                "title": ["Traduisez en anglais (Canada)", "conversion du texte en anglais"],
+                "title": [
+                    "Traduisez en anglais (Canada)",
+                    "conversion du texte en anglais",
+                ],
                 "content": "Traduisez le texte suivant en anglais (Canada) : {{Texte}}.",
                 "lang": "fr-CA",
             },
@@ -174,43 +192,65 @@ DEFAULT_CONFIG = {
                 "lang": "fr-CA",
             },
             {
-                "title": ["Résumez une transcription de réunion", "principaux objectifs uniquement"],
+                "title": [
+                    "Résumez une transcription de réunion",
+                    "principaux objectifs uniquement",
+                ],
                 "content": "Résumez les principaux objectifs de cette transcription de réunion : {{collez le texte de la transcription}}.",
                 "lang": "fr-CA",
             },
             {
-                "title": ["Rédigez une description de poste", "rédaction pour des rôles spécifiques"],
+                "title": [
+                    "Rédigez une description de poste",
+                    "rédaction pour des rôles spécifiques",
+                ],
                 "content": "Rédigez une description de poste pour un nouveau poste dans {{collez le texte du département ou de l'agence}}.",
                 "lang": "fr-CA",
             },
             {
-                "title": ["Créez un plan de présentation", "structure pour le secteur public"],
+                "title": [
+                    "Créez un plan de présentation",
+                    "structure pour le secteur public",
+                ],
                 "content": "Créez un plan de présentation sur {{collez le sujet du texte}} pour un auditoire du secteur public.",
                 "lang": "fr-CA",
             },
             {
-                "title": ["Développez un plan de projet", "avec étapes clés et échéances"],
+                "title": [
+                    "Développez un plan de projet",
+                    "avec étapes clés et échéances",
+                ],
                 "content": "Développez un plan de projet pour ce {{collez la description du projet}} avec des étapes clés et des échéances.",
                 "lang": "fr-CA",
             },
             {
-                "title": ["Générez des questions fréquentes", "FAQ pour clarifier le programme"],
+                "title": [
+                    "Générez des questions fréquentes",
+                    "FAQ pour clarifier le programme",
+                ],
                 "content": "Générez une liste de questions fréquemment posées et de réponses pour ce {{collez le texte du programme gouvernemental}}.",
                 "lang": "fr-CA",
             },
             {
-                "title": ["Préparez une présentation", "basée sur le contenu du document"],
+                "title": [
+                    "Préparez une présentation",
+                    "basée sur le contenu du document",
+                ],
                 "content": "Préparez une présentation {{contenant le nombre de diapositives}} basée sur les informations contenues dans ce {{collez le document}}.",
                 "lang": "fr-CA",
             },
             {
-                "title": ["Créez une liste des risques et atténuations", "solutions aux risques identifiés"],
+                "title": [
+                    "Créez une liste des risques et atténuations",
+                    "solutions aux risques identifiés",
+                ],
                 "content": "Créez une liste des risques potentiels et des stratégies d’atténuation pour ce {{collez la description du projet}}.",
                 "lang": "fr-CA",
             },
         ],
     },
 }
+
 
 def get_config():
     with get_db() as db:
@@ -897,12 +937,18 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     [
         # English prompts
         {
-            "title": ["Translate text to French (Canada)", "conversion of text into French"],
+            "title": [
+                "Translate text to French (Canada)",
+                "conversion of text into French",
+            ],
             "content": "Translate the following text in French (Canada): {{Text}}",
             "lang": "en-GB",
         },
         {
-            "title": ["Translate text to English (Canada)", "conversion of text into English"],
+            "title": [
+                "Translate text to English (Canada)",
+                "conversion of text into English",
+            ],
             "content": "Translate the following text in English (Canada): {{Text}}",
             "lang": "en-GB",
         },
@@ -922,7 +968,10 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
             "lang": "en-GB",
         },
         {
-            "title": ["Create a presentation outline", "structured for the public sector"],
+            "title": [
+                "Create a presentation outline",
+                "structured for the public sector",
+            ],
             "content": "Create an outline for a presentation on {{paste topic text}} for a public sector audience.",
             "lang": "en-GB",
         },
@@ -942,18 +991,27 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
             "lang": "en-GB",
         },
         {
-            "title": ["Create risk list and mitigations", "risks with actionable solutions"],
+            "title": [
+                "Create risk list and mitigations",
+                "risks with actionable solutions",
+            ],
             "content": "Create a list of potential risks and mitigation strategies for this {{paste project description text}}.",
             "lang": "en-GB",
         },
         # French prompts
         {
-            "title": ["Traduisez en français (Canada)", "conversion du texte en français"],
+            "title": [
+                "Traduisez en français (Canada)",
+                "conversion du texte en français",
+            ],
             "content": "Traduisez le texte suivant en français (Canada) : {{Texte}}.",
             "lang": "fr-CA",
         },
         {
-            "title": ["Traduisez en anglais (Canada)", "conversion du texte en anglais"],
+            "title": [
+                "Traduisez en anglais (Canada)",
+                "conversion du texte en anglais",
+            ],
             "content": "Traduisez le texte suivant en anglais (Canada) : {{Texte}}.",
             "lang": "fr-CA",
         },
@@ -963,17 +1021,26 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
             "lang": "fr-CA",
         },
         {
-            "title": ["Résumez une transcription de réunion", "principaux objectifs uniquement"],
+            "title": [
+                "Résumez une transcription de réunion",
+                "principaux objectifs uniquement",
+            ],
             "content": "Résumez les principaux objectifs de cette transcription de réunion : {{collez le texte de la transcription}}.",
             "lang": "fr-CA",
         },
         {
-            "title": ["Rédigez une description de poste", "rédaction pour des rôles spécifiques"],
+            "title": [
+                "Rédigez une description de poste",
+                "rédaction pour des rôles spécifiques",
+            ],
             "content": "Rédigez une description de poste pour un nouveau poste dans {{collez le texte du département ou de l'agence}}.",
             "lang": "fr-CA",
         },
         {
-            "title": ["Créez un plan de présentation", "structure pour le secteur public"],
+            "title": [
+                "Créez un plan de présentation",
+                "structure pour le secteur public",
+            ],
             "content": "Créez un plan de présentation sur {{collez le sujet du texte}} pour un auditoire du secteur public.",
             "lang": "fr-CA",
         },
@@ -983,7 +1050,10 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
             "lang": "fr-CA",
         },
         {
-            "title": ["Générez des questions fréquentes", "FAQ pour clarifier le programme"],
+            "title": [
+                "Générez des questions fréquentes",
+                "FAQ pour clarifier le programme",
+            ],
             "content": "Générez une liste de questions fréquemment posées et de réponses pour ce {{collez le texte du programme gouvernemental}}.",
             "lang": "fr-CA",
         },
@@ -993,7 +1063,10 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
             "lang": "fr-CA",
         },
         {
-            "title": ["Créez une liste des risques et atténuations", "solutions aux risques identifiés"],
+            "title": [
+                "Créez une liste des risques et atténuations",
+                "solutions aux risques identifiés",
+            ],
             "content": "Créez une liste des risques potentiels et des stratégies d’atténuation pour ce {{collez la description du projet}}.",
             "lang": "fr-CA",
         },
