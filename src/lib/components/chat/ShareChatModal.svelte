@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { models, config } from '$lib/stores';
+	import { models, config, returnFocusButtonID } from '$lib/stores';
 
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
 	import { copyToClipboard } from '$lib/utils';
 
@@ -76,10 +76,15 @@
 	}
 </script>
 
-<Modal bind:show size="md">
+<Modal
+	bind:show
+	size="md"
+	title={$i18n.t('Share Chat')}
+	returnFocusSelector={`#${$returnFocusButtonID}`}
+>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
+			<h2 class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</h2>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -144,7 +149,7 @@
 							{/if}
 
 							<button
-								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full focus:outline-2 focus:outline-blue-600"
 								type="button"
 								id="copy-and-share-chat-button"
 								on:click={async () => {

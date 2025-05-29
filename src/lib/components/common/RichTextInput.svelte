@@ -51,6 +51,7 @@
 
 	let element;
 	let editor;
+	let focusFlag = false;
 
 	const options = {
 		throwOnError: false
@@ -171,7 +172,11 @@
 				}),
 				Highlight,
 				Typography,
-				Placeholder.configure({ placeholder: placeholderText }),
+				Placeholder.configure({
+					placeholder,
+					emptyEditorClass:
+						'before:content-[attr(data-placeholder)] before:float-left before:text-[#5C6B8B] before:h-0 before:pointer-events-none'
+				}),
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -219,17 +224,27 @@
 						}
 					}
 				}
+				requestAnimationFrame(() => {
+					const el = editor?.view?.dom;
+					if (el?.getAttribute('tabindex') === '-1') {
+						el.setAttribute('tabindex', 0);
+					}
+				});
 			},
 			editorProps: {
 				attributes: {
 					id,
-					'aria-label': ariaLabel,
-					title: title,
-					role: 'textbox'
+					'aria-label': $i18n.t('Message Input')
 				},
 				handleDOMEvents: {
 					focus: (view, event) => {
 						eventDispatch('focus', { event });
+						focusFlag = true;
+						return false;
+					},
+					blur: (view, event) => {
+						eventDispatch('blur', { event });
+						focusFlag = false;
 						return false;
 					},
 					keyup: (view, event) => {
@@ -374,16 +389,17 @@
 		);
 		if (placeholderExtension) {
 			placeholderExtension.options.placeholder = placeholderText;
-			editor.view.dispatch(editor.view.state.tr); // Trigger a re-render
+			(placeholderExtension.options.label = $i18n.t('Message Input')),
+				editor.view.dispatch(editor.view.state.tr); // Trigger a re-render
 		}
 	}
 </script>
 
 <div
-	bind:this={element}
-	class="relative w-full min-w-full h-full min-h-fit {className}"
-	data-placeholder={placeholderText}
-	aria-label={ariaLabel}
-	{title}
 	role="textbox"
+	bind:this={element}
+	class="relative w-full min-w-full {focusFlag
+		? 'outline-1 outline-black focus:outline-white'
+		: ''} h-full min-h-fit mb-1 {className}"
+	aria-label={$i18n.t('Message Input')}
 />

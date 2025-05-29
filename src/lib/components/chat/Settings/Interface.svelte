@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
 	const dispatch = createEventDispatcher();
@@ -223,13 +223,14 @@
 >
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
-			<div class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</div>
+			<h3 class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">{$i18n.t('Landing Page Mode')}</div>
 
 					<button
+						id="landing-page-mode-button"
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleLandingPageMode();
@@ -253,6 +254,11 @@
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleChatBubble();
+							toast.announce(
+								chatBubble
+									? $i18n.t('Display username option hidden below')
+									: $i18n.t('Display username option visible below')
+							);
 						}}
 						type="button"
 					>
@@ -377,7 +383,7 @@
 				</div>
 			{/if}
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</div>
+			<h3 class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -547,7 +553,7 @@
 				</div>
 			</div>
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Voice')}</div>
+			<h3 class=" my-1.5 text-sm font-medium">{$i18n.t('Voice')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -589,7 +595,7 @@
 				</div>
 			</div>
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('File')}</div>
+			<h3 class=" my-1.5 text-sm font-medium">{$i18n.t('File')}</h3>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -620,14 +626,14 @@
 							<input
 								bind:value={imageCompressionSize.width}
 								type="number"
-								class="w-20 bg-transparent outline-none text-center"
+								class="w-20 bg-transparent focus:outline-1 focus:outline-black dark:focus:outline-white text-center"
 								min="0"
 								placeholder="Width"
 							/>x
 							<input
 								bind:value={imageCompressionSize.height}
 								type="number"
-								class="w-20 bg-transparent outline-none text-center"
+								class="w-20 bg-transparent focus:outline-1 focus:outline-black dark:focus:outline-white text-center"
 								min="0"
 								placeholder="Height"
 							/>
@@ -640,7 +646,7 @@
 
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full focus:outline-2 focus:outline-blue-600"
 			type="submit"
 		>
 			{$i18n.t('Save')}

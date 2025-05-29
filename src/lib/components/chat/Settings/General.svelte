@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
@@ -9,6 +9,7 @@
 	const i18n = getContext('i18n');
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
+	import Tooltip from '../../common/Tooltip.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -138,13 +139,14 @@
 <div class="flex flex-col h-full justify-between text-sm">
 	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="">
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('Settings')}</div>
+			<h3 class=" mb-1 text-sm font-medium">{$i18n.t('Settings')}</h3>
 
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+						id="theme-selection"
+						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-left focus:outline-2 focus:outline-black dark:focus:outline-white"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
@@ -181,22 +183,29 @@
 			<hr class=" dark:border-gray-850 my-3" />
 
 			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
-				<textarea
-					bind:value={system}
-					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					rows="4"
-				/>
+				<h3 class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</h3>
+				<Tooltip content={$i18n.t('Enter system prompt here')} placement="top-start">
+					<textarea
+						bind:value={system}
+						class="w-full rounded-lg p-4 text-sm placeholder-[#5C6B8B] dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+						rows="4"
+					/>
+				</Tooltip>
 			</div>
 
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
+					<h3 class="  font-medium">{$i18n.t('Advanced Parameters')}</h3>
 					<button
-						class=" text-xs font-medium text-gray-500"
+						class=" text-xs font-medium text-gray-600 dark:text-grey-100"
 						type="button"
 						on:click={() => {
 							showAdvanced = !showAdvanced;
+							toast.announce(
+								showAdvanced
+									? $i18n.t('Showing advanced parameters below')
+									: $i18n.t('Hiding advanced parameters')
+							);
 						}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
 					>
 				</div>
@@ -271,7 +280,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full focus:outline-2 focus:outline-blue-600"
 			on:click={() => {
 				saveSettings({
 					system: system !== '' ? system : undefined,

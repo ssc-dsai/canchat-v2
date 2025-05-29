@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -33,7 +33,7 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="sm" bind:show returnfocusSelector="#add-group">
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
 			<div class=" text-lg font-medium self-center font-primary">

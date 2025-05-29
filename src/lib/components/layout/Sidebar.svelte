@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { goto } from '$app/navigation';
@@ -228,7 +228,7 @@
 					.join(' ');
 
 				await chats.set(await getChatListBySearchText(localStorage.token, normalizedSearch));
-
+				toast.announce($chats.length + $i18n.t(' chat found'));
 				if ($chats.length === 0) {
 					tags.set(await getAllTags(localStorage.token));
 				}
@@ -345,6 +345,15 @@
 	const onBlur = () => {
 		shiftKey = false;
 		selectedChatId = null;
+	};
+
+	const changeFocus = async (elementId) => {
+		requestAnimationFrame(() => {
+			const element = document.getElementById(elementId);
+			if (element) {
+				element.focus();
+			}
+		});
 	};
 
 	onMount(async () => {
@@ -480,22 +489,24 @@
 			: 'invisible'}"
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
-			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
-				aria-label={$i18n.t('Toggle sidebar')}
-				title={$i18n.t('Toggle sidebar')}
-			>
-				<div class=" m-auto self-center">
+			<Tooltip content={$i18n.t('Hide Sidebar')}>
+				<button
+					class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					on:click={async () => {
+						showSidebar.set(!$showSidebar);
+						toast.announce($i18n.t('Sidebar collapsed.'));
+						await changeFocus('sidebar-toggle-button');
+					}}
+					id="hide-sidebar-button"
+					aria-label={$i18n.t('Hide Sidebar')}
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
 						viewBox="0 0 24 24"
 						stroke-width="2"
 						stroke="currentColor"
-						class="size-5"
+						class="size-5 m-auto self-center"
 					>
 						<path
 							stroke-linecap="round"
@@ -503,8 +514,8 @@
 							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
 						/>
 					</svg>
-				</div>
-			</button>
+				</button>
+			</Tooltip>
 
 			<a
 				id="sidebar-new-chat-button"
@@ -521,6 +532,7 @@
 							showSidebar.set(false);
 						}
 					}, 0);
+					toast.announce($i18n.t('You are now in the new chat.'));
 				}}
 			>
 				<div class="flex items-center">
@@ -587,11 +599,9 @@
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
-			<SearchInput
-				bind:value={search}
-				on:input={searchDebounceHandler}
-				placeholder={$i18n.t('Search')}
-			/>
+			<Tooltip content={$i18n.t('Search')} placement="left">
+				<SearchInput bind:value={search} on:input={searchDebounceHandler} />
+			</Tooltip>
 		</div>
 
 		<div
@@ -746,8 +756,11 @@
 										on:unselect={() => {
 											selectedChatId = null;
 										}}
-										on:change={async () => {
-											initChatList();
+										on:change={async (e) => {
+											const { buttonID } = e.detail;
+											await initChatList();
+											await tick();
+											changeFocus(buttonID);
 										}}
 										on:tag={(e) => {
 											const { type, name } = e.detail;
@@ -760,28 +773,12 @@
 					</div>
 				{/if}
 
-				{#if !search && folders}
-					<Folders
-						{folders}
-						on:import={(e) => {
-							const { folderId, items } = e.detail;
-							importChatHandler(items, false, folderId);
-						}}
-						on:update={async (e) => {
-							initChatList();
-						}}
-						on:change={async () => {
-							initChatList();
-						}}
-					/>
-				{/if}
-
 				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
 					<div class="pt-1.5">
 						{#if $chats}
 							{#each $chats as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
-									<div
+									<h3
 										class="w-full pl-2.5 text-xs text-gray-700 dark:text-gray-400 font-medium {idx ===
 										0
 											? ''
@@ -806,7 +803,7 @@
 							{$i18n.t('November')}
 							{$i18n.t('December')}
 							-->
-									</div>
+									</h3>
 								{/if}
 
 								<ChatItem
@@ -821,8 +818,12 @@
 									on:unselect={() => {
 										selectedChatId = null;
 									}}
-									on:change={async () => {
+									on:change={async (e) => {
+										const { buttonID } = e.detail;
 										initChatList();
+										await initChatList();
+										await tick();
+										changeFocus(buttonID);
 									}}
 									on:tag={(e) => {
 										const { type, name } = e.detail;
@@ -860,29 +861,31 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
-				{#if $user !== undefined}
-					<UserMenu
-						role={$user.role}
-						on:show={(e) => {
-							if (e.detail === 'archived-chat') {
-								showArchivedChats.set(true);
-							}
-						}}
+				{#if $user !== undefined && $user !== null}
+					<Tooltip
+						content={$user.name ? $user.name + ' ' + $i18n.t('User Menu') : $i18n.t('User Menu')}
 					>
-						<div
-							class="select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						<UserMenu
+							ariaLabel={$user.name
+								? $user.name + ' ' + $i18n.t('User Menu')
+								: $i18n.t('User Menu')}
+							role={$user?.role}
+							buttonID="sidebar-user-menu"
+							buttonClass="self-center font-medium select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:show={(e) => {
+								if (e.detail === 'archived-chat') {
+									showArchivedChats.set(true);
+								}
+							}}
 						>
-							<div class="self-center mr-3">
-								<img
-									src={$user.profile_image_url}
-									class="max-w-[28px] object-cover rounded-full"
-									alt="User profile"
-									draggable="false"
-								/>
-							</div>
-							<div class="self-center font-medium">{$user.name}</div>
-						</div>
-					</UserMenu>
+							<img
+								src={$user?.profile_image_url}
+								class=" max-w-[30px] object-cover rounded-full self-center mr-3"
+								alt="User profile"
+							/>
+							{$user?.name}
+						</UserMenu>
+					</Tooltip>
 				{/if}
 			</div>
 		</div>

@@ -1,5 +1,5 @@
 <script>
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
@@ -146,6 +146,7 @@
 				<div>
 					<Tooltip content={$i18n.t('Create Group')}>
 						<button
+							id="add-group"
 							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
 							on:click={() => {
 								showCreateGroupModal = !showCreateGroupModal;

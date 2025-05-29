@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 	import { addUser } from '$lib/apis/auths';
@@ -119,7 +119,7 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="sm" bind:show returnfocusSelector="#add-user">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Add User')}</div>
