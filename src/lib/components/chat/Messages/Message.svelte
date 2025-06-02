@@ -19,6 +19,7 @@
 	export let messageId;
 
 	export let user;
+	export let selectedToolIds: string[] = [];
 
 	export let gotoMessage;
 	export let showPreviousMessage;
@@ -70,6 +71,7 @@
 				{chatId}
 				{history}
 				{messageId}
+				{selectedToolIds}
 				isLastMessage={messageId === history.currentId}
 				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
 				{gotoMessage}
@@ -92,6 +94,7 @@
 				bind:history
 				{chatId}
 				{messageId}
+				{selectedToolIds}
 				isLastMessage={messageId === history?.currentId}
 				{updateChat}
 				{editMessage}
