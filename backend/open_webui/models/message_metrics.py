@@ -2,7 +2,7 @@ import time
 from typing import Optional
 import uuid
 from pydantic import BaseModel
-from sqlalchemy import Column, Text, BigInteger, func
+from sqlalchemy import Column, Text, BigInteger, func, distinct, cast, Date
 from open_webui.internal.db import Base, get_db
 from logging import getLogger
 
@@ -458,6 +458,69 @@ class MessageMetricsTable:
         except Exception as e:
             logger.error(f"Failed to get historical daily tokens: {e}")
             return []
+
+    # This function is here and not with Users model since the values needed are in the message metrics table.
+    def get_historical_daily_users(
+        self, days: int = 7, domain: Optional[str] = None, model: Optional[str] = None
+    ) -> list[dict]:
+        try:
+
+            current_time = int(time.time())
+            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
+            today_midnight = int(
+                time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
+            )
+            start_time = today_midnight - (days * 24 * 60 * 60)
+            end_time = today_midnight + (24 * 60 * 60)
+
+            with get_db() as db:
+                date_expr = cast(
+                    func.to_timestamp(MessageMetric.created_at), Date
+                ).label("date")
+                query = db.query(
+                    func.count(distinct(MessageMetric.user_id)).label("count"),
+                    date_expr,
+                ).filter(
+                    MessageMetric.created_at >= start_time,
+                    MessageMetric.created_at < end_time,
+                )
+
+                if domain:
+                    query = query.filter(MessageMetric.user_domain == domain)
+                if model:
+                    query = query.filter(MessageMetric.model == model)
+
+                query = query.group_by(date_expr).order_by(date_expr)
+
+                results = query.all()
+
+                # Build a dict for quick lookup
+                date_to_count = {str(row.date): row.count for row in results}
+
+                # Ensure all days in range are present, in reverse (oldest to newest)
+                output = []
+                for day in reversed(range(days)):
+                    day_start = today_midnight - (day * (24 * 60 * 60))
+                    date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
+                    output.append(
+                        {"date": date_str, "count": date_to_count.get(date_str, 0)}
+                    )
+
+                return output
+        except Exception as e:
+            logger.error(f"Failed to get historical daily user counts: {e}")
+            # Fallback: return zeros for each day
+            fallback = []
+            current_time = int(time.time())
+            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
+            today_midnight = int(
+                time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
+            )
+            for day in range(days):
+                day_start = today_midnight - (day * (24 * 60 * 60))
+                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
+                fallback.append({"date": date_str, "count": 0})
+            return sorted(fallback, key=lambda x: x["date"])
 
 
 MessageMetrics = MessageMetricsTable()

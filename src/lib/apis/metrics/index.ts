@@ -119,7 +119,7 @@ export const getHistoricalDailyUsers = async (
 ): Promise<Array<{ date: string; count: number }>> => {
 	try {
 		// Build URL with proper domain handling
-		let url = `${WEBUI_API_BASE_URL}/users/daily/historical?days=${days}`;
+		let url = `${WEBUI_API_BASE_URL}/metrics/historical/daily/users?days=${days}`;
 
 		if (domain) {
 			url += `&domain=${encodeURIComponent(domain)}`;

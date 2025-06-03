@@ -243,6 +243,35 @@ async def get_model_historical_prompts(
 
 
 ############################
+# GetHistoricalDailyUsers
+############################
+
+
+@router.get("/historical/daily/users")
+async def get_historical_daily_users(
+    days: int = 7,
+    model: str = None,
+    domain: str = None,
+    user=Depends(get_metrics_user),
+):
+    if user.role in ["admin", "global_analyst"]:
+        domain_to_use = domain if domain != "" else None
+    elif user.role == "analyst":
+        domain_to_use = user.domain
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    historical_daily_data = MessageMetrics.get_historical_daily_users(
+        days, domain_to_use, model
+    )
+
+    return {"historical_daily_users": historical_daily_data}
+
+
+############################
 # Date Range Metrics
 ############################
 
