@@ -247,7 +247,7 @@ async def get_model_historical_prompts(
 ############################
 
 
-@router.get("/historical/daily/users")
+@router.get("/historical/users/daily")
 async def get_historical_daily_users(
     days: int = 7,
     model: str = None,

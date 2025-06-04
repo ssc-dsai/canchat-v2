@@ -460,11 +460,11 @@ class MessageMetricsTable:
             return []
 
     # This function is here and not with Users model since the values needed are in the message metrics table.
+    # Values are grouped by date and user_id without sql due to limitations with timestamps and being database agnostic.
     def get_historical_daily_users(
         self, days: int = 7, domain: Optional[str] = None, model: Optional[str] = None
     ) -> list[dict]:
         try:
-
             current_time = int(time.time())
             today = time.strftime("%Y-%m-%d", time.localtime(current_time))
             today_midnight = int(
@@ -474,12 +474,8 @@ class MessageMetricsTable:
             end_time = today_midnight + (24 * 60 * 60)
 
             with get_db() as db:
-                date_expr = cast(
-                    func.to_timestamp(MessageMetric.created_at), Date
-                ).label("date")
                 query = db.query(
-                    func.count(distinct(MessageMetric.user_id)).label("count"),
-                    date_expr,
+                    MessageMetric.user_id, MessageMetric.created_at
                 ).filter(
                     MessageMetric.created_at >= start_time,
                     MessageMetric.created_at < end_time,
@@ -490,23 +486,25 @@ class MessageMetricsTable:
                 if model:
                     query = query.filter(MessageMetric.model == model)
 
-                query = query.group_by(date_expr).order_by(date_expr)
-
                 results = query.all()
 
-                # Build a dict for quick lookup
-                date_to_count = {str(row.date): row.count for row in results}
+                # Group user_ids by date string
+                day_to_users = {}
+                for user_id, created_at in results:
+                    date_str = time.strftime("%Y-%m-%d", time.localtime(created_at))
+                    if date_str not in day_to_users:
+                        day_to_users[date_str] = set()
+                    day_to_users[date_str].add(user_id)
 
-                # Ensure all days in range are present, in reverse (oldest to newest)
                 output = []
-                for day in reversed(range(days)):
-                    day_start = today_midnight - (day * (24 * 60 * 60))
+                for day in range(days):
+                    day_start = today_midnight - (day * 24 * 60 * 60)
                     date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
-                    output.append(
-                        {"date": date_str, "count": date_to_count.get(date_str, 0)}
-                    )
+                    count = len(day_to_users.get(date_str, set()))
+                    output.append({"date": date_str, "count": count})
 
-                return output
+                # Return in chronological order (oldest to newest)
+                return sorted(output, key=lambda x: x["date"])
         except Exception as e:
             logger.error(f"Failed to get historical daily user counts: {e}")
             # Fallback: return zeros for each day

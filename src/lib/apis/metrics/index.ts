@@ -82,7 +82,6 @@ export const getHistoricalUsers = async (
 	domain?: string
 ): Promise<Array<{ date: string; count: number }>> => {
 	try {
-		// Build URL with proper domain handling
 		let url = `${WEBUI_API_BASE_URL}/users/enrollment/historical?days=${days}`;
 
 		if (domain) {
@@ -118,8 +117,7 @@ export const getHistoricalDailyUsers = async (
 	domain?: string
 ): Promise<Array<{ date: string; count: number }>> => {
 	try {
-		// Build URL with proper domain handling
-		let url = `${WEBUI_API_BASE_URL}/metrics/historical/daily/users?days=${days}`;
+		let url = `${WEBUI_API_BASE_URL}/metrics/historical/users/daily?days=${days}`;
 
 		if (domain) {
 			url += `&domain=${encodeURIComponent(domain)}`;
@@ -138,7 +136,9 @@ export const getHistoricalDailyUsers = async (
 				return generateFallbackDates(days);
 			}
 			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical users'}`);
+			throw new Error(
+				`Error ${res.status}: ${error.detail || 'Failed to get historical daily users'}`
+			);
 		}
 		const data = await res.json();
 		return data.historical_daily_users || [];
@@ -263,10 +263,8 @@ export const getHistoricalPrompts = async (
 	domain?: string
 ): Promise<any[]> => {
 	try {
-		// Build URL with proper domain handling
 		let url = `${WEBUI_API_BASE_URL}/metrics/historical/prompts?days=${days}`;
 
-		// Only add domain parameter if it's not null or undefined
 		if (domain !== null && domain !== undefined) {
 			url += `&domain=${encodeURIComponent(domain)}`;
 		}
@@ -300,10 +298,8 @@ export const getHistoricalTokens = async (
 	domain?: string
 ): Promise<any[]> => {
 	try {
-		// Build URL with proper domain handling
 		let url = `${WEBUI_API_BASE_URL}/metrics/historical/tokens?days=${days}`;
 
-		// Only add domain parameter if it's not null or undefined
 		if (domain !== null && domain !== undefined) {
 			url += `&domain=${encodeURIComponent(domain)}`;
 		}
