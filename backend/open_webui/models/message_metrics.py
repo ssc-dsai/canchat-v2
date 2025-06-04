@@ -2,7 +2,7 @@ import time
 from typing import Optional
 import uuid
 from pydantic import BaseModel
-from sqlalchemy import Column, Text, BigInteger, func, distinct, cast, Date
+from sqlalchemy import Column, Text, BigInteger, func
 from open_webui.internal.db import Base, get_db
 from logging import getLogger
 
