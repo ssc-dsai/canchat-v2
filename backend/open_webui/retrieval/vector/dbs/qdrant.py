@@ -6,6 +6,7 @@ from qdrant_client.http.models import (
     Filter,
     FieldCondition,
     MatchValue,
+    ScalarQuantization,
     ScalarQuantizationConfig,
     ScalarType,
 )
@@ -140,7 +141,9 @@ class QdrantClient:
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
 
         quantization_config = (
-            ScalarQuantizationConfig(type=ScalarType.INT8, always_ram=True)
+            ScalarQuantization(
+                scalar=ScalarQuantizationConfig(type=ScalarType.INT8, always_ram=True)
+            )
             if QDRANT_ENABLE_QUANTIZE
             else None
         )
