@@ -6,6 +6,8 @@ from qdrant_client.http.models import (
     Filter,
     FieldCondition,
     MatchValue,
+    ScalarQuantizationConfig,
+    ScalarType,
 )
 
 
@@ -14,6 +16,7 @@ from typing import Optional
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     QDRANT_API_KEY,
+    QDRANT_ENABLE_QUANTIZE,
     QDRANT_TIMEOUT_SECONDS,
     QDRANT_URL,
 )
@@ -135,15 +138,23 @@ class QdrantClient:
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
+
+        quantization_config=ScalarQuantizationConfig(
+            type=ScalarType.INT8,
+            always_ram=True
+            ) if QDRANT_ENABLE_QUANTIZE else None
+
         if not self.client.collection_exists(collection_name=collection_name):
             self.client.create_collection(
                 collection_name=collection_name,
                 vectors_config=VectorParams(
                     size=len(items[0]["vector"]),
                     distance=Distance.COSINE,
+                    on_disk=QDRANT_ENABLE_QUANTIZE,
                     multivector_config=models.MultiVectorConfig(
                         comparator=models.MultiVectorComparator.MAX_SIM
                     ),
+                quantization_config=quantization_config,
                 ),
             )
 
