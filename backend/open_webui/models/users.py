@@ -440,42 +440,4 @@ class UsersTable:
             logger.error(f"Failed to get range metrics: {e}")
             return {"total_users": 0, "active_users": 0}
 
-    def get_historical_daily_data(
-        self, start_timestamp: int, end_timestamp: int, domain: str = None
-    ) -> list[dict]:
-        """Get historical daily user data for a specific date range"""
-        try:
-            result = []
-
-            # Convert timestamps to readable dates
-            start_date = time.strftime("%Y-%m-%d", time.localtime(start_timestamp))
-            end_date = time.strftime("%Y-%m-%d", time.localtime(end_timestamp))
-
-            # Get daily data for each day in the range
-            current_day = start_timestamp
-            while current_day < end_timestamp:
-                next_day = current_day + 86400  # add one day in seconds
-
-                with get_db() as db:
-                    query = db.query(User).filter(
-                        User.last_active_at >= current_day,
-                        User.last_active_at < next_day,
-                    )
-
-                    if domain:
-                        query = query.filter(User.domain == domain)
-
-                    count = query.count()
-
-                    day_str = time.strftime("%Y-%m-%d", time.localtime(current_day))
-                    result.append({"date": day_str, "users": count})
-
-                current_day = next_day
-
-            return result
-        except Exception as e:
-            logger.error(f"Failed to get historical daily data: {e}")
-            return []
-
-
 Users = UsersTable()
