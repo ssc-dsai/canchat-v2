@@ -440,4 +440,5 @@ class UsersTable:
             logger.error(f"Failed to get range metrics: {e}")
             return {"total_users": 0, "active_users": 0}
 
+
 Users = UsersTable()

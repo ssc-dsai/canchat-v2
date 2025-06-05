@@ -4,6 +4,7 @@ import uuid
 from pydantic import BaseModel
 from sqlalchemy import Column, Text, BigInteger, func
 from open_webui.internal.db import Base, get_db
+from open_webui.models.users import User
 from logging import getLogger
 
 logger = getLogger(__name__)
@@ -474,11 +475,23 @@ class MessageMetricsTable:
             end_time = today_midnight + (24 * 60 * 60)
 
             with get_db() as db:
+                # Get all available domains from users table
+                available_domains = set(
+                    row[0] for row in db.query(User.domain).distinct().all() if row[0]
+                )
+
+                # If a domain is specified, check if it exists
+                if domain and domain not in available_domains:
+                    raise ValueError(
+                        f"Domain '{domain}' does not exist in the users table."
+                    )
+
                 query = db.query(
                     MessageMetric.user_id, MessageMetric.created_at
                 ).filter(
                     MessageMetric.created_at >= start_time,
                     MessageMetric.created_at < end_time,
+                    MessageMetric.user_domain.in_(available_domains),
                 )
 
                 if domain:
