@@ -139,10 +139,11 @@ class QdrantClient:
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
 
-        quantization_config=ScalarQuantizationConfig(
-            type=ScalarType.INT8,
-            always_ram=True
-            ) if QDRANT_ENABLE_QUANTIZE else None
+        quantization_config = (
+            ScalarQuantizationConfig(type=ScalarType.INT8, always_ram=True)
+            if QDRANT_ENABLE_QUANTIZE
+            else None
+        )
 
         if not self.client.collection_exists(collection_name=collection_name):
             self.client.create_collection(
@@ -154,7 +155,7 @@ class QdrantClient:
                     multivector_config=models.MultiVectorConfig(
                         comparator=models.MultiVectorComparator.MAX_SIM
                     ),
-                quantization_config=quantization_config,
+                    quantization_config=quantization_config,
                 ),
             )
 
