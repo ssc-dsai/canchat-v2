@@ -1531,8 +1531,8 @@ MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 # Quantize vectors and keep quantized data in memory to reduce memory usage
 # Docs: https://qdrant.tech/documentation/guides/optimize/
-QDRANT_ENABLE_QUANTIZE = (
-    os.environ.get("QDRANT_ENABLE_QUANTIZE", "False").lower() == "true"
+QDRANT_ENABLE_QUANTIZATION = (
+    os.environ.get("QDRANT_ENABLE_QUANTIZATION", "False").lower() == "true"
 )
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 QDRANT_TIMEOUT_SECONDS = os.environ.get("QDRANT_TIMEOUT_SECONDS", 5)

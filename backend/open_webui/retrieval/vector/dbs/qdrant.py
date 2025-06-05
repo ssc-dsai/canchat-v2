@@ -17,7 +17,7 @@ from typing import Optional
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     QDRANT_API_KEY,
-    QDRANT_ENABLE_QUANTIZE,
+    QDRANT_ENABLE_QUANTIZATION,
     QDRANT_TIMEOUT_SECONDS,
     QDRANT_URL,
 )
@@ -144,7 +144,7 @@ class QdrantClient:
             ScalarQuantization(
                 scalar=ScalarQuantizationConfig(type=ScalarType.INT8, always_ram=True)
             )
-            if QDRANT_ENABLE_QUANTIZE
+            if QDRANT_ENABLE_QUANTIZATION
             else None
         )
 
@@ -154,7 +154,7 @@ class QdrantClient:
                 vectors_config=VectorParams(
                     size=len(items[0]["vector"]),
                     distance=Distance.COSINE,
-                    on_disk=QDRANT_ENABLE_QUANTIZE,
+                    on_disk=QDRANT_ENABLE_QUANTIZATION,
                     multivector_config=models.MultiVectorConfig(
                         comparator=models.MultiVectorComparator.MAX_SIM
                     ),
