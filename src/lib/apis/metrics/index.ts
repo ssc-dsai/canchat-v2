@@ -25,7 +25,9 @@ export const getDomains = async (token: string): Promise<string[]> => {
 		}
 		if (!metricsRes.ok) {
 			const error = await metricsRes.json();
-			throw new Error(`Error ${metricsRes.status}: ${error.detail || 'Failed to get metrics domains'}`);
+			throw new Error(
+				`Error ${metricsRes.status}: ${error.detail || 'Failed to get metrics domains'}`
+			);
 		}
 
 		const usersData = await usersRes.json();
