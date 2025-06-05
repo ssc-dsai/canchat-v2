@@ -74,6 +74,15 @@ class MessageMetricsTable:
             logger.error(f"Failed to get used models: {e}")
             return []
 
+    def get_domains(self) -> list[str]:
+        try:
+            with get_db() as db:
+                domains = db.query(MessageMetric.user_domain).distinct().all()
+                return [domain[0] for domain in domains if domain[0]]
+        except Exception as e:
+            logger.error(f"Failed to get domains: {e}")
+            return []
+
     def get_messages_number(
         self, domain: Optional[str] = None, model: Optional[str] = None
     ) -> Optional[int]:
@@ -475,23 +484,12 @@ class MessageMetricsTable:
             end_time = today_midnight + (24 * 60 * 60)
 
             with get_db() as db:
-                # Get all available domains from users table
-                available_domains = set(
-                    row[0] for row in db.query(User.domain).distinct().all() if row[0]
-                )
-
-                # If a domain is specified, check if it exists
-                if domain and domain not in available_domains:
-                    raise ValueError(
-                        f"Domain '{domain}' does not exist in the users table."
-                    )
 
                 query = db.query(
                     MessageMetric.user_id, MessageMetric.created_at
                 ).filter(
                     MessageMetric.created_at >= start_time,
                     MessageMetric.created_at < end_time,
-                    MessageMetric.user_domain.in_(available_domains),
                 )
 
                 if domain:
