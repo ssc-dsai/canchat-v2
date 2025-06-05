@@ -21,7 +21,7 @@
 		updateFolderNameById,
 		updateFolderParentIdById
 	} from '$lib/apis/folders';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import {
 		getChatById,
 		getChatsByFolderId,
@@ -31,6 +31,7 @@
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let open = false;
 
@@ -49,6 +50,8 @@
 	let dragged = false;
 
 	let name = '';
+
+	let buttonID = `${folderId}`;
 
 	const onDragOver = (e) => {
 		e.preventDefault();
@@ -318,6 +321,7 @@
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
+	returnFocusSelector={'#' + buttonID}
 	title={$i18n.t('Delete folder?')}
 	on:confirm={() => {
 		deleteHandler();
@@ -363,7 +367,7 @@
 		}}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div class="w-full group">
+		<div class="w-full group relative">
 			<button
 				id="folder-{folderId}-button"
 				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -371,15 +375,15 @@
 					editHandler();
 				}}
 			>
-				<div class="text-gray-300 dark:text-gray-600">
-					{#if open}
-						<ChevronDown className=" size-3" strokeWidth="2.5" />
-					{:else}
-						<ChevronRight className=" size-3" strokeWidth="2.5" />
-					{/if}
-				</div>
+				{#if open}
+					<ChevronDown className=" size-3" strokeWidth="2.5" />
+				{:else}
+					<ChevronRight className=" size-3" strokeWidth="2.5" />
+				{/if}
 
-				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
+				<h3
+					class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1 text-gray-900 dark:text-gray-100 font-semibold"
+				>
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"
@@ -408,15 +412,16 @@
 					{:else}
 						{folders[folderId].name}
 					{/if}
-				</div>
-
-				<button
-					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-					on:pointerup={(e) => {
-						e.stopPropagation();
-					}}
-				>
+				</h3>
+			</button>
+			<div
+				class="absolute top-1/2 -translate-y-1/2 z-10 right-2 self-center flex items-center dark:text-gray-300"
+			>
+				<Tooltip content={$i18n.t('Folder Menu')}>
 					<FolderMenu
+						buttonClass="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+						ariaLabel={$i18n.t('Folder Menu')}
+						{buttonID}
 						on:rename={() => {
 							editHandler();
 						}}
@@ -426,13 +431,17 @@
 						on:export={() => {
 							exportHandler();
 						}}
+						on:pointerup={(e) => {
+							e.stopPropagation();
+						}}
+						on:click={(e) => {}}
 					>
-						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
+						<div>
 							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
-						</button>
+						</div>
 					</FolderMenu>
-				</button>
-			</button>
+				</Tooltip>
+			</div>
 		</div>
 
 		<div slot="content" class="w-full">

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { onMount, getContext } from 'svelte';
 
 	import { user } from '$lib/stores';
@@ -114,6 +114,7 @@
 				<div class="flex flex-col">
 					<div class="self-center mt-2">
 						<button
+							id="profile-image"
 							class="relative rounded-full dark:bg-gray-700"
 							type="button"
 							on:click={() => {
@@ -147,7 +148,7 @@
 				</div>
 
 				<div class="flex-1 flex flex-col self-center gap-0.5">
-					<div class=" mb-0.5 text-sm font-medium">{$i18n.t('Profile Image')}</div>
+					<h3 class=" mb-0.5 text-sm font-medium">{$i18n.t('Profile Image')}</h3>
 
 					<div>
 						<button
@@ -155,6 +156,7 @@
 							on:click={async () => {
 								if (canvasPixelTest()) {
 									profileImageUrl = generateInitialsImage(name);
+									toast.announce($i18n.t('Profile image changed to using initials'));
 								} else {
 									toast.info(
 										$i18n.t(
@@ -181,6 +183,9 @@
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
 							on:click={async () => {
 								profileImageUrl = '/user.png';
+								toast.announce(
+									$i18n.t('Removing changes to profile image and using default profile image')
+								);
 							}}>{$i18n.t('Remove')}</button
 						>
 					</div>
@@ -189,7 +194,7 @@
 
 			<div class="pt-0.5">
 				<div class="flex flex-col w-full">
-					<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
+					<h3 class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</h3>
 
 					<div class="flex-1">
 						<input
@@ -206,7 +211,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full focus:outline-2 focus:outline-blue-600"
 			on:click={async () => {
 				const res = await submitHandler();
 
