@@ -18,6 +18,7 @@ from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     QDRANT_API_KEY,
     QDRANT_ENABLE_QUANTIZATION,
+    QDRANT_PREFER_GRPC,
     QDRANT_TIMEOUT_SECONDS,
     QDRANT_URL,
 )
@@ -26,7 +27,7 @@ from open_webui.config import (
 class QdrantClient:
     def __init__(self):
         self.client = Client(
-            url=QDRANT_URL, api_key=QDRANT_API_KEY, timeout=int(QDRANT_TIMEOUT_SECONDS)
+            url=QDRANT_URL, api_key=QDRANT_API_KEY, timeout=int(QDRANT_TIMEOUT_SECONDS), prefer_grpc=QDRANT_PREFER_GRPC,
         )
 
     def _result_to_get_result(self, result) -> GetResult:

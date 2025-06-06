@@ -1534,7 +1534,10 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_ENABLE_QUANTIZATION = (
     os.environ.get("QDRANT_ENABLE_QUANTIZATION", "False").lower() == "true"
 )
-QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
+QDRANT_PREFER_GRPC = (
+    os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
+)
+QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost")
 QDRANT_TIMEOUT_SECONDS = os.environ.get("QDRANT_TIMEOUT_SECONDS", 5)
 
 # OpenSearch
