@@ -18,6 +18,8 @@ from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     QDRANT_API_KEY,
     QDRANT_ENABLE_QUANTIZATION,
+    QDRANT_ON_DISK_PAYLOAD,
+    QDRANT_ON_DISK_VECTOR,
     QDRANT_PREFER_GRPC,
     QDRANT_TIMEOUT_SECONDS,
     QDRANT_URL,
@@ -152,10 +154,11 @@ class QdrantClient:
         if not self.client.collection_exists(collection_name=collection_name):
             self.client.create_collection(
                 collection_name=collection_name,
+                on_disk_payload=QDRANT_ON_DISK_PAYLOAD,
                 vectors_config=VectorParams(
                     size=len(items[0]["vector"]),
                     distance=Distance.COSINE,
-                    on_disk=QDRANT_ENABLE_QUANTIZATION,
+                    on_disk=QDRANT_ON_DISK_VECTOR,
                     multivector_config=models.MultiVectorConfig(
                         comparator=models.MultiVectorComparator.MAX_SIM
                     ),

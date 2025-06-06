@@ -1534,6 +1534,12 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_ENABLE_QUANTIZATION = (
     os.environ.get("QDRANT_ENABLE_QUANTIZATION", "False").lower() == "true"
 )
+QDRANT_ON_DISK_PAYLOAD = (
+    os.environ.get("QDRANT_ON_DISK_PAYLOAD", "False").lower() == "true"
+)
+QDRANT_ON_DISK_VECTOR = (
+    os.environ.get("QDRANT_ON_DISK_VECTOR", "False").lower() == "true"
+)
 QDRANT_PREFER_GRPC = (
     os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
 )
