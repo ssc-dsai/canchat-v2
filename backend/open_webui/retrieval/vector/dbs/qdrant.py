@@ -29,7 +29,10 @@ from open_webui.config import (
 class QdrantClient:
     def __init__(self):
         self.client = Client(
-            url=QDRANT_URL, api_key=QDRANT_API_KEY, timeout=int(QDRANT_TIMEOUT_SECONDS), prefer_grpc=QDRANT_PREFER_GRPC,
+            url=QDRANT_URL,
+            api_key=QDRANT_API_KEY,
+            timeout=int(QDRANT_TIMEOUT_SECONDS),
+            prefer_grpc=QDRANT_PREFER_GRPC,
         )
 
     def _result_to_get_result(self, result) -> GetResult:
