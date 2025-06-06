@@ -6,6 +6,9 @@ from qdrant_client.http.models import (
     Filter,
     FieldCondition,
     MatchValue,
+    ScalarQuantization,
+    ScalarQuantizationConfig,
+    ScalarType,
 )
 
 
@@ -14,6 +17,10 @@ from typing import Optional
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     QDRANT_API_KEY,
+    QDRANT_ENABLE_QUANTIZATION,
+    QDRANT_ON_DISK_PAYLOAD,
+    QDRANT_ON_DISK_VECTOR,
+    QDRANT_PREFER_GRPC,
     QDRANT_TIMEOUT_SECONDS,
     QDRANT_URL,
 )
@@ -22,7 +29,10 @@ from open_webui.config import (
 class QdrantClient:
     def __init__(self):
         self.client = Client(
-            url=QDRANT_URL, api_key=QDRANT_API_KEY, timeout=int(QDRANT_TIMEOUT_SECONDS)
+            url=QDRANT_URL,
+            api_key=QDRANT_API_KEY,
+            timeout=int(QDRANT_TIMEOUT_SECONDS),
+            prefer_grpc=QDRANT_PREFER_GRPC,
         )
 
     def _result_to_get_result(self, result) -> GetResult:
@@ -135,15 +145,27 @@ class QdrantClient:
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
+
+        quantization_config = (
+            ScalarQuantization(
+                scalar=ScalarQuantizationConfig(type=ScalarType.INT8, always_ram=True)
+            )
+            if QDRANT_ENABLE_QUANTIZATION
+            else None
+        )
+
         if not self.client.collection_exists(collection_name=collection_name):
             self.client.create_collection(
                 collection_name=collection_name,
+                on_disk_payload=QDRANT_ON_DISK_PAYLOAD,
                 vectors_config=VectorParams(
                     size=len(items[0]["vector"]),
                     distance=Distance.COSINE,
+                    on_disk=QDRANT_ON_DISK_VECTOR,
                     multivector_config=models.MultiVectorConfig(
                         comparator=models.MultiVectorComparator.MAX_SIM
                     ),
+                    quantization_config=quantization_config,
                 ),
             )
 
