@@ -160,9 +160,7 @@ class QdrantClient:
             self.client.create_collection(
                 collection_name=collection_name,
                 on_disk_payload=QDRANT_ON_DISK_PAYLOAD,
-                hnsw_config=HnswConfigDiff(
-                    on_disk=QDRANT_ON_DISK_HNSW
-                ),
+                hnsw_config=HnswConfigDiff(on_disk=QDRANT_ON_DISK_HNSW),
                 vectors_config=VectorParams(
                     size=len(items[0]["vector"]),
                     distance=Distance.COSINE,
