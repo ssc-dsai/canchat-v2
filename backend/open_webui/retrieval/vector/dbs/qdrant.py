@@ -5,6 +5,7 @@ from qdrant_client.http.models import (
     VectorParams,
     Filter,
     FieldCondition,
+    HnswConfigDiff,
     MatchValue,
     ScalarQuantization,
     ScalarQuantizationConfig,
@@ -18,6 +19,7 @@ from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     QDRANT_API_KEY,
     QDRANT_ENABLE_QUANTIZATION,
+    QDRANT_ON_DISK_HNSW,
     QDRANT_ON_DISK_PAYLOAD,
     QDRANT_ON_DISK_VECTOR,
     QDRANT_PREFER_GRPC,
@@ -158,6 +160,9 @@ class QdrantClient:
             self.client.create_collection(
                 collection_name=collection_name,
                 on_disk_payload=QDRANT_ON_DISK_PAYLOAD,
+                hnsw_config=HnswConfigDiff(
+                    on_disk=QDRANT_ON_DISK_HNSW
+                ),
                 vectors_config=VectorParams(
                     size=len(items[0]["vector"]),
                     distance=Distance.COSINE,
