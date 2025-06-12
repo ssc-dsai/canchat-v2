@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 
 	import { user, settings, config } from '$lib/stores';
@@ -99,7 +99,7 @@
 >
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
+			<h3 class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</h3>
 
 			<!-- {#if $config.audio.stt.engine !== 'web'}
 				<div class=" py-0.5 flex w-full justify-between">
@@ -139,7 +139,7 @@
 		</div>
 
 		<div>
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
+			<h3 class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</h3>
 
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Auto-playback response')}</div>
@@ -164,7 +164,7 @@
 
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden focus:outline-2 focus:outline-black dark:focus:outline-white"
 						bind:value={playbackRate}
 					>
 						{#each speedOptions as option}
@@ -179,11 +179,11 @@
 
 		{#if $config.audio.tts.engine === ''}
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+				<h3 id="set-voice" class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</h3>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none focus:outline-2 focus:outline-black dark:focus:outline-white"
 							bind:value={voice}
 						>
 							<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
@@ -198,7 +198,7 @@
 					</div>
 				</div>
 				<div class="flex items-center justify-between my-1.5">
-					<div class="text-xs">
+					<div class="text-xs text-gray-800">
 						{$i18n.t('Allow non-local voices')}
 					</div>
 
@@ -232,7 +232,7 @@
 
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full focus:outline-2 focus:outline-blue-600"
 			type="submit"
 		>
 			{$i18n.t('Save')}

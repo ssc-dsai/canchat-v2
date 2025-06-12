@@ -3,7 +3,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { addNewMemory, updateMemoryById } from '$lib/apis/memories';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 
 	const dispatch = createEventDispatcher();
 
@@ -33,7 +33,7 @@
 	};
 </script>
 
-<Modal bind:show size="sm">
+<Modal bind:show size="sm" returnfocusSelector="#add-memory">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center">

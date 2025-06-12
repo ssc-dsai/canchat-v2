@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import dayjs from 'dayjs';
 
 	import { createEventDispatcher } from 'svelte';
@@ -285,7 +285,7 @@
 		editedContent = message.content;
 
 		await tick();
-
+		toast.announce($i18n.t('Message editing started.'));
 		editTextAreaElement.style.height = '';
 		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 	};
@@ -297,6 +297,7 @@
 		editedContent = '';
 
 		await tick();
+		toast.success($i18n.t('Message editing confirmed.'));
 	};
 
 	const saveAsCopyHandler = async () => {
@@ -306,12 +307,14 @@
 		editedContent = '';
 
 		await tick();
+		toast.announce($i18n.t('Message saved as copy. You are now in copied message chain.'));
 	};
 
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
 		await tick();
+		toast.announce($i18n.t('Message editing cancelled.'));
 	};
 
 	const generateImage = async (message: MessageType) => {
@@ -482,7 +485,7 @@
 
 				{#if message.timestamp}
 					<div
-						class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+						class=" self-center text-xs text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
 							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -587,7 +590,7 @@
 								<textarea
 									id="message-edit-{message.id}"
 									bind:this={editTextAreaElement}
-									class=" bg-transparent outline-none w-full resize-none"
+									class=" bg-transparent focus:outline-dark dark:focus:outline-white w-full resize-none"
 									bind:value={editedContent}
 									on:input={(e) => {
 										e.target.style.height = '';
@@ -611,7 +614,8 @@
 									<div>
 										<button
 											id="save-new-message-button"
-											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											aria-label={$i18n.t('Save as Copy')}
+											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -623,7 +627,7 @@
 									<div class="flex space-x-1.5">
 										<button
 											id="close-edit-message-button"
-											class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+											class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
 											on:click={() => {
 												cancelEditMessage();
 											}}
@@ -633,7 +637,7 @@
 
 										<button
 											id="confirm-edit-message-button"
-											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl focus:outline-2 focus:outline-blue-600"
 											on:click={() => {
 												editMessageConfirmHandler();
 											}}
@@ -644,7 +648,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col relative" id="response-content-container">
+							<div class="w-full flex flex-col relative">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
@@ -716,32 +720,35 @@
 						>
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit">
-									<button
-										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
-										on:click={() => {
-											showPreviousMessage(message);
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-											stroke-width="2.5"
-											class="size-3.5"
+									<Tooltip content={$i18n.t('Previous Response')} placement="bottom">
+										<button
+											aria-label={$i18n.t('Previous Response')}
+											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+											on:click={() => {
+												showPreviousMessage(message);
+											}}
 										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M15.75 19.5 8.25 12l7.5-7.5"
-											/>
-										</svg>
-									</button>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+												stroke-width="2.5"
+												class="size-3.5"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M15.75 19.5 8.25 12l7.5-7.5"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
 
 									<div
 										class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
 									>
-										{siblings.indexOf(message.id) + 1}/{siblings.length}
+										{siblings.indexOf(message.id) + 1} of {siblings.length}
 									</div>
 
 									<button
@@ -773,9 +780,7 @@
 									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 												on:click={() => {
 													editMessageHandler();
 												}}
@@ -801,9 +806,8 @@
 
 								<Tooltip content={$i18n.t('Copy')} placement="bottom">
 									<button
-										class="{isLastMessage
-											? 'visible'
-											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
+										aria-label={$i18n.t('Copy')}
+										class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
 											copyToClipboard(message.content);
 										}}
@@ -828,9 +832,8 @@
 								<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 									<button
 										id="speak-button-{message.id}"
-										class="{isLastMessage
-											? 'visible'
-											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+										aria-label={$i18n.t('Read Aloud')}
+										class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 										on:click={() => {
 											if (!loadingSpeech) {
 												toggleSpeakMessage();
@@ -1010,9 +1013,7 @@
 									{#if $config?.features.enable_message_rating ?? true}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+												class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
 													message?.annotation?.rating ?? ''
 												).toString() === '1'
 													? 'bg-gray-100 dark:bg-gray-800'
@@ -1046,9 +1047,7 @@
 
 										<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
 											<button
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+												class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
 													message?.annotation?.rating ?? ''
 												).toString() === '-1'
 													? 'bg-gray-100 dark:bg-gray-800'
@@ -1085,10 +1084,9 @@
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												type="button"
+												aria-label={$i18n.t('Continue Response')}
 												id="continue-response-button"
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+												class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
 													continueResponse();
 												}}
@@ -1119,9 +1117,8 @@
 									<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 										<button
 											type="button"
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+											aria-label={$i18n.t('Regenerate')}
+											class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 											on:click={() => {
 												showRateComment = false;
 												regenerateResponse(message);

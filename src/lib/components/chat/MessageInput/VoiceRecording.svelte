@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { createEventDispatcher, tick, getContext, onMount, onDestroy } from 'svelte';
 	import { config, settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
@@ -267,6 +267,7 @@
 	const confirmRecording = async () => {
 		loading = true;
 		confirmed = true;
+		toast.announce($i18n.t('Voice recording transcription started'));
 
 		if (recording && mediaRecorder) {
 			await mediaRecorder.stop();

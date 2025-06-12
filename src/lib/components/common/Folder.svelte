@@ -123,42 +123,50 @@
 			<div
 				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-400 transition"
 			>
-				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
-					<div class="text-gray-700 dark:text-gray-400">
-						{#if open}
-							<ChevronDown className=" size-3" strokeWidth="2.5" />
-						{:else}
-							<ChevronRight className=" size-3" strokeWidth="2.5" />
-						{/if}
-					</div>
+				<button
+					class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium text-gray-900 dark:text-gray-100"
+				>
+					{#if open}
+						<ChevronDown className=" size-3" strokeWidth="2.5" />
+					{:else}
+						<ChevronRight className=" size-3" strokeWidth="2.5" />
+					{/if}
 
-					<div
-						class="flex w-full text-gray-900 dark:text-white bg-transparent group-hover:bg-gray-100 dark:group-hover:bg-transparent px-1 rounded transition"
-					>
-						{name}
-					</div>
+					{#if name === 'Chats'}
+						<h2 class="translate-y-[0.5px]pr-4 text-gray-900 dark:text-gray-100 font-semibold">
+							{name}
+						</h2>
+					{:else}
+						<h3 class="translate-y-[0.5px] pr-4 text-gray-900 dark:text-gray-100 font-semibold">
+							{name}
+						</h3>
+					{/if}
 				</button>
 
 				{#if onAdd}
-					<button
-						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center text-gray-700 dark:text-gray-300"
-						on:pointerup={(e) => {
-							e.stopPropagation();
-						}}
-						on:click={(e) => {
-							e.stopPropagation();
-							onAdd();
-						}}
-					>
+					<div class="absolute z-10 right-2 self-center flex items-center dark:text-gray-300">
 						<Tooltip content={onAddLabel}>
 							<button
 								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
-								on:click={(e) => {}}
+								on:pointerup={(e) => {
+									e.stopPropagation();
+								}}
+								on:click={(e) => {
+									e.stopPropagation();
+									onAdd();
+									open = true;
+								}}
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.stopPropagation();
+									}
+								}}
+								aria-label={onAddLabel}
 							>
-								<Plus className=" size-3" strokeWidth="2.5" />
+								<Plus className=" size-3 text-gray-900 dark:text-gray-100" strokeWidth="2.5" />
 							</button>
 						</Tooltip>
-					</button>
+					</div>
 				{/if}
 			</div>
 
