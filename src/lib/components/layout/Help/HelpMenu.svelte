@@ -19,9 +19,11 @@
 	export let showSuggestionHandler: Function;
 
 	export let onClose: Function = () => {};
+	export let ariaLabel: string = 'Help';
 </script>
 
 <Dropdown
+	{ariaLabel}
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
