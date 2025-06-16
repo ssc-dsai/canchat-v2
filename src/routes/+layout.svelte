@@ -30,7 +30,7 @@
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { toast } from 'svelte-sonner';
+	import { Toaster, toast } from 'svelte-sonner';
 
 	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
@@ -47,8 +47,6 @@
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
-
-	import Toaster from '$lib/components/common/Toaster.svelte';
 
 	setContext('i18n', i18n);
 
