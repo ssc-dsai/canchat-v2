@@ -511,7 +511,9 @@ async def update_rag_config(
         )
 
         request.app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
-        request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = form_data.web.search.bypass_embedding_and_retrieval
+        request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
+            form_data.web.search.bypass_embedding_and_retrieval
+        )
         request.app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
         request.app.state.config.SEARXNG_QUERY_URL = (
             form_data.web.search.searxng_query_url

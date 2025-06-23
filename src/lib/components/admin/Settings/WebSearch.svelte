@@ -90,8 +90,12 @@
 					<div class="flex items-center relative">
 						<Tooltip
 							content={webConfig.search.bypass_embedding_and_retrieval
-								? $i18n.t('Inject the entire document as context for comprehensive processing, this is recommended for complex queries.')
-								: $i18n.t('Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.')}
+								? $i18n.t(
+										'Inject the entire document as context for comprehensive processing, this is recommended for complex queries.'
+									)
+								: $i18n.t(
+										'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
+									)}
 						>
 							<Switch bind:state={webConfig.search.bypass_embedding_and_retrieval} />
 						</Tooltip>
