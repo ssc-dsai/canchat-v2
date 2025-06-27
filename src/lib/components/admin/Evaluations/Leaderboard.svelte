@@ -333,7 +333,7 @@
 
 		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300 mr-1.5"
+		<span class="text-lg font-medium text-[#767676] dark:text-gray-300 mr-1.5"
 			>{rankedModels.length}</span
 		>
 	</div>
@@ -341,57 +341,74 @@
 	<div class=" flex space-x-2">
 		<Tooltip content={$i18n.t('Re-rank models by topic similarity')}>
 			<div class="flex flex-1">
-				<div class=" self-center ml-1 mr-3">
+				<label for="leaderboard-search" class="sr-only"
+					>{$i18n.t('Search leaderboard by topic')}</label
+				>
+				<div class=" self-center ml-1 mr-3" aria-hidden="true">
 					<MagnifyingGlass className="size-3" />
 				</div>
 				<input
-					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+					id="leaderboard-search"
+					type="text"
+					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 					bind:value={query}
 					placeholder={$i18n.t('Search')}
+					aria-describedby="leaderboard-search-help"
 					on:focus={() => {
 						loadEmbeddingModel();
 					}}
 				/>
 			</div>
 		</Tooltip>
+		<div id="leaderboard-search-help" class="sr-only">
+			{$i18n.t(
+				'Search to re-rank models by topic similarity. This does not filter models but weights their ratings based on topic relevance.'
+			)}
+		</div>
 	</div>
 </div>
 
 <div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded pt-0.5">
 	{#if loadingLeaderboard}
-		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
+		<div
+			class=" absolute top-0 bottom-0 left-0 right-0 flex"
+			aria-live="polite"
+			aria-label="Loading leaderboard"
+		>
 			<div class="m-auto">
 				<Spinner />
 			</div>
 		</div>
 	{/if}
 	{#if (rankedModels ?? []).length === 0}
-		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
+		<div class="text-center text-xs text-[#767676] dark:text-gray-400 py-1">
 			{$i18n.t('No models found')}
 		</div>
 	{:else}
 		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded {loadingLeaderboard
+			class="w-full text-sm text-left text-[#767676] dark:text-gray-400 table-auto max-w-full rounded {loadingLeaderboard
 				? 'opacity-20'
 				: ''}"
+			aria-label="Model leaderboard rankings"
+			aria-describedby={query ? 'leaderboard-search-help' : undefined}
 		>
 			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
+				class="text-xs text-[#4a4a4a] uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
 			>
 				<tr class="">
-					<th scope="col" class="px-3 py-1.5 cursor-pointer select-none w-3">
+					<th scope="col" class="px-3 py-1.5 w-3">
 						{$i18n.t('RK')}
 					</th>
-					<th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
+					<th scope="col" class="px-3 py-1.5">
 						{$i18n.t('Model')}
 					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
+					<th scope="col" class="px-3 py-1.5 text-right w-fit">
 						{$i18n.t('Rating')}
 					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
+					<th scope="col" class="px-3 py-1.5 text-right w-5">
 						{$i18n.t('Won')}
 					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
+					<th scope="col" class="px-3 py-1.5 text-right w-5">
 						{$i18n.t('Lost')}
 					</th>
 				</tr>
@@ -423,7 +440,7 @@
 							{model.rating}
 						</td>
 
-						<td class=" px-3 py-1.5 text-right font-semibold text-green-500">
+						<td class=" px-3 py-1.5 text-right font-semibold text-[#14873f] dark:text-green-400">
 							<div class=" w-10">
 								{#if model.stats.won === '-'}
 									-
@@ -455,8 +472,8 @@
 	{/if}
 </div>
 
-<div class=" text-gray-500 text-xs mt-1.5 w-full flex justify-end">
-	<div class=" text-right">
+<div class=" text-[#767676] text-xs mt-1.5 w-full flex justify-end">
+	<div class=" text-right" role="note" aria-label="Leaderboard methodology explanation">
 		<div class="line-clamp-1">
 			ⓘ {$i18n.t(
 				'The evaluation leaderboard uses a hybrid rating system combining competitive ELO ratings with individual feedback analysis.'
