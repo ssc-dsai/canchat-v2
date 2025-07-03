@@ -8,6 +8,7 @@ from open_webui.env import SRC_LOG_LEVELS
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
+
 def validate_url(url: str) -> bool:
     """
     Validates URL of search result and logs out malformed ones.
@@ -18,7 +19,7 @@ def validate_url(url: str) -> bool:
     if validators.url(url):
         return True
     else:
-        log.error(f"Badly formatted URL: \"{url}\"")
+        log.error(f'Badly formatted URL: "{url}"')
         return False
 
 
