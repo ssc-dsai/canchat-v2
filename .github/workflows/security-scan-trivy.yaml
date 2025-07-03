@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: 'Format Backend'
+    name: 'Scan - Trivy'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
