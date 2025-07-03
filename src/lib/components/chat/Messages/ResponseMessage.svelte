@@ -49,6 +49,12 @@
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 
+	import IssueModal from '$lib/components/common/IssueModal.svelte';
+	import SuggestionModal from '$lib/components/common/SuggestionModal.svelte';
+	import Bug from '$lib/components/icons/Bug.svelte';
+	import LightBlub from '$lib/components/icons/LightBlub.svelte';
+	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
+
 	interface MessageType {
 		id: string;
 		model: string;
@@ -153,6 +159,8 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+	let showIssueModal = false;
+	let showSuggestionModal = false;
 
 	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
@@ -1418,6 +1426,50 @@
 												</button>
 											</Tooltip>
 										{/each}
+
+									<!-- Help buttons -->
+									<Tooltip content={$i18n.t('Report an Issue')} placement="bottom">
+										<button
+											type="button"
+											class="{isLastMessage
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+											on:click={() => {
+												showIssueModal = true;
+											}}
+										>
+											<Bug className="size-4" />
+										</button>
+									</Tooltip>
+
+									<Tooltip content={$i18n.t('Suggestion Box')} placement="bottom">
+										<button
+											type="button"
+											class="{isLastMessage
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+											on:click={() => {
+												showSuggestionModal = true;
+											}}
+										>
+											<LightBlub className="size-4" />
+										</button>
+									</Tooltip>
+
+									<Tooltip content={$i18n.t('User Survey')} placement="bottom">
+										<button
+											type="button"
+											class="{isLastMessage
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+											on:click={() => {
+												const surveyUrl = $config?.app?.urls?.survey || 'https://forms.gle/ntmgGf5j3FJJJVde9';
+												window.open(surveyUrl, '_blank');
+											}}
+										>
+											<Lifebuoy className="size-4" />
+										</button>
+									</Tooltip>
 									{/if}
 								{/if}
 							{/if}
@@ -1440,6 +1492,14 @@
 		</div>
 	</div>
 {/key}
+
+{#if showIssueModal}
+	<IssueModal bind:show={showIssueModal} />
+{/if}
+
+{#if showSuggestionModal}
+	<SuggestionModal bind:show={showSuggestionModal} />
+{/if}
 
 <style>
 	.buttons::-webkit-scrollbar {
