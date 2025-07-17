@@ -39,6 +39,7 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 # Config helpers
 ####################################
 
+
 class Config(Base):
     __tablename__ = "config"
 

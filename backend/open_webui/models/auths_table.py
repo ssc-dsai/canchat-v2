@@ -21,6 +21,7 @@ Note: This service does not follow the pattern of being within the file
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
+
 class AuthsTable:
     def insert_new_auth(
         self,

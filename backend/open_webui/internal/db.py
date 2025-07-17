@@ -72,6 +72,7 @@ def handle_peewee_migration(DATABASE_URL):
 
 handle_peewee_migration(DATABASE_URL)
 
+
 # Function to run the alembic migrations
 def run_migrations():
     print("Running migrations")
@@ -88,6 +89,7 @@ def run_migrations():
         command.upgrade(alembic_cfg, "head")
     except Exception as e:
         print(f"Error: {e}")
+
 
 run_migrations()
 
