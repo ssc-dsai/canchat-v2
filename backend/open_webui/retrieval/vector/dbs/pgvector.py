@@ -46,7 +46,6 @@ class DocumentChunk(Base):
 
 class PgvectorClient:
     def __init__(self) -> None:
-
         # if no pgvector uri, use the existing database connection
         if not PGVECTOR_DB_URL:
             from open_webui.internal.db import Session

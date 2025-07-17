@@ -22,14 +22,12 @@ from open_webui.env import (
 
 from fastapi import (
     Depends,
-    FastAPI,
     File,
     HTTPException,
     Request,
     UploadFile,
     APIRouter,
 )
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, validator
 from starlette.background import BackgroundTask
@@ -52,7 +50,6 @@ from open_webui.config import (
     UPLOAD_DIR,
 )
 from open_webui.env import (
-    ENV,
     SRC_LOG_LEVELS,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
@@ -117,7 +114,6 @@ async def send_post_request(
     content_type: Optional[str] = None,
     user: UserModel = None,
 ):
-
     r = None
     try:
         session = aiohttp.ClientSession(
@@ -1378,7 +1374,6 @@ async def get_openai_models(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-
     models = []
     if url_idx is None:
         model_list = await get_all_models(request, user=user)

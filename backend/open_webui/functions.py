@@ -7,16 +7,9 @@ import asyncio
 from pydantic import BaseModel
 from typing import AsyncGenerator, Generator, Iterator
 from fastapi import (
-    Depends,
-    FastAPI,
-    File,
-    Form,
-    HTTPException,
     Request,
-    UploadFile,
-    status,
 )
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import StreamingResponse
 
 
 from open_webui.socket.main import (
@@ -29,15 +22,11 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.tools import get_tools, get_tools_async
-from open_webui.utils.access_control import has_access
+from open_webui.utils.tools import get_tools_async
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
 from open_webui.utils.misc import (
-    add_or_update_system_message,
-    get_last_user_message,
-    prepend_to_first_user_message_content,
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
 )
@@ -95,7 +84,7 @@ async def get_function_models(request):
             )
 
             for p in sub_pipes:
-                sub_pipe_id = f'{pipe.id}.{p["id"]}'
+                sub_pipe_id = f"{pipe.id}.{p['id']}"
                 sub_pipe_name = p["name"]
 
                 if hasattr(function_module, "name"):
@@ -281,7 +270,7 @@ async def generate_function_chat_completion(
 
             except Exception as e:
                 log.error(f"Error: {e}")
-                yield f"data: {json.dumps({'error': {'detail':str(e)}})}\n\n"
+                yield f"data: {json.dumps({'error': {'detail': str(e)}})}\n\n"
                 return
 
             if isinstance(res, str):
