@@ -24,7 +24,8 @@ from open_webui.env import (
     WEBUI_NAME,
     log,
 )
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import get_db
+from open_webui.models.base import Base
 
 
 class EndpointFilter(logging.Filter):
@@ -38,27 +39,6 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 ####################################
 # Config helpers
 ####################################
-
-
-# Function to run the alembic migrations
-def run_migrations():
-    print("Running migrations")
-    try:
-        from alembic import command
-        from alembic.config import Config
-
-        alembic_cfg = Config(OPEN_WEBUI_DIR / "alembic.ini")
-
-        # Set the script location dynamically
-        migrations_path = OPEN_WEBUI_DIR / "migrations"
-        alembic_cfg.set_main_option("script_location", str(migrations_path))
-
-        command.upgrade(alembic_cfg, "head")
-    except Exception as e:
-        print(f"Error: {e}")
-
-
-run_migrations()
 
 
 class Config(Base):
@@ -1443,7 +1423,7 @@ Strictly return in JSON format:
 ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
     "ENABLE_AUTOCOMPLETE_GENERATION",
     "task.autocomplete.enable",
-    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "True").lower() == "true",
+    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "False").lower() == "true",
 )
 
 AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(

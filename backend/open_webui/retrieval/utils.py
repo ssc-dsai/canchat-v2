@@ -1,9 +1,7 @@
 import logging
 import os
-import uuid
 from typing import Optional, Union
 
-import asyncio
 import requests
 
 from huggingface_hub import snapshot_download
@@ -14,7 +12,6 @@ from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.utils.misc import get_last_user_message
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
@@ -461,7 +458,7 @@ def get_sources_from_files(
                                     reranking_function=reranking_function,
                                     r=r,
                                 )
-                            except Exception as e:
+                            except Exception:
                                 log.debug(
                                     "Error when using hybrid search, using"
                                     " non hybrid search as fallback."

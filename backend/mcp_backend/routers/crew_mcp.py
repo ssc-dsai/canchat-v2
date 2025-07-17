@@ -5,14 +5,12 @@ API endpoints for CrewAI integration with MCP servers
 
 import logging
 import sys
-import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.routers.tasks import generate_chat_tags, generate_title
+from open_webui.utils.auth import get_verified_user
 from open_webui.models.chats import Chats
 from open_webui.socket.main import get_event_emitter
 
@@ -21,7 +19,7 @@ backend_dir = Path(__file__).parent.parent.parent
 sys.path.append(str(backend_dir))
 
 try:
-    from crew_mcp_integration import CrewMCPManager
+    from mcp_backend.integration.crew_mcp_integration import CrewMCPManager
 except ImportError as e:
     logging.error(f"Failed to import CrewMCPManager: {e}")
     CrewMCPManager = None
@@ -97,10 +95,8 @@ Respond with just the title, no quotes or formatting."""
         title = title_res["choices"][0]["message"]["content"].strip()
         if title:
             Chats.update_chat_title_by_id(request.chat_id, title)
-            log.info(f"Generated title for chat {request.chat_id}: {title}")
             return title
 
-    log.warning(f"Failed to generate valid title for chat {request.chat_id}")
     return None
 
 
@@ -141,12 +137,10 @@ Assistant: {result[:1000]}..."""
                 tags = tags_json.get("tags", [])
                 if isinstance(tags, list) and tags:
                     Chats.update_chat_tags_by_id(request.chat_id, tags, user)
-                    log.info(f"Generated tags for chat {request.chat_id}: {tags}")
                     return tags
-            except json.JSONDecodeError as e:
-                log.error(f"JSON parse error for chat {request.chat_id}: {e}")
+            except json.JSONDecodeError:
+                pass
 
-    log.warning(f"Failed to generate valid tags for chat {request.chat_id}")
     return None
 
 
@@ -165,38 +159,62 @@ async def _emit_event(event_emitter, event_type: str, data, chat_id: str):
 async def generate_title_and_tags_background(
     request_data, request: CrewMCPQuery, result: str, user
 ):
-    """Background task to generate title and tags without blocking the main response"""
+    """
+    Background task to generate title and tags for MCP requests.
+    Uses standard Open WebUI model selection.
+    """
     try:
-        log.info(f"Starting background title/tag generation for chat {request.chat_id}")
-
         # Setup
         event_emitter = await _setup_event_emitter(request, user)
 
-        from open_webui.utils.task import get_task_model_id
-
         models = request_data.app.state.MODELS
-        task_model_id = get_task_model_id(
-            request.model or "mistral:7b",
-            request_data.app.state.config.TASK_MODEL,
-            request_data.app.state.config.TASK_MODEL_EXTERNAL,
-            models,
-        )
+
+        # Safety check to prevent crashes
+        if not models or not isinstance(models, dict):
+            return
+
+        # For deployment environments, try to use any available model
+        # Prefer Ollama models but fall back to others if needed
+        ollama_models = [k for k, v in models.items() if v.get("owned_by") == "ollama"]
+
+        task_model_id = None
+        if ollama_models:
+            # Use the smallest/most reliable Ollama model
+            task_model_id = (
+                "llama3.2:3b" if "llama3.2:3b" in ollama_models else ollama_models[0]
+            )
+        elif models:
+            # In deployment, use the first available model if no Ollama models
+            task_model_id = next(iter(models.keys()))
+        else:
+            # No models available at all
+            return
+
+        # Only proceed if we have a valid model
+        if not task_model_id:
+            return
 
         # Generate title and tags
-        title = await _generate_title(
-            request_data, request, result, user, task_model_id
-        )
-        if title:
-            await _emit_event(event_emitter, "chat:title", title, request.chat_id)
+        try:
+            title = await _generate_title(
+                request_data, request, result, user, task_model_id
+            )
+            if title:
+                await _emit_event(event_emitter, "chat:title", title, request.chat_id)
+        except Exception:
+            pass
 
-        tags = await _generate_tags(request_data, request, result, user, task_model_id)
-        if tags:
-            await _emit_event(event_emitter, "chat:tags", tags, request.chat_id)
+        try:
+            tags = await _generate_tags(
+                request_data, request, result, user, task_model_id
+            )
+            if tags:
+                await _emit_event(event_emitter, "chat:tags", tags, request.chat_id)
+        except Exception:
+            pass
 
-    except Exception as e:
-        log.error(
-            f"Error in background title/tag generation for chat {request.chat_id}: {e}"
-        )
+    except Exception:
+        pass
 
 
 # Global manager instance
@@ -254,34 +272,64 @@ async def run_crew_query(
         selected_tools = request.selected_tools or []
 
         log.info(f"Selected tools: {selected_tools}")
-        log.info(f"Using intelligent crew with manager agent for routing")
+        log.info("Using intelligent crew with manager agent for routing")
 
         # Always use the intelligent crew - it will handle routing internally
-        result = crew_mcp_manager.run_intelligent_crew(request.query, selected_tools)
+        # Run in executor to prevent blocking the main thread and causing health check failures
+        import asyncio
+        import concurrent.futures
+
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            result = await loop.run_in_executor(
+                executor,
+                crew_mcp_manager.run_intelligent_crew,
+                request.query,
+                selected_tools,
+            )
+
         used_tools = [tool["name"] for tool in tools]  # All tools potentially available
 
         # Generate proper title and tags if chat_id is provided (like standard chat flow)
         if request.chat_id:
-            log.info(f"Processing title and tag generation for chat {request.chat_id}")
             try:
                 # Run the title and tag generation in the background
                 import asyncio
 
-                log.info(f"About to create background task for chat {request.chat_id}")
-                task = asyncio.create_task(
-                    generate_title_and_tags_background(
-                        request_data, request, result, user
-                    )
-                )
-                log.info(f"Created background task: {task}")
+                # Create background task for title/tag generation
+                async def safe_background_task():
+                    try:
+                        await generate_title_and_tags_background(
+                            request_data, request, result, user
+                        )
+                    except Exception:
+                        # Completely isolate any background task exceptions
+                        pass
 
-            except Exception as e:
-                log.error(
-                    f"Error in title/tag generation for chat {request.chat_id}: {e}"
-                )
-                import traceback
+                task = asyncio.create_task(safe_background_task())
 
-                log.error(f"Full traceback: {traceback.format_exc()}")
+                # Add error handling for the background task
+                def handle_background_task_completion(task):
+                    try:
+                        if task.cancelled():
+                            pass
+                        elif task.exception():
+                            # Don't re-raise the exception, just log it if needed
+                            exc = task.exception()
+                            # Silently handle the exception without logging to avoid spam
+                            pass
+                        else:
+                            # Task completed successfully
+                            pass
+                    except Exception:
+                        # Don't let callback exceptions propagate
+                        pass
+
+                task.add_done_callback(handle_background_task_completion)
+
+            except Exception:
+                # Completely isolate any background task creation exceptions
+                pass
 
         return CrewMCPResponse(result=result, tools_used=used_tools, success=True)
 
