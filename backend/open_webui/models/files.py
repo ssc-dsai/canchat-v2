@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Optional
 
-from open_webui.internal.db import JSONField, get_db
+from open_webui.internal.db import get_db
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.base import Base
 from pydantic import BaseModel, ConfigDict
@@ -198,7 +198,8 @@ class FilesTable:
                 file.data = {**(file.data if file.data else {}), **data}
                 db.commit()
                 return FileModel.model_validate(file)
-            except Exception as e:
+
+            except Exception:
                 return None
 
     def update_file_metadata_by_id(self, id: str, meta: dict) -> Optional[FileModel]:
