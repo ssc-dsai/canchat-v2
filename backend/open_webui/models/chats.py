@@ -3,7 +3,8 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import get_db
+from open_webui.models.base import Base
 from open_webui.models.tags import TagModel, Tag, Tags
 
 
@@ -575,8 +576,8 @@ class ChatTable:
                         | text(
                             """
                             EXISTS (
-                                SELECT 1 
-                                FROM json_each(Chat.chat, '$.messages') AS message 
+                                SELECT 1
+                                FROM json_each(Chat.chat, '$.messages') AS message
                                 WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
                             )
                             """
