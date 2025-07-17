@@ -6,6 +6,7 @@ from open_webui.models.users import User
 from open_webui.notifications.notifier import MessageType, NotificationType
 from open_webui.notifications.notifiers.gc_notify.gc_notifier import GCNotify
 
+
 @pytest.fixture
 def setup_env(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "sqlite://test-webui.db")
