@@ -42,7 +42,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
-
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -87,7 +86,7 @@ from open_webui.internal.db import Session
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import Users
 
 from open_webui.config import (
     # Ollama

@@ -11,9 +11,6 @@ import inspect
 from fastapi import Request
 from starlette.responses import Response, StreamingResponse
 
-
-from open_webui.models.users import UserModel
-
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,

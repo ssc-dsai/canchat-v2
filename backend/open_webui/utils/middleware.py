@@ -193,7 +193,7 @@ async def chat_completion_tools_handler(
     def get_tools_function_calling_payload(messages, task_model_id, content):
         user_message = get_last_user_message(messages)
         history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
+            f'{message["role"].upper()}: """{message["content"]}"""'
             for message in messages[::-1][:4]
         )
 
@@ -1179,7 +1179,6 @@ async def process_chat_response(
 
     if not isinstance(response, StreamingResponse):
         if event_emitter:
-
             if "selected_model_id" in response:
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
@@ -1193,7 +1192,6 @@ async def process_chat_response(
                 content = response["choices"][0]["message"]["content"]
 
                 if content:
-
                     await event_emitter(
                         {
                             "type": "chat:completion",
@@ -1270,7 +1268,6 @@ async def process_chat_response(
         return response
 
     if event_emitter:
-
         task_id = str(uuid4())  # Create a unique task ID.
 
         # Handle as a background task
@@ -1421,7 +1418,6 @@ async def process_chat_response(
 
                                             reasoning_start_time = None
                                         else:
-
                                             reasoning_display_content = "\n".join(
                                                 (
                                                     f"> {line}"
@@ -1537,7 +1533,6 @@ async def process_chat_response(
         return {"status": True, "task_id": task_id}
 
     else:
-
         # Fallback to the original response
         async def stream_wrapper(original_generator, events):
             def wrap_item(item):

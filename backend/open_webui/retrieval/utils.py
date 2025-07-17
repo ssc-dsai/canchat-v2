@@ -143,7 +143,7 @@ def query_doc_with_hybrid_search(
 
         log.info(
             "query_doc_with_hybrid_search:result "
-            + f'{result["metadatas"]} {result["distances"]}'
+            + f"{result['metadatas']} {result['distances']}"
         )
         return result
     except Exception as e:
@@ -283,9 +283,7 @@ def query_collection_with_hybrid_search(
                 )
                 results.append(result)
         except Exception as e:
-            log.exception(
-                "Error when querying the collection with " f"hybrid_search: {e}"
-            )
+            log.exception(f"Error when querying the collection with hybrid_search: {e}")
             error = True
 
     if error:

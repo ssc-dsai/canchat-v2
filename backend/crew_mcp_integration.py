@@ -313,7 +313,7 @@ class CrewMCPManager:
                 - TIME: Handles current time, dates, timezones, scheduling, time-related calculations
                 - NEWS: Handles current news, headlines, articles, breaking news, news search
                 
-                Available specialists for this query: {', '.join(available_specialists)}
+                Available specialists for this query: {", ".join(available_specialists)}
                 
                 Your job is to analyze the user's intent and decide:
                 1. Which specialist(s) can best answer their question
@@ -330,7 +330,7 @@ class CrewMCPManager:
             routing_task = Task(
                 description=f"""Analyze this user query and make a routing decision: "{query}"
 
-Available specialists: {', '.join(available_specialists)}
+Available specialists: {", ".join(available_specialists)}
 
 Based on what the user is actually asking for, decide:
 
