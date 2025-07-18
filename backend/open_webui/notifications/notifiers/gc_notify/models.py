@@ -1,11 +1,12 @@
 # External
+from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel
-from typing import Dict, List
+from pydantic import BaseModel, model_validator
+from typing import Any, Dict, List, Self, cast
 
 # Internal
-
+from open_webui.models.users import UserModel
 
 # Forms
 class SendBulkEmail500Model(BaseModel):
@@ -75,38 +76,97 @@ class SendBulkEmail201DataModel(BaseModel):
     template_version: int | None
     updated_at: datetime | None
 
-
-# https://documentation.notification.canada.ca/en/apispec.html#/Notifications/sendBulkNotifications
 class SendBulkEmail201Model(BaseModel):
+    """
+    Top level object for a successful response when sending a bulk email.
+
+    Swagger API Docs: https://documentation.notification.canada.ca/en/apispec.html#/Notifications/sendBulkNotifications
+    """
     data: SendBulkEmail201DataModel
 
 
-class PersonalizationValueType(str, Enum):
+# Classes for Templates
+class TemplatePersonalization(ABC):
     """
-    An Enum which identifies where the information for a personalization in a template comes from.
-
-    STATIC: A static value to insert.
-    USER_FIELD: A field from the User Model.
-    """
-
-    STATIC = "static"
-    USER_FIELD = "user_field"
-
-
-class TemplatePersonalization(BaseModel):
-    """
-    A model that represents a personalization in a GC Notify Template.
-    Docs: https://notification.canada.ca/sending-custom-content/
+    Defines a template personalization for GC Notify.
+    A personalization is defined by the key used in the template and the value to fill it.
 
     Attributes:
-      type (PersonalizationValueType): the type identifies from where data is extracted.
-      name (str): the name of the variable in the template.
-      value (str): the value to be used to populate the variable in the template.
+      name (str): the name(key) of the personalization in the template.
+    """
+    __name: str
+
+    def __init__(self, name: str) -> None:
+        self.__name=name
+        super().__init__()
+
+    def get_name(self) -> str:
+        """
+        Returns the name of the personalization used in the template.
+        """
+        return self.__name
+
+    @abstractmethod
+    def get_value(self, arg: Any = None) -> str:
+        """
+        Returns the value to be inserted into the template.
+        """
+        pass
+
+class StaticPersonalization(TemplatePersonalization):
+    """
+    Represents a static value to be inserted into the template.
+
+    Attributes:
+      value (str): The value to insert into the template.
     """
 
-    type: PersonalizationValueType
-    name: str
-    value: str | Dict[str, PersonalizationValueType]
+    __value: str
+
+    def __init__(self, name: str, value: str) -> None:
+        self.__value=value
+        super().__init__(name)
+
+    def get_value(self, arg: Any = None) -> str:
+        return self.__value
+
+class UserPersonalization(TemplatePersonalization):
+    """
+    A personalization which extract data from a UserModel.
+
+    Attributes:
+      name (str): the name(key) of the personalization in the template.
+      field_name(str): the name of the field in the UserModel to extract data from.
+    """
+
+    __field_name: str
+
+    def __init__(self, name: str, field_name: str):
+        self.__field_name=field_name
+        super().__init__(name)
+
+    def get_value(self, arg: Any = None) -> str:
+        if not isinstance(arg, UserModel):
+            raise TypeError("arg must be a UserModel")
+        return str(getattr(arg, self.__field_name))
+
+class MappedStatic(TemplatePersonalization):
+    """
+    Allows for
+    """
+
+    __map: dict[str, str]
+    __default: str
+    __accessor: TemplatePersonalization
+
+    def __init__(self, name: str, map: dict[str, str], default: str, accessor: TemplatePersonalization) -> None:
+        self.__map=map
+        self.__default=default
+        self.__accessor=accessor
+        super().__init__(name)
+
+    def get_value(self, arg: Any = None) -> str:
+        return self.__map.get(self.__accessor.get_value(arg), self.__default)
 
 
 class GCNotifyTemplate(Enum):
@@ -120,21 +180,32 @@ class GCNotifyTemplate(Enum):
 
     WELCOME = (
         "b2f0784d-2779-4a9c-a64a-e1f2c43d8f3a",
-        [
-            TemplatePersonalization(
+        cast(list[TemplatePersonalization],
+          [
+            UserPersonalization(
                 name="email address",
-                type=PersonalizationValueType.USER_FIELD,
-                value="email",
+                field_name="email"
             ),
-            TemplatePersonalization(
-                name="name", type=PersonalizationValueType.USER_FIELD, value="name"
+            UserPersonalization(
+                name="name",
+                field_name="name"
             ),
-            TemplatePersonalization(
+            # StaticPersonalization(
+            #     name="url",
+            #     value="https://https://canchat-v2.dsai-sdia.ssc-spc.cloud-nuage.canada.ca"
+            # ),
+            MappedStatic(
                 name="url",
-                type=PersonalizationValueType.STATIC,
-                value="https://https://canchat-v2.dsai-sdia.ssc-spc.cloud-nuage.canada.ca",
-            ),
-        ],
+                map={
+                    "ssc-spc.gc.ca": "https://https://canchat-v2.dsai-sdia.ssc-spc.cloud-nuage.canada.ca",
+                },
+                default="https://canchat.pilot-pilote.dsai-sdia.ssc-spc.cloud-nuage.canada.ca",
+                accessor=UserPersonalization(
+                    name="domain",
+                    field_name="domain"
+                )
+            )
+        ]),
     )
 
     def __init__(self, id: str, personalizations: list[TemplatePersonalization]):

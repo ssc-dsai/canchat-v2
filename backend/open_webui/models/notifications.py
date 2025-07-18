@@ -7,7 +7,8 @@ from pydantic import BaseModel
 from sqlalchemy import Column, Text, BigInteger, Boolean, Null
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import get_db
+from open_webui.models.base import Base
 
 # from open_webui.models.base import Base
 
@@ -70,7 +71,7 @@ class NotificationsTable:
         notification_type: NotificationType,
         is_sent: bool,
         notifier_used: str,
-        is_received: str | None = None,
+        is_received: bool | None = None,
         status: str | None = None,
     ) -> Optional[NotificationModel]:
         with get_db() as db:

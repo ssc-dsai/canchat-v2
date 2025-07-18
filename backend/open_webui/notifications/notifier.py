@@ -3,7 +3,7 @@ from enum import auto, Enum
 from typing import List
 
 from open_webui.models.notifications import MessageType, NotificationType
-from open_webui.models.users import User
+from open_webui.models.users import UserModel
 
 
 class Notifier(ABC):
@@ -12,17 +12,17 @@ class Notifier(ABC):
     """
 
     @abstractmethod
-    def identifier() -> str:
+    def identifier(self) -> str:
         pass
 
     @abstractmethod
-    def notify(
+    def notify(self,
         message_type: MessageType,
         notification_type: NotificationType,
-        users: list[User],
+        users: list[UserModel],
     ) -> bool:
         pass
 
     @abstractmethod
-    def supported_notification_types() -> List[NotificationType]:
+    def supported_notification_types(self) -> List[NotificationType]:
         return []

@@ -8,7 +8,7 @@ import requests
 # Internal
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.notifications import MessageType, Notifications, NotificationType
-from open_webui.models.users import User
+from open_webui.models.users import UserModel
 from open_webui.notifications.notifier import Notifier
 from open_webui.notifications.notifiers.gc_notify.models import (
     GCNotifyTemplate,
@@ -54,17 +54,17 @@ class GCNotify(Notifier):
         self.auth_header = {"Authorization": f"ApiKey-v1 {api_key}"}
         super().__init__()
 
-    def identifier():
+    def identifier(self):
         return "gc_notify"
 
-    def supported_notification_types():
-        [NotificationType.EMAIL, NotificationType.SMS]
+    def supported_notification_types(self):
+        return [NotificationType.EMAIL, NotificationType.SMS]
 
     def notify(
         self,
         message_type: MessageType,
         notification_type: NotificationType,
-        users: list[User],
+        users: list[UserModel],
     ) -> bool:
         value = (notification_type, len(users))
         match value:
@@ -87,10 +87,10 @@ class GCNotify(Notifier):
 
         return False
 
-    def send_email(self, message_type: MessageType, user: User) -> bool:
+    def send_email(self, message_type: MessageType, user: UserModel) -> bool:
         return False
 
-    def send_bulk_email(self, message_type: MessageType, users: list[User]) -> bool:
+    def send_bulk_email(self, message_type: MessageType, users: list[UserModel]) -> bool:
         current_datetime = datetime.now(tz=timezone.utc).isoformat()
         bulkEmailModel = SendBulkEmailPostModel(
             name=f"{message_type.name}-{current_datetime}",
@@ -124,12 +124,18 @@ class GCNotify(Notifier):
                         "notification_type": NotificationType.EMAIL,
                         "is_sent": True,
                         "is_received": False,
-                        "notifier_used": "gc_notify",
+                        "notifier_used": self.identifier(),
                         "status": responseModel.data.job_status,
                     }
 
                     notification = Notifications.insert_new_notification(
-                        **notification_dict
+                        user_id=user.id,
+                        message_type=message_type,
+                        notification_type=NotificationType.EMAIL,
+                        is_sent=True,
+                        is_received=False,
+                        notifier_used=self.identifier(),
+                        status=responseModel.data.job_status,
                     )
 
                     if notification:
