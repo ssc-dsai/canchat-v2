@@ -363,6 +363,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "web_loader_ssl_verification": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
+                "bypass_embedding_and_retrieval": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
                 "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                 "searxng_query_url": request.app.state.config.SEARXNG_QUERY_URL,
