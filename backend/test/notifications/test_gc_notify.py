@@ -1,17 +1,14 @@
 import os
 import pytest
+from pytest_mock import MockerFixture
 import time
 import uuid
 
+from open_webui.models.notifications import Notifications
 from open_webui.models.users import UserModel
 from open_webui.notifications.notifier import MessageType, NotificationType
 from open_webui.notifications.notifiers.gc_notify.gc_notifier import GCNotify
 
-
-@pytest.fixture
-def setup_env(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("DATABASE_URL", "sqlite://test-webui.db")
-    monkeypatch.setenv("ANOTHER_ENV_VAR", "another_value")
 
 def _create_user(name: str, email: str) -> UserModel:
   return UserModel(
@@ -25,7 +22,7 @@ def _create_user(name: str, email: str) -> UserModel:
      profile_image_url="",
   )
 
-def test_gc_notify(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture):
+def test_gc_notify(mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture):
     caplog.set_level("DEBUG", logger="open_webui.models.notifications")
 
     api_key = os.environ["GC_NOTIFY_TEST_KEY"]
@@ -43,4 +40,7 @@ def test_gc_notify(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFix
         notification_type=NotificationType.EMAIL,
         users=users,
     )
-    # notifier.
+
+    for user in users:
+        notifications = Notifications.get_by_user_id(user_id=user.id)
+        assert len(notifications) == 1

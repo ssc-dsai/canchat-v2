@@ -2440,3 +2440,9 @@ JIRA_PROJECT_KEY = PersistentConfig(
     "jira.project_key",
     os.environ.get("JIRA_PROJECT_KEY", ""),
 )
+
+####################################
+# Notifications
+####################################
+
+NOTIFICATIONS_NOTIFIER = os.environ.get("NOTIFICATIONS_NOTIFIER", "none")

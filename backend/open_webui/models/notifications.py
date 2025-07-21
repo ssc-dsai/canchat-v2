@@ -1,9 +1,9 @@
 from enum import Enum
 import logging
 import time
-from typing import Optional
+from typing import List
 import uuid
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Column, Text, BigInteger, Boolean, Null
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -51,6 +51,8 @@ class Notification(Base):
 
 
 class NotificationModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     message_type: MessageType
@@ -73,7 +75,7 @@ class NotificationsTable:
         notifier_used: str,
         is_received: bool | None = None,
         status: str | None = None,
-    ) -> Optional[NotificationModel]:
+    ) -> NotificationModel | None:
         with get_db() as db:
             notification = NotificationModel(
                 id=str(uuid.uuid4()),
@@ -96,6 +98,18 @@ class NotificationsTable:
                 return notification
             else:
                 return None
+
+    def get_by_user_id(self, user_id: str) -> List[NotificationModel]:
+        try:
+            with get_db() as db:
+                notifications = db.query(Notification).filter_by(user_id=user_id).all()
+
+                notificationModels: List[NotificationModel] = [NotificationModel.model_validate(notification) for notification in notifications]
+
+                return notificationModels
+        except Exception as e:
+            log.error("Failed to return Notifications for user_id=%s   Error: %s", user_id, e)
+            return list()
 
 
 Notifications = NotificationsTable()

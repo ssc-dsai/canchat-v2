@@ -54,8 +54,9 @@ class GCNotify(Notifier):
         self.auth_header = {"Authorization": f"ApiKey-v1 {api_key}"}
         super().__init__()
 
-    def identifier(self):
-        return "gc_notify"
+    @staticmethod
+    def identifier() -> str:
+        return str("gc_notify")
 
     def supported_notification_types(self):
         return [NotificationType.EMAIL, NotificationType.SMS]
@@ -68,10 +69,7 @@ class GCNotify(Notifier):
     ) -> bool:
         value = (notification_type, len(users))
         match value:
-            case (NotificationType.EMAIL, x) if x == 1:
-                return self.send_email(message_type=message_type, user=users[0])
-
-            case (NotificationType.EMAIL, x) if x > 1:
+            case (NotificationType.EMAIL, x) if x >= 1:
                 return self.send_bulk_email(message_type=message_type, users=users)
 
             case (NotificationType.EMAIL, x) if x == 0:
@@ -154,6 +152,7 @@ class GCNotify(Notifier):
                 return False
             case 500:
                 responseModel = SendBulkEmail500Model(**response.json())
+                log.error("Received status code 500: Internal Server Error. message: %s", responseModel.message)
 
             case _:
                 log.error(

@@ -12,7 +12,8 @@ class Notifier(ABC):
     """
 
     @abstractmethod
-    def identifier(self) -> str:
+    @staticmethod
+    def identifier() -> str:
         pass
 
     @abstractmethod

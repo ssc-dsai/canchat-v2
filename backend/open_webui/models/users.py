@@ -1,5 +1,5 @@
 import time
-from typing import Optional
+from typing import Any, Optional
 from logging import getLogger
 
 from open_webui.internal.db import JSONField, get_db
@@ -61,7 +61,7 @@ class UserModel(BaseModel):
 
     api_key: Optional[str] = None
     settings: Optional[UserSettings] = None
-    info: Optional[dict] = None
+    info: Optional[dict[Any, Any]] = None
 
     oauth_sub: Optional[str] = None
 
