@@ -371,10 +371,12 @@ def get_sources_from_files(
             # BYPASS_EMBEDDING_AND_RETRIEVAL
             if file.get("type") == "collection":
                 file_ids = file.get("data", {}).get("file_ids", [])
+                # Even in full context mode, limit to k documents to prevent massive context
+                limited_file_ids = file_ids[:k] if k and k > 0 else file_ids
 
                 documents = []
                 metadatas = []
-                for file_id in file_ids:
+                for file_id in limited_file_ids:
                     file_object = Files.get_file_by_id(file_id)
 
                     if file_object:

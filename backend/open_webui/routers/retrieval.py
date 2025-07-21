@@ -461,11 +461,8 @@ async def update_rag_config(
         else request.app.state.config.PDF_EXTRACT_IMAGES
     )
 
-    request.app.state.config.RAG_FULL_CONTEXT = (
-        form_data.RAG_FULL_CONTEXT
-        if form_data.RAG_FULL_CONTEXT is not None
-        else request.app.state.config.RAG_FULL_CONTEXT
-    )
+    if form_data.RAG_FULL_CONTEXT is not None:
+        request.app.state.config.RAG_FULL_CONTEXT = form_data.RAG_FULL_CONTEXT
 
     request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = (
         form_data.enable_google_drive_integration
