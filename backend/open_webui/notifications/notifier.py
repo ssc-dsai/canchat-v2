@@ -11,8 +11,8 @@ class Notifier(ABC):
     A system that sends notifications to users.
     """
 
-    @abstractmethod
     @staticmethod
+    @abstractmethod
     def identifier() -> str:
         pass
 
