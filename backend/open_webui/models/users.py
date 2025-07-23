@@ -1,8 +1,13 @@
 import time
-from typing import Optional
+from typing import Any, Optional
 from logging import getLogger
 
-from open_webui.internal.db import JSONField, get_db
+from open_webui.models.notifications import MessageType, Notification
+from open_webui.internal.db import (
+    DATABASE_CONNECTOR,
+    DatabaseService,
+    JSONField,
+)
 
 from open_webui.models.base import Base
 from open_webui.models.chats import Chats
@@ -61,7 +66,7 @@ class UserModel(BaseModel):
 
     api_key: Optional[str] = None
     settings: Optional[UserSettings] = None
-    info: Optional[dict] = None
+    info: Optional[dict[Any, Any]] = None
 
     oauth_sub: Optional[str] = None
 
@@ -100,7 +105,8 @@ class UserUpdateForm(BaseModel):
     password: Optional[str] = None
 
 
-class UsersTable:
+class UsersTable(DatabaseService):
+
     def insert_new_user(
         self,
         id: str,
@@ -111,7 +117,7 @@ class UsersTable:
         oauth_sub: Optional[str] = None,
         domain: str = "*",
     ) -> Optional[UserModel]:
-        with get_db() as db:
+        with self.db.get_db() as db:
             user = UserModel(
                 **{
                     "id": id,
@@ -137,7 +143,7 @@ class UsersTable:
 
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -145,7 +151,7 @@ class UsersTable:
 
     def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 user = db.query(User).filter_by(api_key=api_key).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -153,7 +159,7 @@ class UsersTable:
 
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 user = db.query(User).filter_by(email=email).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -161,7 +167,7 @@ class UsersTable:
 
     def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 user = db.query(User).filter_by(oauth_sub=sub).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -170,7 +176,7 @@ class UsersTable:
     def get_users(
         self, skip: Optional[int] = None, limit: Optional[int] = None
     ) -> list[UserModel]:
-        with get_db() as db:
+        with self.db.get_db() as db:
             query = db.query(User).order_by(User.created_at.desc())
 
             if skip:
@@ -183,17 +189,17 @@ class UsersTable:
             return [UserModel.model_validate(user) for user in users]
 
     def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
-        with get_db() as db:
+        with self.db.get_db() as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
 
     def get_user_domains(self) -> list[str]:
-        with get_db() as db:
+        with self.db.get_db() as db:
             return [domain[0] for domain in db.query(User.domain).distinct().all()]
 
     def get_num_users(self, domain: Optional[str] = None) -> Optional[int]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 if domain:
                     return db.query(User).filter_by(domain=domain).count()
                 return db.query(User).count()
@@ -202,7 +208,7 @@ class UsersTable:
 
     def get_first_user(self) -> UserModel:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 user = db.query(User).order_by(User.created_at).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -210,7 +216,7 @@ class UsersTable:
 
     def get_user_webhook_url_by_id(self, id: str) -> Optional[str]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
 
                 if user.settings is None:
@@ -226,7 +232,7 @@ class UsersTable:
 
     def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 db.query(User).filter_by(id=id).update({"role": role})
                 db.commit()
                 user = db.query(User).filter_by(id=id).first()
@@ -238,7 +244,7 @@ class UsersTable:
         self, id: str, profile_image_url: str
     ) -> Optional[UserModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 db.query(User).filter_by(id=id).update(
                     {"profile_image_url": profile_image_url}
                 )
@@ -251,7 +257,7 @@ class UsersTable:
 
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 db.query(User).filter_by(id=id).update(
                     {"last_active_at": int(time.time())}
                 )
@@ -266,7 +272,7 @@ class UsersTable:
         self, days: int = 1, domain: Optional[str] = None
     ) -> Optional[int]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 start_time = int(time.time()) - (days * 24 * 60 * 60)
                 query = db.query(User).filter(User.last_active_at >= start_time)
 
@@ -282,7 +288,7 @@ class UsersTable:
         self, id: str, oauth_sub: str
     ) -> Optional[UserModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 db.query(User).filter_by(id=id).update({"oauth_sub": oauth_sub})
                 db.commit()
 
@@ -293,7 +299,7 @@ class UsersTable:
 
     def update_user_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 db.query(User).filter_by(id=id).update(updated)
                 db.commit()
 
@@ -311,7 +317,7 @@ class UsersTable:
             # Delete User Chats
             result = Chats.delete_chats_by_user_id(id)
             if result:
-                with get_db() as db:
+                with self.db.get_db() as db:
                     # Delete User
                     db.query(User).filter_by(id=id).delete()
                     db.commit()
@@ -324,7 +330,7 @@ class UsersTable:
 
     def update_user_api_key_by_id(self, id: str, api_key: str) -> str:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 result = db.query(User).filter_by(id=id).update({"api_key": api_key})
                 db.commit()
                 return True if result == 1 else False
@@ -333,14 +339,14 @@ class UsersTable:
 
     def get_user_api_key_by_id(self, id: str) -> Optional[str]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
                 return user.api_key
         except Exception:
             return None
 
     def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
-        with get_db() as db:
+        with self.db.get_db() as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [user.id for user in users]
 
@@ -380,7 +386,7 @@ class UsersTable:
                 start_time = day_start
                 end_time = start_time + (24 * 60 * 60)
 
-                with get_db() as db:
+                with self.db.get_db() as db:
                     query = db.query(User).filter(
                         User.created_at < end_time,
                     )
@@ -415,7 +421,7 @@ class UsersTable:
     ) -> dict:
         """Get user metrics for a specific date range"""
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 # Get the total count of users active in the range
                 query = db.query(User).filter(
                     User.last_active_at >= start_timestamp,
@@ -439,5 +445,25 @@ class UsersTable:
             logger.error(f"Failed to get range metrics: {e}")
             return {"total_users": 0, "active_users": 0}
 
+    def get_users_without_welcome_notification(self) -> list[UserModel]:
+        try:
+            with self.db.get_db() as db:
 
-Users = UsersTable()
+                notification_query = db.query(Notification.user_id).filter(
+                    Notification.message_type == MessageType.WELCOME.value,
+                )
+
+                query = db.query(User).filter(
+                    User.id.not_in(notification_query),
+                )
+                logger.debug(query)
+
+                result = query.all()
+                return [UserModel.model_validate(user) for user in result]
+
+        except Exception as e:
+            logger.error(f"Failed users who have not received a welcome message: {e}")
+            return list()
+
+
+Users = UsersTable(database=DATABASE_CONNECTOR)

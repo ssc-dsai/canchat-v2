@@ -1,7 +1,8 @@
+from abc import ABC
 import json
 import logging
 from contextlib import contextmanager
-from typing import Any, Optional
+from typing import Any, Optional, overload
 
 from open_webui.internal.wrappers import register_connection
 from open_webui.env import (
@@ -48,11 +49,11 @@ class JSONField(types.TypeDecorator):
 
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
-def handle_peewee_migration(DATABASE_URL):
+def handle_peewee_migration(database_url: str):
     # db = None
     try:
         # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
+        db = register_connection(database_url.replace("postgresql://", "postgres://"))
         migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()
@@ -70,11 +71,9 @@ def handle_peewee_migration(DATABASE_URL):
         assert db.is_closed(), "Database connection is still open."
 
 
-handle_peewee_migration(DATABASE_URL)
-
-
 # Function to run the alembic migrations
-def run_migrations():
+def run_migrations(database_url: str):
+    handle_peewee_migration(database_url)
     print("Running migrations")
     try:
         from alembic import command
@@ -85,49 +84,80 @@ def run_migrations():
         # Set the script location dynamically
         migrations_path = OPEN_WEBUI_DIR / "migrations"
         alembic_cfg.set_main_option("script_location", str(migrations_path))
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
         command.upgrade(alembic_cfg, "head")
     except Exception as e:
         print(f"Error: {e}")
 
 
-run_migrations()
+run_migrations(DATABASE_URL)
 
-SQLALCHEMY_DATABASE_URL = DATABASE_URL
-if "sqlite" in SQLALCHEMY_DATABASE_URL:
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-    )
-else:
-    if DATABASE_POOL_SIZE > 0:
+
+def get_session_maker(database_url: str = DATABASE_URL):
+    SQLALCHEMY_DATABASE_URL = database_url
+    if "sqlite" in SQLALCHEMY_DATABASE_URL:
         engine = create_engine(
-            SQLALCHEMY_DATABASE_URL,
-            pool_size=DATABASE_POOL_SIZE,
-            max_overflow=DATABASE_POOL_MAX_OVERFLOW,
-            pool_timeout=DATABASE_POOL_TIMEOUT,
-            pool_recycle=DATABASE_POOL_RECYCLE,
-            pool_pre_ping=True,
-            poolclass=QueuePool,
+            SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
         )
     else:
-        engine = create_engine(
-            SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool
-        )
+        if DATABASE_POOL_SIZE > 0:
+            engine = create_engine(
+                SQLALCHEMY_DATABASE_URL,
+                pool_size=DATABASE_POOL_SIZE,
+                max_overflow=DATABASE_POOL_MAX_OVERFLOW,
+                pool_timeout=DATABASE_POOL_TIMEOUT,
+                pool_recycle=DATABASE_POOL_RECYCLE,
+                pool_pre_ping=True,
+                poolclass=QueuePool,
+            )
+        else:
+            engine = create_engine(
+                SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool
+            )
+
+    return sessionmaker(
+        autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
+    )
 
 
-SessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
-)
-
-Session = scoped_session(SessionLocal)
+Session = scoped_session(get_session_maker(DATABASE_URL))
 
 
-def get_session():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+class DatabaseConnector:
+    database_url: str
+
+    def __init__(self, database_url: str) -> None:
+        self.database_url = database_url
+
+    @contextmanager
+    def get_db(self):
+        db = get_session_maker(database_url=self.database_url)()
+        try:
+            yield db
+        finally:
+            db.close()
 
 
-get_db = contextmanager(get_session)
+class DatabaseService(ABC):
+    db: DatabaseConnector
+
+    @overload
+    def __init__(self, database: str) -> None: ...
+
+    @overload
+    def __init__(self, database: DatabaseConnector) -> None: ...
+
+    def __init__(self, database: str | DatabaseConnector) -> None:
+        if isinstance(database, str):
+            self.db = DatabaseConnector(database_url=database)
+        elif isinstance(database, DatabaseConnector):
+            self.db = database
+        else:
+            raise TypeError("database is not a str or a DatabaseConnector")
+
+
+DATABASE_CONNECTOR = DatabaseConnector(database_url=DATABASE_URL)
+
+# For backwards compatibility until everything can move to using the DatabaseService class
+get_db = DATABASE_CONNECTOR.get_db

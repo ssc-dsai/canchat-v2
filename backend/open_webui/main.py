@@ -32,7 +32,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response
 
-
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,

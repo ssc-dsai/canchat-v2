@@ -25,7 +25,8 @@ target_metadata = Auth.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-DB_URL = DATABASE_URL
+# Grab database URL if already set
+DB_URL = config.get_main_option("sqlalchemy.url", DATABASE_URL)
 
 if DB_URL:
     config.set_main_option("sqlalchemy.url", DB_URL.replace("%", "%%"))

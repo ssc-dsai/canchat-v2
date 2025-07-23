@@ -1,0 +1,125 @@
+from enum import Enum
+import logging
+import time
+from typing import List
+import uuid
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import Column, Text, BigInteger, Boolean, Null, ForeignKey
+
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db import (
+    DATABASE_CONNECTOR,
+    DatabaseService,
+)
+from open_webui.models.base import Base
+
+# from open_webui.models.base import Base
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["DB"])
+
+
+# The types of notifications that can be sent.
+class MessageType(str, Enum):
+    """
+    Identifies the type of message that is sent to the user.
+    """
+
+    WELCOME = "welcome"
+    ACCOUNT_DELETION = "account_deletion"
+
+
+class NotificationType(str, Enum):
+    """
+    Identitifies the mode of communication used to send the notification.
+    """
+
+    EMAIL = "email"
+    SMS = "sms"
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Text, primary_key=True)
+    user_id = Column(Text, ForeignKey("user.id"))
+    message_type = Column(Text)
+    notification_type = Column(Text)
+    notifier_used = Column(Text)
+    is_sent = Column(Boolean)
+    is_received = Column(Boolean, nullable=True, default=Null)
+    status = Column(Text, nullable=True)
+    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
+
+
+class NotificationModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    user_id: str
+    message_type: MessageType
+    notification_type: NotificationType
+    is_sent: bool
+    is_received: bool | None
+    status: str | None
+    created_at: int
+    updated_at: int
+    notifier_used: str
+
+
+class NotificationsService(DatabaseService):
+
+    def insert_new_notification(
+        self,
+        user_id: str,
+        message_type: MessageType,
+        notification_type: NotificationType,
+        is_sent: bool,
+        notifier_used: str,
+        is_received: bool | None = None,
+        status: str | None = None,
+    ) -> NotificationModel | None:
+        with self.db.get_db() as db:
+            notification = NotificationModel(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                message_type=message_type,
+                notification_type=notification_type,
+                is_sent=is_sent,
+                is_received=is_received,
+                status=status,
+                created_at=int(time.time()),
+                updated_at=int(time.time()),
+                notifier_used=notifier_used,
+            )
+            log.debug(notification.model_dump(mode="json"))
+            result = Notification(**notification.model_dump(mode="json"))
+            db.add(result)
+            db.commit()
+            db.flush()
+            db.refresh(result)
+            if result:
+                return notification
+            else:
+                return None
+
+    def get_by_user_id(self, user_id: str) -> List[NotificationModel]:
+        try:
+            with self.db.get_db() as db:
+                notifications = db.query(Notification).filter_by(user_id=user_id).all()
+
+                notificationModels: List[NotificationModel] = [
+                    NotificationModel.model_validate(notification)
+                    for notification in notifications
+                ]
+
+                return notificationModels
+        except Exception as e:
+            log.error(
+                "Failed to return Notifications for user_id=%s   Error: %s", user_id, e
+            )
+            return list()
+
+
+Notifications = NotificationsService(database=DATABASE_CONNECTOR)
