@@ -11,8 +11,9 @@ router = APIRouter()
 
 @router.get("/gc_notify/callback")
 async def get_gc_notify_callback():
-  pass
+    pass
+
 
 @router.post("/gc_notify/callback")
 async def post_gc_notify_callback():
-  pass
+    pass
