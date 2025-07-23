@@ -88,7 +88,9 @@ class GCNotify(Notifier):
     def send_email(self, message_type: MessageType, user: UserModel) -> bool:
         return False
 
-    def send_bulk_email(self, message_type: MessageType, users: list[UserModel]) -> bool:
+    def send_bulk_email(
+        self, message_type: MessageType, users: list[UserModel]
+    ) -> bool:
         current_datetime = datetime.now(tz=timezone.utc).isoformat()
         bulkEmailModel = SendBulkEmailPostModel(
             name=f"{message_type.name}-{current_datetime}",
@@ -152,7 +154,10 @@ class GCNotify(Notifier):
                 return False
             case 500:
                 responseModel = SendBulkEmail500Model(**response.json())
-                log.error("Received status code 500: Internal Server Error. message: %s", responseModel.message)
+                log.error(
+                    "Received status code 500: Internal Server Error. message: %s",
+                    responseModel.message,
+                )
 
             case _:
                 log.error(

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Self, cast
 # Internal
 from open_webui.models.users import UserModel
 
+
 # Forms
 class SendBulkEmail500Model(BaseModel):
     message: str
@@ -76,12 +77,14 @@ class SendBulkEmail201DataModel(BaseModel):
     template_version: int | None
     updated_at: datetime | None
 
+
 class SendBulkEmail201Model(BaseModel):
     """
     Top level object for a successful response when sending a bulk email.
 
     Swagger API Docs: https://documentation.notification.canada.ca/en/apispec.html#/Notifications/sendBulkNotifications
     """
+
     data: SendBulkEmail201DataModel
 
 
@@ -94,10 +97,11 @@ class TemplatePersonalization(ABC):
     Attributes:
       name (str): the name(key) of the personalization in the template.
     """
+
     __name: str
 
     def __init__(self, name: str) -> None:
-        self.__name=name
+        self.__name = name
         super().__init__()
 
     def get_name(self) -> str:
@@ -113,6 +117,7 @@ class TemplatePersonalization(ABC):
         """
         pass
 
+
 class StaticPersonalization(TemplatePersonalization):
     """
     Represents a static value to be inserted into the template.
@@ -124,11 +129,12 @@ class StaticPersonalization(TemplatePersonalization):
     __value: str
 
     def __init__(self, name: str, value: str) -> None:
-        self.__value=value
+        self.__value = value
         super().__init__(name)
 
     def get_value(self, arg: Any = None) -> str:
         return self.__value
+
 
 class UserPersonalization(TemplatePersonalization):
     """
@@ -142,13 +148,14 @@ class UserPersonalization(TemplatePersonalization):
     __field_name: str
 
     def __init__(self, name: str, field_name: str):
-        self.__field_name=field_name
+        self.__field_name = field_name
         super().__init__(name)
 
     def get_value(self, arg: Any = None) -> str:
         if not isinstance(arg, UserModel):
             raise TypeError("arg must be a UserModel")
         return str(getattr(arg, self.__field_name))
+
 
 class MappedStatic(TemplatePersonalization):
     """
@@ -159,10 +166,16 @@ class MappedStatic(TemplatePersonalization):
     __default: str
     __accessor: TemplatePersonalization
 
-    def __init__(self, name: str, map: dict[str, str], default: str, accessor: TemplatePersonalization) -> None:
-        self.__map=map
-        self.__default=default
-        self.__accessor=accessor
+    def __init__(
+        self,
+        name: str,
+        map: dict[str, str],
+        default: str,
+        accessor: TemplatePersonalization,
+    ) -> None:
+        self.__map = map
+        self.__default = default
+        self.__accessor = accessor
         super().__init__(name)
 
     def get_value(self, arg: Any = None) -> str:
@@ -180,32 +193,25 @@ class GCNotifyTemplate(Enum):
 
     WELCOME = (
         "b2f0784d-2779-4a9c-a64a-e1f2c43d8f3a",
-        cast(list[TemplatePersonalization],
-          [
-            UserPersonalization(
-                name="email address",
-                field_name="email"
-            ),
-            UserPersonalization(
-                name="name",
-                field_name="name"
-            ),
-            # StaticPersonalization(
-            #     name="url",
-            #     value="https://https://canchat-v2.dsai-sdia.ssc-spc.cloud-nuage.canada.ca"
-            # ),
-            MappedStatic(
-                name="url",
-                map={
-                    "ssc-spc.gc.ca": "https://https://canchat-v2.dsai-sdia.ssc-spc.cloud-nuage.canada.ca",
-                },
-                default="https://canchat.pilot-pilote.dsai-sdia.ssc-spc.cloud-nuage.canada.ca",
-                accessor=UserPersonalization(
-                    name="domain",
-                    field_name="domain"
-                )
-            )
-        ]),
+        cast(
+            list[TemplatePersonalization],
+            [
+                UserPersonalization(name="email address", field_name="email"),
+                UserPersonalization(name="name", field_name="name"),
+                # StaticPersonalization(
+                #     name="url",
+                #     value="https://https://canchat-v2.dsai-sdia.ssc-spc.cloud-nuage.canada.ca"
+                # ),
+                MappedStatic(
+                    name="url",
+                    map={
+                        "ssc-spc.gc.ca": "https://https://canchat-v2.dsai-sdia.ssc-spc.cloud-nuage.canada.ca",
+                    },
+                    default="https://canchat.pilot-pilote.dsai-sdia.ssc-spc.cloud-nuage.canada.ca",
+                    accessor=UserPersonalization(name="domain", field_name="domain"),
+                ),
+            ],
+        ),
     )
 
     def __init__(self, id: str, personalizations: list[TemplatePersonalization]):

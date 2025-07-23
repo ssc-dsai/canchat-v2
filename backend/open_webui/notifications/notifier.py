@@ -17,7 +17,8 @@ class Notifier(ABC):
         pass
 
     @abstractmethod
-    def notify(self,
+    def notify(
+        self,
         message_type: MessageType,
         notification_type: NotificationType,
         users: list[UserModel],

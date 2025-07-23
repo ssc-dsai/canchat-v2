@@ -4,10 +4,13 @@ import time
 from typing import List
 import uuid
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, Text, BigInteger, Boolean, Null
+from sqlalchemy import Column, Text, BigInteger, Boolean, Null, ForeignKey
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.internal.db import get_db
+from open_webui.internal.db import (
+    DATABASE_CONNECTOR,
+    DatabaseService,
+)
 from open_webui.models.base import Base
 
 # from open_webui.models.base import Base
@@ -39,7 +42,7 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(Text, primary_key=True)
-    user_id = Column(Text)
+    user_id = Column(Text, ForeignKey("user.id"))
     message_type = Column(Text)
     notification_type = Column(Text)
     notifier_used = Column(Text)
@@ -65,7 +68,8 @@ class NotificationModel(BaseModel):
     notifier_used: str
 
 
-class NotificationsTable:
+class NotificationsService(DatabaseService):
+
     def insert_new_notification(
         self,
         user_id: str,
@@ -76,7 +80,7 @@ class NotificationsTable:
         is_received: bool | None = None,
         status: str | None = None,
     ) -> NotificationModel | None:
-        with get_db() as db:
+        with self.db.get_db() as db:
             notification = NotificationModel(
                 id=str(uuid.uuid4()),
                 user_id=user_id,
@@ -93,6 +97,7 @@ class NotificationsTable:
             result = Notification(**notification.model_dump(mode="json"))
             db.add(result)
             db.commit()
+            db.flush()
             db.refresh(result)
             if result:
                 return notification
@@ -101,15 +106,20 @@ class NotificationsTable:
 
     def get_by_user_id(self, user_id: str) -> List[NotificationModel]:
         try:
-            with get_db() as db:
+            with self.db.get_db() as db:
                 notifications = db.query(Notification).filter_by(user_id=user_id).all()
 
-                notificationModels: List[NotificationModel] = [NotificationModel.model_validate(notification) for notification in notifications]
+                notificationModels: List[NotificationModel] = [
+                    NotificationModel.model_validate(notification)
+                    for notification in notifications
+                ]
 
                 return notificationModels
         except Exception as e:
-            log.error("Failed to return Notifications for user_id=%s   Error: %s", user_id, e)
+            log.error(
+                "Failed to return Notifications for user_id=%s   Error: %s", user_id, e
+            )
             return list()
 
 
-Notifications = NotificationsTable()
+Notifications = NotificationsService(database=DATABASE_CONNECTOR)

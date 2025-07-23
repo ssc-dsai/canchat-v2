@@ -1,38 +1,31 @@
 import os
 import pytest
 from pytest_mock import MockerFixture
-import time
-import uuid
 
 from open_webui.models.notifications import Notifications
 from open_webui.models.users import UserModel
 from open_webui.notifications.notifier import MessageType, NotificationType
 from open_webui.notifications.notifiers.gc_notify.gc_notifier import GCNotify
 
+from test.conftest import setup_clean_db  # type: ignore
+from test.test_utils.user_utils import create_user
 
-def _create_user(name: str, email: str) -> UserModel:
-  return UserModel(
-     id=str(uuid.uuid4()),
-     name=name,
-     email=email,
-     domain=email.split("@")[1],
-     created_at=int(time.time()),
-     last_active_at=int(time.time()),
-     updated_at=int(time.time()),
-     profile_image_url="",
-  )
 
-def test_gc_notify(mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture):
+def test_gc_notify(
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    setup_clean_db: None,
+):
     caplog.set_level("DEBUG", logger="open_webui.models.notifications")
 
     api_key = os.environ["GC_NOTIFY_TEST_KEY"]
-
     assert api_key
 
     notifier = GCNotify(api_key=api_key)
-    users = [
-       _create_user(name="Test User", email="test@ssc-spc.gc.ca"),
-       _create_user(name="Test User2", email="test2@test.gc.ca"),
+    users: list[UserModel] = [
+        create_user(name="Test User", email="test@ssc-spc.gc.ca"),
+        create_user(name="Test User2", email="test2@test.gc.ca"),
     ]
 
     assert notifier.notify(

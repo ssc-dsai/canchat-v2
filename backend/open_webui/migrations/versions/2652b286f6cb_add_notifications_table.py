@@ -19,11 +19,14 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+TABLE_NAME: str = "notifications"
+
+
 def upgrade() -> None:
     op.create_table(
-        "notifications",
+        TABLE_NAME,
         sa.Column("id", sa.Text, primary_key=True),
-        sa.Column("user_id", sa.Text, nullable=False),
+        sa.Column("user_id", sa.Text, nullable=False, index=True),
         sa.Column("message_type", sa.Text, nullable=False),
         sa.Column("notification_type", sa.Text, nullable=False),
         sa.Column("notifier_used", sa.Text, nullable=False),
@@ -34,6 +37,8 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.BigInteger, nullable=False),
     )
 
+    # TODO: Populate table so that only new users get the welcome message.
+
 
 def downgrade() -> None:
-    op.drop_table("notifications")
+    op.drop_table(table_name=TABLE_NAME)

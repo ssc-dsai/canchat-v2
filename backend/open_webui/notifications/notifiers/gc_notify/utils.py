@@ -21,19 +21,21 @@ def format_errors(model: SendBulkEmail400Model) -> str:
     return formatted_errors
 
 
-def generate_rows(template: GCNotifyTemplate, users: List[UserModel]) -> List[List[str]]:
+def generate_rows(
+    template: GCNotifyTemplate, users: List[UserModel]
+) -> List[List[str]]:
     rows: List[List[str]] = list()
 
     # Set first row which is the column headers
-    rows.append([personalization.get_name() for personalization in template.personalizations])
+    rows.append(
+        [personalization.get_name() for personalization in template.personalizations]
+    )
 
     for current_user in users:
         user_row: List[str] = list()
 
         for personalization in template.personalizations:
-            user_row.append(
-                personalization.get_value(current_user)
-            )
+            user_row.append(personalization.get_value(current_user))
         rows.append(user_row)
 
     return rows
