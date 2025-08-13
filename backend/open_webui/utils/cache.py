@@ -67,7 +67,7 @@ class LLMResponseCache:
         return normalized
 
     def _normalize_messages(self, messages: list) -> list:
-        """Normalize messages by keeping only the last user message for caching"""
+        """Normalize messages by extracting the actual user query, excluding RAG context"""
         if not messages:
             return []
         
@@ -81,11 +81,16 @@ class LLMResponseCache:
         if not last_user_message:
             return []
         
-        # Get original content and normalize it for semantic caching
+        # Get original content
         original_content = last_user_message.get("content", "")
-        normalized_content = self._normalize_text_content(original_content)
+        
+        # Extract actual user query from RAG-injected content
+        user_query = self._extract_user_query_from_rag(original_content)
+        
+        # Normalize the user query for semantic caching
+        normalized_content = self._normalize_text_content(user_query)
             
-        # Only cache based on the last user message to avoid conversation history affecting cache keys
+        # Only cache based on the actual user query to avoid RAG context affecting cache keys
         normalized_msg = {
             "role": last_user_message.get("role"),
             "content": normalized_content
@@ -93,6 +98,54 @@ class LLMResponseCache:
         # Remove None values
         normalized_msg = {k: v for k, v in normalized_msg.items() if v is not None}
         return [normalized_msg]
+    
+    def _extract_user_query_from_rag(self, content: str) -> str:
+        """
+        Extract the actual user query from RAG-injected content.
+        RAG templates inject context and instructions, but we only want to cache based on the user's actual question.
+        """
+        import re
+        
+        # Look for the user query section in RAG templates
+        # Pattern 1: <user_query>actual query</user_query>
+        user_query_match = re.search(r'<user_query>\s*(.*?)\s*</user_query>', content, re.DOTALL)
+        if user_query_match:
+            return user_query_match.group(1).strip()
+        
+        # Pattern 2: Look for content after "user_query" or similar markers
+        query_patterns = [
+            r'user_query[:\s]*\n(.*?)(?:\n\n|\Z)',  # user_query: followed by the query
+            r'<user_query[^>]*>(.*?)</user_query>',  # XML-style tags
+            r'### user[_\s]*query[:\s]*\n(.*?)(?:\n\n|\Z)',  # Markdown headers
+        ]
+        
+        for pattern in query_patterns:
+            match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+            if match:
+                query = match.group(1).strip()
+                if query and len(query) < 1000:  # Sanity check - user queries shouldn't be massive
+                    return query
+        
+        # Pattern 3: If content contains RAG markers, extract the last line as it's often the user query
+        rag_markers = ['### Task:', '<context>', '</context>', 'source_id', 'incorporating inline citations']
+        if any(marker in content for marker in rag_markers):
+            # Split by lines and find the last substantial line
+            lines = content.split('\n')
+            for line in reversed(lines):
+                line = line.strip()
+                # Look for lines that look like user queries (not system instructions)
+                if (line and 
+                    len(line) > 3 and 
+                    len(line) < 500 and 
+                    not line.startswith('#') and 
+                    not line.startswith('<') and 
+                    not line.startswith('*') and
+                    not any(marker in line for marker in ['Task:', 'Guidelines:', 'Output:', 'Example:', 'Context:'])):
+                    return line
+        
+        # Fallback: if no RAG patterns detected, return original content
+        # This handles normal conversations without web search
+        return content
     
     def _get_available_classification_model(self) -> Optional[str]:
         """
@@ -165,6 +218,7 @@ class LLMResponseCache:
         classification_model = self._get_available_classification_model()
         if not classification_model:
             # No AI model available, use enhanced pattern matching
+            log.debug("🔍 CLASSIFICATION - Using fallback pattern matching (no AI model available)")
             return self._fallback_time_detection(content)
             
         # For more complex cases, use a lightweight classification prompt
@@ -185,65 +239,36 @@ Respond with exactly one word: "TIME_DEPENDENT" or "TIME_INDEPENDENT"
         try:
             import requests
             
-            # Use OpenWebUI's chat completions endpoint (works with any configured model)
+            # Try Ollama first (faster, no circular dependency)
             try:
                 response = requests.post(
-                    "http://localhost:8080/api/chat/completions",
+                    "http://localhost:11434/api/chat",
                     json={
                         "model": classification_model,
                         "messages": [{"role": "user", "content": classification_prompt}],
-                        "temperature": 0.1,
-                        "max_tokens": 5,
-                        "stream": False
+                        "stream": False,
+                        "options": {"temperature": 0.1}
                     },
-                    timeout=5  # Slightly longer timeout for external APIs
+                    timeout=2  # Reduced timeout for classification
                 )
-                
                 if response.status_code == 200:
-                    result_data = response.json()
-                    
-                    # Handle different response formats
-                    if 'choices' in result_data and result_data['choices']:
-                        result = result_data['choices'][0]['message']['content'].strip().upper()
-                    elif 'response' in result_data:
-                        result = result_data['response'].strip().upper()
-                    else:
-                        result = str(result_data).upper()
-                    
-                    return 'TIME_DEPENDENT' in result
-                    
+                    result = response.json()
+                    response_text = result.get("message", {}).get("content", "").strip().upper()
+                    is_time_dependent = "TIME_DEPENDENT" in response_text
+                    log.debug(f"🔍 CLASSIFICATION - Ollama result: {response_text} -> {'TIME_DEPENDENT' if is_time_dependent else 'TIME_INDEPENDENT'}")
+                    return is_time_dependent
+                else:
+                    log.debug(f"🔍 CLASSIFICATION - Ollama failed: {response.status_code}")
             except Exception as e:
-                log.warning(f"OpenWebUI classification failed: {e}")
+                log.debug(f"🔍 CLASSIFICATION - Ollama error: {e}")
                 
-            # Fallback: Direct Ollama call for local testing
-            if classification_model and ':' in classification_model:  # Likely an Ollama model
-                try:
-                    response = requests.post(
-                        "http://localhost:11434/api/generate",
-                        json={
-                            "model": classification_model,
-                            "prompt": classification_prompt,
-                            "stream": False,
-                            "options": {
-                                "temperature": 0.1,
-                                "num_predict": 5
-                            }
-                        },
-                        timeout=3
-                    )
-                    
-                    if response.status_code == 200:
-                        result = response.json().get('response', '').strip().upper()
-                        return 'TIME_DEPENDENT' in result
-                        
-                except Exception as e:
-                    log.warning(f"Ollama classification failed: {e}")
+            # If Ollama fails, fall back to pattern matching to avoid circular dependency
+            log.debug("🔍 CLASSIFICATION - Using fallback pattern matching (Ollama failed)")
+            return self._fallback_time_detection(content)
                 
         except Exception as e:
-            log.warning(f"Time dependency classification error: {e}")
-        
-        # Fallback to enhanced pattern matching if AI fails
-        return self._fallback_time_detection(content)
+            log.debug(f"🔍 CLASSIFICATION - Error: {e}")
+            return self._fallback_time_detection(content)
     
     def _fallback_time_detection(self, content: str) -> bool:
         """
@@ -290,17 +315,19 @@ Respond with exactly one word: "TIME_DEPENDENT" or "TIME_INDEPENDENT"
             
         content = last_user_message.get('content', '')
         
-        # Use AI-powered time dependency detection
-        if self._is_time_dependent_content(content):
+        # Extract the actual user query from RAG content for analysis
+        actual_user_query = self._extract_user_query_from_rag(content)
+        
+        # Use AI-powered time dependency detection on the actual user query, not RAG context
+        if self._is_time_dependent_content(actual_user_query):
             return False
             
         # Check for form data that indicates non-idempotent requests
         if form_data:
-            # Check if RAG/search is enabled in the request
-            if form_data.get('web_search', False):
-                return False
-                
-            # Check if MCP tools are being used
+            # NOTE: We now ALLOW web_search because we cache based on the user query, not the search results
+            # The search results are dynamic, but the user's question can still be cached if it's time-independent
+            
+            # Check if MCP tools are being used (these often have side effects)
             if form_data.get('tools') or form_data.get('tool_ids'):
                 return False
                 
@@ -381,89 +408,94 @@ Respond with exactly one word: "TIME_DEPENDENT" or "TIME_INDEPENDENT"
         key_string = json.dumps(key_data, sort_keys=True)
         return hashlib.sha256(key_string.encode()).hexdigest()
     
+    def would_be_cached(self, model: str, messages: list, parameters: Dict[str, Any], form_data: dict = None) -> bool:
+        """
+        Check if a request would be cached (either cache hit or cacheable for future storage).
+        This can be used by RAG systems to skip web search for cacheable queries.
+        """
+        if not self.connected:
+            return False
+            
+        try:
+            # Check for existing cache hit
+            cached_response = self.get_cached_response(model, messages, parameters, form_data)
+            if cached_response:
+                return True
+                
+            # Check if this request would be cacheable for future storage
+            return self._is_cacheable_request(messages, form_data)
+        except Exception:
+            return False
+
     def get_cached_response(self, model: str, messages: list, parameters: Dict[str, Any], form_data: dict = None) -> Optional[str]:
         """Get cached response if available - OPTIMIZED for instant cache hits"""
         if not self.connected:
-            log.warning("❌ Redis not connected, cache disabled")
             return None
         
-        print(f"DEBUG: CACHE CHECK - Evaluating request with {len(messages)} messages")
+        # Extract user query for logging
+        user_query = "N/A"
         if messages:
-            print(f"DEBUG: CACHE CHECK - First message content preview: {messages[0].get('content', '')[:100]}...")
+            for msg in reversed(messages):
+                if msg.get('role') == 'user':
+                    content = msg.get('content', '')
+                    user_query = self._extract_user_query_from_rag(content)[:50] + ("..." if len(self._extract_user_query_from_rag(content)) > 50 else "")
+                    break
         
-        # PERFORMANCE OPTIMIZATION: Check cache first before expensive cacheable validation
-        # Generate cache key immediately for fast lookup
         try:
+            # Generate cache key for lookup
             cache_key = self._generate_cache_key(model, messages, parameters)
-            print(f"DEBUG: Cache LOOKUP key: {cache_key}")
             
             # Test Redis connectivity
-            try:
-                self.redis_client.ping()
-                print(f"DEBUG: Redis PING successful")
-            except Exception as e:
-                print(f"DEBUG: Redis PING failed: {e}")
-                return None
+            self.redis_client.ping()
             
-            # INSTANT CACHE CHECK - no expensive AI classification needed for existing keys
+            # Check for existing cached response
             cached_data = self.redis_client.get(cache_key)
             if cached_data:
-                log.info(f"🎯 INSTANT Cache HIT for model: {model} - returning cached response")
-                print(f"DEBUG: INSTANT Cache HIT! Found data: {cached_data[:50]}...")
+                log.info(f"🎯 CACHE HIT [{model}] Query: '{user_query}'")
                 return cached_data
             
-            # Cache miss - now we need to check if this request is cacheable
-            print(f"DEBUG: Cache MISS - checking if request is cacheable for future storage")
+            # Cache miss - check if this request would be cacheable for future storage
             if not self._is_cacheable_request(messages, form_data):
-                print(f"DEBUG: CACHE SKIP - Request not cacheable (time-dependent or non-idempotent)")
-                log.info("🚫 Skipping cache for non-cacheable request")
+                log.info(f"🚫 CACHE SKIP [{model}] Query: '{user_query}' - Not cacheable")
                 return None
             
-            log.info(f"❌ Cache MISS for model: {model} - will cache new response")
-            print(f"DEBUG: Cache MISS! Key not found in Redis but request is cacheable")
+            log.info(f"❌ CACHE MISS [{model}] Query: '{user_query}' - Will cache response")
             return None
                 
         except Exception as e:
-            log.error(f"❌ Error getting cached response: {e}")
+            log.error(f"❌ Cache lookup error: {e}")
             return None
     
     def cache_response(self, model: str, messages: list, parameters: Dict[str, Any], response: str, ttl: int = None, form_data: dict = None) -> bool:
         """Cache a response"""
         if not self.connected:
-            log.warning("❌ Redis not connected, cannot cache response")
             return False
         
-        print(f"DEBUG: CACHE STORAGE CHECK - Evaluating request with {len(messages)} messages")
+        # Extract user query for logging
+        user_query = "N/A"
         if messages:
-            print(f"DEBUG: CACHE STORAGE CHECK - First message content preview: {messages[0].get('content', '')[:100]}...")
+            for msg in reversed(messages):
+                if msg.get('role') == 'user':
+                    content = msg.get('content', '')
+                    user_query = self._extract_user_query_from_rag(content)[:50] + ("..." if len(self._extract_user_query_from_rag(content)) > 50 else "")
+                    break
         
         # Only cache idempotent, time-independent requests
         if not self._is_cacheable_request(messages, form_data):
-            print(f"DEBUG: CACHE STORAGE SKIP - Request not cacheable (time-dependent or non-idempotent)")
-            log.info("🚫 Skipping cache storage for non-cacheable request")
+            log.debug(f"🚫 STORAGE SKIP [{model}] Query: '{user_query}' - Not cacheable")
             return False
-        
-        print(f"DEBUG: CACHE STORAGE PROCEED - This IS a user question, proceeding with cache storage")
             
         try:
-            print(f"DEBUG: STORAGE Input - Model: {model}")
-            print(f"DEBUG: STORAGE Input - Messages: {messages}")
-            print(f"DEBUG: STORAGE Input - Parameters: {parameters}")
-            print(f"DEBUG: STORAGE Normalized - Messages: {self._normalize_messages(messages)}")
-            print(f"DEBUG: STORAGE Normalized - Parameters: {self._normalize_parameters(parameters)}")
-            
             cache_key = self._generate_cache_key(model, messages, parameters)
             cache_ttl = ttl or LLM_CACHE_TTL
             
             # Store the response
             self.redis_client.setex(cache_key, cache_ttl, response)
-            log.info(f"💾 Cached response for model: {model} (TTL: {cache_ttl}s)")
-            print(f"DEBUG: Cache STORAGE key: {cache_key}")  # Force print to console
-            print(f"DEBUG: Stored response: {response[:50]}...")
+            log.info(f"💾 CACHED [{model}] Query: '{user_query}' (TTL: {cache_ttl}s)")
             return True
             
         except Exception as e:
-            log.error(f"❌ Error caching response: {e}")
+            log.error(f"❌ Cache storage error: {e}")
             return False
 
 # Global cache instance

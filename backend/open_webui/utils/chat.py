@@ -112,7 +112,10 @@ def create_response_from_text(text: str, model_id: str) -> dict:
             "prompt_tokens": 0,
             "completion_tokens": 0,
             "total_tokens": 0
-        }
+        },
+        # Add metadata to indicate this is a cached response
+        "cached": True,
+        "web_search": False  # Explicitly indicate no web search was used
     }
 
 
@@ -171,30 +174,36 @@ async def generate_chat_completion(
     # EARLY CACHE CHECK - Before any processing overhead
     cache = None
     is_streaming = form_data.get("stream", False)
-    log.info(f"🔧 Request details - Model: {model_id}, Streaming: {is_streaming}")
+    # Check if web search was originally enabled (before middleware might have disabled it)
+    has_web_search = form_data.get("web_search", False) or "web_search_results" in form_data
+    original_web_search = form_data.get("original_web_search", has_web_search)  # Middleware should set this
+    log.info(f"🔧 PROCESSING [{model_id}] Streaming: {is_streaming}, Web Search: {original_web_search} {'(skipped)' if original_web_search and not has_web_search else ''}")
+    
+    # Get messages for use throughout the function (needed for caching)
+    messages = form_data.get("messages", [])
     
     if ENABLE_LLM_CACHE:
         try:
             cache = get_cache()
-            messages = form_data.get("messages", [])
             
-            # Create cache parameters from request (remove streaming flag for consistent keys)
+            # Create cache parameters from request (optimize for cache hit rate)
             cache_params = {
-                "temperature": form_data.get("temperature", 0.7),
+                # Use temperature 0.0 for caching to ensure deterministic, consistent responses
+                # This maximizes cache hit rate and provides reliable cached answers
+                "temperature": 0.0,  # Force deterministic for caching
                 "max_tokens": form_data.get("max_tokens"),
                 "top_p": form_data.get("top_p"),
                 "stream": False  # Always use False for consistent cache keys
             }
             
-            log.info(f"🔍 Checking cache EARLY - before any pipeline processing...")
             # Check for cached response even for streaming requests
-            cached_response = cache.get_cached_response(model_id, messages, cache_params)
+            # Pass form_data to help the cache system understand the request context
+            cached_response = cache.get_cached_response(model_id, messages, cache_params, form_data)
             if cached_response:
-                log.info(f"🎯 EARLY Cache HIT - returning instant response (was streaming: {is_streaming})")
-                # Return immediately, bypassing ALL pipeline processing
+                log.info(f"🎯 CACHE HIT [{model_id}] Serving instant response (Web Search: {original_web_search})")
+                # Return immediately, bypassing ALL pipeline processing including web search
                 return create_response_from_text(cached_response, model_id)
-            else:
-                log.info(f"❌ Cache MISS - proceeding with full pipeline (streaming: {is_streaming})")
+            # Note: cache miss logging is handled by get_cached_response()
         except Exception as e:
             log.error(f"❌ Cache error: {e}")
             cache = None
@@ -271,17 +280,21 @@ async def generate_chat_completion(
         # Cache the function response if caching is enabled and not streaming
         if cache and not form_data.get("stream", False):
             try:
-                log.info(f"💾 Attempting to cache function response...")
                 response_text = extract_text_from_response(response)
-                log.info(f"   Extracted response text: {len(response_text)} chars")
-                cache.cache_response(model_id, messages, cache_params, response_text, LLM_CACHE_TTL)
-                log.info(f"✅ Successfully cached function response")
+                # Use same cache_params as lookup for consistency
+                cache_params_for_storage = {
+                    "temperature": 0.0,  # Force deterministic for caching
+                    "max_tokens": None,
+                    "top_p": None,
+                    "stream": False  # Always use False for consistent cache keys
+                }
+                cache.cache_response(model_id, messages, cache_params_for_storage, response_text, LLM_CACHE_TTL)
             except Exception as e:
                 log.error(f"❌ Error caching function response: {e}")
         elif cache and form_data.get("stream", False):
-            log.info(f"⚡ Streaming function response - not caching")
+            log.debug(f"⚡ Streaming function response - not caching")
         else:
-            log.info(f"⚠️ Cache is None - cannot cache function response")
+            log.debug(f"⚠️ Cache is None - cannot cache function response")
         
         return response
     if model["owned_by"] == "ollama":
@@ -321,14 +334,18 @@ async def generate_chat_completion(
                     # Cache the collected response after streaming completes
                     if collected_content.strip():
                         try:
-                            log.info(f"💾 Caching streaming Ollama response...")
-                            log.info(f"   Collected content: {len(collected_content)} chars")
-                            cache.cache_response(model_id, messages, cache_params, collected_content, LLM_CACHE_TTL)
-                            log.info(f"✅ Successfully cached streaming Ollama response")
+                            # Use same cache_params as lookup for consistency
+                            cache_params_for_storage = {
+                                "temperature": 0.0,  # Force deterministic for caching
+                                "max_tokens": None,
+                                "top_p": None,
+                                "stream": False  # Always use False for consistent cache keys
+                            }
+                            cache.cache_response(model_id, messages, cache_params_for_storage, collected_content, LLM_CACHE_TTL)
                         except Exception as e:
                             log.error(f"❌ Error caching streaming Ollama response: {e}")
                     else:
-                        log.warning(f"⚠️ No content collected from streaming response to cache")
+                        log.debug("⚠️ No content collected from streaming response to cache")
                 
                 return StreamingResponse(
                     streaming_wrapper_with_cache(),
@@ -347,15 +364,19 @@ async def generate_chat_completion(
             # Cache the response if caching is enabled
             if cache:
                 try:
-                    log.info(f"💾 Attempting to cache Ollama response...")
                     response_text = extract_text_from_response(converted_response)
-                    log.info(f"   Extracted response text: {len(response_text)} chars")
-                    cache.cache_response(model_id, messages, cache_params, response_text, LLM_CACHE_TTL)
-                    log.info(f"✅ Successfully cached Ollama response")
+                    # Use same cache_params as lookup for consistency
+                    cache_params_for_storage = {
+                        "temperature": 0.0,  # Force deterministic for caching
+                        "max_tokens": None,
+                        "top_p": None,
+                        "stream": False  # Always use False for consistent cache keys
+                    }
+                    cache.cache_response(model_id, messages, cache_params_for_storage, response_text, LLM_CACHE_TTL)
                 except Exception as e:
                     log.error(f"❌ Error caching Ollama response: {e}")
             else:
-                log.info(f"⚠️ Cache is None - cannot cache Ollama response")
+                log.debug("⚠️ Cache is None - cannot cache Ollama response")
             
             return converted_response
     else:
@@ -366,15 +387,19 @@ async def generate_chat_completion(
         # Cache the response if caching is enabled and not streaming
         if cache and not form_data.get("stream", False):
             try:
-                log.info(f"💾 Attempting to cache OpenAI response...")
                 response_text = extract_text_from_response(response)
-                log.info(f"   Extracted response text: {len(response_text)} chars")
-                cache.cache_response(model_id, messages, cache_params, response_text, LLM_CACHE_TTL)
-                log.info(f"✅ Successfully cached OpenAI response")
+                # Use same cache_params as lookup for consistency
+                cache_params_for_storage = {
+                    "temperature": 0.0,  # Force deterministic for caching
+                    "max_tokens": None,
+                    "top_p": None,
+                    "stream": False  # Always use False for consistent cache keys
+                }
+                cache.cache_response(model_id, messages, cache_params_for_storage, response_text, LLM_CACHE_TTL)
             except Exception as e:
                 log.error(f"❌ Error caching OpenAI response: {e}")
         elif cache and form_data.get("stream", False):
-            log.info(f"⚡ Streaming OpenAI response - not caching")
+            log.debug(f"⚡ Streaming OpenAI response - not caching")
         else:
             log.info(f"⚠️ Cache is None - cannot cache OpenAI response")
         
@@ -396,22 +421,6 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
 
     model = models[model_id]
 
-    # DEBUG: Log the incoming data structure
-    log.info(f"🐛 DEBUG: chat_completed called with data keys: {list(data.keys())}")
-    if "messages" in data:
-        log.info(f"🐛 DEBUG: messages found, count: {len(data['messages'])}")
-        # Show the last message to see if it contains the response
-        if data['messages']:
-            last_msg = data['messages'][-1]
-            log.info(f"🐛 DEBUG: last message role: {last_msg.get('role')}, content length: {len(last_msg.get('content', ''))}")
-    if "content" in data:
-        log.info(f"🐛 DEBUG: content found, length: {len(data['content'])} chars")
-    
-    # Log all available keys for debugging
-    for key in data.keys():
-        if key != "messages":  # Don't log full messages again
-            log.info(f"🐛 DEBUG: data['{key}'] = {data[key] if len(str(data[key])) < 100 else str(data[key])[:100] + '...'}")
-    
     # Add caching logic for completed streaming responses
     if ENABLE_LLM_CACHE:
         try:
@@ -431,28 +440,23 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
                     response_content = data.get("content", "")
                 
                 if response_content:
-                    # Create cache parameters (similar to the original request)
+                    # Create cache parameters (use consistent params for storage)
                     cache_params = {
-                        "temperature": 0.7,  # Default values as we don't have the original params
+                        "temperature": 0.0,  # Force deterministic for caching
                         "stream": False  # Always use False for consistent cache keys
                     }
                     
-                    log.info(f"💾 Attempting to cache completed streaming response...")
-                    log.info(f"   Model: {model_id}, Response length: {len(response_content)} chars")
-                    log.info(f"   Response preview: {response_content[:100]}...")
+                    log.debug(f"💾 Caching completed streaming response for {model_id}")
                     
                     # Cache the completed response using the original messages (minus the assistant response)
                     original_messages = messages[:-1] if len(messages) > 1 else messages
                     cache.cache_response(model_id, original_messages, cache_params, response_content, LLM_CACHE_TTL)
-                    log.info(f"✅ Successfully cached completed streaming response")
                 else:
-                    log.info(f"🐛 DEBUG: No response content found to cache")
+                    log.debug("No response content found to cache")
             else:
-                log.info(f"🐛 DEBUG: Cache conditions not met - cache: {cache is not None}, messages: {'messages' in data}")
+                log.debug("Cache conditions not met for completed response")
         except Exception as e:
-            log.error(f"❌ Error caching completed streaming response: {e}")
-            import traceback
-            log.error(f"   Traceback: {traceback.format_exc()}")
+            log.error(f"❌ Error caching completed response: {e}")
 
     try:
         data = process_pipeline_outlet_filter(request, data, user, models)
