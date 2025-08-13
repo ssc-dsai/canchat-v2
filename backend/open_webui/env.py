@@ -87,6 +87,7 @@ log_sources = [
     "IMAGES",
     "MAIN",
     "MODELS",
+    "NOTIFICATIONS",
     "OLLAMA",
     "OPENAI",
     "RAG",
@@ -96,7 +97,7 @@ log_sources = [
     "METRICS",
 ]
 
-SRC_LOG_LEVELS = {}
+SRC_LOG_LEVELS: dict[str, str] = {}
 
 for source in log_sources:
     log_env_var = source + "_LOG_LEVEL"
@@ -268,7 +269,7 @@ if os.path.exists(f"{DATA_DIR}/ollama.db"):
 else:
     pass
 
-DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+DATABASE_URL: str = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
