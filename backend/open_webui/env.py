@@ -330,6 +330,7 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+REDIS_AUTO_START = os.environ.get("REDIS_AUTO_START", "true").lower() == "true"
 
 ####################################
 # WEBUI_AUTH (Required for security)
@@ -409,3 +410,11 @@ OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
+
+####################################
+# LLM RESPONSE CACHE
+####################################
+
+ENABLE_LLM_CACHE = os.environ.get("ENABLE_LLM_CACHE", "true").lower() == "true"
+LLM_CACHE_TTL = int(os.environ.get("LLM_CACHE_TTL", "3600"))
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")

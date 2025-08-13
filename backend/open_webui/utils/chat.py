@@ -1,5 +1,6 @@
 import logging
 import sys
+import time
 
 from typing import Any
 import random
@@ -40,12 +41,116 @@ from open_webui.utils.response import (
     convert_streaming_response_ollama_to_openai,
 )
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL, ENABLE_LLM_CACHE, LLM_CACHE_TTL
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+# Import Redis cache utility if caching is enabled
+if ENABLE_LLM_CACHE:
+    try:
+        from open_webui.utils.cache import get_cache
+        log.info("✅ LLM response caching enabled")
+    except ImportError:
+        log.warning("❌ Cache module not available, caching disabled")
+        ENABLE_LLM_CACHE = False
+
+
+def extract_user_message_from_messages(messages: list) -> str:
+    """Extract the last user message from the conversation"""
+    for message in reversed(messages):
+        if message.get("role") == "user" and message.get("content"):
+            return message["content"]
+    return ""
+
+
+def extract_text_from_response(response) -> str:
+    """Extract text content from various response formats"""
+    if isinstance(response, str):
+        return response
+    
+    if isinstance(response, dict):
+        # OpenAI format
+        if "choices" in response and response["choices"]:
+            choice = response["choices"][0]
+            if "message" in choice and "content" in choice["message"]:
+                return choice["message"]["content"]
+            elif "text" in choice:
+                return choice["text"]
+        
+        # Ollama format
+        if "message" in response and "content" in response["message"]:
+            return response["message"]["content"]
+        
+        # Direct content
+        if "content" in response:
+            return response["content"]
+    
+    return str(response)
+
+
+def create_response_from_text(text: str, model_id: str) -> dict:
+    """Create a proper response format from cached text"""
+    return {
+        "id": f"cache-{model_id}",
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": model_id,
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": text
+                },
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0
+        }
+    }
+
+
+async def create_streaming_response_from_text(text: str, model_id: str):
+    """Create a streaming response from cached text - ultra-fast delivery"""
+    
+    # Single chunk with all content for instant delivery
+    chunk = {
+        "id": f"chatcmpl-cache-{model_id}",
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model_id,
+        "choices": [
+            {
+                "index": 0,
+                "delta": {"content": text},
+                "finish_reason": None
+            }
+        ]
+    }
+    yield f"data: {json.dumps(chunk)}\n\n"
+    
+    # Completion signal
+    final_chunk = {
+        "id": f"chatcmpl-cache-{model_id}",
+        "object": "chat.completion.chunk", 
+        "created": int(time.time()),
+        "model": model_id,
+        "choices": [
+            {
+                "index": 0,
+                "delta": {},
+                "finish_reason": "stop"
+            }
+        ]
+    }
+    yield f"data: {json.dumps(final_chunk)}\n\n"
+    yield "data: [DONE]\n\n"
 
 
 async def generate_chat_completion(
@@ -62,6 +167,37 @@ async def generate_chat_completion(
     model_id = form_data["model"]
     if model_id not in models:
         raise Exception("Model not found")
+
+    # EARLY CACHE CHECK - Before any processing overhead
+    cache = None
+    is_streaming = form_data.get("stream", False)
+    log.info(f"🔧 Request details - Model: {model_id}, Streaming: {is_streaming}")
+    
+    if ENABLE_LLM_CACHE:
+        try:
+            cache = get_cache()
+            messages = form_data.get("messages", [])
+            
+            # Create cache parameters from request (remove streaming flag for consistent keys)
+            cache_params = {
+                "temperature": form_data.get("temperature", 0.7),
+                "max_tokens": form_data.get("max_tokens"),
+                "top_p": form_data.get("top_p"),
+                "stream": False  # Always use False for consistent cache keys
+            }
+            
+            log.info(f"🔍 Checking cache EARLY - before any pipeline processing...")
+            # Check for cached response even for streaming requests
+            cached_response = cache.get_cached_response(model_id, messages, cache_params)
+            if cached_response:
+                log.info(f"🎯 EARLY Cache HIT - returning instant response (was streaming: {is_streaming})")
+                # Return immediately, bypassing ALL pipeline processing
+                return create_response_from_text(cached_response, model_id)
+            else:
+                log.info(f"❌ Cache MISS - proceeding with full pipeline (streaming: {is_streaming})")
+        except Exception as e:
+            log.error(f"❌ Cache error: {e}")
+            cache = None
 
     # Process the form_data through the pipeline
     try:
@@ -128,9 +264,26 @@ async def generate_chat_completion(
 
     if model.get("pipe"):
         # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
-        return await generate_function_chat_completion(
+        response = await generate_function_chat_completion(
             request, form_data, user=user, models=models
         )
+        
+        # Cache the function response if caching is enabled and not streaming
+        if cache and not form_data.get("stream", False):
+            try:
+                log.info(f"💾 Attempting to cache function response...")
+                response_text = extract_text_from_response(response)
+                log.info(f"   Extracted response text: {len(response_text)} chars")
+                cache.cache_response(model_id, messages, cache_params, response_text, LLM_CACHE_TTL)
+                log.info(f"✅ Successfully cached function response")
+            except Exception as e:
+                log.error(f"❌ Error caching function response: {e}")
+        elif cache and form_data.get("stream", False):
+            log.info(f"⚡ Streaming function response - not caching")
+        else:
+            log.info(f"⚠️ Cache is None - cannot cache function response")
+        
+        return response
     if model["owned_by"] == "ollama":
         # Using /ollama/api/chat endpoint
         form_data = convert_payload_openai_to_ollama(form_data)
@@ -139,17 +292,93 @@ async def generate_chat_completion(
         )
         if form_data.get("stream"):
             response.headers["content-type"] = "text/event-stream"
-            return StreamingResponse(
-                convert_streaming_response_ollama_to_openai(response),
-                headers=dict(response.headers),
-                background=response.background,
-            )
+            
+            # Wrap streaming response for caching
+            if cache:
+                async def streaming_wrapper_with_cache():
+                    collected_content = ""
+                    async for chunk in convert_streaming_response_ollama_to_openai(response):
+                        # Forward chunk to client immediately
+                        yield chunk
+                        
+                        # Collect content for caching while streaming
+                        if chunk.startswith("data: ") and not chunk.startswith("data: [DONE]"):
+                            try:
+                                data_str = chunk[6:].strip()  # Remove "data: " prefix
+                                if data_str:
+                                    chunk_data = json.loads(data_str)
+                                    if "choices" in chunk_data and chunk_data["choices"]:
+                                        choice = chunk_data["choices"][0]
+                                        if "delta" in choice and "content" in choice["delta"]:
+                                            content = choice["delta"]["content"]
+                                            if content:  # Only add non-empty content
+                                                collected_content += content
+                            except (json.JSONDecodeError, KeyError, IndexError) as e:
+                                # Log parsing errors for debugging
+                                log.debug(f"Failed to parse chunk for caching: {e}")
+                                pass
+                    
+                    # Cache the collected response after streaming completes
+                    if collected_content.strip():
+                        try:
+                            log.info(f"💾 Caching streaming Ollama response...")
+                            log.info(f"   Collected content: {len(collected_content)} chars")
+                            cache.cache_response(model_id, messages, cache_params, collected_content, LLM_CACHE_TTL)
+                            log.info(f"✅ Successfully cached streaming Ollama response")
+                        except Exception as e:
+                            log.error(f"❌ Error caching streaming Ollama response: {e}")
+                    else:
+                        log.warning(f"⚠️ No content collected from streaming response to cache")
+                
+                return StreamingResponse(
+                    streaming_wrapper_with_cache(),
+                    headers=dict(response.headers),
+                    background=response.background,
+                )
+            else:
+                return StreamingResponse(
+                    convert_streaming_response_ollama_to_openai(response),
+                    headers=dict(response.headers),
+                    background=response.background,
+                )
         else:
-            return convert_response_ollama_to_openai(response)
+            converted_response = convert_response_ollama_to_openai(response)
+            
+            # Cache the response if caching is enabled
+            if cache:
+                try:
+                    log.info(f"💾 Attempting to cache Ollama response...")
+                    response_text = extract_text_from_response(converted_response)
+                    log.info(f"   Extracted response text: {len(response_text)} chars")
+                    cache.cache_response(model_id, messages, cache_params, response_text, LLM_CACHE_TTL)
+                    log.info(f"✅ Successfully cached Ollama response")
+                except Exception as e:
+                    log.error(f"❌ Error caching Ollama response: {e}")
+            else:
+                log.info(f"⚠️ Cache is None - cannot cache Ollama response")
+            
+            return converted_response
     else:
-        return await generate_openai_chat_completion(
+        response = await generate_openai_chat_completion(
             request=request, form_data=form_data, user=user, bypass_filter=bypass_filter
         )
+        
+        # Cache the response if caching is enabled and not streaming
+        if cache and not form_data.get("stream", False):
+            try:
+                log.info(f"💾 Attempting to cache OpenAI response...")
+                response_text = extract_text_from_response(response)
+                log.info(f"   Extracted response text: {len(response_text)} chars")
+                cache.cache_response(model_id, messages, cache_params, response_text, LLM_CACHE_TTL)
+                log.info(f"✅ Successfully cached OpenAI response")
+            except Exception as e:
+                log.error(f"❌ Error caching OpenAI response: {e}")
+        elif cache and form_data.get("stream", False):
+            log.info(f"⚡ Streaming OpenAI response - not caching")
+        else:
+            log.info(f"⚠️ Cache is None - cannot cache OpenAI response")
+        
+        return response
 
 
 chat_completion = generate_chat_completion
@@ -166,6 +395,64 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         raise Exception("Model not found")
 
     model = models[model_id]
+
+    # DEBUG: Log the incoming data structure
+    log.info(f"🐛 DEBUG: chat_completed called with data keys: {list(data.keys())}")
+    if "messages" in data:
+        log.info(f"🐛 DEBUG: messages found, count: {len(data['messages'])}")
+        # Show the last message to see if it contains the response
+        if data['messages']:
+            last_msg = data['messages'][-1]
+            log.info(f"🐛 DEBUG: last message role: {last_msg.get('role')}, content length: {len(last_msg.get('content', ''))}")
+    if "content" in data:
+        log.info(f"🐛 DEBUG: content found, length: {len(data['content'])} chars")
+    
+    # Log all available keys for debugging
+    for key in data.keys():
+        if key != "messages":  # Don't log full messages again
+            log.info(f"🐛 DEBUG: data['{key}'] = {data[key] if len(str(data[key])) < 100 else str(data[key])[:100] + '...'}")
+    
+    # Add caching logic for completed streaming responses
+    if ENABLE_LLM_CACHE:
+        try:
+            cache = get_cache()
+            if cache and "messages" in data:
+                messages = data.get("messages", [])
+                
+                # Extract response content from the last assistant message
+                response_content = None
+                if messages and len(messages) >= 2:
+                    last_message = messages[-1]
+                    if last_message.get("role") == "assistant":
+                        response_content = last_message.get("content", "")
+                
+                # Also check if there's a direct content field (fallback)
+                if not response_content and "content" in data:
+                    response_content = data.get("content", "")
+                
+                if response_content:
+                    # Create cache parameters (similar to the original request)
+                    cache_params = {
+                        "temperature": 0.7,  # Default values as we don't have the original params
+                        "stream": False  # Always use False for consistent cache keys
+                    }
+                    
+                    log.info(f"💾 Attempting to cache completed streaming response...")
+                    log.info(f"   Model: {model_id}, Response length: {len(response_content)} chars")
+                    log.info(f"   Response preview: {response_content[:100]}...")
+                    
+                    # Cache the completed response using the original messages (minus the assistant response)
+                    original_messages = messages[:-1] if len(messages) > 1 else messages
+                    cache.cache_response(model_id, original_messages, cache_params, response_content, LLM_CACHE_TTL)
+                    log.info(f"✅ Successfully cached completed streaming response")
+                else:
+                    log.info(f"🐛 DEBUG: No response content found to cache")
+            else:
+                log.info(f"🐛 DEBUG: Cache conditions not met - cache: {cache is not None}, messages: {'messages' in data}")
+        except Exception as e:
+            log.error(f"❌ Error caching completed streaming response: {e}")
+            import traceback
+            log.error(f"   Traceback: {traceback.format_exc()}")
 
     try:
         data = process_pipeline_outlet_filter(request, data, user, models)
