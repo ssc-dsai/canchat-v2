@@ -39,7 +39,6 @@ from open_webui.socket.main import (
 )
 from open_webui.routers import (
     audio,
-    cache,
     images,
     ollama,
     openai,
@@ -1075,7 +1074,6 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
-app.include_router(cache.router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
 app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
 app.include_router(crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"])
