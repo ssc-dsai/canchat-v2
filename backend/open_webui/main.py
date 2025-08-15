@@ -182,6 +182,7 @@ from open_webui.config import (
     ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
+    ENABLE_WIKIPEDIA_GROUNDING,
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     WEBUI_AUTH,
@@ -575,6 +576,7 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
+app.state.config.ENABLE_WIKIPEDIA_GROUNDING = ENABLE_WIKIPEDIA_GROUNDING
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
 )
@@ -1199,6 +1201,7 @@ async def get_app_config(request: Request):
                 {
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                    "enable_wiki_grounding": app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
