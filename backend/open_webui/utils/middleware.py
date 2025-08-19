@@ -495,8 +495,10 @@ async def chat_web_search_handler(
     # Check if this request would be cached - if so, skip web search entirely
     try:
         from open_webui.env import ENABLE_LLM_CACHE
+
         if ENABLE_LLM_CACHE:
             from open_webui.utils.cache import get_cache
+
             cache = get_cache()
             if cache.connected:
                 messages = form_data.get("messages", [])
@@ -506,23 +508,40 @@ async def chat_web_search_handler(
                     "temperature": 0.0,  # Force deterministic for consistent caching
                     "max_tokens": form_data.get("max_tokens"),
                     "top_p": form_data.get("top_p"),
-                    "stream": False
+                    "stream": False,
                 }
-                
+
                 # If this query would be cached, skip web search
                 if cache.would_be_cached(model_id, messages, cache_params, form_data):
                     # Extract user query for logging context
                     user_query = "N/A"
                     if messages:
                         for msg in reversed(messages):
-                            if msg.get('role') == 'user':
-                                content = msg.get('content', '')
+                            if msg.get("role") == "user":
+                                content = msg.get("content", "")
                                 from open_webui.utils.cache import get_cache
+
                                 cache_instance = get_cache()
-                                user_query = cache_instance._extract_user_query_from_rag(content)[:50] + ("..." if len(cache_instance._extract_user_query_from_rag(content)) > 50 else "")
+                                user_query = (
+                                    cache_instance._extract_user_query_from_rag(
+                                        content
+                                    )[:50]
+                                    + (
+                                        "..."
+                                        if len(
+                                            cache_instance._extract_user_query_from_rag(
+                                                content
+                                            )
+                                        )
+                                        > 50
+                                        else ""
+                                    )
+                                )
                                 break
-                    
-                    log.info(f"🚫 WEB SEARCH SKIP [{model_id}] Query: '{user_query}' - Cacheable query")
+
+                    log.info(
+                        f"🚫 WEB SEARCH SKIP [{model_id}] Query: '{user_query}' - Cacheable query"
+                    )
                     # Mark that web search was originally enabled but skipped
                     form_data["original_web_search"] = True
                     form_data["web_search"] = False
@@ -530,7 +549,7 @@ async def chat_web_search_handler(
                     return form_data
     except Exception as e:
         log.debug(f"Cache check failed in web search handler: {e}")
-    
+
     event_emitter = extra_params["__event_emitter__"]
     await event_emitter(
         {

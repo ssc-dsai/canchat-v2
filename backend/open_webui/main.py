@@ -357,12 +357,12 @@ async def lifespan(app: FastAPI):
         import socket
         from open_webui.env import REDIS_URL, REDIS_AUTO_START
         from urllib.parse import urlparse
-        
+
         # Parse Redis URL to get host and port
         parsed_url = urlparse(REDIS_URL)
-        redis_host = parsed_url.hostname or 'localhost'
+        redis_host = parsed_url.hostname or "localhost"
         redis_port = parsed_url.port or 6379
-        
+
         # Check if Redis is already running
         def is_redis_running():
             try:
@@ -373,29 +373,33 @@ async def lifespan(app: FastAPI):
                 return result == 0
             except:
                 return False
-        
+
         if not is_redis_running():
             if REDIS_AUTO_START:
                 log.info(f"🚀 Starting Redis server on {redis_host}:{redis_port}")
                 redis_process = subprocess.Popen(
-                    ['redis-server', '--port', str(redis_port), '--bind', redis_host],
+                    ["redis-server", "--port", str(redis_port), "--bind", redis_host],
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
+                    stderr=subprocess.PIPE,
                 )
                 # Give Redis a moment to start
                 await asyncio.sleep(2)
-                
+
                 if is_redis_running():
                     log.info("✅ Redis server started successfully")
                     app.state.redis_process = redis_process
                 else:
                     log.warning("⚠️ Redis server may not have started properly")
             else:
-                log.info("⚠️ Redis auto-start disabled. Expecting external Redis service.")
-                log.info(f"💡 Configure REDIS_URL={REDIS_URL} to point to your Redis service")
+                log.info(
+                    "⚠️ Redis auto-start disabled. Expecting external Redis service."
+                )
+                log.info(
+                    f"💡 Configure REDIS_URL={REDIS_URL} to point to your Redis service"
+                )
         else:
             log.info("✅ Redis server already running")
-            
+
     except Exception as e:
         log.warning(f"⚠️ Could not start Redis server: {e}")
         if REDIS_AUTO_START:
@@ -883,8 +887,14 @@ async def commit_session_after_request(request: Request, call_next):
         # Ensure we always return a response
         if response is None:
             # Don't log errors for streaming endpoints or websockets - this is expected
-            if "/ws/" in request.url.path or "stream" in request.url.path or "/api/chat/completions" in request.url.path:
-                log.debug(f"Streaming/WebSocket endpoint returned None response for {request.url.path} (expected)")
+            if (
+                "/ws/" in request.url.path
+                or "stream" in request.url.path
+                or "/api/chat/completions" in request.url.path
+            ):
+                log.debug(
+                    f"Streaming/WebSocket endpoint returned None response for {request.url.path} (expected)"
+                )
                 return JSONResponse(
                     status_code=status.HTTP_200_OK,
                     content={"detail": "Streaming response completed"},
@@ -901,9 +911,9 @@ async def commit_session_after_request(request: Request, call_next):
     except Exception as e:
         # Only silence "No response returned" errors for streaming endpoints
         if "No response returned" in str(e) and (
-            request.url.path.startswith("/api/chat/") or 
-            request.url.path.startswith("/api/models") or
-            request.url.path.startswith("/ws/")
+            request.url.path.startswith("/api/chat/")
+            or request.url.path.startswith("/api/models")
+            or request.url.path.startswith("/ws/")
         ):
             # This is expected for streaming responses, don't log as error
             pass
@@ -983,8 +993,15 @@ async def inspect_websocket(request: Request, call_next):
         # Ensure we always return a response
         if response is None:
             # Don't log errors for streaming endpoints or websockets - this is expected
-            if "/ws/" in request.url.path or "stream" in request.url.path or "/api/chat/completions" in request.url.path or "/api/models" in request.url.path:
-                log.debug(f"Streaming/WebSocket/Model endpoint returned None response for {request.url.path} (expected)")
+            if (
+                "/ws/" in request.url.path
+                or "stream" in request.url.path
+                or "/api/chat/completions" in request.url.path
+                or "/api/models" in request.url.path
+            ):
+                log.debug(
+                    f"Streaming/WebSocket/Model endpoint returned None response for {request.url.path} (expected)"
+                )
                 return JSONResponse(
                     status_code=status.HTTP_200_OK,
                     content={"detail": "Streaming response completed"},
@@ -999,14 +1016,16 @@ async def inspect_websocket(request: Request, call_next):
     except Exception as e:
         # Only silence "No response returned" errors for streaming endpoints
         if "No response returned" in str(e) and (
-            request.url.path.startswith("/api/chat/") or 
-            request.url.path.startswith("/api/models") or
-            request.url.path.startswith("/ws/")
+            request.url.path.startswith("/api/chat/")
+            or request.url.path.startswith("/api/models")
+            or request.url.path.startswith("/ws/")
         ):
             # This is expected for streaming responses, don't log as error
             pass
         else:
-            log.error(f"Error in inspect_websocket middleware for {request.url.path}: {e}")
+            log.error(
+                f"Error in inspect_websocket middleware for {request.url.path}: {e}"
+            )
         # For WebSocket upgrade requests, return a proper error response
         if (
             "/ws/socket.io" in request.url.path
