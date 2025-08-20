@@ -5,9 +5,91 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<<<<<<< HEAD
-## [0.6.5] - 2025-04-14
-=======
+## [0.5.7-ccv2-1.6.1] - 2025-08-14
+
+### Fixed
+
+- **🚨 Typo In Warning**: Fix wording of warning to ensure data veracity in French and English.
+- **🗃️ Database Lock**: Fixed issue which caused an open transaction to lock the database.
+- **📝 Prompt Visibility**: Fixed public prompts not being visible to users.
+
+## [0.5.7-ccv2-1.6.0] - 2025-08-07
+
+### Added
+
+- **📑 Prompt List Pagination and Dynamic Loading**: Improved the user experience when viewing prompts by including pagination.
+- **✍️ Feedback Management Features for Admins**: Allow for exporting or deleting all Feedback.
+- **🗂️ Indexes on Prompt and Feedback**: Added indexes on the `prompt` and `feedback` tables to increase database request speed.
+- **🧹 Cleanup scripts for Qdrant**: Added scripts that allow for cleanups of collections.
+- **📚 Allowed for re-indexing of files**: Re-index files if a collection is not in place but the file is still available.
+
+### Changed
+
+- **🚨 Improved Error Handling and Reporting**: Improved description and handling of errors in middleware layers.
+- **🩺 Improved Database Healthcheck**: Improved database health check to prevent blocking the main thread.
+- **🗃️ Refactored Database Initialization**: Refactored database initialization to allow for simpler use and the testing.
+
+### Fixed
+
+- **3️⃣ Limit concurrent model selection**: Limit number of concurrent models to 3.
+- **🔍 Full Context Toggles**: Fixed misconfig of full context when using web search.
+
+## [0.5.7-ccv2-1.5.0] - 2025-07-10
+
+### Added
+
+- **🔗 MCP Server Integration**: Integrated support for MCP servers, expanding connection options and deployment flexibility.
+- **📰 News Desk with MCP**: Introduced News Desk integration alongside MCP server support, enabling centralized news and update management.
+- **🎓 Training Course Links (EN/FR)**: Added links to official training courses in both English and French for easier access to learning resources.
+- **🛠️ Issue Reporting Modal**: Access reporting modal via an exclamation icon in chat responses menu.
+- **💡 Suggestion Modal**: Access suggestion modal via a lightbulb icon in chat responses menu.
+- **🔍 Trivy Security Scan in CI**: Added Trivy scanning to the CI pipeline for automated vulnerability detection and improved security.
+
+### Changed
+
+- **📊 ReadMe Branding Update**: Updated the README file to display CANChat branding.
+- **🏆 Model Feedback ELO Hybrid**: Changed the model feedback ELO system to a hybrid solution for improved ranking accuracy.
+
+### Fixed
+
+- **🛡️ Brave Search URL Validation**: Now validates the URL of Brave search results and logs out any malformed URLs to improve reliability and security.
+- **🔒 Improved Redis Lock Error Handling**: Enhanced error handling for Redis lock management and cleanup tasks, increasing reliability and stability.
+- **📝 Improved Accessibility**: Enhanced accessibility for improved user experience.
+- **📊 Metrics Dashboard**: Enhanced model metrics access and display for analysts.
+
+### Removed
+
+- **🔕 New Version Notification Toast Removed**: Removed the toast notification for new version updates.
+
+## [0.5.7-ccv2-1.4.0] - 2025-06-11
+
+### Added
+
+- **📊 Additional Feedback Columns**: Added more columns to the feedback system for improved analysis and tracking.
+- **📈 Analysis and Global Analysis Roles**: Added new roles to access the metrics dashboard, enabling more granular accessibility for analysis.
+- **🌍 Banner Localization**: Added support for localized banners, allowing announcements to be displayed in multiple languages.
+- **📝 Full Document Retrieval Flag**: Added a flag to enable processing the entire document during web retrieval.
+
+### Changed
+
+- **📊 Users Enrollement graph**: Changed graph from daily total users to number of enrollments.
+- **💡 Default Suggestions Prompts**: Updated the default suggestions prompts to provide more relevant and helpful suggestions for users.
+
+### Fixed
+
+- **📊 Historical Daily User Graph Data Output**: Fixed the historical daily user graph data was incorrect or incomplete, ensuring accurate reporting.
+
+### Removed
+
+- **🧹 Dependency Cleanup**: Removed old dependencies to streamline the project and improve maintainability.
+- **🔗 V1 Prompts Importation**: Removed the ability to import V1 private prompts within the Prompt Workspace.
+
+## [0.5.7-ccv2-1.3.1] - 2025-05-15
+
+### Fixed
+
+- **📊 Metrics Dashboard**: Resolved issues with date range in graphs for more accurate analysis.
+
 ## [0.5.7-ccv2-1.3.0] - 2025-05-15
 
 ### Changed
@@ -34,13 +116,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **📊 Metric Dashboard**: Fix data issues with daily prompts and tokens
 
-## [0.5.7-ccv2-1.2.0] - 2025-04-04
-
-### Changed
-
-- **⚙️ Help Button Placement**: Moved the help button to the top right menu for easier access and improved user navigation.
-- **🔄 Pending Page Enhancements**: The pending page now auto-refreshes upon role changes, providing real-time updates and improved clarity.
->>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
+## [0.6.5] - 2025-04-14
 
 ### Added
 
@@ -141,6 +217,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚙️ **Auto-Exclusion for Broken RAG Collections**: Auto-skips document collections that fail to fetch data or return "None", preventing silent errors and streamlining retrieval workflows.
 - 📝 **Docling Text File Handling Fix**: Fixed file parsing inconsistency that broke docling-based RAG functionality for certain plain text files, ensuring wider file compatibility.
 
+## [0.5.7-ccv2-1.2.0] - 2025-04-04
+
+### Changed
+
+- **⚙️ Help Button Placement**: Moved the help button to the top right menu for easier access and improved user navigation.
+- **🔄 Pending Page Enhancements**: The pending page now auto-refreshes upon role changes, providing real-time updates and improved clarity.
+
+### Added
+
+- **🔗 V1 Prompts Importation**: Users can now import their V1 private prompts within their dedicated Prompt Workspace.
+- **📋 Report Issue and Suggestion Forms**: Added forms for reporting issues and submitting suggestions.
+- **🌐 User Domain**: Added user domain for multitenancy.
+- **📊 Usage Metrics Admin Dashboard**: Added an admin dashboard to track usage metrics.
+
+### Fixed
+
+- **🔧 Saving Models Groups RBAC Issue**: Fixed an issue with saving models related to Groups RBAC.
+- **🔧 PWA Manifest**: Fixed an issue with the Progressive Web App (PWA) manifest to ensure proper functionality and compatibility across devices.
+
 ## [0.6.0] - 2025-03-31
 
 ### Added
@@ -220,6 +315,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📧 LDAP Email Case Sensitivity**: Resolved an issue where LDAP login failed due to email case sensitivity mismatches, improving authentication reliability.
 - **💬 WebSocket Chat Event Registration**: Fixed a bug preventing chat event listeners from being registered upon sign-in, ensuring real-time updates work properly.
 
+## [0.5.7-ccv2-1.1.2] - 2025-02-27
+
+### Fix
+
+- **🌐 Enhanced Internationalization (i18n)**: Refined and expanded translations.
+- **📂 Folders**: Removed JSON exportation.
+- **✏️ Chat Items**: Renaming chat items when in a chat folder now changes instantly.
+- **📂 Archived Chats**: Removed JSON exportation.
+- **📌 Pinned Chats**: Pinned chats now see an unpinning option.
+- **🖼️ Prompt View**: Fix visual issues and now displays text color correctly based on dark/light mode.
+
 ## [0.5.18] - 2025-02-27
 
 ### Fixed
@@ -248,6 +354,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **📝 "Full Context Mode" Renamed for Clarity**: The "Full Context Mode" toggle in Web Search settings is now labeled "Bypass Embedding & Retrieval" for consistency across the UI.
+
+## [0.5.7-ccv2-1.1.1] - 2025-02-21
+
+### Fix
+
+- **🔧 Download Chats**: Removed JSON exportation.
+
+## [0.5.7-ccv2-1.1.0] - 2025-02-20
+
+### Changed
+
+- **⚙️ Versioning Stability**: For stability purposes, we stopped rebasing our code from Open WebUI at v0.5.7.
+- **🎨 Redesigned Prompt Create/Edit Page**: A fresh UI to create & edit prompts.
+- **🌍 Translation Button**: We've change the location of the language button from the settings modals to the sidebar menu.
+- **⚙️ CI/CD Workflows**: Removed broken/unwanted workflows that we're dedicated to Open WebUI.
+- **🔗 Open Webui Whitelabeling**: Removed Open WebUI Labeling.
+- **🔧 Open Webui Whitelabeling**: Removed Open WebUI.
+- **🔗 New Pending Activation Screen**: Pending screen now fits CANChat's Labeling with a link to ask access and in both official languages.
+
+### Added
+
+- **🔗 Private Prompt Workspace for Users**: Users now have the ability to create/edit their own private prompts on their own Prompt Workspace.
+- **💡 Documentation EN/FR**: CANChat's documentation links.
+- **🔍 Feedback Survey EN/FR**: Survey enabling user feedback.
+- **🌍 Model Descriptions**: Now Models have a quick description in both official languages.
+
+### Fixed
+
+- **✨ Favicon Logo**: Favicon logos are now using the DSAI logo.
+- **🌍 Enhanced Internationalization (i18n)**: Refined and expanded translations.
+- **📚 Accessibilty**: Revomed some accessibility issues mainly on the chat/main page.
+- **⚙️ Setting Page**: Removed unwanted settings.
+- **🔧 Licensing**: Readded required Licensing.
+- **🧠 Prompt Suggestions**: When new chat is pressed, prompt suggestions now cycles to all available options.
+- **🌍 Tag/Search**: tag:search now translates in both official languages.
 
 ## [0.5.16] - 2025-02-20
 
@@ -381,6 +522,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **⚡ Deprecated Non-Web Worker Pyodide Execution**: Moves entirely to browser sandboxing for better performance and security.
 
+## [0.5.7-ccv2-1.0.0] - 2025-01-23
+
+### Fix
+
+- **🔧 Rebasing**: Rebasing to version v0.5.7, kept our qdrant client.
+
 ## [0.5.7] - 2025-01-23
 
 ### Added
@@ -431,6 +578,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **⚙️ General Stability Refac**: Backend refactoring delivers a more stable, robust platform.
 - **🖥️ Desktop App Preparations**: Ongoing work to support the upcoming Open WebUI desktop app. Follow our progress and updates here: https://github.com/open-webui/desktop
+
+## [0.5.4-ccv2-1.0.4] - 2025-01-27
+
+### Fix
+
+- **🌍 Fr-CA Translations**: Missing/Correcting translations.
+
+## [0.5.4-ccv2-1.0.3] - 2025-01-23
+
+### Fix
+
+- **🌍 Fr-CA Translations**: Missing/Correcting translations.
+
+## [0.5.4-ccv2-1.0.2] - 2025-01-21
+
+### Fix
+
+- **🌍 About Section**: Removed old content from Open WebUI.
+
+## [0.5.4-ccv2-1.0.1] - 2025-01-16
+
+### Fix
+
+- **🌍 Fr-CA Translations**: Missing translations.
+
+## [0.5.4-ccv2-1.0.0] - 2025-01-15
+
+### Fix
+
+- **🔧 Rebasing**: Rebasing to version v0.5.4, kept our qdrant client.
 
 ## [0.5.4] - 2025-01-05
 
@@ -572,7 +749,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **🎨 Knowledge Base Styling**: Refined knowledge base visuals for a cleaner, more modern look, laying the groundwork for further enhancements in upcoming releases.
 
-## [0.4.6-ccv2-1.0.1] - 2024-11-28
+## [0.4.6-ccv2-1.0.1] - 2024-11-29
+
+### Fix
+
+- **🔧 Suggestion Prompts**: Add missing persistance code from rebasing.
+- **🔧 App Title**: Removing Web OpenUI from name.
+
+## [0.4.6-ccv2-1.0.0] - 2024-11-28
 
 ### Fix
 
@@ -902,42 +1086,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **🗑️ Deprecated 'DOCS_DIR'**: Removed the outdated 'docs_dir' variable in favor of more direct file management solutions, with direct file directory syncing and API uploads for a more integrated experience.
 
-## [0.3.31] - 2024-10-06
-
-### Added
-
-- **📚 Knowledge Feature**: Reimagined documents feature, now more performant with a better UI for enhanced organization; includes streamlined API integration for Retrieval-Augmented Generation (RAG). Detailed documentation forthcoming: https://docs.openwebui.com/
-- **🌐 New Landing Page**: Freshly designed landing page; toggle between the new UI and the classic chat UI from Settings > Interface for a personalized experience.
-- **📁 Full Document Retrieval Mode**: Toggle between full document retrieval or traditional snippets by clicking on the file item. This mode enhances document capabilities and supports comprehensive tasks like summarization by utilizing the entire content instead of RAG.
-- **📄 Extracted File Content Display**: View extracted content directly by clicking on the file item, simplifying file analysis.
-- **🎨 Artifacts Feature**: Render web content and SVGs directly in the interface, supporting quick iterations and live changes.
-- **🖊️ Editable Code Blocks**: Supercharged code blocks now allow live editing directly in the LLM response, with live reloads supported by artifacts.
-- **🔧 Code Block Enhancements**: Introduced a floating copy button in code blocks to facilitate easier code copying without scrolling.
-- **🔍 SVG Pan/Zoom**: Enhanced interaction with SVG images, including Mermaid diagrams, via new pan and zoom capabilities.
-- **🔍 Text Select Quick Actions**: New floating buttons appear when text is highlighted in LLM responses, offering deeper interactions like "Ask a Question" or "Explain".
-- **🗃️ Database Pool Configuration**: Enhanced database handling to support scalable user growth.
-- **🔊 Experimental Audio Compression**: Compress audio files to navigate around the 25MB limit for OpenAI's speech-to-text processing.
-- **🔍 Query Embedding**: Adjusted embedding behavior to enhance system performance by not repeating query embedding.
-- **💾 Lazy Load Optimizations**: Implemented lazy loading of large dependencies to minimize initial memory usage, boosting performance.
-- **🍏 Apple Touch Icon Support**: Optimizes the display of icons for web bookmarks on Apple mobile devices.
-- **🔽 Expandable Content Markdown Support**: Introducing 'details', 'summary' tag support for creating expandable content sections in markdown, facilitating cleaner, organized documentation and interactive content display.
-
-### Fixed
-
-- **🔘 Action Button Issue**: Resolved a bug where action buttons were not functioning, enhancing UI reliability.
-- **🔄 Multi-Model Chat Loop**: Fixed an infinite loop issue in multi-model chat environments, ensuring smoother chat operations.
-- **📄 Chat PDF/TXT Export Issue**: Resolved problems with exporting chat logs to PDF and TXT formats.
-- **🔊 Call to Text-to-Speech Issues**: Rectified problems with text-to-speech functions to improve audio interactions.
-
-### Changed
-
-- **⚙️ Endpoint Renaming**: Renamed 'rag' endpoints to 'retrieval' for clearer function description.
-- **🎨 Styling and Interface Updates**: Multiple refinements across the platform to enhance visual appeal and user interaction.
-
-### Removed
-
-- **🗑️ Deprecated 'DOCS_DIR'**: Removed the outdated 'docs_dir' variable in favor of more direct file management solutions, with direct file directory syncing and API uploads for a more integrated experience.
-
 ## [0.3.30] - 2024-09-26
 
 ### Fixed
@@ -947,7 +1095,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔧 O1 Max Completion Tokens Issue**: Resolved compatibility issues with OpenAI's o1 models max_completion_tokens param to ensure smooth operation.
 - **🔄 Pip Install Database Issue**: Fixed a critical issue where database changes during pip installations were reverting and not saving chat logs, now ensuring data persistence and reliability in chat operations.
 - **🏷️ Chat Rename Tab Update**: Fixed the functionality to change the web browser's tab title simultaneously when a chat is renamed, keeping tab titles consistent.
-- **🏷️ Chat Rename Tab Update**: Fixed the functionality to change the web browser's tab title simultaneously when a chat is renamed, keeping tab titles consistent.
+
 ## [0.3.29] - 2023-09-25
 
 ### Fixed
