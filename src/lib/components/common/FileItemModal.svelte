@@ -87,11 +87,7 @@
 							<Tooltip
 								content={enableFullContent
 									? $i18n.t(
-<<<<<<< HEAD
 											'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
-=======
-											'Inject the entire document as context for comprehensive processing, this is recommended for complex queries.'
->>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 										)
 									: $i18n.t(
 											'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
