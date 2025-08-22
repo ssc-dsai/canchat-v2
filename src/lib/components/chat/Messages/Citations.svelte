@@ -20,6 +20,10 @@
 
 	function calculateShowRelevance(sources: any[]) {
 		const distances = sources.flatMap((citation) => citation.distances ?? []);
+		const inRange = distances.filter((d) => d !== undefined && d >= -1 && d <= 1).length;
+		const outOfRange = distances.filter((d) => d !== undefined && (d < -1 || d > 1)).length;
+
+		if (distances.length === 0) {
 			return false;
 		}
 
@@ -35,7 +39,10 @@
 
 	function shouldShowPercentage(sources: any[]) {
 		const distances = sources.flatMap((citation) => citation.distances ?? []);
-		console.log('sources', sources);
+		return distances.every((d) => d !== undefined && d >= -1 && d <= 1);
+	}
+
+	$: {
 		citations = sources.reduce((acc, source) => {
 			if (Object.keys(source).length === 0) {
 				return acc;

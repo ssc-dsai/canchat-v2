@@ -368,16 +368,7 @@
 	}
 </script>
 
-<<<<<<< HEAD
 <Modal size="xl" bind:show returnFocusSelector="#user-menu">
-=======
-<Modal
-	size="xl"
-	bind:show
-	title={$i18n.t('Settings')}
-	returnFocusSelector={$returnFocusButtonID ? '#' + $returnFocusButtonID : ''}
->
->>>>>>> eb0e6ec2b (Merged PR 203: Accessibility: Add permanent message button, disable generate prompt key, remove call, and fix settings)
 	<div id="settings-modal-wrapper" class="text-gray-700 dark:text-gray-100">
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<h2 class=" text-lg font-medium self-center">{$i18n.t('Settings')}</h2>

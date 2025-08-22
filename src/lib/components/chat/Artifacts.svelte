@@ -168,6 +168,7 @@
 
 	const showFullScreen = () => {
 		if (iframeElement.requestFullscreen) {
+			iframeElement.requestFullscreen();
 		} else if (iframeElement.webkitRequestFullscreen) {
 			iframeElement.webkitRequestFullscreen();
 		} else if (iframeElement.msRequestFullscreen) {
@@ -176,6 +177,8 @@
 	};
 
 	onMount(() => {});
+</script>
+
 <div class=" w-full h-full relative flex flex-col bg-gray-50 dark:bg-gray-850">
 	<div class="w-full h-full flex flex-col flex-1 relative">
 		{#if contents.length > 0}

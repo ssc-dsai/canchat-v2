@@ -1347,6 +1347,11 @@
 
 		await sendPrompt(history, userPrompt, userMessageId, { newChat: true });
 	};
+
+	const sendPrompt = async (
+		_history,
+		prompt: string,
+		parentId: string,
 		{ modelId = null, modelIdx = null, newChat = false } = {}
 	) => {
 		if (autoScroll) {

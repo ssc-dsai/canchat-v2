@@ -231,6 +231,10 @@
 			mediaRecorder.onstart = () => {
 				console.log('Recording started');
 				audioChunks = [];
+			};
+
+			mediaRecorder.ondataavailable = (event) => {
+				if (hasStartedSpeaking) {
 					audioChunks.push(event.data);
 				}
 			};
@@ -893,7 +897,7 @@
 							await startVideoStream();
 						}}
 					>
-						<div>
+						<button class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900" type="button">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
@@ -906,7 +910,7 @@
 									clip-rule="evenodd"
 								/>
 							</svg>
-						</div>
+						</button>
 					</VideoInputMenu>
 				{:else}
 					<Tooltip content={$i18n.t('Camera')}>

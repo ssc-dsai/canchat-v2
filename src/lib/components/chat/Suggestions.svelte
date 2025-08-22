@@ -68,8 +68,8 @@
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		{$i18n.t('Suggested')}
-	{:else}
-		<!-- Keine Vorschläge -->
+	{/if}
+</div>
 
 <div class=" h-40 max-h-full overflow-auto scrollbar-none {className}">
 	{#each prompts as prompt, promptIdx}

@@ -22,9 +22,6 @@
 
 	export let id = '';
 
-	export let save = false;
-	export let run = true;
-
 	export let onSave = (e) => {};
 	export let onCode = (e) => {};
 
@@ -42,10 +39,6 @@
 	export let stickyButtonsClassName = 'top-8';
 
 	let pyodideWorker = null;
-
-	export let className = 'my-2';
-	export let editorClassName = '';
-	export let stickyButtonsClassName = 'top-8';
 
 	let _code = '';
 	$: if (code) {
@@ -413,7 +406,7 @@
 </script>
 
 <div>
-	<div class="relative {className} flex flex-col rounded-lg">
+	<div class="relative {className} flex flex-col rounded-lg" dir="ltr">
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
 				<SvgPanZoom
@@ -474,7 +467,11 @@
 					{#if save}
 						<button
 							class="save-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							on:click={saveCode}
 						>
+							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
+						</button>
+					{/if}
 
 					<button
 						class="copy-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"

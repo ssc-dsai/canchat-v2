@@ -46,7 +46,11 @@ function generateRegexRules(delimiters) {
 	const inlineRule = new RegExp(
 		`^(${inlinePatterns.join('|')})(?=[\\s?。，!-\/:-@[-\`{-~]|$)`,
 		'u'
+	);
 	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?=[\\s?。，!-\/:-@[-\`{-~]|$)`, 'u');
+
+	return { inlineRule, blockRule };
+}
 
 const { inlineRule, blockRule } = generateRegexRules(DELIMITER_LIST);
 

@@ -2,7 +2,6 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getDomains = async (token: string): Promise<string[]> => {
 	try {
-<<<<<<< HEAD
 		const [usersRes, metricsRes] = await Promise.all([
 			fetch(`${WEBUI_API_BASE_URL}/users/domains`, {
 				method: 'GET',
@@ -19,15 +18,6 @@ export const getDomains = async (token: string): Promise<string[]> => {
 				}
 			})
 		]);
-=======
-		const res = await fetch(`${WEBUI_API_BASE_URL}/users/domains`, {
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		});
->>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 
 		if (!usersRes.ok) {
 			const error = await usersRes.json();
@@ -116,10 +106,6 @@ export const getHistoricalUsers = async (
 	domain?: string
 ): Promise<Array<{ date: string; count: number }>> => {
 	try {
-<<<<<<< HEAD
-=======
-		// Build URL with proper domain handling
->>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 		let url = `${WEBUI_API_BASE_URL}/users/enrollment/historical?days=${days}`;
 
 		if (domain) {
@@ -155,12 +141,7 @@ export const getHistoricalDailyUsers = async (
 	domain?: string
 ): Promise<Array<{ date: string; count: number }>> => {
 	try {
-<<<<<<< HEAD
 		let url = `${WEBUI_API_BASE_URL}/metrics/historical/users/daily?days=${days}`;
-=======
-		// Build URL with proper domain handling
-		let url = `${WEBUI_API_BASE_URL}/users/daily/historical?days=${days}`;
->>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 
 		if (domain) {
 			url += `&domain=${encodeURIComponent(domain)}`;
@@ -179,13 +160,9 @@ export const getHistoricalDailyUsers = async (
 				return generateFallbackDates(days);
 			}
 			const error = await res.json();
-<<<<<<< HEAD
 			throw new Error(
 				`Error ${res.status}: ${error.detail || 'Failed to get historical daily users'}`
 			);
-=======
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical users'}`);
->>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 		}
 		const data = await res.json();
 		return data.historical_daily_users || [];
@@ -546,11 +523,7 @@ export const getRangeMetrics = async (
 	model?: string
 ): Promise<any> => {
 	try {
-<<<<<<< HEAD
 		let url = `${WEBUI_API_BASE_URL}/metrics/range/metrics?start_date=${startDate}&end_date=${endDate}`;
-=======
-		let url = `${WEBUI_API_BASE_URL}/metrics/range/users?start_date=${startDate}&end_date=${endDate}`;
->>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 
 		if (domain) {
 			url += `&domain=${encodeURIComponent(domain)}`;

@@ -14,6 +14,10 @@
 
 	let query = '';
 
+	let items = [];
+	let filteredItems = [];
+
+	let fuse = null;
 	$: if (fuse) {
 		filteredItems = query
 			? fuse.search(query).map((e) => {
@@ -21,6 +25,10 @@
 				})
 			: items;
 	}
+
+	onMount(() => {
+		let legacy_documents = $knowledge.filter((item) => item?.meta?.document);
+		let legacy_collections =
 			legacy_documents.length > 0
 				? [
 						{

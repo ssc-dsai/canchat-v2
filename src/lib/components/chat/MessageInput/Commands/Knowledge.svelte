@@ -183,8 +183,11 @@
 							type="button"
 							on:click={() => {
 								confirmSelect(item);
+							}}
 							on:mousemove={() => {
 								selectedIdx = idx;
+							}}
+						>
 							<div>
 								<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
 									{#if item.legacy}
@@ -243,74 +246,6 @@
 												>
 													<div
 														class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
-													>
-														File
-													</div>
-
-													<div class="line-clamp-1">
-														{file?.meta?.name}
-													</div>
-												</div>
-
-												<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
-													{$i18n.t('Updated')}
-													{dayjs(file.updated_at * 1000).fromNow()}
-												</div>
-											</div>
-										</button>
-									{/each}
-								{:else}
-									<div class=" text-gray-500 text-xs mt-1 mb-2">
-										{$i18n.t('No files found.')}
-									</div>
-								{/if}
-							</div> -->
-							on:focus={() => {}}
-						>
-							<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
-								<div class="line-clamp-1">
-									{item.name}
-								</div>
-
-								{#if item?.meta?.document}
-									<div
-										class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs px-1"
-									>
-										Document
-									</div>
-								{:else}
-									<div
-										class="bg-green-500/20 text-green-700 dark:text-green-200 rounded uppercase text-xs px-1"
-									>
-										Collection
-									</div>
-								{/if}
-							</div>
-
-							<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
-								{item.description}
-							</div>
-						</button>
-
-						<!-- <div slot="content" class=" pl-2 pt-1 flex flex-col gap-0.5">
-								{#if !item.legacy && (item?.files ?? []).length > 0}
-									{#each item?.files ?? [] as file, fileIdx}
-										<button
-											class=" px-3 py-1.5 rounded-xl w-full text-left flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-850 dark:hover:text-gray-100 selected-command-option-button"
-											type="button"
-											on:click={() => {
-												console.log(file);
-											}}
-											on:mousemove={() => {
-												selectedIdx = idx;
-											}}
-										>
-											<div>
-												<div
-													class=" font-medium text-black dark:text-gray-100 flex items-center gap-1"
-												>
-													<div
-														class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded uppercase text-xs font-bold px-1 flex-shrink-0"
 													>
 														File
 													</div>

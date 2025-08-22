@@ -20,10 +20,6 @@
 		item?.meta?.content_type === 'application/pdf' ||
 		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
 
-	export let edit = false;
-
-	let enableFullContent = false;
-
 	onMount(() => {
 		console.log(item);
 		if (item?.context === 'full') {
@@ -40,6 +36,11 @@
 					<div class=" font-medium text-lg dark:text-gray-100">
 						<a
 							href="#"
+							class="hover:underline line-clamp-1"
+							on:click|preventDefault={() => {
+								if (!isPDF && item.url) {
+									window.open(
+										item.type === 'file' ? `${item.url}/content` : `${item.url}`,
 										'_blank'
 									);
 								}
@@ -71,13 +72,13 @@
 
 						{#if item?.file?.data?.content}
 							<div class="capitalize shrink-0">
-								{getLineCount(item?.file?.data?.content ?? '')}
-								{$i18n.t('Extracted lines')}
+								{getLineCount(item?.file?.data?.content ?? '')} extracted lines
 							</div>
 
 							<div class="flex items-center gap-1 shrink-0">
 								<Info />
-								{$i18n.t('Formatting may be inconsistent from source.')}
+
+								Formatting may be inconsistent from source.
 							</div>
 						{/if}
 					</div>
@@ -95,9 +96,9 @@
 							>
 								<div class="flex items-center gap-1.5 text-xs">
 									{#if enableFullContent}
-										{$i18n.t('Using Entire Document')}
+										Using Entire Document
 									{:else}
-										{$i18n.t('Using Focused Retrieval')}
+										Using Focused Retrieval
 									{/if}
 									<Switch
 										bind:state={enableFullContent}
@@ -109,7 +110,11 @@
 							</Tooltip>
 						</div>
 					{/if}
+				</div>
 			</div>
+		</div>
+
+		<div class="max-h-[75vh] overflow-auto">
 			{#if isPDF}
 				<iframe
 					title={item?.name}
