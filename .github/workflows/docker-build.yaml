@@ -17,11 +17,11 @@ jobs:
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
+    # strategy:
+    #   fail-fast: false
+      # matrix:
+      #   platform:
+      #     - linux/amd64
           # Add more platforms if needed, e.g., - linux/arm64
 
     steps:
@@ -34,10 +34,10 @@ jobs:
         env:
           IMAGE_NAME: '${{ github.repository }}'
 
-      - name: Prepare
-        run: |
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+      # - name: Prepare
+      #   run: |
+      #     platform=${{ matrix.platform }}
+      #     echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -84,7 +84,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: ${{ matrix.platform }}
+          # platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
