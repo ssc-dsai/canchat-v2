@@ -1,7 +1,7 @@
 <script lang="ts">
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -144,11 +144,11 @@
 											>
 												<td class="px-3 py-1 w-2/3">
 													<Tooltip placement="top-start" content={chat.title}>
-														<a href="/c/{chat.id}" target="_blank">
-															<div class=" underline line-clamp-1">
-																{chat.title}
-															</div>
-														</a>
+													<a href="/c/{chat.id}" target="_blank">
+														<div class=" underline line-clamp-1">
+															{chat.title}
+														</div>
+													</a>
 													</Tooltip>
 												</td>
 
@@ -220,7 +220,7 @@
 
 						<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1 justify-end w-full">
 							<button
-								class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
+								class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
 								on:click={() => {
 									showUnarchiveAllConfirmDialog = true;
 								}}
