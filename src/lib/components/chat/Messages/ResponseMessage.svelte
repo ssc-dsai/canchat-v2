@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from '$lib/utils/toast';
+	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
 	import { createEventDispatcher } from 'svelte';
@@ -51,7 +51,6 @@
 
 	import IssueModal from '$lib/components/common/IssueModal.svelte';
 	import SuggestionModal from '$lib/components/common/SuggestionModal.svelte';
-	import Bug from '$lib/components/icons/Bug.svelte';
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
 	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
 
@@ -776,7 +775,7 @@
 
 										<button
 											id="confirm-edit-message-button"
-											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl focus:outline-2 focus:outline-blue-600"
+											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 											on:click={() => {
 												editMessageConfirmHandler();
 											}}
@@ -787,7 +786,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col relative">
+							<div class="w-full flex flex-col relative" id="response-content-container">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
