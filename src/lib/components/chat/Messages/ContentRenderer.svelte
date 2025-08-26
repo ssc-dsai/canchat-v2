@@ -26,10 +26,6 @@
 
 	let floatingButtonsElement;
 
-	let selectedText = '';
-	let floatingInput = false;
-	let floatingInputValue = '';
-
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
 		if (
@@ -48,9 +44,10 @@
 			let selection = window.getSelection();
 
 			if (selection.toString().trim().length > 0) {
-				floatingInput = false;
 				const range = selection.getRangeAt(0);
 				const rect = range.getBoundingClientRect();
+
+				const parentRect = contentContainerElement.getBoundingClientRect();
 
 				// Adjust based on parent rect
 				const top = rect.bottom - parentRect.top;
@@ -93,12 +90,6 @@
 				// call the closeHandler function
 				floatingButtonsElement?.closeHandler();
 			}
-		}
-	};
-
-	const keydownHandler = (e) => {
-		if (e.key === 'Escape') {
-			closeFloatingButtons();
 		}
 	};
 
