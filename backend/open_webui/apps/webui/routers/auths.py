@@ -4,7 +4,7 @@ import time
 import datetime
 import logging
 
-from open_webui.apps.webui.models.auths import (
+from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
     Auths,
@@ -17,7 +17,7 @@ from open_webui.apps.webui.models.auths import (
     UpdateProfileForm,
     UserResponse,
 )
-from open_webui.apps.webui.models.users import Users
+from open_webui.models.users import Users
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH,

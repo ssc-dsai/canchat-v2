@@ -470,7 +470,6 @@ class MessageMetricsTable:
             logger.error(f"Failed to get historical daily tokens: {e}")
             return []
 
-<<<<<<< HEAD
     # This function is here and not with Users model since the values needed are in the message metrics table.
     # Values are grouped by date and user_id without sql due to limitations with timestamps and being database agnostic.
     def get_historical_daily_users(
@@ -532,7 +531,5 @@ class MessageMetricsTable:
                 fallback.append({"date": date_str, "count": 0})
             return sorted(fallback, key=lambda x: x["date"])
 
-=======
->>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
 
 MessageMetrics = MessageMetricsTable()

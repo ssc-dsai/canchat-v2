@@ -400,10 +400,6 @@ class UsersTable:
 
                 with get_db() as db:
                     query = db.query(User).filter(
-<<<<<<< HEAD
-=======
-                        User.created_at >= start_time,
->>>>>>> 9cf64bac9 (feat: v0.5.7-ccv2-1.3.0 (#131))
                         User.created_at < end_time,
                     )
 
@@ -564,7 +560,6 @@ class UsersTable:
         except Exception as e:
             logger.error(f"Failed to get historical daily data: {e}")
             return []
-
 
     def get_range_metrics(
         self, start_timestamp: int, end_timestamp: int, domain: str = None
