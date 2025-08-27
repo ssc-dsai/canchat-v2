@@ -8,6 +8,7 @@
 	const dispatch = createEventDispatcher();
 
 	import {
+		ariaMessage,
 		type Model,
 		mobile,
 		settings,
@@ -195,12 +196,6 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
-				console.log('File upload completed:', {
-					id: uploadedFile.id,
-					name: fileItem.name,
-					collection: uploadedFile?.meta?.collection_name
-				});
-
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
@@ -224,23 +219,11 @@
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
-		console.log('Input files handler called with:', inputFiles);
 		inputFiles.forEach((file) => {
-			console.log('Processing file:', {
-				name: file.name,
-				type: file.type,
-				size: file.size,
-				extension: file.name.split('.').at(-1)
-			});
-
 			if (
 				($config?.file?.max_size ?? null) !== null &&
 				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 			) {
-				console.log('File exceeds max size limit:', {
-					fileSize: file.size,
-					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-				});
 				toast.error(
 					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
 						maxSize: $config?.file?.max_size
@@ -286,7 +269,6 @@
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
-			console.log('Escape');
 			dragged = false;
 		}
 	};
@@ -308,12 +290,9 @@
 
 	const onDrop = async (e) => {
 		e.preventDefault();
-		console.log(e);
-
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
 			if (inputFiles && inputFiles.length > 0) {
-				console.log(inputFiles);
 				inputFilesHandler(inputFiles);
 			}
 		}
@@ -341,7 +320,6 @@
 	});
 
 	onDestroy(() => {
-		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
 
 		const dropzoneElement = document.getElementById('chat-container');
@@ -487,14 +465,14 @@
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
-								toast.announce($i18n.t('Voice recording cancelled'));
+								ariaMessage.set($i18n.t('Voice recording cancelled'));
 							}}
 							on:confirm={async (e) => {
 								const { text, filename } = e.detail;
 								prompt = `${prompt}${text} `;
 
 								recording = false;
-								toast.announce($i18n.t('Voice recording transcription completed'));
+								ariaMessage.set($i18n.t('Voice recording transcription completed'));
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
@@ -596,9 +574,6 @@
 														files.splice(fileIdx, 1);
 														files = files;
 													}}
-													on:click={() => {
-														console.log(file);
-													}}
 												/>
 											{/if}
 										{/each}
@@ -643,12 +618,10 @@
 															? createMessagesList(history, history.currentId)
 															: null
 													).catch((error) => {
-														console.log(error);
-
+														toast.error(`${error}`);
 														return null;
 													});
 
-													console.log(res);
 													return res;
 												}}
 												oncompositionstart={() => (isComposing = true)}
@@ -673,7 +646,6 @@
 													// Check if Ctrl + R is pressed
 													if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
 														e.preventDefault();
-														console.log('regenerate');
 
 														const regenerateButton = [
 															...document.getElementsByClassName('regenerate-response-button')
@@ -775,7 +747,6 @@
 													}
 
 													if (e.key === 'Escape') {
-														console.log('Escape');
 														atSelectedModel = undefined;
 														selectedToolIds = [];
 														webSearchEnabled = false;
@@ -784,7 +755,6 @@
 												}}
 												on:paste={async (e) => {
 													e = e.detail.event;
-													console.log(e);
 
 													const clipboardData = e.clipboardData || window.clipboardData;
 
@@ -857,7 +827,6 @@
 												// Check if Ctrl + R is pressed
 												if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
 													e.preventDefault();
-													console.log('regenerate');
 
 													const regenerateButton = [
 														...document.getElementsByClassName('regenerate-response-button')
@@ -876,8 +845,6 @@
 													const editButton = [
 														...document.getElementsByClassName('edit-user-message-button')
 													]?.at(-1);
-
-													console.log(userMessageElement);
 
 													userMessageElement.scrollIntoView({ block: 'center' });
 													editButton?.click();
@@ -949,8 +916,6 @@
 																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
 																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
-														console.log('Enter pressed:', enterPressed);
-
 														if (enterPressed) {
 															e.preventDefault();
 														}
@@ -985,7 +950,6 @@
 												}
 
 												if (e.key === 'Escape') {
-													console.log('Escape');
 													atSelectedModel = undefined;
 													selectedToolIds = [];
 													webSearchEnabled = false;
@@ -1061,10 +1025,9 @@
 														});
 														await uploadFileHandler(file);
 													} else {
-														console.log('No file was selected from Google Drive');
+														toast.error($i18n.t('No file was selected from Google Drive'));
 													}
 												} catch (error) {
-													console.error('Google Drive Error:', error);
 													toast.error(
 														$i18n.t('Error accessing Google Drive: {{error}}', {
 															error: error.message
@@ -1081,10 +1044,10 @@
 														});
 														await uploadFileHandler(file);
 													} else {
-														console.log('No file was selected from OneDrive');
+														toast.error($i18n.t('No file was selected from OneDrive'));
 													}
 												} catch (error) {
-													console.error('OneDrive Error:', error);
+													toast.error($i18n.t(`OneDrive Error: ${error}`));
 												}
 											}}
 											onClose={async () => {
@@ -1222,7 +1185,7 @@
 
 															if (stream) {
 																recording = true;
-																toast.announce($i18n.t('Voice recording started'));
+																ariaMessage.set($i18n.t('Voice recording started'));
 																const tracks = stream.getTracks();
 																tracks.forEach((track) => track.stop());
 															}
