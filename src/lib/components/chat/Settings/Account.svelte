@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
-	import { user, config, settings } from '$lib/stores';
+	import {ariaMessage, user, config, settings } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
@@ -199,7 +199,7 @@
 							on:click={async () => {
 								if (canvasPixelTest()) {
 									profileImageUrl = generateInitialsImage(name);
-									toast.announce($i18n.t('Profile image changed to using initials'));
+									ariaMessage.set($i18n.t('Profile image changed to using initials'));
 								} else {
 									toast.info(
 										$i18n.t(
@@ -226,7 +226,7 @@
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
 							on:click={async () => {
 								profileImageUrl = '/user.png';
-								toast.announce(
+								ariaMessage.set(
 									$i18n.t('Removing changes to profile image and using default profile image')
 								);
 							}}>{$i18n.t('Remove')}</button

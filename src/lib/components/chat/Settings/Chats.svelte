@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, user, settings, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
+	import {ariaMessage, chats, user, settings, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
 
 	import {
 		archiveAllChats,
@@ -101,7 +101,7 @@
 	};
 
 	const announceConfirmation = () => {
-		toast.announce($i18n.t('Are you sure? Please confirm or cancel'));
+		ariaMessage.set($i18n.t('Are you sure? Please confirm or cancel'));
 	};
 
 	const handleArchivedChatsChange = async () => {
@@ -243,7 +243,7 @@
 							class="hover:text-white transition"
 							on:click={() => {
 								showArchiveConfirm = false;
-								toast.announce($i18n.t('Cancel archive all chats'));
+								ariaMessage.set($i18n.t('Cancel archive all chats'));
 							}}
 						>
 							<svg
@@ -332,7 +332,7 @@
 							class="hover:text-white transition"
 							on:click={() => {
 								showDeleteConfirm = false;
-								toast.announce($i18n.t('Cancel delete all chats'));
+								ariaMessage.set($i18n.t('Cancel delete all chats'));
 							}}
 						>
 							<svg

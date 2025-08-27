@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import {
+		ariaMessage,
 		chats,
 		config,
 		settings,
@@ -193,7 +194,7 @@
 				scrollToBottom();
 			}, 100);
 		}
-		toast.announce($i18n.t('Navigating to previous response'));
+		ariaMessage.set($i18n.t('Navigating to previous response'));
 	};
 
 	const showNextMessage = async (message) => {
@@ -245,7 +246,7 @@
 				scrollToBottom();
 			}, 100);
 		}
-		toast.announce($i18n.t('Navigating to next response'));
+		ariaMessage.set($i18n.t('Navigating to next response'));
 	};
 
 	const rateMessage = async (messageId, rating) => {

@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { config, models, settings, user } from '$lib/stores';
+	import { ariaMessage, config, models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
-	// Removed focus-trap import and related code
-	// import * as focusTrap from 'focus-trap';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -304,7 +302,7 @@
 		clearTimeout(searchDebounceTimeout);
 		searchDebounceTimeout = setTimeout(() => {
 			visibleTabs = searchSettings(search);
-			toast.announce(visibleTabs.length + ' visible tabs found');
+			ariaMessage.set(visibleTabs.length + $i18n.t('vibile tabs found'));
 			if (visibleTabs.length > 0 && !visibleTabs.includes(selectedTab)) {
 				selectedTab = visibleTabs[0];
 			}
@@ -352,7 +350,7 @@
 	};
 	const announceSelectedTab = async () => {
 		const title = $i18n.t(selectedTab);
-		toast.announce($i18n.t('settingsTab', { title }));
+		ariaMessage.set($i18n.t('settingsTab', { title }));
 	};
 
 	$: if (show) {
