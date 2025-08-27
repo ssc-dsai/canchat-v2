@@ -43,6 +43,8 @@ export const shortCodesToEmojis = writable(
 
 export const TTSWorker = writable(null);
 
+export const ariaMessage = writable('');
+
 export const chatId = writable('');
 export const chatTitle = writable('');
 
