@@ -2,16 +2,14 @@
 	import { marked } from 'marked';
 
 	import { toast } from 'svelte-sonner';
-	import Sortable from 'sortablejs';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, config, models as _models, settings, user } from '$lib/stores';
 	import {
 		createNewModel,
 		deleteModelById,
@@ -30,11 +28,11 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
-	import { locale } from '$lib/stores/locale';
+
+	const i18n = getContext('i18n');
 
 	let shiftKey = false;
 
@@ -61,7 +59,7 @@
 		models?.map((model) => ({
 			id: model.id,
 			desc:
-				$locale === 'fr-CA'
+				$i18n.language === 'fr-CA'
 					? (model?.meta?.description_fr || '').trim()
 					: (model?.meta?.description || '').trim()
 		})) || [];
@@ -71,6 +69,16 @@
 	}
 
 	let searchValue = '';
+
+	$: filteredModels = models
+		?.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
+		.map((model) => ({
+			...model,
+			description: ($i18n.language === 'fr-CA'
+				? model?.meta?.description_fr || ''
+				: model?.meta?.description || ''
+			).trim()
+		}));
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
@@ -100,24 +108,6 @@
 		goto('/workspace/models/create');
 	};
 
-	const shareModelHandler = async (model) => {
-		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
-
-		const url = 'https://openwebui.com';
-
-		const tab = await window.open(`${url}/models/create`, '_blank');
-
-		const messageHandler = (event) => {
-			if (event.origin !== url) return;
-			if (event.data === 'loaded') {
-				tab.postMessage(JSON.stringify(model), '*');
-				window.removeEventListener('message', messageHandler);
-			}
-		};
-
-		window.addEventListener('message', messageHandler, false);
-	};
-
 	const hideModelHandler = async (model) => {
 		let info = model.info;
 
@@ -136,8 +126,6 @@
 			...info.meta,
 			hidden: !(info?.meta?.hidden ?? false)
 		};
-
-		console.log(info);
 
 		const res = await updateModelById(localStorage.token, info.id, info);
 
@@ -356,9 +344,6 @@
 							<ModelMenu
 								user={$user}
 								{model}
-								shareHandler={() => {
-									shareModelHandler(model);
-								}}
 								cloneHandler={() => {
 									cloneModelHandler(model);
 								}}
@@ -484,12 +469,12 @@
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 						on:click={async () => {
-							downloadModels(models);
+								downloadModels(models);
 						}}
 					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Models')}
-						</div>
+							<div class=" self-center mr-2 font-medium line-clamp-1">
+								{$i18n.t('Export Models')}
+							</div>
 
 						<div class=" self-center">
 							<svg
@@ -508,33 +493,6 @@
 					</button>
 				{/if}
 			</div>
-		</div>
-	{/if}
-
-	{#if $config?.features.enable_community_sharing}
-		<div class=" my-16">
-			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by Open WebUI Community')}
-			</div>
-
-			<a
-				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
-				target="_blank"
-			>
-				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a model')}</div>
-					<div class=" text-sm line-clamp-1">
-						{$i18n.t('Discover, download, and explore model presets')}
-					</div>
-				</div>
-
-				<div>
-					<div>
-						<ChevronRight />
-					</div>
-				</div>
-			</a>
 		</div>
 	{/if}
 {:else}
