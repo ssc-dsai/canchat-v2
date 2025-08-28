@@ -350,8 +350,29 @@ https://github.com/open-webui/open-webui
 async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
+    # Initialize FastMCP manager
+    try:
+        from mcp_backend.management.mcp_manager import get_mcp_manager
 
-    # Start Redis server if not already running (only in development)
+        app.state.mcp_manager = get_mcp_manager()
+        log.info("FastMCP manager initialized")
+
+        # Initialize all MCP servers (built-in and external) if enabled
+        if app.state.config.ENABLE_MCP_API:
+            await app.state.mcp_manager.initialize_all_servers()
+            log.info("All MCP servers initialized")
+
+            # Note: Built-in MCP servers use stdio transport and are managed internally
+            # External MCP servers are loaded from database and managed via API
+
+    except Exception as e:
+        log.error(f"Failed to initialize FastMCP manager: {e}")
+
+    # Redis Auto-Start for Local Development Only
+    # NOTE: This is automatically disabled in production/K8s environments via REDIS_AUTO_START=false
+    # Production deployments use external Redis services (AWS ElastiCache, Azure Redis, etc.)
+    # Docker/container deployments should set REDIS_AUTO_START=false and provide REDIS_URL
+    # This convenience feature is only for local `python main.py` development workflows
     redis_process = None
     try:
         import subprocess
@@ -377,7 +398,7 @@ async def lifespan(app: FastAPI):
 
         if not is_redis_running():
             if REDIS_AUTO_START:
-                log.info(f"🚀 Starting Redis server on {redis_host}:{redis_port}")
+                log.info(f"🚀 Starting Redis server on {redis_host}:{redis_port} (local development)")
                 redis_process = subprocess.Popen(
                     ["redis-server", "--port", str(redis_port), "--bind", redis_host],
                     stdout=subprocess.PIPE,
@@ -387,17 +408,13 @@ async def lifespan(app: FastAPI):
                 await asyncio.sleep(2)
 
                 if is_redis_running():
-                    log.info("✅ Redis server started successfully")
+                    log.info("✅ Redis server started successfully for local development")
                     app.state.redis_process = redis_process
                 else:
                     log.warning("⚠️ Redis server may not have started properly")
             else:
-                log.info(
-                    "⚠️ Redis auto-start disabled. Expecting external Redis service."
-                )
-                log.info(
-                    f"💡 Configure REDIS_URL={REDIS_URL} to point to your Redis service"
-                )
+                log.info("⚠️ Redis auto-start disabled. Expecting external Redis service.")
+                log.info(f"💡 Configure REDIS_URL={REDIS_URL} to point to your Redis service")
         else:
             log.info("✅ Redis server already running")
 
@@ -407,23 +424,6 @@ async def lifespan(app: FastAPI):
             log.info("💡 Please ensure Redis is running manually: redis-server")
         else:
             log.info("💡 Please ensure your Redis service is available")
-    # Initialize FastMCP manager
-    try:
-        from mcp_backend.management.mcp_manager import get_mcp_manager
-
-        app.state.mcp_manager = get_mcp_manager()
-        log.info("FastMCP manager initialized")
-
-        # Initialize all MCP servers (built-in and external) if enabled
-        if app.state.config.ENABLE_MCP_API:
-            await app.state.mcp_manager.initialize_all_servers()
-            log.info("All MCP servers initialized")
-
-            # Note: Built-in MCP servers use stdio transport and are managed internally
-            # External MCP servers are loaded from database and managed via API
-
-    except Exception as e:
-        log.error(f"Failed to initialize FastMCP manager: {e}")
 
     # Initialize Wikipedia grounding models in background
     async def initialize_wiki_grounding():
@@ -505,7 +505,7 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 log.error(f"Error during MCP manager cleanup: {e}")
 
-        # Cleanup Redis server if we started it
+        # Cleanup Redis server if we started it locally (REDIS_AUTO_START=true)
         if hasattr(app.state, "redis_process") and app.state.redis_process:
             try:
                 log.info("🛑 Shutting down Redis server")
