@@ -34,7 +34,7 @@ dependencies = [
     "bcrypt==4.2.0",
 
     "pymongo",
-    "redis",
+    "redis>=5.0.0",
     "boto3==1.35.53",
 
     "argon2-cffi==23.1.0",
