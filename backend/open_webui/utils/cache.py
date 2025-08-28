@@ -4,6 +4,7 @@ import logging
 from typing import Optional, Dict, Any
 import redis
 from open_webui.env import REDIS_URL, LLM_CACHE_TTL
+from open_webui.config import OLLAMA_BASE_URL
 
 log = logging.getLogger(__name__)
 
@@ -215,7 +216,12 @@ class LLMResponseCache:
 
             # Fallback: Try Ollama for local testing
             try:
-                response = requests.get("http://localhost:11434/api/tags", timeout=2)
+                ollama_url = (
+                    OLLAMA_BASE_URL.rstrip("/")
+                    if OLLAMA_BASE_URL
+                    else "http://localhost:11434"
+                )
+                response = requests.get(f"{ollama_url}/api/tags", timeout=2)
                 if response.status_code == 200:
                     models = response.json().get("models", [])
                     available_model_names = [m.get("name", "") for m in models]
@@ -284,8 +290,13 @@ Respond with exactly one word: "TIME_DEPENDENT" or "TIME_INDEPENDENT"
 
             # Try Ollama first (faster, no circular dependency)
             try:
+                ollama_url = (
+                    OLLAMA_BASE_URL.rstrip("/")
+                    if OLLAMA_BASE_URL
+                    else "http://localhost:11434"
+                )
                 response = requests.post(
-                    "http://localhost:11434/api/chat",
+                    f"{ollama_url}/api/chat",
                     json={
                         "model": classification_model,
                         "messages": [
