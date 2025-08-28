@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, tick, getContext, onMount, onDestroy } from 'svelte';
-	import {ariaMessage, config, settings } from '$lib/stores';
+	import { ariaMessage, config, settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, extractCurlyBraceWords } from '$lib/utils';
 
 	import { transcribeAudio } from '$lib/apis/audio';

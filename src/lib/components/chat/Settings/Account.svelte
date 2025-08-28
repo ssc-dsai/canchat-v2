@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
-	import {ariaMessage, user, config, settings } from '$lib/stores';
+	import { ariaMessage, user, config, settings } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';

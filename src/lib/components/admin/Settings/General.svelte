@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {getWebhookUrl, updateWebhookUrl } from '$lib/apis';
+	import { getWebhookUrl, updateWebhookUrl } from '$lib/apis';
 	import {
 		getAdminConfig,
 		getLdapConfig,

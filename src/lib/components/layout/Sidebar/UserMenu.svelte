@@ -6,7 +6,15 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user, returnFocusButtonID } from '$lib/stores';
+	import {
+		showSettings,
+		activeUserIds,
+		USAGE_POOL,
+		mobile,
+		showSidebar,
+		user,
+		returnFocusButtonID
+	} from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { userSignOut } from '$lib/apis/auths';
