@@ -330,8 +330,14 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-# REDIS_AUTO_START: Only for local development - set to false in production/K8s
-REDIS_AUTO_START = os.environ.get("REDIS_AUTO_START", "true").lower() == "true"
+# REDIS_AUTO_START: Only for local development - set to false in production/K8s/Docker
+# Defaults to false in Docker environments, true only for bare-metal local development
+REDIS_AUTO_START = (
+    os.environ.get(
+        "REDIS_AUTO_START", "false" if os.environ.get("DOCKER") else "true"
+    ).lower()
+    == "true"
+)
 
 ####################################
 # WEBUI_AUTH (Required for security)

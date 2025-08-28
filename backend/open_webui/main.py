@@ -369,9 +369,11 @@ async def lifespan(app: FastAPI):
         log.error(f"Failed to initialize FastMCP manager: {e}")
 
     # Redis Auto-Start for Local Development Only
-    # NOTE: This is automatically disabled in production/K8s environments via REDIS_AUTO_START=false
+    # NOTE: This is automatically disabled in production/K8s/Docker environments via REDIS_AUTO_START=false
+    # - Bare metal local development: REDIS_AUTO_START defaults to true
+    # - Docker/container deployments: REDIS_AUTO_START defaults to false (provide REDIS_URL instead)
+    # - Production/K8s: Always set REDIS_AUTO_START=false and configure external Redis service
     # Production deployments use external Redis services (AWS ElastiCache, Azure Redis, etc.)
-    # Docker/container deployments should set REDIS_AUTO_START=false and provide REDIS_URL
     # This convenience feature is only for local `python main.py` development workflows
     redis_process = None
     try:
@@ -398,7 +400,9 @@ async def lifespan(app: FastAPI):
 
         if not is_redis_running():
             if REDIS_AUTO_START:
-                log.info(f"🚀 Starting Redis server on {redis_host}:{redis_port} (local development)")
+                log.info(
+                    f"🚀 Starting Redis server on {redis_host}:{redis_port} (local development)"
+                )
                 redis_process = subprocess.Popen(
                     ["redis-server", "--port", str(redis_port), "--bind", redis_host],
                     stdout=subprocess.PIPE,
@@ -408,13 +412,19 @@ async def lifespan(app: FastAPI):
                 await asyncio.sleep(2)
 
                 if is_redis_running():
-                    log.info("✅ Redis server started successfully for local development")
+                    log.info(
+                        "✅ Redis server started successfully for local development"
+                    )
                     app.state.redis_process = redis_process
                 else:
                     log.warning("⚠️ Redis server may not have started properly")
             else:
-                log.info("⚠️ Redis auto-start disabled. Expecting external Redis service.")
-                log.info(f"💡 Configure REDIS_URL={REDIS_URL} to point to your Redis service")
+                log.info(
+                    "⚠️ Redis auto-start disabled. Expecting external Redis service."
+                )
+                log.info(
+                    f"💡 Configure REDIS_URL={REDIS_URL} to point to your Redis service"
+                )
         else:
             log.info("✅ Redis server already running")
 

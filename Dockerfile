@@ -187,8 +187,8 @@ RUN chown -R $UID:$GID /app $HOME && \
 
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
-    # Install pandoc and netcat
-    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl && \
+    # Install pandoc, netcat, and Redis server (for optional local development)
+    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl redis-server && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # install helper tools
@@ -205,8 +205,8 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     rm -rf /root/.cache /root/.npm /root/.pip; \
     else \
     apt-get update && \
-    # Install pandoc, netcat and minimal dependencies
-    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl jq && \
+    # Install pandoc, netcat, Redis server (for optional local development), and minimal dependencies
+    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl jq redis-server && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # Remove build dependencies after installation
