@@ -6,7 +6,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores';
+	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user, returnFocusButtonID } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { userSignOut } from '$lib/apis/auths';
@@ -18,6 +18,7 @@
 	export let className = 'max-w-[240px]';
 	export let buttonClass = '';
 	export let ariaLabel = '';
+	export let buttonID = '';
 
 	const dispatch = createEventDispatcher();
 
@@ -49,7 +50,7 @@
 		}
 	}}
 >
-	<DropdownMenu.Trigger class={buttonClass} aria-label={ariaLabel}>
+	<DropdownMenu.Trigger class={buttonClass} aria-label={ariaLabel} id={buttonID}>
 		<slot />
 	</DropdownMenu.Trigger>
 
@@ -66,6 +67,7 @@
 				id="open-settings-button"
 				on:click={async () => {
 					await showSettings.set(true);
+					await returnFocusButtonID.set(buttonID);
 					show = false;
 
 					if ($mobile) {
@@ -98,7 +100,8 @@
 			</DropdownMenu.Item>
 			<DropdownMenu.Item
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-				on:click={() => {
+				on:click={async () => {
+					await returnFocusButtonID.set(buttonID);
 					dispatch('show', 'archived-chat');
 					show = false;
 
