@@ -52,7 +52,7 @@
 	import IssueModal from '$lib/components/common/IssueModal.svelte';
 	import SuggestionModal from '$lib/components/common/SuggestionModal.svelte';
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
-	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
+	import ExclamationCircle from '$lib/components/icons/ExclamationCircle.svelte';
 
 	interface MessageType {
 		id: string;
@@ -229,12 +229,8 @@
 							)
 							?.at(0) ?? undefined;
 
-					console.log(voice);
-
 					const speak = new SpeechSynthesisUtterance(message.content);
 					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					console.log(speak);
 
 					speak.onend = () => {
 						speaking = false;
@@ -259,7 +255,6 @@
 			);
 
 			if (!messageContentParts.length) {
-				console.log('No content to speak');
 				toast.info($i18n.t('No content to speak'));
 
 				speaking = false;
@@ -377,7 +372,7 @@
 		editedContent = preprocessForEditing(message.content);
 
 		await tick();
-		toast.announce($i18n.t('Message editing started.'));
+
 		editTextAreaElement.style.height = '';
 		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 	};
@@ -402,14 +397,12 @@
 		editedContent = '';
 
 		await tick();
-		toast.announce($i18n.t('Message saved as copy. You are now in copied message chain.'));
 	};
 
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
 		await tick();
-		toast.announce($i18n.t('Message editing cancelled.'));
 	};
 
 	const generateImage = async (message: MessageType) => {
@@ -417,7 +410,6 @@
 		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
 			toast.error(`${error}`);
 		});
-		console.log(res);
 
 		if (res) {
 			const files = res.map((image) => ({
@@ -438,8 +430,6 @@
 
 	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
 		feedbackLoading = true;
-		console.log('Feedback', rating, details);
-
 		const updatedMessage = {
 			...message,
 			annotation: {
@@ -517,7 +507,6 @@
 			}
 		}
 
-		console.log(updatedMessage);
 		saveMessage(message.id, updatedMessage);
 
 		await tick();
@@ -533,7 +522,6 @@
 						return [];
 					}
 				);
-				console.log(tags);
 
 				if (tags) {
 					updatedMessage.annotation.tags = tags;
@@ -565,14 +553,9 @@
 	}
 
 	onMount(async () => {
-		// console.log('ResponseMessage mounted');
-
 		await tick();
 		if (buttonsContainerElement) {
-			console.log(buttonsContainerElement);
 			buttonsContainerElement.addEventListener('wheel', function (event) {
-				// console.log(event.deltaY);
-
 				event.preventDefault();
 				if (event.deltaY !== 0) {
 					// Adjust horizontal scroll position based on vertical scroll
@@ -800,11 +783,7 @@
 										floatingButtons={message?.done && !readOnly}
 										save={!readOnly}
 										{model}
-										onTaskClick={async (e) => {
-											console.log(e);
-										}}
 										onSourceClick={async (id, idx) => {
-											console.log(id, idx);
 											let sourceButton = document.getElementById(`source-${message.id}-${idx}`);
 											const sourcesCollapsible = document.getElementById(
 												`collapsible-${message.id}`
@@ -1193,9 +1172,6 @@
 											class=" {isLastMessage
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
-											on:click={() => {
-												console.log(message);
-											}}
 											id="info-{message.id}"
 										>
 											<svg
@@ -1437,7 +1413,7 @@
 													showIssueModal = true;
 												}}
 											>
-												<Bug className="size-4" />
+												<ExclamationCircle className="size-4" />
 											</button>
 										</Tooltip>
 
@@ -1452,22 +1428,6 @@
 												}}
 											>
 												<LightBlub className="size-4" />
-											</button>
-										</Tooltip>
-
-										<Tooltip content={$i18n.t('User Survey')} placement="bottom">
-											<button
-												type="button"
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-												on:click={() => {
-													const surveyUrl =
-														$config?.app?.urls?.survey || 'https://forms.gle/ntmgGf5j3FJJJVde9';
-													window.open(surveyUrl, '_blank');
-												}}
-											>
-												<Lifebuoy className="size-4" />
 											</button>
 										</Tooltip>
 									{/if}
