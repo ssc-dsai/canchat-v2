@@ -87,7 +87,26 @@ class WikiSearchGrounder:
         """
         query_lower = query.lower().strip()
 
-        # Skip very short queries
+        # Special case: time-related queries (can be very short)
+        time_queries_en = [
+            r"\b(what\s+time\s+is\s+it|current\s+time|time\s+now|what\'s\s+the\s+time|what\s+is\s+the\s+time|what\s+the\s+time)",
+            r"\b(what\s+(is\s+the\s+)?date|current\s+date|today\'s\s+date)",
+            r"\b(what\s+day\s+is\s+it|what\s+day\s+is\s+today)",
+        ]
+
+        time_queries_fr = [
+            r"\b(quelle\s+heure\s+est(-il|)\s*\??|heure\s+actuelle|heure\s+maintenant|quelle\s+heure)",
+            r"\b(quelle\s+(est\s+la\s+)?date|date\s+actuelle|date\s+d\'aujourd\'hui)",
+            r"\b(quel\s+jour\s+(sommes(-nous|)|est(-ce|))|quel\s+jour\s+aujourd\'hui)",
+        ]
+
+        # Check time queries first (these should always be grounded regardless of length)
+        for pattern in time_queries_en + time_queries_fr:
+            if re.search(pattern, query_lower):
+                log.info(f"🔍 Query matches time pattern, should ground: {pattern}")
+                return True
+
+        # Skip very short queries (except time queries which were handled above)
         if len(query_lower) < 10:
             return False
 
@@ -177,14 +196,29 @@ class WikiSearchGrounder:
 
         # English patterns that SHOULD be grounded (factual/recent information needs)
         factual_patterns_en = [
+            # Time and date queries
+            r"\b(what\s+time\s+is\s+it|current\s+time|time\s+now|what\'s\s+the\s+time|what\s+is\s+the\s+time|what\s+the\s+time)",
+            r"\b(what\s+(is\s+the\s+)?date|current\s+date|today\'s\s+date)",
+            r"\b(what\s+day\s+is\s+it|what\s+day\s+is\s+today)",
             # Current events / news
             r"\b(latest|current|recent|new|today|this\s+(week|month|year)|2024|2025)",
             r"\b(what\'s\s+happening|news|events|updates)",
             r"\bhappening\s+(now|today|recently)",
+            # Enhanced temporal patterns
+            r"\b(as\s+of|up\s+to\s+date|current\s+status|currently|nowadays|these\s+days)",
+            r"\b(still\s+(active|alive|operating|running)|no\s+longer|anymore)",
+            r"\b(now|present|today|contemporary)",
+            # Age and time-sensitive queries
+            r"\b(how\s+old|age|born|died|since\s+when|until\s+when)",
+            r"\b(active|inactive|retired|current\s+(position|role|status))",
             # Factual queries
             r"\b(when\s+(did|was|were)|what\s+(happened|is\s+the|was\s+the)|where\s+(is|was|are|were)|who\s+(is|was|are|were))",
             r"\b(how\s+many|how\s+much|statistics|data|facts|information\s+about)",
             r"\b(population|temperature|weather|price|cost|rate)",
+            # Dynamic/changing information
+            r"\b(status|condition|situation|state\s+of)",
+            r"\b(available|unavailable|open|closed|operating|running)",
+            r"\b(leader|president|prime\s+minister|CEO|director|head\s+of)",
             # Research/lookup queries
             r"\b(find\s+(information|data)|research|look\s+up|search\s+for)",
             r"\b(definition\s+of|meaning\s+of|what\s+(does|is)|explain\s+what)",
@@ -202,16 +236,31 @@ class WikiSearchGrounder:
 
         # French patterns that SHOULD be grounded
         factual_patterns_fr = [
+            # Time and date queries
+            r"\b(quelle\s+heure\s+est(-il|)\s*\??|heure\s+actuelle|heure\s+maintenant|quelle\s+heure)",
+            r"\b(quelle\s+(est\s+la\s+)?date|date\s+actuelle|date\s+d\'aujourd\'hui)",
+            r"\b(quel\s+jour\s+(sommes(-nous|)|est(-ce|))|quel\s+jour\s+aujourd\'hui)",
             # Current events / news
             r"\b(dernier|dernière|actuel|récent|récente|nouveau|nouvelle|aujourd\'hui|cette\s+(semaine|mois|année)|2024|2025)",
             r"\b(qu\'est(-ce\s+qui|ce\s+que)\s+se\s+passe|nouvelles|événements|actualités|mises\s+à\s+jour)",
             r"\bse\s+passe\s+(maintenant|aujourd\'hui|récemment)",
+            # Enhanced temporal patterns
+            r"\b(à\s+ce\s+jour|jusqu\'à\s+présent|état\s+actuel|actuellement|de\s+nos\s+jours)",
+            r"\b(encore\s+(actif|vivant|en\s+fonctionnement)|ne\s+.+\s+plus|plus\s+maintenant)",
+            r"\b(maintenant|présent|aujourd\'hui|contemporain)",
+            # Age and time-sensitive queries
+            r"\b(quel\s+âge|âge|né|décédé|depuis\s+quand|jusqu\'à\s+quand)",
+            r"\b(actif|inactif|retraité|poste\s+actuel|rôle\s+actuel|statut\s+actuel)",
             # Factual queries
             r"\b(quand\s+(a|est|était|sont|étaient)|qu\'est(-ce\s+qui|ce\s+que)\s+(s\'est\s+passé|est|était)|où\s+(est|était|sont|étaient)|qui\s+(est|était|sont|étaient))",
             r"\bquand\s+.*?\s+(a|ont)\s+(commencé|débuté)",
             r"\bquand\s+.*commencé",
             r"\b(combien\s+(de|d\')|statistiques|données|faits|informations\s+sur)",
             r"\b(population|température|météo|prix|coût|taux)",
+            # Dynamic/changing information
+            r"\b(statut|condition|situation|état\s+de)",
+            r"\b(disponible|indisponible|ouvert|fermé|en\s+fonctionnement)",
+            r"\b(dirigeant|président|premier\s+ministre|PDG|directeur|chef\s+de)",
             # Research/lookup queries
             r"\b(trouvez?\s+(informations?|données)|recherch(e|er|ez)|cherch(e|er|ez))",
             r"\b(définition\s+(de|d\')|signification\s+(de|d\')|qu\'est(-ce\s+que|ce\s+qui)|expliqu(e|ez)\s+ce\s+que)",
@@ -447,6 +496,24 @@ class WikiSearchGrounder:
             log.error(f"Search failed: {e}")
             return []
 
+    def _is_time_query(self, query: str) -> bool:
+        """Check if query is asking for current time/date information"""
+        query_lower = query.lower().strip()
+
+        time_patterns = [
+            r"\b(what\s+time\s+is\s+it|current\s+time|time\s+now|what\'s\s+the\s+time|what\s+is\s+the\s+time|what\s+the\s+time)",
+            r"\b(what\s+(is\s+the\s+)?date|current\s+date|today\'s\s+date)",
+            r"\b(what\s+day\s+is\s+it|what\s+day\s+is\s+today)",
+            r"\b(quelle\s+heure\s+est(-il|)\s*\??|heure\s+actuelle|heure\s+maintenant|quelle\s+heure)",
+            r"\b(quelle\s+(est\s+la\s+)?date|date\s+actuelle|date\s+d\'aujourd\'hui)",
+            r"\b(quel\s+jour\s+(sommes(-nous|)|est(-ce|))|quel\s+jour\s+aujourd\'hui)",
+        ]
+
+        for pattern in time_patterns:
+            if re.search(pattern, query_lower):
+                return True
+        return False
+
     async def ground_query(self, query: str, request=None, user=None) -> Optional[Dict]:
         """Main grounding method with intelligent query filtering"""
 
@@ -461,6 +528,19 @@ class WikiSearchGrounder:
                 "🔍 Query doesn't need factual grounding based on content analysis"
             )
             return None
+
+        # Special handling for time queries - don't search Wikipedia, just provide context
+        if self._is_time_query(query):
+            log.info(
+                "🔍 Time query detected, providing temporal context without search"
+            )
+            return {
+                "original_query": query,
+                "grounding_data": [],  # No search results needed
+                "source": "temporal-context",
+                "timestamp": datetime.now().isoformat(),
+                "is_time_query": True,
+            }
 
         log.info(
             "🔍 Query determined to need factual grounding, proceeding with search"
@@ -488,6 +568,19 @@ class WikiSearchGrounder:
             log.info("🔍 Query too short, skipping grounding")
             return None
 
+        # Special handling for time queries - don't search Wikipedia, just provide context
+        if self._is_time_query(query):
+            log.info(
+                "🔍 Time query detected in always mode, providing temporal context without search"
+            )
+            return {
+                "original_query": query,
+                "grounding_data": [],  # No search results needed
+                "source": "temporal-context",
+                "timestamp": datetime.now().isoformat(),
+                "is_time_query": True,
+            }
+
         log.info("🔍 Always mode: grounding without content analysis")
         results = await self.search(query)
 
@@ -503,37 +596,82 @@ class WikiSearchGrounder:
         }
 
     def format_grounding_context(self, grounding_data: Dict) -> str:
-        """Format for LLM context with translation info"""
-        if not grounding_data or "grounding_data" not in grounding_data:
+        """Format for LLM context with translation info and current date awareness"""
+        if not grounding_data:
             return ""
+
+        from datetime import datetime
+
+        # Get current date and time information
+        current_date = datetime.now()
+        formatted_date = current_date.strftime("%Y-%m-%d")
+        formatted_time = current_date.strftime("%I:%M:%S %p")
+        formatted_weekday = current_date.strftime("%A")
+
+        # Try to get timezone information
+        try:
+            import time
+
+            timezone_name = (
+                time.tzname[time.daylight] if time.daylight else time.tzname[0]
+            )
+        except:
+            timezone_name = "UTC"
 
         context = []
         context.append("=== GROUNDING CONTEXT ===")
-        context.append(f"Query: {grounding_data.get('original_query', '')}")
-
-        # Show if translation was used
-        first_result = (
-            grounding_data["grounding_data"][0]
-            if grounding_data["grounding_data"]
-            else {}
-        )
-        if first_result.get("search_query") != first_result.get("original_query"):
-            context.append(
-                f"Search Query (translated): {first_result.get('search_query', '')}"
-            )
-
-        context.append(f"Source: txtai-wikipedia")
+        context.append(f"Current Date: {formatted_date} ({formatted_weekday})")
+        context.append(f"Current Time: {formatted_time} {timezone_name}")
         context.append("")
 
-        for i, item in enumerate(grounding_data["grounding_data"], 1):
-            title = item.get("title", "Unknown")
-            content = item.get("content", "")
-            score = item.get("score", 0)
+        # Check if this is a time query
+        is_time_query = grounding_data.get("is_time_query", False)
 
-            context.append(f"[{i}] {title}")
-            if score > 0:
-                context.append(f"Score: {score:.3f}")
-            context.append(f"Content: {content}")
+        if is_time_query:
+            context.append(
+                "DIRECT TIME RESPONSE: The user is asking for current time/date information."
+            )
+            context.append(
+                "You should directly provide the current date and time information shown above."
+            )
+            context.append(
+                "No need to search for additional information - just answer based on the temporal context provided."
+            )
+            context.append("")
+        else:
+            context.append(
+                "IMPORTANT: When answering questions, consider the current date above. For topics that change over time (current events, politics, technology, leadership positions, etc.), acknowledge what information might be outdated and provide context about recency when relevant. If you're unsure about the currentness of information, mention that the information may not reflect the most recent developments as of the current date."
+            )
+            context.append("")
+
+        context.append(f"Query: {grounding_data.get('original_query', '')}")
+
+        # Only process search results if we have grounding data
+        if "grounding_data" in grounding_data and grounding_data["grounding_data"]:
+            # Show if translation was used
+            first_result = grounding_data["grounding_data"][0]
+            if first_result.get("search_query") != first_result.get("original_query"):
+                context.append(
+                    f"Search Query (translated): {first_result.get('search_query', '')}"
+                )
+
+            context.append(f"Source: {grounding_data.get('source', 'txtai-wikipedia')}")
+            context.append("")
+
+            for i, item in enumerate(grounding_data["grounding_data"], 1):
+                title = item.get("title", "Unknown")
+                content = item.get("content", "")
+                score = item.get("score", 0)
+
+                context.append(f"[{i}] {title}")
+                if score > 0:
+                    context.append(f"Score: {score:.3f}")
+                context.append(f"Content: {content}")
+                context.append("")
+        else:
+            context.append(
+                f"Source: {grounding_data.get('source', 'temporal-context')}"
+            )
             context.append("")
 
         context.append("=== END GROUNDING ===")
