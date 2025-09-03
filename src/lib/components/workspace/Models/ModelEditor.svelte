@@ -14,7 +14,6 @@
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import AccessControl from '../common/AccessControl.svelte';
-	import { stringify } from 'postcss';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
@@ -38,14 +37,8 @@
 
 	let loaded = false;
 
-	// ///////////
-	// model
-	// ///////////
-
 	let id = '';
 	let name = '';
-
-	let enableDescription = true;
 
 	$: if (!edit) {
 		if (name) {
@@ -63,6 +56,7 @@
 		meta: {
 			profile_image_url: '/static/favicon.png',
 			description: '',
+			description_fr: '',
 			suggestion_prompts: null,
 			tags: []
 		},
@@ -107,21 +101,25 @@
 		info.name = name;
 
 		if (id === '') {
-			toast.error('Model ID is required.');
+			toast.error($i18n.t('Model ID is required.'));
+			loading = false;
+			return;
 		}
 
 		if (name === '') {
-			toast.error('Model Name is required.');
+			toast.error($i18n.t('Model Name is required.'));
+			loading = false;
+			return;
+		}
+
+		if (!info.meta.description?.trim() || !info.meta.description_fr?.trim()) {
+			toast.error($i18n.t('Both English and French descriptions are required.'));
+			loading = false;
+			return;
 		}
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
-
-		if (enableDescription) {
-			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
-		} else {
-			info.meta.description = null;
-		}
 
 		if (knowledge.length > 0) {
 			info.meta.knowledge = knowledge;
@@ -185,14 +183,10 @@
 
 			id = model.id;
 
-			enableDescription = model?.meta?.description !== null;
-
 			if (model.base_model_id) {
 				const base_model = $models
 					.filter((m) => !m?.preset && !(m?.arena ?? false))
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
-
-				console.log('base_model', base_model);
 
 				if (base_model) {
 					model.base_model_id = base_model.id;
@@ -237,12 +231,6 @@
 				accessControl = {};
 			}
 
-			console.log(model?.access_control);
-			console.log(accessControl);
-
-			console.log(model?.access_control);
-			console.log(accessControl);
-
 			info = {
 				...info,
 				...JSON.parse(
@@ -256,8 +244,6 @@
 					)
 				)
 			};
-
-			console.log(model);
 		}
 
 		loaded = true;
@@ -353,7 +339,6 @@
 				) {
 					reader.readAsDataURL(inputFiles[0]);
 				} else {
-					console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
 					inputFiles = null;
 				}
 			}}
@@ -426,8 +411,8 @@
 								}}
 								type="button"
 							>
-								Reset Image</button
-							>
+								{$i18n.t('Reset Image')}
+							</button>
 						</div>
 					</div>
 				</div>
@@ -486,29 +471,24 @@
 					<div class="my-1">
 						<div class="mb-1 flex w-full justify-between items-center">
 							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
-
-							<button
-								class="p-1 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									enableDescription = !enableDescription;
-								}}
-							>
-								{#if !enableDescription}
-									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-								{/if}
-							</button>
 						</div>
 
-						{#if enableDescription}
+						<div>
 							<Textarea
-								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-								placeholder={$i18n.t('Add a short description about what this model does')}
 								bind:value={info.meta.description}
+								placeholder={$i18n.t('Enter English description')}
+								className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+								required
 							/>
-						{/if}
+						</div>
+						<div class="mt-2">
+							<Textarea
+								bind:value={info.meta.description_fr}
+								placeholder={$i18n.t('Enter French description')}
+								className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+								required
+							/>
+						</div>
 					</div>
 
 					<div class=" mt-2 my-1">
@@ -553,8 +533,8 @@
 								<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
 								<div>
 									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-										placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+										className=" text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden "
+										placeholder={$i18n.t('Write your model system prompt content here')}
 										rows={4}
 										bind:value={info.params.system}
 									/>
