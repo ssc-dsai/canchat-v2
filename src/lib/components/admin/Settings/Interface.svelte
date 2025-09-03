@@ -296,10 +296,18 @@
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							type="button"
 							on:click={() => {
-								if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {
-									promptSuggestions = [
-										...promptSuggestions,
-										{ content: '', title: ['', ''], lang: i18n.languages }
+								if (banners.length === 0 || banners.at(-1).content !== '') {
+									banners = [
+										...banners,
+										{
+											id: uuidv4(),
+											type: '',
+											title: '',
+											content: '',
+											dismissible: true,
+											timestamp: Math.floor(Date.now() / 1000),
+											lang: ''
+										}
 									];
 								}
 							}}
@@ -316,84 +324,78 @@
 							</svg>
 						</button>
 					</div>
-					<div class="grid lg:grid-cols-2 flex-col gap-1.5">
-						{#each promptSuggestions as prompt, promptIdx}
-							<div
-								class=" flex border border-gray-100 dark:border-none dark:bg-gray-850 rounded-xl py-1.5"
-							>
-								<div class="flex flex-col flex-1 pl-1">
-									<select
-										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
-										bind:value={prompt.lang}
-										placeholder={$i18n.languages[prompt.lang] || 'Unknown Language'}
-									>
-										{#each languages as language}
-											<option value={language.code}>{language.title}</option>
-										{/each}
-									</select>
-									<div class="flex border-b border-gray-100 dark:border-gray-800 w-full">
-										<input
-											class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
-											placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
-											bind:value={prompt.title[0]}
-										/>
 
 					<div class=" flex flex-col space-y-1">
 						{#each banners as banner, bannerIdx}
-							<div class=" flex justify-between">
-								<div
-									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
+						<div class=" flex justify-between">
+							<div class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850">
+								<select
+									class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
+									bind:value={banner.type}
+									required
 								>
-									<select
-										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-hidden"
-										bind:value={banner.type}
-										required
-									>
-										{#if banner.type == ''}
-											<option value="" selected disabled class="text-gray-900"
-												>{$i18n.t('Type')}</option
-											>
-										{/if}
-										<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
-										<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
-										<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
-										<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
-									</select>
+									{#if banner.type == ''}
+										<option value="" selected disabled class="text-gray-900"
+											>{$i18n.t('Type')}</option
+										>
+									{/if}
+									<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
+									<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
+									<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
+									<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
+								</select>
 
-									<input
-										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
-										placeholder={$i18n.t('Content')}
-										bind:value={banner.content}
-									/>
+								<select
+									class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
+									bind:value={banner.lang}
+									required
+								>
+									{#if banner.lang == ''}
+										<option value="" selected disabled class="text-gray-900"
+											>{$i18n.t('Language')}</option
+										>
+									{/if}
+									{#each languages as language}
+										<option value={language.code} class="text-gray-900">
+											{$i18n.t(language.code)}
+										</option>
+									{/each}
+								</select>
 
-									<div class="relative top-1.5 -left-2">
-										<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
-											<Switch bind:state={banner.dismissible} />
-										</Tooltip>
-									</div>
+								<input
+									class="px-5 py-1.5 text-xs w-full bg-transparent outline-none"
+									placeholder={$i18n.t('Content')}
+									bind:value={banner.content}
+								/>
+
+								<div class="relative top-1.5 -left-2">
+									<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
+										<Switch bind:state={banner.dismissible} />
+									</Tooltip>
 								</div>
-
-								<button
-									class="px-2"
-									type="button"
-									on:click={() => {
-										banners.splice(bannerIdx, 1);
-										banners = banners;
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-										/>
-									</svg>
-								</button>
 							</div>
-						{/each}
+
+							<button
+								class="px-2"
+								type="button"
+								on:click={() => {
+									banners.splice(bannerIdx, 1);
+									banners = banners;
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+									/>
+								</svg>
+							</button>
+						</div>
+					{/each}
 					</div>
 				</div>
 
@@ -409,7 +411,10 @@
 								type="button"
 								on:click={() => {
 									if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {
-										promptSuggestions = [...promptSuggestions, { content: '', title: ['', ''] }];
+										promptSuggestions = [
+											...promptSuggestions,
+											{ content: '', title: ['', ''], lang: i18n.languages }
+										];
 									}
 								}}
 							>
@@ -431,6 +436,15 @@
 									class=" flex border border-gray-100 dark:border-none dark:bg-gray-850 rounded-xl py-1.5"
 								>
 									<div class="flex flex-col flex-1 pl-1">
+										<select
+											class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
+											bind:value={prompt.lang}
+											placeholder={$i18n.languages[prompt.lang] || 'Unknown Language'}
+										>
+											{#each languages as language}
+												<option value={language.code}>{language.title}</option>
+											{/each}
+										</select>
 										<div class="flex border-b border-gray-100 dark:border-gray-850 w-full">
 											<input
 												class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
