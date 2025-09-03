@@ -48,6 +48,8 @@
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
+	import TopRightControls from '$lib/components/layout/TopRightControls.svelte';
+
 
 	setContext('i18n', i18n);
 
@@ -80,27 +82,8 @@
 
 		await socket.set(_socket);
 
-		_socket.on('connect_error', (err) => {
-			console.log('connect_error', err);
-		});
-
-		_socket.on('connect', () => {
-			console.log('connected', _socket.id);
-		});
-
-		_socket.on('reconnect_attempt', (attempt) => {
-			console.log('reconnect_attempt', attempt);
-		});
-
-		_socket.on('reconnect_failed', () => {
-			console.log('reconnect_failed');
-		});
-
-		_socket.on('disconnect', (reason, details) => {
-			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
-			if (details) {
-				console.log('Additional details:', details);
-			}
+		_socket.on('connect_error', () => {
+			toast.error($i18n.t('Socket connection error. Please check your network.'));
 		});
 
 		_socket.on('user-list', (data) => {
@@ -165,10 +148,7 @@
 		}, 60000);
 
 		pyodideWorker.onmessage = (event) => {
-			console.log('pyodideWorker.onmessage', event);
 			const { id, ...data } = event.data;
-
-			console.log(id, data);
 
 			data['stdout'] && (stdout = data['stdout']);
 			data['stderr'] && (stderr = data['stderr']);
@@ -193,8 +173,6 @@
 		};
 
 		pyodideWorker.onerror = (event) => {
-			console.log('pyodideWorker.onerror', event);
-
 			if (cb) {
 				cb(
 					JSON.parse(
@@ -217,10 +195,7 @@
 		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
 		const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
 
-		console.log('executeTool', data, toolServer);
-
 		if (toolServer) {
-			console.log(toolServer);
 			const res = await executeToolServer(
 				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
 				toolServer.url,
@@ -229,7 +204,6 @@
 				toolServerData
 			);
 
-			console.log('executeToolServer', res);
 			if (cb) {
 				cb(JSON.parse(JSON.stringify(res)));
 			}
@@ -297,13 +271,10 @@
 			}
 		} else if (data?.session_id === $socket.id) {
 			if (type === 'execute:python') {
-				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb);
 			} else if (type === 'execute:tool') {
-				console.log('execute:tool', data);
 				executeTool(data, cb);
 			} else if (type === 'request:chat:completion') {
-				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
 
 				try {
@@ -338,7 +309,6 @@
 									cb({
 										status: true
 									});
-									console.log({ status: true });
 
 									// res will either be SSE or JSON
 									const reader = res.body.getReader();
@@ -359,7 +329,6 @@
 											const lines = chunk.split('\n').filter((line) => line.trim() !== '');
 
 											for (const line of lines) {
-												console.log(line);
 												$socket?.emit(channel, line);
 											}
 										}
@@ -387,8 +356,6 @@
 						done: true
 					});
 				}
-			} else {
-				console.log('chatEventHandler', event);
 			}
 		}
 	};
@@ -529,7 +496,7 @@
 				: [navigator.language || navigator.userLanguage];
 			const lang = backendConfig.default_locale
 				? backendConfig.default_locale
-				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
+				: bestMatchingLanguage(languages, browserLanguages, 'en-GB');
 			changeLanguage(lang);
 		}
 
@@ -627,12 +594,17 @@
 	{#if $isApp}
 		<div class="flex flex-row h-screen">
 			<AppSidebar />
-
 			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+				{#if $user}
+					<TopRightControls />
+				{/if}
 				<slot />
 			</div>
 		</div>
 	{:else}
+		{#if $user}
+			<TopRightControls />
+		{/if}
 		<slot />
 	{/if}
 {/if}
