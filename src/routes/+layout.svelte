@@ -50,7 +50,6 @@
 	import { chatCompletion } from '$lib/apis/openai';
 	import TopRightControls from '$lib/components/layout/TopRightControls.svelte';
 
-
 	setContext('i18n', i18n);
 
 	const bc = new BroadcastChannel('active-tab-channel');

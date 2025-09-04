@@ -289,7 +289,7 @@
 
 	const getModelDesc = (itemId) => {
 		return descriptions.find((d) => d.id === itemId)?.desc || '';
-	}
+	};
 
 	onMount(async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
@@ -595,10 +595,7 @@
 								{#if item.model?.info?.meta?.description}
 									<Tooltip
 										content={`${marked.parse(
-											sanitizeResponseContent(getModelDesc(item.value)).replaceAll(
-												'\n',
-												'<br>'
-											)
+											sanitizeResponseContent(getModelDesc(item.value)).replaceAll('\n', '<br>')
 										)}`}
 									>
 										<div class=" translate-y-[1px]">

@@ -327,75 +327,77 @@
 
 					<div class=" flex flex-col space-y-1">
 						{#each banners as banner, bannerIdx}
-						<div class=" flex justify-between">
-							<div class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850">
-								<select
-									class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
-									bind:value={banner.type}
-									required
+							<div class=" flex justify-between">
+								<div
+									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
 								>
-									{#if banner.type == ''}
-										<option value="" selected disabled class="text-gray-900"
-											>{$i18n.t('Type')}</option
-										>
-									{/if}
-									<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
-									<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
-									<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
-									<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
-								</select>
+									<select
+										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
+										bind:value={banner.type}
+										required
+									>
+										{#if banner.type == ''}
+											<option value="" selected disabled class="text-gray-900"
+												>{$i18n.t('Type')}</option
+											>
+										{/if}
+										<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
+										<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
+										<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
+										<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
+									</select>
 
-								<select
-									class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
-									bind:value={banner.lang}
-									required
-								>
-									{#if banner.lang == ''}
-										<option value="" selected disabled class="text-gray-900"
-											>{$i18n.t('Language')}</option
-										>
-									{/if}
-									{#each languages as language}
-										<option value={language.code} class="text-gray-900">
-											{$i18n.t(language.code)}
-										</option>
-									{/each}
-								</select>
+									<select
+										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
+										bind:value={banner.lang}
+										required
+									>
+										{#if banner.lang == ''}
+											<option value="" selected disabled class="text-gray-900"
+												>{$i18n.t('Language')}</option
+											>
+										{/if}
+										{#each languages as language}
+											<option value={language.code} class="text-gray-900">
+												{$i18n.t(language.code)}
+											</option>
+										{/each}
+									</select>
 
-								<input
-									class="px-5 py-1.5 text-xs w-full bg-transparent outline-none"
-									placeholder={$i18n.t('Content')}
-									bind:value={banner.content}
-								/>
-
-								<div class="relative top-1.5 -left-2">
-									<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
-										<Switch bind:state={banner.dismissible} />
-									</Tooltip>
-								</div>
-							</div>
-
-							<button
-								class="px-2"
-								type="button"
-								on:click={() => {
-									banners.splice(bannerIdx, 1);
-									banners = banners;
-								}}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+									<input
+										class="px-5 py-1.5 text-xs w-full bg-transparent outline-none"
+										placeholder={$i18n.t('Content')}
+										bind:value={banner.content}
 									/>
-								</svg>
-							</button>
-						</div>
-					{/each}
+
+									<div class="relative top-1.5 -left-2">
+										<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
+											<Switch bind:state={banner.dismissible} />
+										</Tooltip>
+									</div>
+								</div>
+
+								<button
+									class="px-2"
+									type="button"
+									on:click={() => {
+										banners.splice(bannerIdx, 1);
+										banners = banners;
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+										/>
+									</svg>
+								</button>
+							</div>
+						{/each}
 					</div>
 				</div>
 
