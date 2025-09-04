@@ -377,11 +377,6 @@
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleChatBubble();
-							toast.announce(
-								chatBubble
-									? $i18n.t('Display username option hidden below')
-									: $i18n.t('Display username option visible below')
-							);
 						}}
 						type="button"
 					>
@@ -398,7 +393,7 @@
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
 						<div class=" self-center text-xs">
-							{$i18n.t('Display the username instead of You in the chat')}
+							{$i18n.t('Display the username instead of You in the Chat')}
 						</div>
 
 						<button
@@ -1030,7 +1025,7 @@
 
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full focus:outline-2 focus:outline-blue-600"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}
