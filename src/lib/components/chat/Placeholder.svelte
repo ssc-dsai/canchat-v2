@@ -2,15 +2,20 @@
 	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
 
-	import { onMount, getContext, tick, createEventDispatcher } from 'svelte';
-	import { blur, fade } from 'svelte/transition';
+	import { getContext, tick, createEventDispatcher } from 'svelte';
+	import { fade } from 'svelte/transition';
 
 	const dispatch = createEventDispatcher();
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
-	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
+	import {
+		config,
+		user,
+		models as _models,
+		temporaryChatEnabled,
+		suggestionCycle
+	} from '$lib/stores';
+	import { sanitizeResponseContent } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { locale } from '$lib/stores/locale';
 
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -42,6 +47,7 @@
 	export let toolServers = [];
 
 	let models = [];
+	let modelDescription = '';
 
 	const selectSuggestionPrompt = async (p) => {
 		let text = p;
@@ -83,24 +89,19 @@
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 
-	// Add helper function to get localized description
-	function getModelDesc(model) {
-		return $locale === 'fr-CA'
+	const getModelDesc = (model) =>
+		$i18n.language === 'fr-CA'
 			? sanitizeResponseContent(model?.info?.meta?.description_fr ?? '')
 			: sanitizeResponseContent(model?.info?.meta?.description ?? '');
-	}
 
 	// Create a reactive statement that updates descriptions when locale changes
-	$: modelDescription = getModelDesc(models[selectedModelIdx]);
+	$: $i18n.language, modelDescription = getModelDesc(models[selectedModelIdx]);
 
-	onMount(() => {
-		// Listen for storage event only since it's triggered by locale changes
-		const handleLocaleChange = () => {
-			modelDescription = getModelDesc(models[selectedModelIdx]);
-		};
-		window.addEventListener('storage', handleLocaleChange);
-		return () => window.removeEventListener('storage', handleLocaleChange);
-	});
+	$: {
+		// Whenever the model changes, trigger a suggestion reshuffle
+		models[selectedModelIdx]?.info?.meta?.suggestion_prompts;
+		suggestionCycle.update((n) => n + 1);
+	}
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">

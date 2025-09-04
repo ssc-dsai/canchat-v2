@@ -277,6 +277,20 @@
 		}
 	};
 
+	$: descriptions = items.map((item) => {
+		return {
+			id: item.value,
+			desc:
+				$i18n.language === 'fr-CA'
+					? (item.model?.info?.meta?.description_fr || '').trim()
+					: (item.model?.info?.meta?.description || '').trim()
+		};
+	});
+
+	const getModelDesc = (itemId) => {
+		return descriptions.find((d) => d.id === itemId)?.desc || '';
+	}
+
 	onMount(async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 
@@ -463,7 +477,7 @@
 
 				{#each filteredItems as item, index}
 					<button
-						aria-label="model-item"
+						aria-label={getModelDesc(item.model)}
 						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted {index ===
 						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
@@ -581,7 +595,7 @@
 								{#if item.model?.info?.meta?.description}
 									<Tooltip
 										content={`${marked.parse(
-											sanitizeResponseContent(item.model?.info?.meta?.description).replaceAll(
+											sanitizeResponseContent(getModelDesc(item.value)).replaceAll(
 												'\n',
 												'<br>'
 											)
@@ -692,7 +706,7 @@
 							<div class="flex flex-col self-start">
 								<div class="flex gap-1">
 									<div class="line-clamp-1">
-										Downloading "{model}"
+										{$i18n.t('Downloading "{{model}}"', { model })}
 									</div>
 
 									<div class="shrink-0">
