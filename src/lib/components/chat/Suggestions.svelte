@@ -4,6 +4,7 @@
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
+	import { suggestionCycle } from '$lib/stores/index';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -13,6 +14,19 @@
 	export let inputValue = '';
 
 	let sortedPrompts = [];
+
+	// Single function to handle shuffling
+	const shuffleSuggestions = (suggestions) => {
+		return [...(suggestions ?? [])]
+			.flat() // Replace reduce/spread with flat()
+			.sort(() => Math.random() - 0.5);
+	};
+
+	// Reshuffle when suggestionCycle changes or suggestions update
+	$: {
+		$suggestionCycle; // Just use to trigger reactivity
+		sortedPrompts = shuffleSuggestions(suggestionPrompts);
+	}
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
@@ -68,71 +82,49 @@
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		{$i18n.t('Suggested')}
+	{:else}
+		<!-- Keine Vorschläge -->
+
+		<div
+			class="flex w-full text-center items-center justify-center self-start text-gray-400 dark:text-gray-600"
+		>
+			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
+		</div>
 	{/if}
-</div>
-
-<div class=" h-40 max-h-full overflow-auto scrollbar-none {className}">
-	{#each prompts as prompt, promptIdx}
-		{#if prompt.lang == $i18n.language}
-			<button
-				class="flex flex-col flex-1 shrink-0 w-full justify-between px-3 py-2 rounded-xl bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition group"
-				on:click={() => {
-					dispatch('select', prompt.content);
-				}}
-			>
-				<div class="flex flex-col text-left">
-					{#if prompt.title && prompt.title[0] !== ''}
-						<div
-							class="  font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
-						>
-							{prompt.title[0]}
-						</div>
-						<div class="text-xs text-gray-500 font-normal line-clamp-1">{prompt.title[1]}</div>
-					{:else}
-						<div
-							class="  font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
-						>
-							{prompt.content}
-						</div>
-
-						<div class="text-xs text-gray-500 font-normal line-clamp-1">Prompt</div>
-					{/if}
-				</div>
-			</button>
-		{/if}
-	{/each}
 </div>
 
 <div class="h-40 overflow-auto scrollbar-none {className} items-start">
 	{#if filteredPrompts.length > 0}
 		{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
-			<button
-				class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
-				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
-				       dark:hover:bg-white/5 transition group"
-				style="animation-delay: {idx * 60}ms"
-				on:click={() => dispatch('select', prompt.content)}
-			>
-				<div class="flex flex-col text-left">
-					{#if prompt.title && prompt.title[0] !== ''}
-						<div
-							class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
-						>
-							{prompt.title[0]}
-						</div>
-						<div class="text-xs text-gray-500 font-normal line-clamp-1">
-							{prompt.title[1]}
-						</div>
-					{:else}
-						<div
-							class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
-						>
-							{prompt.content}
-						</div>
-						<div class="text-xs text-gray-500 font-normal line-clamp-1">{$i18n.t('Prompt')}</div>
-					{/if}
-				</div>
-			</button>
+			{#if prompt.lang == $i18n.language}
+				<button
+					class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
+						px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
+						dark:hover:bg-white/5 transition group"
+					style="animation-delay: {idx * 60}ms"
+					on:click={() => dispatch('select', prompt.content)}
+				>
+					<div class="flex flex-col text-left">
+						{#if prompt.title && prompt.title[0] !== ''}
+							<div
+								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+							>
+								{prompt.title[0]}
+							</div>
+							<div class="text-xs text-gray-500 font-normal line-clamp-1">
+								{prompt.title[1]}
+							</div>
+						{:else}
+							<div
+								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+							>
+								{prompt.content}
+							</div>
+							<div class="text-xs text-gray-500 font-normal line-clamp-1">{$i18n.t('Prompt')}</div>
+						{/if}
+					</div>
+				</button>
+			{/if}
 		{/each}
 	{/if}
 </div>
