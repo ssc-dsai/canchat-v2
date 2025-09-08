@@ -826,13 +826,6 @@ if CUSTOM_NAME:
         log.exception(e)
         pass
 
-
-####################################
-# LICENSE_KEY
-####################################
-
-LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
-
 ####################################
 # STORAGE PROVIDER
 ####################################
