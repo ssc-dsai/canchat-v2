@@ -193,10 +193,8 @@
 				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
 					? 'dark'
 					: 'light';
-				console.log('Setting system meta theme color: ' + systemTheme);
 				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
 			} else {
-				console.log('Setting meta theme color: ' + _theme);
 				metaThemeColor.setAttribute(
 					'content',
 					_theme === 'dark'
@@ -221,8 +219,6 @@
 			document.documentElement.style.setProperty('--color-gray-950', '#000000');
 			document.documentElement.classList.add('dark');
 		}
-
-		console.log(_theme);
 	};
 
 	const themeChangeHandler = (_theme: string) => {

@@ -20,7 +20,7 @@ export const getConfig = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -51,7 +51,7 @@ export const updateConfig = async (token: string, config: object) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -95,7 +95,7 @@ export const getAllFeedbacks = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -131,7 +131,7 @@ export const getFeedbacksCount = async (token: string = '', search?: string) => 
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -163,7 +163,7 @@ export const getAllFeedbacksLegacy = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -194,7 +194,7 @@ export const exportAllFeedbacks = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -225,7 +225,7 @@ export const createNewFeedback = async (token: string, feedback: object) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -256,7 +256,7 @@ export const getFeedbackById = async (token: string, feedbackId: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -287,7 +287,7 @@ export const updateFeedbackById = async (token: string, feedbackId: string, feed
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -315,7 +315,7 @@ export const deleteFeedbackById = async (token: string, feedbackId: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 

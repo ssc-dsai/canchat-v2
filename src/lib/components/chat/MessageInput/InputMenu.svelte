@@ -64,7 +64,6 @@
 	function handleFileChange(event) {
 		const inputFiles = Array.from(event.target?.files);
 		if (inputFiles && inputFiles.length > 0) {
-			console.log(inputFiles);
 			inputFilesHandler(inputFiles);
 		}
 	}

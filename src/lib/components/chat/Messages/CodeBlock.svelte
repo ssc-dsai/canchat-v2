@@ -220,8 +220,6 @@
 			code.includes('pytz') ? 'pytz' : null
 		].filter(Boolean);
 
-		console.log(packages);
-
 		pyodideWorker = new PyodideWorker();
 
 		pyodideWorker.postMessage({
@@ -239,10 +237,7 @@
 		}, 60000);
 
 		pyodideWorker.onmessage = (event) => {
-			console.log('pyodideWorker.onmessage', event);
 			const { id, ...data } = event.data;
-
-			console.log(id, data);
 
 			if (data['stdout']) {
 				stdout = data['stdout'];
@@ -309,7 +304,6 @@
 		};
 
 		pyodideWorker.onerror = (event) => {
-			console.log('pyodideWorker.onerror', event);
 			executing = false;
 		};
 	};
@@ -323,7 +317,7 @@
 				mermaidHtml = svg;
 			}
 		} catch (error) {
-			console.log('Error:', error);
+			console.error('Error:', error);
 		}
 	};
 
@@ -378,8 +372,6 @@
 	};
 
 	onMount(async () => {
-		console.log('codeblock', lang, code);
-
 		if (lang) {
 			onCode({ lang, code });
 		}

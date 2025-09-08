@@ -199,15 +199,6 @@ export const canvasPixelTest = () => {
 	// Read RGB data and fail if unmatched
 	for (let i = 0; i < p.length; i += 1) {
 		if (p[i] !== pixelValues[i]) {
-			console.log(
-				'canvasPixelTest: Wrong canvas pixel RGB value detected:',
-				p[i],
-				'at:',
-				i,
-				'expected:',
-				pixelValues[i]
-			);
-			console.log('canvasPixelTest: Canvas blocking or spoofing is likely');
 			return false;
 		}
 	}
@@ -283,9 +274,6 @@ export const generateInitialsImage = (name) => {
 	canvas.height = 100;
 
 	if (!canvasPixelTest()) {
-		console.log(
-			'generateInitialsImage: failed pixel test, fingerprint evasion is likely. Using default image.'
-		);
 		return '/user.png';
 	}
 
@@ -422,9 +410,6 @@ export const copyToClipboard = async (text, formatted = false) => {
 			textArea.select();
 
 			try {
-				const successful = document.execCommand('copy');
-				const msg = successful ? 'successful' : 'unsuccessful';
-				console.log('Fallback: Copying text command was ' + msg);
 				result = true;
 			} catch (err) {
 				console.error('Fallback: Oops, unable to copy', err);
@@ -437,7 +422,6 @@ export const copyToClipboard = async (text, formatted = false) => {
 		result = await navigator.clipboard
 			.writeText(text)
 			.then(() => {
-				console.log('Async: Copying to clipboard was successful!');
 				return true;
 			})
 			.catch((error) => {
@@ -476,7 +460,6 @@ export const extractCurlyBraceWords = (text) => {
 };
 
 export const removeLastWordFromString = (inputString, wordString) => {
-	console.log('inputString', inputString);
 	// Split the string by newline characters to handle lines separately
 	const lines = inputString.split('\n');
 
@@ -501,9 +484,6 @@ export const removeLastWordFromString = (inputString, wordString) => {
 
 	// Combine the lines together again, placing the updated last line back in
 	const resultString = [...lines, updatedLastLine].join('\n');
-
-	// Return the final string
-	console.log('resultString', resultString);
 
 	return resultString;
 };
@@ -641,7 +621,7 @@ const convertOpenAIMessages = (convo) => {
 				lastId = currentId;
 			}
 		} catch (error) {
-			console.log('Error with', message, '\nError:', error);
+			console.error('Error with', message, '\nError:', error);
 		}
 	}
 
@@ -712,7 +692,6 @@ export const convertOpenAIChats = (_chats) => {
 			failed++;
 		}
 	}
-	console.log(failed, 'Conversations could not be imported');
 	return chats;
 };
 
@@ -1195,7 +1174,6 @@ export const formatFileSize = (size) => {
 };
 
 export const getLineCount = (text) => {
-	console.log(typeof text);
 	return text ? text.split('\n').length : 0;
 };
 

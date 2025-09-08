@@ -68,7 +68,6 @@
 
 		// Get the messageId at the specified index
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
-		console.log(messageId);
 
 		// Traverse the branch to find the deepest child message
 		let messageChildrenIds = history.messages[messageId].childrenIds;

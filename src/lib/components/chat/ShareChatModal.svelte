@@ -20,7 +20,6 @@
 
 		const sharedChat = await shareChatById(localStorage.token, chatId);
 		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
-		console.log(shareUrl);
 		chat = await getChatById(localStorage.token, chatId);
 
 		return shareUrl;
@@ -28,7 +27,6 @@
 
 	const shareChat = async () => {
 		const _chat = chat.chat;
-		console.log('share', _chat);
 
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 		const url = 'https://openwebui.com';
@@ -74,7 +72,6 @@
 				}
 			} else {
 				chat = null;
-				console.log(chat);
 			}
 		})();
 	}
@@ -160,9 +157,6 @@
 									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 									if (isSafari) {
-										// Oh, Safari, you're so special, let's give you some extra love and attention
-										console.log('isSafari');
-
 										const getUrlPromise = async () => {
 											const url = await shareLocalChat();
 											return new Blob([url], { type: 'text/plain' });
@@ -175,7 +169,6 @@
 												})
 											])
 											.then(() => {
-												console.log('Async: Copying to clipboard was successful!');
 												return true;
 											})
 											.catch((error) => {

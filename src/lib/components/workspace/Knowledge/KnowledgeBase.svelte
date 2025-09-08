@@ -105,14 +105,10 @@
 	const createFileFromText = (name, content) => {
 		const blob = new Blob([content], { type: 'text/plain' });
 		const file = blobToFile(blob, `${name}.txt`);
-
-		console.log(file);
 		return file;
 	};
 
 	const uploadFileHandler = async (file) => {
-		console.log(file);
-
 		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
@@ -135,10 +131,6 @@
 			($config?.file?.max_size ?? null) !== null &&
 			file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 		) {
-			console.log('File exceeds max size limit:', {
-				fileSize: file.size,
-				maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-			});
 			toast.error(
 				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
 					maxSize: $config?.file?.max_size
@@ -156,7 +148,6 @@
 			});
 
 			if (uploadedFile) {
-				console.log(uploadedFile);
 				knowledge.files = knowledge.files.map((item) => {
 					if (item.itemId === tempItemId) {
 						item.id = uploadedFile.id;
@@ -259,7 +250,7 @@
 		if (totalFiles > 0) {
 			await processDirectory(dirHandle);
 		} else {
-			console.log('No files to upload.');
+			toast.error(i18n.t('No files to upload.'));
 		}
 	};
 
@@ -375,12 +366,8 @@
 
 	const deleteFileHandler = async (fileId) => {
 		try {
-			console.log('Starting file deletion process for:', fileId);
-
 			// Remove from knowledge base only
 			const updatedKnowledge = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
-
-			console.log('Knowledge base updated:', updatedKnowledge);
 
 			if (updatedKnowledge) {
 				knowledge = updatedKnowledge;
@@ -415,7 +402,6 @@
 	};
 
 	const changeDebounceHandler = () => {
-		console.log('debounce');
 		if (debounceTimeout) {
 			clearTimeout(debounceTimeout);
 		}
@@ -863,8 +849,6 @@
 										selectedFileId = selectedFileId === e.detail ? null : e.detail;
 									}}
 									on:delete={(e) => {
-										console.log(e.detail);
-
 										selectedFileId = null;
 										deleteFileHandler(e.detail);
 									}}

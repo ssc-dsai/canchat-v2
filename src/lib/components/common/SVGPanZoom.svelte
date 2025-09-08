@@ -38,7 +38,6 @@
 	const resetPanZoomViewport = () => {
 		instance.moveTo(0, 0);
 		instance.zoomAbs(0, 0, 1);
-		console.log(instance.getTransform());
 	};
 
 	const downloadAsSVG = () => {

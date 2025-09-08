@@ -29,7 +29,7 @@ export const createNewChannel = async (token: string = '', channel: ChannelForm)
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -60,7 +60,7 @@ export const getChannels = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -91,7 +91,7 @@ export const getChannelById = async (token: string = '', channel_id: string) => 
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -127,7 +127,7 @@ export const updateChannelById = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -158,7 +158,7 @@ export const deleteChannelById = async (token: string = '', channel_id: string) 
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -197,7 +197,7 @@ export const getChannelMessages = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -237,7 +237,7 @@ export const getChannelThreadMessages = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -276,7 +276,7 @@ export const sendMessage = async (token: string = '', channel_id: string, messag
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -316,7 +316,7 @@ export const updateMessage = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -356,7 +356,7 @@ export const addReaction = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -396,7 +396,7 @@ export const removeReaction = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -430,7 +430,7 @@ export const deleteMessage = async (token: string = '', channel_id: string, mess
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 

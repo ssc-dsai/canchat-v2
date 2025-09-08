@@ -46,12 +46,9 @@ function initNetworkProxyFromEnv() {
 	}
 	const dispatcher = new ProxyAgent({ uri: preferedProxyURL });
 	setGlobalDispatcher(dispatcher);
-	console.log(`Initialized network proxy "${preferedProxy}" from env`);
 }
 
 async function downloadPackages() {
-	console.log('Setting up pyodide + micropip');
-
 	let pyodide;
 	try {
 		pyodide = await loadPyodide({
@@ -70,31 +67,25 @@ async function downloadPackages() {
 		const pyodidePackageVersion = pyodidePackageJson.version.replace('^', '');
 
 		if (pyodideVersion !== pyodidePackageVersion) {
-			console.log('Pyodide version mismatch, removing static/pyodide directory');
 			await rmdir('static/pyodide', { recursive: true });
 		}
 	} catch (e) {
-		console.log('Pyodide package not found, proceeding with download.');
+		console.error('Pyodide package not found, proceeding with download.');
 	}
 
 	try {
-		console.log('Loading micropip package');
 		await pyodide.loadPackage('micropip');
 
 		const micropip = pyodide.pyimport('micropip');
-		console.log('Downloading Pyodide packages:', packages);
 
 		try {
 			for (const pkg of packages) {
-				console.log(`Installing package: ${pkg}`);
 				await micropip.install(pkg);
 			}
 		} catch (err) {
 			console.error('Package installation failed:', err);
 			return;
 		}
-
-		console.log('Pyodide packages downloaded, freezing into lock file');
 
 		try {
 			const lockFile = await micropip.freeze();
@@ -108,7 +99,6 @@ async function downloadPackages() {
 }
 
 async function copyPyodide() {
-	console.log('Copying Pyodide files into static directory');
 	// Copy all files from node_modules/pyodide to static/pyodide
 	for await (const entry of await readdir('node_modules/pyodide')) {
 		await copyFile(`node_modules/pyodide/${entry}`, `static/pyodide/${entry}`);

@@ -233,9 +233,6 @@
 										<button
 											class=" px-3 py-1.5 rounded-xl w-full text-left flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-850 dark:hover:text-gray-100 selected-command-option-button"
 											type="button"
-											on:click={() => {
-												console.log(file);
-											}}
 											on:mousemove={() => {
 												selectedIdx = idx;
 											}}

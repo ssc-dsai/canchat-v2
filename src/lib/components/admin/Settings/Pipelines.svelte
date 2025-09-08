@@ -147,7 +147,7 @@
 			const file = pipelineFiles[0];
 			const res = await uploadPipeline(localStorage.token, file, selectedPipelinesUrlIdx).catch(
 				(error) => {
-					console.log(error);
+					console.error(error);
 					toast.error('Something went wrong :/');
 					return null;
 				}

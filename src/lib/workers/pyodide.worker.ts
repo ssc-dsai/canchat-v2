@@ -28,7 +28,6 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 			}
 		},
 		stderr: (text) => {
-			console.log('An error occurred:', text);
 			if (self.stderr) {
 				self.stderr += `${text}\n`;
 			} else {
@@ -40,20 +39,6 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 
 	let mountDir = '/mnt';
 	self.pyodide.FS.mkdirTree(mountDir);
-	// self.pyodide.FS.mount(self.pyodide.FS.filesystems.IDBFS, {}, mountDir);
-
-	// // Load persisted files from IndexedDB (Initial Sync)
-	// await new Promise<void>((resolve, reject) => {
-	// 	self.pyodide.FS.syncfs(true, (err) => {
-	// 		if (err) {
-	// 			console.error('Error syncing from IndexedDB:', err);
-	// 			reject(err);
-	// 		} else {
-	// 			console.log('Successfully loaded from IndexedDB.');
-	// 			resolve();
-	// 		}
-	// 	});
-	// });
 
 	const micropip = self.pyodide.pyimport('micropip');
 
@@ -106,21 +91,6 @@ matplotlib.pyplot.show = show`);
 
 		// Safely process and recursively serialize the result
 		self.result = processResult(self.result);
-
-		console.log('Python result:', self.result);
-
-		// Persist any changes to IndexedDB
-		// await new Promise<void>((resolve, reject) => {
-		// 	self.pyodide.FS.syncfs(false, (err) => {
-		// 		if (err) {
-		// 			console.error('Error syncing to IndexedDB:', err);
-		// 			reject(err);
-		// 		} else {
-		// 			console.log('Successfully synced to IndexedDB.');
-		// 			resolve();
-		// 		}
-		// 	});
-		// });
 	} catch (error) {
 		self.stderr = error.toString();
 	}

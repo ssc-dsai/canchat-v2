@@ -111,7 +111,6 @@
 				try {
 					const updatedTools = await getTools(localStorage.token);
 					tools.set(updatedTools);
-					console.log('Tools refreshed after MCP setting change');
 				} catch (error) {
 					console.error('Failed to refresh tools after MCP setting change:', error);
 				}

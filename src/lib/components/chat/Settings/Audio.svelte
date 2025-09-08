@@ -66,7 +66,6 @@
 				});
 
 				if (res) {
-					console.log(res);
 					voices = res.voices;
 				}
 			}
@@ -131,7 +130,7 @@
 					device: !!navigator?.gpu ? 'webgpu' : 'wasm', // Detect WebGPU
 					progress_callback: (e) => {
 						TTSModelProgress = e;
-						console.log(e);
+						console.error(e);
 					}
 				});
 

@@ -73,17 +73,13 @@
 					let lines = value.split('\n');
 
 					for (const line of lines) {
-						if (line !== '') {
-							if (line.includes('[DONE]')) {
-								console.log('done');
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								text += data.choices[0].delta.content ?? '';
-							}
+						if (line !== '' && !line.includes('[DONE]')) {
+							let data = JSON.parse(line.replace(/^data: /, ''));
+							text += data.choices[0].delta.content ?? '';
 						}
 					}
 				} catch (error) {
-					console.log(error);
+					console.error(error);
 				}
 
 				scrollToBottom();

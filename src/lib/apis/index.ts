@@ -25,7 +25,7 @@ export const getModels = async (
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -173,7 +173,7 @@ export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -212,7 +212,7 @@ export const chatAction = async (token: string, action_id: string, body: ChatAct
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -244,7 +244,7 @@ export const stopTask = async (token: string, id: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -276,7 +276,7 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -315,7 +315,7 @@ export const getToolServerData = async (token: string, url: string) => {
 			}
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -334,7 +334,6 @@ export const getToolServerData = async (token: string, url: string) => {
 		specs: convertOpenApiToToolPayload(res)
 	};
 
-	console.log(data);
 	return data;
 };
 
@@ -491,7 +490,7 @@ export const getTaskConfig = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -520,7 +519,7 @@ export const updateTaskConfig = async (token: string, config: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -562,7 +561,7 @@ export const generateTitle = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -602,7 +601,7 @@ export const generateTags = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -674,7 +673,7 @@ export const generateEmoji = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -724,7 +723,7 @@ export const generateQueries = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -796,7 +795,7 @@ export const generateAutoCompletion = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -860,7 +859,7 @@ export const generateMoACompletion = async (
 			stream: true
 		})
 	}).catch((err) => {
-		console.log(err);
+		console.error(err);
 		error = err;
 		return null;
 	});
@@ -888,7 +887,7 @@ export const getPipelinesList = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -922,7 +921,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -958,7 +957,7 @@ export const downloadPipeline = async (token: string, url: string, urlIdx: strin
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -994,7 +993,7 @@ export const deletePipeline = async (token: string, id: string, urlIdx: string) 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -1031,7 +1030,7 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1068,7 +1067,7 @@ export const getPipelineValves = async (token: string, pipeline_id: string, urlI
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1104,7 +1103,7 @@ export const getPipelineValvesSpec = async (token: string, pipeline_id: string, 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1146,7 +1145,7 @@ export const updatePipelineValves = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 
 			if ('detail' in err) {
 				error = err.detail;
@@ -1178,7 +1177,7 @@ export const getBackendConfig = async () => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1204,7 +1203,7 @@ export const getChangelog = async () => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1231,7 +1230,7 @@ export const getVersionUpdates = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1258,7 +1257,7 @@ export const getModelFilterConfig = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1293,7 +1292,7 @@ export const updateModelFilterConfig = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1320,7 +1319,7 @@ export const getWebhookUrl = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1350,7 +1349,7 @@ export const updateWebhookUrl = async (token: string, url: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1377,7 +1376,7 @@ export const getCommunitySharingEnabledStatus = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1404,7 +1403,7 @@ export const toggleCommunitySharingEnabledStatus = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -1431,7 +1430,7 @@ export const getModelConfig = async (token: string): Promise<GlobalModelConfig> 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1479,7 +1478,7 @@ export const updateModelConfig = async (token: string, config: GlobalModelConfig
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});

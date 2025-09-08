@@ -198,7 +198,7 @@
 						2
 					);
 				} catch (e) {
-					console.log(e);
+					console.error('Failed to parse or stringify COMFYUI_WORKFLOW:', e.message);
 				}
 			}
 

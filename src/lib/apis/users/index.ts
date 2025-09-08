@@ -16,7 +16,7 @@ export const getUserGroups = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -43,7 +43,7 @@ export const getUserDefaultPermissions = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -73,7 +73,7 @@ export const updateUserDefaultPermissions = async (token: string, permissions: o
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -104,7 +104,7 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -131,7 +131,7 @@ export const getUsers = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -157,7 +157,7 @@ export const getUserSettings = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -187,7 +187,7 @@ export const updateUserSettings = async (token: string, settings: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -214,7 +214,7 @@ export const getUserById = async (token: string, userId: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -240,7 +240,7 @@ export const getUserInfo = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -266,7 +266,7 @@ export const getUserRole = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -296,7 +296,7 @@ export const updateUserInfo = async (token: string, info: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -310,7 +310,7 @@ export const updateUserInfo = async (token: string, info: object) => {
 
 export const getAndUpdateUserLocation = async (token: string) => {
 	const location = await getUserPosition().catch((err) => {
-		console.log(err);
+		console.error(err);
 		return null;
 	});
 
@@ -318,7 +318,7 @@ export const getAndUpdateUserLocation = async (token: string) => {
 		await updateUserInfo(token, { location: location });
 		return location;
 	} else {
-		console.log('Failed to get user location');
+		console.error('Failed to get user location');
 		return null;
 	}
 };
@@ -338,7 +338,7 @@ export const deleteUserById = async (token: string, userId: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -378,7 +378,7 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});

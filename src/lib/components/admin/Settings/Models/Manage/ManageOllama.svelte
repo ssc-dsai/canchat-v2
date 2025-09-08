@@ -111,7 +111,7 @@
 							}
 						}
 					} catch (error) {
-						console.log(error);
+						console.error(error);
 					}
 				}
 			}
@@ -210,7 +210,7 @@
 						}
 					}
 				} catch (error) {
-					console.log(error);
+					console.error(error);
 					if (typeof error !== 'string') {
 						error = error.message;
 					}
@@ -312,7 +312,7 @@
 						}
 					}
 				} catch (error) {
-					console.log(error);
+					console.error(error);
 				}
 			}
 		} else {
@@ -373,7 +373,7 @@
 							}
 						}
 					} catch (error) {
-						console.log(error);
+						console.error(error);
 						toast.error(`${error}`);
 					}
 				}
@@ -502,7 +502,7 @@
 						}
 					}
 				} catch (error) {
-					console.log(error);
+					console.error(error);
 					toast.error(`${error}`);
 				}
 			}

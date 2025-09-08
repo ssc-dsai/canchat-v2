@@ -28,7 +28,7 @@ export const createNewPrompt = async (token: string, prompt: PromptItem) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -72,7 +72,7 @@ export const getPrompts = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -116,7 +116,7 @@ export const getPromptList = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -152,7 +152,7 @@ export const getPromptsCount = async (token: string = '', search?: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -184,7 +184,7 @@ export const getPromptsLegacy = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -215,7 +215,7 @@ export const getPromptListLegacy = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -250,7 +250,7 @@ export const getPromptByCommand = async (token: string, command: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -289,7 +289,7 @@ export const updatePromptByCommand = async (token: string, prompt: PromptItem) =
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -326,7 +326,7 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 

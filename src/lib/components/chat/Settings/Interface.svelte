@@ -338,7 +338,6 @@
 			) {
 				reader.readAsDataURL(inputFiles[0]);
 			} else {
-				console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
 				inputFiles = null;
 			}
 		}}

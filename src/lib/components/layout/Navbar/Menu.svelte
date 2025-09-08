@@ -72,8 +72,6 @@
 			try {
 				const isDarkMode = document.documentElement.classList.contains('dark');
 
-				console.log('isDarkMode', isDarkMode);
-
 				// Define a fixed virtual screen size
 				const virtualWidth = 800; // Fixed width (adjust as needed)
 				// Clone the container to avoid layout shifts

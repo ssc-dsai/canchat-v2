@@ -50,9 +50,6 @@
 								chatFiles.splice(fileIdx, 1);
 								chatFiles = chatFiles;
 							}}
-							on:click={() => {
-								console.log(file);
-							}}
 						/>
 					{/each}
 				</div>

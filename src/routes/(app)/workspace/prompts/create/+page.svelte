@@ -33,7 +33,6 @@
 			)
 				return;
 			const _prompt = JSON.parse(event.data);
-			console.log(_prompt);
 
 			prompt = {
 				title: _prompt.title,
