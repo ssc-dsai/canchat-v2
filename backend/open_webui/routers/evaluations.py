@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from pydantic import BaseModel
 
 from open_webui.models.users import Users, UserModel
@@ -73,6 +73,7 @@ class FeedbackUserResponse(FeedbackResponse):
 
 @router.get("/feedbacks/all", response_model=list[FeedbackUserResponse])
 async def get_all_feedbacks(user=Depends(get_admin_user)):
+    """Get all feedbacks (original behavior)"""
     feedbacks = Feedbacks.get_all_feedbacks()
     return [
         FeedbackUserResponse(
@@ -84,22 +85,53 @@ async def get_all_feedbacks(user=Depends(get_admin_user)):
         for feedback in feedbacks
     ]
 
-
-@router.delete("/feedbacks/all")
-async def delete_all_feedbacks(user=Depends(get_admin_user)):
-    success = Feedbacks.delete_all_feedbacks()
-    return success
-
-
-@router.get("/feedbacks/all/export", response_model=list[FeedbackModel])
-async def get_all_feedbacks(user=Depends(get_admin_user)):
-    feedbacks = Feedbacks.get_all_feedbacks()
+# NEW PAGINATED ENDPOINT
+@router.get("/feedbacks/all/paginated", response_model=list[FeedbackUserResponse])
+async def get_all_feedbacks_paginated(
+    user=Depends(get_admin_user),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(10, ge=1, le=100, description="Items per page"),
+    search: Optional[str] = Query(None, description="Search query"),
+):
+    """Get paginated feedbacks with optional search"""
+    print(f"Fetching page {page} with limit {limit} and search '{search}'")
+    feedbacks = Feedbacks.get_all_feedbacks_paginated(
+        page=page, limit=limit, search=search
+    )
     return [
-        FeedbackModel(
+        FeedbackUserResponse(
             **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
         )
         for feedback in feedbacks
     ]
+
+
+@router.get("/feedbacks/count")
+async def get_feedbacks_count(
+    user=Depends(get_admin_user),
+    search: Optional[str] = Query(None, description="Search query"),
+):
+    """Get total count of feedbacks with optional search filter"""
+    return {"count": Feedbacks.get_feedbacks_count(search=search)}
+
+
+@router.get("/feedbacks/all/export", response_model=list[FeedbackUserResponse])
+async def export_all_feedbacks(user=Depends(get_admin_user)):
+    """Export all feedbacks for admin use"""
+    feedbacks = Feedbacks.get_all_feedbacks()
+    return [
+        FeedbackUserResponse(
+            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
+        )
+        for feedback in feedbacks
+    ]
+
+
+@router.delete("/feedbacks/all")
+async def delete_all_feedbacks(user=Depends(get_admin_user)):
+    """Delete all feedbacks (admin only)"""
+    success = Feedbacks.delete_all_feedbacks()
+    return success
 
 
 @router.get("/feedbacks/user", response_model=list[FeedbackUserResponse])
