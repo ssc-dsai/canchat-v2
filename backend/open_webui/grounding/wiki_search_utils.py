@@ -570,5 +570,13 @@ class WikiSearchGrounder:
         return "\n".join(context)
 
 
-# Global instance
-wiki_search_grounder = WikiSearchGrounder()
+# Global instance - lazy initialization to prevent K8s health check issues
+_wiki_search_grounder = None
+
+
+def get_wiki_search_grounder() -> WikiSearchGrounder:
+    """Get the global WikiSearchGrounder instance with lazy initialization"""
+    global _wiki_search_grounder
+    if _wiki_search_grounder is None:
+        _wiki_search_grounder = WikiSearchGrounder()
+    return _wiki_search_grounder
