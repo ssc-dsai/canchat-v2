@@ -13,24 +13,21 @@ This checklist categorizes the changes, ensuring a structured testing process fo
 
 ### **2. User Interface Changes**
 #### **General UI**
-- [ ] **Redesigned Prompt Create/Edit Page**: Verify that the UI for creating/editing prompts is functional and matches design specifications.
-- [ ] **Translation Button Relocation**: Confirm the translation button is accessible from the sidebar menu, and no longer in the settings modal.
-- [ ] **Help Button Placement**: Confirm the help button is accessible from the top-right menu and operational.
+- [x] **Redesigned Prompt Create/Edit Page**: Verify that the UI for creating/editing prompts is functional and matches design specifications.
+- [x] **Translation Button Relocation**: Confirm the translation button is accessible from the sidebar menu, and no longer in the settings modal.
+- [x] **Help Button Placement**: Confirm the help button is accessible from the top-right menu and operational.
 - [ ] **Error Messages UI**: Verify that new error handling descriptions appear correctly in middleware-related interfaces/pages.
-- [ ] **Improved Prompt View**: Test dark/light mode compatibility and confirm text visibility adjustments.
-- [ ] **Default Suggestions Spacing**: Confirm AI suggestion text has a space at the start of the sentence.
-
-#### **Navigation Enhancements**
-- [ ] **Sidebar Accessibility**: Ensure new features are properly discoverable in the redesigned sidebar.
+- [x] **Improved Prompt View**: Test dark/light mode compatibility and confirm text visibility adjustments.
+- [x] **Default Suggestions Spacing**: Confirm AI suggestion text has a space at the start of the sentence.
 
 ---
 
 ### **3. Multilingual Features**
 #### **EN/FR Localization**
-- [ ] **Documentation Links**: Confirm both English and French documentation links work correctly.
-- [ ] **Training Courses Links**: Verify the English and French training course links are functional.
-- [ ] **Model Descriptions**: Confirm that model descriptions render in both official languages.
-- [ ] **Banner Localization**: Test that localized banners display announcements effectively in multiple languages.
+- [x] **Documentation Links**: Confirm both English and French documentation links work correctly.
+- [x] **Training Courses Links**: Verify the English and French training course links are functional.
+- [x] **Model Descriptions**: Confirm that model descriptions render in both official languages.
+- [x] **Banner Localization**: Test that localized banners display announcements effectively in multiple languages.
 - [ ] **Translation Accuracy**: Verify missing translations have been addressed and improved.
 
 ---
@@ -71,13 +68,10 @@ This checklist categorizes the changes, ensuring a structured testing process fo
 ### **6. Role and Multitenancy Enhancements**
 #### **Roles**
 - [ ] **Analysis and Global Analysis Roles**: Confirm new roles allow appropriate metrics dashboard access.
-- [ ] **Role Updates**: Verify proper functionality when setting a user's role via the Edit User modal.
+- [x] **Role Updates**: Verify proper functionality when setting a user's role via the Edit User modal.
 
 #### **User Domain**
 - [ ] **Domain Check**: Confirm proper multitenancy support via user domain feature.
-
-#### **Pending Page Enhancements**
-- [ ] **Auto-refresh on Role Change**: Confirm real-time updates on the pending role change page.
 
 ---
 
@@ -95,7 +89,7 @@ This checklist categorizes the changes, ensuring a structured testing process fo
 ---
 
 ### **8. System Security Enhancements**
-- [ ] **Trivy Security Scan**: Confirm Trivy integration performs vulnerability detection in the CI pipeline.
+- [x] **Trivy Security Scan**: Confirm Trivy integration performs vulnerability detection in the CI pipeline.
 
 ---
 
@@ -110,41 +104,40 @@ This checklist categorizes the changes, ensuring a structured testing process fo
 - [ ] Confirm Wikipedia-grounded information enhances chat responses.
 
 #### **PWA Manifest**
-- [ ] Ensure the Progressive Web App manifest works across devices.
+- [x] Ensure the Progressive Web App manifest works across devices.
 
 ---
 
 ### **10. Fixes**
 - **General Bug Fixes**:
-  - [ ] Ensure pinned chats now offer "unpin" functionality.
-  - [ ] Test renaming chat items in folders for instant updates.
-  - [ ] Confirm accurate default model selection for new chats.
+  - [x] Ensure pinned chats now offer "unpin" functionality.
+  - [x] Test renaming chat items in folders for instant updates.
+  - [x] Confirm accurate default model selection for new chats.
   - [ ] Validate corrected issues with date ranges in metrics graphs.
-  - [ ] Verify JSON exportation has been removed for chats, folders, and archived items.
+  - [x] Verify JSON exportation has been removed for chats, folders, and archived items.
   - [ ] Confirm proper handling of the tiktoken dependency.
-  - [ ] Ensure wording/typos in French and English warnings are corrected.
   - [ ] Test malformed Brave search URLs are logged/handled appropriately.
 
 ---
 
 ### **11. Removed Features**
-- [ ] **New Version Notification Toast**: Confirm toast notification for version updates is removed.
+- [x] **New Version Notification Toast**: Confirm toast notification for version updates is removed.
 - [ ] **Actions Specific to Open WebUI**: Verify removed workflows, settings, and references.
 
 ---
 
 ### **12. Reporting Features**
 - **Report Issue Modal**:
-  - [ ] Confirm issue reporting modal via the exclamation icon works as intended.
+  - [x] Confirm issue reporting modal via the exclamation icon works as intended.
 - **Suggestion Modal**:
-  - [ ] Validate the suggestion modal through the lightbulb icon.
+  - [x] Validate the suggestion modal through the lightbulb icon.
 
 ---
 
 ### **13. Miscellaneous**
-- [ ] **Alphabetical Models List**: Confirm models are displayed in alphabetical order.
+- [x] **Alphabetical Models List**: Confirm models are displayed in alphabetical order.
 - [ ] **Reindexed Files**: Test reindexing of files in collections where files are available.
-- [ ] **3 Concurrent Models**: Confirm there’s a limit on selecting only 3 concurrent models.
+- [x] **3 Concurrent Models**: Confirm there’s a limit on selecting only 3 concurrent models.
 
 ---
 
