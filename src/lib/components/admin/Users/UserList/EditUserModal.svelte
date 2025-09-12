@@ -4,20 +4,19 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 
-	import { updateUserById } from '$lib/apis/users';
+	import { updateUserById, updateUserRole } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
-	dayjs.extend(localizedFormat);
 
 	export let show = false;
 	export let selectedUser;
 	export let sessionUser;
 
 	let _user = {
+		id: '',
 		profile_image_url: '',
 		name: '',
 		email: '',
@@ -26,20 +25,42 @@
 	};
 
 	const submitHandler = async () => {
+		// Check if role changed
+		const roleChanged = selectedUser.role !== _user.role;
+
+		// Update user basic info (name, email, password, profile_image_url)
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
 			toast.error(`${error}`);
+			return null;
 		});
 
-		if (res) {
-			dispatch('save');
-			show = false;
+		if (!res) {
+			toast.error(i18n.t('User update failed'));
+			return;
 		}
+
+		// Update role if it changed
+		if (roleChanged) {
+			const roleRes = await updateUserRole(localStorage.token, selectedUser.id, _user.role).catch(
+				(error) => {
+					toast.error(`Role update failed: ${error}`);
+					return null;
+				}
+			);
+
+			if (!roleRes) {
+				return; // Exit if role update failed
+			}
+		}
+
+		dispatch('save');
+		show = false;
 	};
 
 	onMount(() => {
 		if (selectedUser) {
-			_user = selectedUser;
-			_user.password = '';
+			_user = { ...selectedUser }; // Copy all properties
+			_user.password = ''; // Clear password for security
 		}
 	});
 </script>
@@ -90,7 +111,7 @@
 
 							<div class="text-xs text-gray-500">
 								{$i18n.t('Created at')}
-								{dayjs(selectedUser.created_at * 1000).format('LL')}
+								{dayjs(selectedUser.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
 							</div>
 						</div>
 					</div>
@@ -161,7 +182,7 @@
 
 					<div class="flex justify-end pt-3 text-sm font-medium">
 						<button
-							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 							type="submit"
 						>
 							{$i18n.t('Save')}
