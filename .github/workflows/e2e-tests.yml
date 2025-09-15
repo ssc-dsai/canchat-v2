@@ -233,10 +233,9 @@ jobs:
 
       - name: Start Backend Server
         run: |
-          echo "$OLLAMA_BASE_URL"
           cd ./backend/
           . ./.venv/bin/activate
-          sh dev.sh &
+          sh dev.sh > ./backend.log 2>&1 &
 
       - name: Start Frontend Server
         run: npm run dev &
@@ -250,6 +249,7 @@ jobs:
               exit 0
             fi
             echo "Waiting for Backend..."
+            cat ./backend.log 
             sleep 5
           done
           echo "Backend failed to start in time" >&2
