@@ -233,6 +233,7 @@ jobs:
 
       - name: Start Backend Server
         run: |
+          echo "$OLLAMA_BASE_URL"
           cd ./backend/
           . ./.venv/bin/activate
           sh dev.sh &
