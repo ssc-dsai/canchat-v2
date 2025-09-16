@@ -148,7 +148,7 @@ jobs:
               exit 0
             fi
             echo "Waiting for Backend..."
-            du -ah --max-depth=2 /app | sort -h
+            du -ah --max-depth=2 /dev/root | sort -h
             sleep 2
           done
           echo "Backend failed to start in time" >&2
