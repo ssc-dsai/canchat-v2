@@ -89,6 +89,28 @@ jobs:
            cp -rf ./test/e2e/resources/canchat_files/ ./
            touch .env
            echo "$E2E_ENV_FILE" | base64 --decode > .env
+           
+      - name: cache info venv
+        run: |
+           df -h
+           cd ./backend/
+           . ./.venv/bin/activate
+           pip cache list
+           pip cache purge
+           df -h
+
+      - name: cache info npm
+        run: |
+           df -h
+           npm cache verify
+           npm cache clean --force
+           npm cache verify
+           df -h
+
+      - name: cache info docker
+        run: |
+           docker system prune -af
+           df -h
 
       - name: Wait for Qdrant to be ready
         run: |
@@ -118,7 +140,6 @@ jobs:
       - name: Start Frontend Server
         run: npm run dev &
 
-
       - name: Wait for Backend to be ready
         run: |
           for i in {1..30}; do
@@ -127,6 +148,7 @@ jobs:
               exit 0
             fi
             echo "Waiting for Backend..."
+            df -h
             sleep 2
           done
           echo "Backend failed to start in time" >&2
