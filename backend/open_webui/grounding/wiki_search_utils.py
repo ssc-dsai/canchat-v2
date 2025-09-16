@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from datetime import datetime
 
+from open_webui.grounding.sync_reranker import SyncReranker
 from open_webui.env import SRC_LOG_LEVELS
 from .context_analysis import analyze_conversation_context
 
@@ -65,12 +66,6 @@ def _check_optional_dependency(module_name: str) -> bool:
 class WikiSearchGrounder:
     """Pure txtai-wikipedia implementation with lazy loading and concurrency control"""
 
-    # Class-level semaphore for controlling concurrent operations
-    # Use limit of 1 to prevent memory exhaustion ("Brian Smash" technique)
-    _semaphore = None
-    _semaphore_lock = asyncio.Lock()
-    MAX_CONCURRENT_OPERATIONS = 1
-
     def __init__(self):
         self.max_content_length = 4000
         self.max_search_results = 5
@@ -81,88 +76,6 @@ class WikiSearchGrounder:
         self.translation_loaded = False
         self.reranker_loaded = False
         self._initialized = False
-
-    @classmethod
-    async def _get_semaphore(cls):
-        """Get or create the class-level semaphore for concurrency control"""
-        if cls._semaphore is None:
-            async with cls._semaphore_lock:
-                # Double-check pattern
-                if cls._semaphore is None:
-                    cls._semaphore = asyncio.Semaphore(cls.MAX_CONCURRENT_OPERATIONS)
-                    log.info(
-                        f"🔒 Wiki grounding semaphore initialized with {cls.MAX_CONCURRENT_OPERATIONS} concurrent operations allowed"
-                    )
-        return cls._semaphore
-
-    async def _acquire_lock(
-        self, operation_name: str
-    ) -> tuple[asyncio.Semaphore, float]:
-        """Acquire semaphore lock and return semaphore and start time for monitoring"""
-        semaphore = await self._get_semaphore()
-
-        # Log queue status before acquiring
-        available_permits = (
-            semaphore._value if hasattr(semaphore, "_value") else "unknown"
-        )
-        log.debug(
-            f"🚦 [{operation_name}] Requesting semaphore (available: {available_permits})"
-        )
-
-        start_time = time.time()
-        await semaphore.acquire()
-
-        wait_time = time.time() - start_time
-        if wait_time > 0.1:  # Log if we waited more than 100ms
-            log.debug(
-                f"🔓 [{operation_name}] Acquired semaphore after {wait_time:.2f}s wait"
-            )
-        else:
-            log.debug(f"🔓 [{operation_name}] Acquired semaphore immediately")
-
-        return semaphore, start_time
-
-    def _release_lock(
-        self, semaphore: asyncio.Semaphore, operation_name: str, start_time: float
-    ):
-        """Release semaphore lock and log timing information"""
-        total_time = time.time() - start_time
-        semaphore.release()
-        available_permits = (
-            semaphore._value if hasattr(semaphore, "_value") else "unknown"
-        )
-        log.debug(
-            f"🔓 [{operation_name}] Released semaphore after {total_time:.2f}s (available: {available_permits})"
-        )
-
-    @classmethod
-    async def get_queue_status(cls) -> dict:
-        """Get current queue status for monitoring"""
-        if cls._semaphore is None:
-            return {
-                "semaphore_initialized": False,
-                "available_permits": "N/A",
-                "max_concurrent": "N/A",
-                "waiting_operations": "N/A",
-            }
-
-        available = (
-            cls._semaphore._value if hasattr(cls._semaphore, "_value") else "unknown"
-        )
-        waiters = getattr(cls._semaphore, "_waiters", None)
-        waiting = len(waiters) if waiters is not None else "unknown"
-
-        return {
-            "semaphore_initialized": True,
-            "available_permits": available,
-            "max_concurrent": max_concurrent,
-            "waiting_operations": waiting,
-            "active_operations": (
-                cls.MAX_CONCURRENT_OPERATIONS - available
-                if isinstance(available, int)
-                else "unknown"
-            ),
-        }
 
     async def initialize(self) -> bool:
         """Initialize models (call once before using search methods)"""
@@ -253,7 +166,7 @@ class WikiSearchGrounder:
             similarity = Similarity(path="colbert-ir/colbertv2.0", lateencode=True)
 
             # Create reranker using embeddings + similarity
-            self.reranker = Reranker(self.embeddings, similarity)
+            self.reranker = SyncReranker(self.embeddings, similarity)
             self.reranker_loaded = True
             log.info("txtai reranker pipeline loaded successfully")
             return True
@@ -436,26 +349,15 @@ class WikiSearchGrounder:
 
             # Apply reranking if available and we have multiple results
             if self.reranker_loaded and len(formatted) > 1:
-                # Acquire semaphore lock to control concurrency during reranking
-                semaphore, start_time = await self._acquire_lock("reranking")
 
                 try:
                     log.info(
                         f"🔍 Reranking {len(formatted)} search results using txtai reranker"
                     )
 
-                    # Run reranking on thread pool to prevent blocking event loop
-                    def run_reranking():
-                        return self.reranker(
-                            search_query, limit=self.max_search_results * 2
-                        )
-
-                    # Use thread pool executor to prevent blocking K8s health checks
-                    with ThreadPoolExecutor(max_workers=1) as executor:
-                        loop = asyncio.get_event_loop()
-                        reranked_results = await loop.run_in_executor(
-                            executor, run_reranking
-                        )
+                    reranked_results = await self.reranker(
+                        search_query, limit=self.max_search_results * 2
+                    )
 
                     # Create mapping of our formatted results by title
                     title_to_formatted = {
@@ -514,11 +416,8 @@ class WikiSearchGrounder:
                     )
 
                 except Exception as e:
-                    log.warning(f"🚨 Reranking failed: {e}")
+                    log.error(f"🚨 Reranking failed: {e}")
                     # Keep original results if reranking fails
-                finally:
-                    # Always release the semaphore lock after reranking
-                    self._release_lock(semaphore, "reranking", start_time)
 
             # Return top results
             final_results = formatted[: self.max_search_results]
