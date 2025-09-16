@@ -89,7 +89,7 @@ jobs:
            cp -rf ./test/e2e/resources/canchat_files/ ./
            touch .env
            echo "$E2E_ENV_FILE" | base64 --decode > .env
-           
+
       - name: cache info venv
         run: |
            df -h
@@ -148,7 +148,7 @@ jobs:
               exit 0
             fi
             echo "Waiting for Backend..."
-            df -h
+            du -ah --max-depth=2 /app | sort -h
             sleep 2
           done
           echo "Backend failed to start in time" >&2
