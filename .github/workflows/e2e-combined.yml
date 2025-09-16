@@ -1,0 +1,276 @@
+name: Build Cache and Run E2E Tests
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  cache_build:
+    name: 'Check and build E2E test caches'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+ 
+    steps:
+      - name: Checkout requirements and manifests
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            package.json
+            package-lock.json
+            test/e2e/package.json
+            test/e2e/package-lock.json
+            backend/requirements.txt
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Get cache key names
+        id: key_names
+        run: |
+           echo "venv_key=e2e-venv-${{ hashFiles('./backend/requirements.txt') }}" >> $GITHUB_OUTPUT
+           echo "node_key=e2e-node-${{ hashFiles('./package-lock.json') }}" >> $GITHUB_OUTPUT
+           echo "pw_key=e2e-playwright-$(/bin/date -u "+%Y%m")" >> $GITHUB_OUTPUT
+
+      # Backend cache check and refresh
+      - name: Get venv cache status
+        id: venv-cache-status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RESULT=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=${{ steps.key_names.outputs.venv_key }}")
+          if echo "$RESULT" | grep -q '"total_count": 1'; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Check venv cache 
+        if: steps.venv-cache-status.outputs.exists != 'true'
+        uses: actions/cache@v4   
+        id: e2e-venv
+        with:
+          path: ./backend/.venv
+          key: ${{ steps.key_names.outputs.venv_key }}
+
+      - name: Install Backend dependencies
+        if: steps.venv-cache-status.outputs.exists != 'true'
+        run: |
+          python -m venv ./backend/.venv
+          . ./backend/.venv/bin/activate
+          pip install -r ./backend/requirements.txt
+
+      # Frontend cache check and refresh
+      - name: Get node_modules cache status
+        id: node-cache-status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RESULT=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=${{ steps.key_names.outputs.node_key }}")
+          if echo "$RESULT" | grep -q '"total_count": 1'; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+                
+      - name: Check node_modules cache
+        if: steps.node-cache-status.outputs.exists != 'true'
+        uses: actions/cache@v4        
+        id: node_modules-cache
+        with:
+          path: |
+            ./node_modules
+          key: ${{ steps.key_names.outputs.node_key }}
+        
+      - name: Install Frontend dependencies
+        if: steps.node-cache-status.outputs.exists != 'true'
+        run: npm install
+
+      # Playwright cache check and refresh                
+      - name: Get Playwright cache status
+        id: playwright-cache-status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RESULT=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/caches?key=${{ steps.key_names.outputs.pw_key }}")
+          if echo "$RESULT" | grep -q '"total_count": 1'; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check Playwright cache
+        if: steps.playwright-cache-status.outputs.exists != 'true'
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ./test/e2e/node_modules
+          key: ${{ steps.key_names.outputs.pw_key }}
+
+      - name: Install Playwright dependencies
+        if: steps.playwright-cache-status.outputs.exists != 'true'
+        run: |
+           cd ./test/e2e
+           npm ci
+           npx playwright install --with-deps
+
+
+  tests:
+    name: 'Playwright E2E Tests'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: cache_build
+    env:
+      CANCHAT_URL: "http://localhost:5173"
+
+    services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+          - 6334:6334
+             
+    steps:
+      - name: Get timestamps
+        id: timestamps
+        shell: bash
+        run: |
+          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4
+
+      - name: Get cache key names
+        id: key_names
+        run: |
+           echo "venv_key=e2e-venv-${{ hashFiles('./backend/requirements.txt') }}" >> $GITHUB_OUTPUT
+           echo "node_key=e2e-node-${{ hashFiles('./package-lock.json') }}" >> $GITHUB_OUTPUT
+           echo "pw_key=e2e-playwright-$(/bin/date -u "+%Y%m")" >> $GITHUB_OUTPUT
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Cache pip dependencies
+      - name: Cache venv
+        uses: actions/cache@v4   
+        id: e2e-venv
+        with:
+          path: ./backend/.venv
+          key: ${{ steps.key_names.outputs.venv_key }}
+
+      # Cache npm dependencies
+      - name: Cache node_modules
+        uses: actions/cache@v4        
+        id: e2e-node_modules
+        with:
+          path: |
+            ./node_modules
+          key: ${{ steps.key_names.outputs.node_key }}
+
+      - name: Cache Playwright binaries
+        uses: actions/cache@v4
+        id: e2e-playwright
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ./test/e2e/node_modules
+          key: ${{ steps.key_names.outputs.pw_key }}
+
+      - name: Install Playwright dependencies
+        if: steps.e2e-playwright.outputs.cache-hit != 'true'
+        run: |
+           cd ./test/e2e
+           npm install
+           npm ci
+           npx playwright install --with-deps
+      
+      - name: Install single user environment variables and files
+        env:
+           E2E_ENV_FILE: ${{ secrets.E2E_ENV_FILE }}
+        run: |
+           cp -rf ./test/e2e/resources/canchat_files/ ./
+           touch .env
+           echo "$E2E_ENV_FILE" | base64 --decode > .env
+
+      - name: Wait for Qdrant to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:6333/healthz| grep 'check passed' > /dev/null; then
+              echo "Qdrant is ready."
+              exit 0
+            fi
+            echo "Waiting for Qdrant..."
+            sleep 2
+          done
+          echo "Qdrant failed to start in time" >&2
+          exit 1
+
+      - name: Start Fauxllama Server
+        run: |
+          . ./backend/.venv/bin/activate
+          cd ./test/ollama_stub/
+          uvicorn fauxllama:app --host 0.0.0.0 --port 11404 &
+
+      - name: Start Backend Server
+        run: |
+          cd ./backend/
+          . ./.venv/bin/activate
+          sh dev.sh
+
+      - name: Start Frontend Server
+        run: npm run dev &
+
+
+      - name: Wait for Backend to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:8080/health| grep '\"status\":true' > /dev/null; then
+              echo "Backend is ready."
+              exit 0
+            fi
+            echo "Waiting for Backend..."
+            sleep 2
+          done
+          echo "Backend failed to start in time" >&2
+          exit 1
+
+
+       
+      - name: Wait for Frontend to be ready
+        run: npx wait-on $CANCHAT_URL
+
+
+      - name: Run Playwright tests
+        run: |
+          cd ./test/e2e
+          npx playwright test tests/releases/
+
+      - name: Copy screenshots to report  
+        if: ${{ !cancelled() }}
+        run: |
+          cp -r test/e2e/playwright-viz test/e2e/playwright-report/images
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ steps.timestamps.outputs.timestamp }}
+          path: ./test/e2e/playwright-report/
+          retention-days: 30 
