@@ -97,9 +97,9 @@ jobs:
            touch .env
            echo "$E2E_ENV_FILE" | base64 --decode > .env 
 
-      - name: Start Docker Compose
+      - name: Start docker-compose
         run: |
-          PLAYWRIGHT_DATE=${{ steps.key_names.outputs.pw_key }} docker compose -f docker-compose.test.yaml up --detach --remove-orphans --force-recreate
+          PLAYWRIGHT_DATE=${{ steps.key_names.outputs.pw_key }} docker-compose -f docker-compose.test.yaml up --detach --remove-orphans --force-recreate
 
       - name: Wait for Qdrant to be ready
         run: |
@@ -185,7 +185,7 @@ jobs:
             cache_key: cache
             cache_path: ./backend/data/cache    
 
-      - name: Post Docker Compose
+      - name: Post docker-compose
         if: ${{ always() }}
         run: |
-          docker compose -f docker-compose.test.yaml down
+          docker-compose -f docker-compose.test.yaml down
