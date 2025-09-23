@@ -97,6 +97,9 @@ jobs:
            touch .env
            echo "$E2E_ENV_FILE" | base64 --decode > .env 
 
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
+        
       - name: Start docker-compose
         run: |
           PLAYWRIGHT_DATE=${{ steps.key_names.outputs.pw_key }} docker-compose -f docker-compose.test.yaml up --detach --remove-orphans --force-recreate
