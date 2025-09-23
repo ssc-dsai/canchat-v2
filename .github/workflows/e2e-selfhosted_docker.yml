@@ -1,0 +1,190 @@
+name: Build Cache and Run E2E Tests (self-hosted)
+
+on:
+  workflow_dispatch:
+  push:
+
+
+jobs:
+  tests:
+    name: 'Playwright E2E Tests'
+    runs-on: arc-ssc-dsai
+    timeout-minutes: 60
+    env:
+      CANCHAT_URL: "http://localhost:5173"
+      CACHE_BASE: "${{ github.workspace }}/../../_cache"
+      PW_TEST_HTML_REPORT_OPEN: 'never'
+
+    services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+          - 6334:6334
+             
+    steps:
+      - name: Checkout CANChat-V2
+        uses: actions/checkout@v4
+
+      - name: Set permissions and cache
+        run: |
+           chmod +x ./test/e2e/environment/e2e-entrypoint.sh
+           mkdir -p "$CACHE_BASE"
+           apt update && apt install rsync -y
+          
+      - name: Get timestamps
+        id: timestamps
+        shell: bash
+        run: |
+          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT
+
+      - name: Get cache key names
+        id: key_names
+        run: |
+           echo "venv_key=${{ hashFiles('./backend/requirements.txt') }}" >> $GITHUB_OUTPUT
+           echo "node_key=${{ hashFiles('./package-lock.json') }}" >> $GITHUB_OUTPUT
+           echo "pw_key=$(/bin/date -u "+%Y%m")" >> $GITHUB_OUTPUT
+          
+      - name: Check and rebuild Playwright Docker image
+        id: docker_playwright
+        run: |
+          if [ $(docker images 'playwright:${{ steps.key_names.outputs.pw_key }}' -q | wc -l) -ne 1 ]; then
+            docker rmi $(docker images 'playwright:*' -q) || true
+          fi
+
+      # Get locally cached npm dependencies
+      - name: Local cache CANChat Frontend
+        uses: ./.github/actions/e2e/local_cache_get
+        id: e2e-canchat-frontend
+        env:
+            cache_prefix: e2e-node
+            cache_key: ${{ steps.key_names.outputs.node_key }}
+            cache_path: ./node_modules
+
+      # Get locally cached pip dependencies
+      - name: Local cache CANChat Backend
+        uses: ./.github/actions/e2e/local_cache_get
+        id: e2e-canchat-backend
+        env:
+            cache_prefix: e2e-venv
+            cache_key: ${{ steps.key_names.outputs.venv_key }}
+            cache_path: ./backend/.venv
+
+      # Get locally cached data dependencies
+      - name: Local cache CANChat Backend data cache
+        uses: ./.github/actions/e2e/local_cache_get
+        id: e2e-canchat-backend-data
+        env:
+            cache_prefix: e2e-data
+            cache_key: cache
+            cache_path: ./backend/data/cache
+
+      # Get locally cached Playwright dependencies
+      - name: Local cache Playwright
+        uses: ./.github/actions/e2e/local_cache_get
+        id: e2e-playwright
+        env:
+            cache_prefix: e2e-playwright
+            cache_key: ${{ steps.key_names.outputs.pw_key }}
+            cache_path: ./test/e2e/node_modules
+
+      - name: Install single user environment variables and files
+        env:
+           E2E_ENV_FILE: ${{ secrets.E2E_ENV_FILE }}
+        run: |
+           cp -rf ./test/e2e/resources/canchat_files/* ./
+           touch .env
+           echo "$E2E_ENV_FILE" | base64 --decode > .env 
+
+      - name: Start Docker Compose
+        run: |
+          PLAYWRIGHT_DATE=${{ steps.key_names.outputs.pw_key }} docker compose -f docker-compose.test.yaml up --detach --remove-orphans --force-recreate
+
+      - name: Wait for Qdrant to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:6333/healthz| grep 'check passed' > /dev/null; then
+              echo "Qdrant is ready."
+              exit 0
+            fi
+            echo "Waiting for Qdrant..."
+            sleep 2
+          done
+          echo "Qdrant failed to start in time" >&2
+          exit 1
+
+      - name: Wait for Backend to be ready
+        run: |
+          for i in {1..120}; do
+            if curl -s http://localhost:8080/health| grep '\"status\":true' > /dev/null; then
+              echo "Backend is ready."
+              exit 0
+            fi
+            echo "Waiting for Backend..."
+            sleep 5
+          done
+          echo "Backend failed to start in time" >&2
+          exit 1
+      - name: Environment checkpoint
+        if: ${{ success() }}
+        id: environment_checkpoint
+        run: |
+           echo "loaded=true" >> $GITHUB_OUTPUT
+
+      - name: Run Playwright tests
+        run: |          
+          docker exec playwright npx playwright test tests/releases/
+
+      - name: Copy screenshots to report  
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -d test/e2e/playwright-viz ]; then
+            cp -r test/e2e/playwright-viz test/e2e/playwright-report/images
+          fi
+
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ steps.timestamps.outputs.timestamp }}
+          path: ./test/e2e/playwright-report/
+          retention-days: 30
+
+      # Get locally cached npm dependencies
+      - name: Post local cache CANChat Frontend
+        uses: ./.github/actions/e2e/local_cache_set
+        if: ${{ success() || steps.environment_checkpoint.outputs.loaded == 'true' }}
+        env:
+            cache_prefix: e2e-node
+            cache_key: ${{ steps.key_names.outputs.node_key }}
+            cache_path: ./node_modules
+
+      - name: Post local cache CANChat Backend
+        uses: ./.github/actions/e2e/local_cache_set
+        if: ${{ success() || steps.environment_checkpoint.outputs.loaded == 'true' }}
+        env:
+            cache_prefix: e2e-venv
+            cache_key: ${{ steps.key_names.outputs.venv_key }}
+            cache_path: ./backend/.venv
+
+      - name: Post local cache Playwright
+        uses: ./.github/actions/e2e/local_cache_set
+        if: ${{ success() || steps.environment_checkpoint.outputs.loaded == 'true' }}
+        env:
+            cache_prefix: e2e-playwright
+            cache_key: ${{ steps.key_names.outputs.pw_key }}
+            cache_path: ./test/e2e/node_modules
+
+      - name: Post cache CANChat Backend data cache
+        uses: ./.github/actions/e2e/local_cache_set
+        if: ${{ success() || steps.environment_checkpoint.outputs.loaded == 'true' }}
+        env:
+            cache_prefix: e2e-data
+            cache_key: cache
+            cache_path: ./backend/data/cache    
+
+      - name: Post Docker Compose
+        if: ${{ always() }}
+        run: |
+          docker compose -f docker-compose.test.yaml down

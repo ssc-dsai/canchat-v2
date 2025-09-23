@@ -90,5 +90,6 @@ setup('authenticate', async ({ page }) => {
     await page.getByText('Sign Out').click();
   }
 
+  await page.screenshot({ path: 'playwright-viz/auth_fail.png', fullPage: true });
 
 });
