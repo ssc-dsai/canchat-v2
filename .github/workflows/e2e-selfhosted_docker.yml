@@ -3,7 +3,9 @@ name: Build Cache and Run E2E Tests (self-hosted)
 on:
   workflow_dispatch:
   push:
-
+    branches:
+      - dev
+      - chat-718
 
 jobs:
   tests:
@@ -30,7 +32,6 @@ jobs:
         run: |
            chmod +x ./test/e2e/environment/e2e-entrypoint.sh
            mkdir -p "$CACHE_BASE"
-           apt update && apt install rsync -y
           
       - name: Get timestamps
         id: timestamps
