@@ -325,7 +325,11 @@
 										>
 									{/if}
 									{#each languages as language}
-										<option value={language.code} class="text-gray-900" selected={banner.lang===language.code}>
+										<option
+											value={language.code}
+											class="text-gray-900"
+											selected={banner.lang === language.code}
+										>
 											{$i18n.t(language.code)}
 										</option>
 									{/each}
