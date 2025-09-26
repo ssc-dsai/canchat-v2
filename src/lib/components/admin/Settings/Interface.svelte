@@ -299,7 +299,7 @@
 						<div class=" flex justify-between">
 							<div class="flex flex-row flex-1 border rounded-xl dark:border-gray-800">
 								<select
-									class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
+									class="w-fit rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
 									bind:value={banner.type}
 									required
 								>
@@ -315,7 +315,7 @@
 								</select>
 
 								<select
-									class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
+									class="w-fit rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
 									bind:value={banner.lang}
 									required
 								>
@@ -325,7 +325,7 @@
 										>
 									{/if}
 									{#each languages as language}
-										<option value={language.code} class="text-gray-900">
+										<option value={language.code} class="text-gray-900" selected={banner.lang===language.code}>
 											{$i18n.t(language.code)}
 										</option>
 									{/each}
