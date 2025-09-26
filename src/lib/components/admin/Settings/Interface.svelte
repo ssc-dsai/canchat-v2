@@ -38,6 +38,7 @@
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
+	let bannerTypes: string[] = ['Info', 'Warning', 'Error', 'Success'];
 
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
@@ -308,10 +309,14 @@
 											>{$i18n.t('Type')}</option
 										>
 									{/if}
-									<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
-									<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
-									<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
-									<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
+
+									{#each bannerTypes as btype}
+										<option
+											value={btype.toLowerCase()}
+											class="text-gray-900"
+											selected={btype === banner.type}>{$i18n.t(btype)}</option
+										>
+									{/each}
 								</select>
 
 								<select
