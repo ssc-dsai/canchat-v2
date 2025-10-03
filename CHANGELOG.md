@@ -8,19 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.7-ccv2-1.8.0] - 2025-10-03
 
 ### Added
-- **⏳ Temporal Context in Query Processing**: Enhance query processing by incorporating temporal context and improving logging.
-- **🌐 Wiki-Grounding: Query Locking**: Implement query-specific locks to prevent concurrent processing of identical queries.
-- **🤖 Wiki-Grounding: Enabling Multiple Rerankers**: Enable the running of multiple rerankers for Wiki grounding processes.
-- **🔒 Wiki-Grounding: Concurrency Control**: Implement concurrency control and provide new configuration options.
-- **💻 Metrics Export**: Add functionality for exporting metrics data and logs.
+- **🤖 Wiki-Grounding: Enabling Multiple Rerankers**: Enabled the running of multiple rerankers for Wiki grounding processes.
+- **🔒 Wiki-Grounding: Concurrency Control**: Implemented concurrency control and provide new configuration options.
+- **💻 Metrics Export**: Added functionality for exporting metrics data and logs.
+- **🔗 Group Assignment & Management**: Implemented domain-based group assignment and management
 
 ### Changed
-- **🖇️ Wiki-Grounding: Lazy Initialization**: Refactor WikiSearchGrounder to use lazy initialization and implement ThreadPoolExecutor for reranking.
-- **⚙️ UI Defaults**: Set "Advanced Params" collapsible to closed by default in Controls.
-- **📋 Sidebar Refactoring**: Optimized chat list initialization and updated React components.
+- **🖇️ Wiki-Grounding: Lazy Initialization**: Refactored WikiSearchGrounder to use lazy initialization and implement ThreadPoolExecutor for reranking.
+- **⚙️ Advanced Params UI Defaults**: Setted "Advanced Params" collapsible to closed by default in Controls.
 
 ### Fixed
-- **⚙️ Feature Toggles**: Prevent Web Search and Wiki Grounding functionalities from being enabled simultaneously.
+- **⚙️ Feature Toggles**: Prevented Web Search and Wiki Grounding functionalities from being enabled simultaneously.
+- **📋 Chat Items Instant Removal**: Deleted Chat Items now disappears immediately upon deletion.
 
 ### Removed
 - **🌐 Wiki-Grounding: Configurations**: Removed unnecessary configurations.
