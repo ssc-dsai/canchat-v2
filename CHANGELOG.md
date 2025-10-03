@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.8.0] - 2025-10-03
+
+### Added
+- **⏳ Temporal Context in Query Processing**: Enhance query processing by incorporating temporal context and improving logging.
+- **🌐 Wiki-Grounding: Query Locking**: Implement query-specific locks to prevent concurrent processing of identical queries.
+- **🤖 Wiki-Grounding: Enabling Multiple Rerankers**: Enable the running of multiple rerankers for Wiki grounding processes.
+- **🔒 Wiki-Grounding: Concurrency Control**: Implement concurrency control and provide new configuration options.
+- **💻 Metrics Export**: Add functionality for exporting metrics data and logs.
+
+### Changed
+- **🖇️ Wiki-Grounding: Lazy Initialization**: Refactor WikiSearchGrounder to use lazy initialization and implement ThreadPoolExecutor for reranking.
+- **⚙️ UI Defaults**: Set "Advanced Params" collapsible to closed by default in Controls.
+- **📋 Sidebar Refactoring**: Optimized chat list initialization and updated React components.
+
+### Fixed
+- **⚙️ Feature Toggles**: Prevent Web Search and Wiki Grounding functionalities from being enabled simultaneously.
+
+### Removed
+- **🌐 Wiki-Grounding: Configurations**: Removed unnecessary configurations.
+- **🔧 Build Optimization**: Removed unused hatch build configurations to allow improvements with `uv`.
+- **🔗 Dependency Clean-up**: Removed the unused `torch` dependency from requirements.
+
 ## [0.5.7-ccv2-1.7.1] - 2025-09-22
 
 ### Enhanced
