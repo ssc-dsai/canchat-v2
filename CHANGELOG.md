@@ -8,20 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.7-ccv2-1.8.0] - 2025-10-03
 
 ### Added
+
 - **🤖 Wiki-Grounding: Enabling Multiple Rerankers**: Enabled the running of multiple rerankers for Wiki grounding processes.
 - **🔒 Wiki-Grounding: Concurrency Control**: Implemented concurrency control and provide new configuration options.
 - **💻 Metrics Export**: Added functionality for exporting metrics data and logs.
 - **🔗 Group Assignment & Management**: Implemented domain-based group assignment and management
 
 ### Changed
+
 - **🖇️ Wiki-Grounding: Lazy Initialization**: Refactored WikiSearchGrounder to use lazy initialization and implement ThreadPoolExecutor for reranking.
 - **⚙️ Advanced Params UI Defaults**: Setted "Advanced Params" collapsible to closed by default in Controls.
 
 ### Fixed
+
 - **⚙️ Feature Toggles**: Prevented Web Search and Wiki Grounding functionalities from being enabled simultaneously.
 - **📋 Chat Items Instant Removal**: Deleted Chat Items now disappears immediately upon deletion.
 
 ### Removed
+
 - **🌐 Wiki-Grounding: Configurations**: Removed unnecessary configurations.
 - **🔧 Build Optimization**: Removed unused hatch build configurations to allow improvements with `uv`.
 - **🔗 Dependency Clean-up**: Removed the unused `torch` dependency from requirements.
@@ -1865,7 +1869,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🔗 Built-in LiteLLM Proxy**: Now includes LiteLLM proxy within Open WebUI for enhanced functionality.
-
   - Easily integrate existing LiteLLM configurations using `-v /path/to/config.yaml:/app/backend/data/litellm/config.yaml` flag.
   - When utilizing Docker container to run Open WebUI, ensure connections to localhost use `host.docker.internal`.
 
