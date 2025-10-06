@@ -21,6 +21,7 @@ class MessageMetric(Base):
     completion_tokens = Column(BigInteger)
     prompt_tokens = Column(BigInteger)
     total_tokens = Column(BigInteger)
+    chat_id = Column(Text, nullable=True)
     created_at = Column(BigInteger)
 
 
@@ -32,6 +33,7 @@ class MessageMetricsModel(BaseModel):
     completion_tokens: float
     prompt_tokens: float
     total_tokens: float
+    chat_id: Optional[str] = None
     created_at: int
 
 
@@ -42,7 +44,7 @@ class UsageModel(BaseModel):
 
 
 class MessageMetricsTable:
-    def insert_new_metrics(self, user: dict, model: str, usage: dict):
+    def insert_new_metrics(self, user: dict, model: str, usage: dict, chat_id: Optional[str] = None):
         with get_db() as db:
             id = str(uuid.uuid4())
             ts = int(time.time())
@@ -57,6 +59,7 @@ class MessageMetricsTable:
                     "completion_tokens": tokens.completion_tokens,
                     "prompt_tokens": tokens.prompt_tokens,
                     "total_tokens": tokens.total_tokens,
+                    "chat_id": chat_id,
                     "created_at": ts,
                 }
             )

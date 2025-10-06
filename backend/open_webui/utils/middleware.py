@@ -24,6 +24,7 @@ from starlette.responses import Response, StreamingResponse
 
 from open_webui.models.chats import Chats
 from open_webui.models.users import Users
+from open_webui.models.message_metrics import MessageMetrics
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
@@ -1617,6 +1618,31 @@ async def process_chat_response(
                                         },
                                     )
                                 else:
+                                    usage = data.get("usage", {}) 
+                                    if usage:
+                                        model_used = (
+                                            data["model"]
+                                            or metadata["selected_model_id"]
+                                            or form_data["model"]
+                                        )
+                                        print("USAGE:", usage)
+                                        print("model_used", model_used)
+                                        print("data_usage", data["usage"])
+                                        print("chat_id", metadata.get("chat_id"))
+                                        MessageMetrics.insert_new_metrics(
+                                            user,
+                                            model_used,
+                                            data["usage"],
+                                            metadata.get("chat_id"),
+                                        )
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": {
+                                                    "usage": usage,
+                                                },
+                                            }
+                                        )
                                     choices = data.get("choices", [])
                                     if not choices:
                                         error = data.get("error", {})
@@ -1626,16 +1652,6 @@ async def process_chat_response(
                                                     "type": "chat:completion",
                                                     "data": {
                                                         "error": error,
-                                                    },
-                                                }
-                                            )
-                                        usage = data.get("usage", {})
-                                        if usage:
-                                            await event_emitter(
-                                                {
-                                                    "type": "chat:completion",
-                                                    "data": {
-                                                        "usage": usage,
                                                     },
                                                 }
                                             )
