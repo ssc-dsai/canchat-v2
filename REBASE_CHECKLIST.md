@@ -52,22 +52,18 @@ This checklist categorizes the changes, ensuring a structured testing process fo
 #### **Dashboard Features**
 - [ ] **Model Analysis Tabs**: Verify tabs and real-time updates based on model analysis.
 - [ ] **Usage Metrics for Admins**: Confirm functional admin dashboard for user tracking.
+- [ ] Verify consistency of timestamps in message metrics.
+- [ ] Test date range selection on metrics graphs for flexible analysis.
 - [ ] **Metrics Graphs Accuracy**:
   - Historical user enrollment graphs.
   - Inter-prompt latency histogram.
   - Daily tokens and prompt tracking.
 
-#### **Date Range Selection**
-- [ ] Test date range selection on metrics graphs for flexible analysis.
-
-#### **Message Metrics Timestamp Standardization**
-- [ ] Verify consistency of timestamps in message metrics.
-
 ---
 
 ### **6. Role and Multitenancy Enhancements**
 #### **Roles**
-- [ ] **Analysis and Global Analysis Roles**: Confirm new roles allow appropriate metrics dashboard access.
+- [x] **Analysis and Global Analysis Roles**: Confirm new roles allow appropriate metrics dashboard access.
 - [x] **Role Updates**: Verify proper functionality when setting a user's role via the Edit User modal.
 
 #### **User Domain**
@@ -115,7 +111,7 @@ This checklist categorizes the changes, ensuring a structured testing process fo
   - [x] Confirm accurate default model selection for new chats.
   - [ ] Validate corrected issues with date ranges in metrics graphs.
   - [x] Verify JSON exportation has been removed for chats, folders, and archived items.
-  - [ ] Confirm proper handling of the tiktoken dependency.
+  - [x] Confirm proper handling of the tiktoken dependency.
   - [ ] Test malformed Brave search URLs are logged/handled appropriately.
 
 ---
