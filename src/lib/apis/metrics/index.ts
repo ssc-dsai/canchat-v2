@@ -1,16 +1,16 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import axiosInstance from '$lib/axiosInstance';
 
 export const getDomains = async (token: string): Promise<string[]> => {
 	try {
 		const [usersRes, metricsRes] = await Promise.all([
-			fetch(`${WEBUI_API_BASE_URL}/users/domains`, {
+			axiosInstance(`${WEBUI_API_BASE_URL}/users/domains`, {
 				method: 'GET',
 				headers: {
 					Accept: 'application/json',
 					authorization: `Bearer ${token}`
 				}
 			}),
-			fetch(`${WEBUI_API_BASE_URL}/metrics/domains`, {
+			axiosInstance(`${WEBUI_API_BASE_URL}/metrics/domains`, {
 				method: 'GET',
 				headers: {
 					Accept: 'application/json',
@@ -51,7 +51,7 @@ export const getTotalUsers = async (token: string, domain?: string): Promise<num
 			? `${WEBUI_API_BASE_URL}/users/count?domain=${encodeURIComponent(domain)}`
 			: `${WEBUI_API_BASE_URL}/users/count`;
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -78,7 +78,7 @@ export const getDailyUsers = async (token: string, domain?: string): Promise<num
 		const url = domain
 			? `${WEBUI_API_BASE_URL}/users/daily/count?domain=${encodeURIComponent(domain)}`
 			: `${WEBUI_API_BASE_URL}/users/daily/count`;
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -112,7 +112,7 @@ export const getHistoricalUsers = async (
 			url += `&domain=${encodeURIComponent(domain)}`;
 		}
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -147,7 +147,7 @@ export const getHistoricalDailyUsers = async (
 			url += `&domain=${encodeURIComponent(domain)}`;
 		}
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -177,7 +177,7 @@ export const getTotalPrompts = async (token: string, domain?: string): Promise<n
 		const url = domain
 			? `${WEBUI_API_BASE_URL}/metrics/prompts?domain=${encodeURIComponent(domain)}`
 			: `${WEBUI_API_BASE_URL}/metrics/prompts`;
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -205,7 +205,7 @@ export const getDailyPrompts = async (token: string, domain?: string): Promise<n
 		const url = domain
 			? `${WEBUI_API_BASE_URL}/metrics/daily/prompts?domain=${encodeURIComponent(domain)}`
 			: `${WEBUI_API_BASE_URL}/metrics/daily/prompts`;
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -232,7 +232,7 @@ export const getTotalTokens = async (token: string, domain?: string): Promise<nu
 		const url = domain
 			? `${WEBUI_API_BASE_URL}/metrics/tokens?domain=${encodeURIComponent(domain)}`
 			: `${WEBUI_API_BASE_URL}/metrics/tokens`;
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -259,7 +259,7 @@ export const getDailyTokens = async (token: string, domain?: string): Promise<nu
 		const url = domain
 			? `${WEBUI_API_BASE_URL}/metrics/daily/tokens?domain=${encodeURIComponent(domain)}`
 			: `${WEBUI_API_BASE_URL}/metrics/daily/tokens`;
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -293,7 +293,7 @@ export const getHistoricalPrompts = async (
 			url += `&domain=${encodeURIComponent(domain)}`;
 		}
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -328,7 +328,7 @@ export const getHistoricalTokens = async (
 			url += `&domain=${encodeURIComponent(domain)}`;
 		}
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -365,7 +365,7 @@ function generateFallbackDates(days: number = 7): Array<{ date: string; count: n
 
 export const getModels = async (token: string): Promise<string[]> => {
 	try {
-		const res = await fetch(`${WEBUI_API_BASE_URL}/metrics/models`, {
+		const res = await axiosInstance(`${WEBUI_API_BASE_URL}/metrics/models`, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -405,7 +405,7 @@ export const getModelPrompts = async (
 			url += `?${params.toString()}`;
 		}
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -448,7 +448,7 @@ export const getModelDailyPrompts = async (
 			url += `?${params.toString()}`;
 		}
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -489,7 +489,7 @@ export const getModelHistoricalPrompts = async (
 			url += `&domain=${encodeURIComponent(domain)}`;
 		}
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -533,7 +533,7 @@ export const getRangeMetrics = async (
 			url += `&model=${encodeURIComponent(model)}`;
 		}
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -578,7 +578,7 @@ export const getInterPromptLatencyHistogram = async (
 			url += `?${params.toString()}`;
 		}
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -615,7 +615,7 @@ export const exportMetricsData = async (
 			? `${WEBUI_API_BASE_URL}/metrics/export?start_date=${startDate}&end_date=${endDate}&domain=${domain}`
 			: `${WEBUI_API_BASE_URL}/metrics/export?start_date=${startDate}&end_date=${endDate}`;
 
-		const res = await fetch(url, {
+		const res = await axiosInstance(url, {
 			method: 'POST',
 			headers: {
 				Accept: 'text/csv',
@@ -637,7 +637,7 @@ export const exportMetricsData = async (
 
 export const getExportLogs = async (token: string): Promise<any[]> => {
 	try {
-		const res = await fetch(`${WEBUI_API_BASE_URL}/metrics/export/logs`, {
+		const res = await axiosInstance(`${WEBUI_API_BASE_URL}/metrics/export/logs`, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',

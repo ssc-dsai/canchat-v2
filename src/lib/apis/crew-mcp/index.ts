@@ -1,9 +1,10 @@
-import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import axiosInstance from "$lib/axiosInstance";
+import { WEBUI_API_BASE_URL } from "$lib/constants";
 
 export const getCrewMCPStatus = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/status`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/crew-mcp/status`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -12,8 +13,7 @@ export const getCrewMCPStatus = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -30,7 +30,7 @@ export const getCrewMCPStatus = async (token: string = '') => {
 export const getCrewMCPTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/tools`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/crew-mcp/tools`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -39,8 +39,7 @@ export const getCrewMCPTools = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -64,24 +63,22 @@ export const queryCrewMCP = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			query: query,
 			model: model,
 			selected_tools: selectedTools,
 			chat_id: chatId,
 			session_id: sessionId
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;

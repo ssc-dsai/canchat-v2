@@ -1,17 +1,17 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getGravatarUrl = async (email: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/gravatar?email=${email}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/gravatar?email=${email}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -25,18 +25,16 @@ export const getGravatarUrl = async (email: string) => {
 export const formatPythonCode = async (code: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/code/format`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/code/format`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({
+		data: {
 			code: code
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -58,19 +56,17 @@ export const formatPythonCode = async (code: string) => {
 export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 	let error = null;
 
-	const blob = await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
+	const blob = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/pdf`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({
+		data: {
 			title: title,
 			messages: messages
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.blob();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -84,18 +80,16 @@ export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 export const getHTMLFromMarkdown = async (md: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/markdown`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/markdown`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({
+		data: {
 			md: md
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -109,18 +103,12 @@ export const getHTMLFromMarkdown = async (md: string) => {
 export const downloadDatabase = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/db/download`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/db/download`, {
 		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		responseType: 'blob'
 	})
 		.then(async (response) => {
-			if (!response.ok) {
-				throw await response.json();
-			}
-			return response.blob();
+			return response.data
 		})
 		.then((blob) => {
 			const url = window.URL.createObjectURL(blob);
@@ -145,18 +133,12 @@ export const downloadDatabase = async (token: string) => {
 export const downloadLiteLLMConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/litellm/config`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/litellm/config`, {
 		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		responseType: 'blob'
 	})
 		.then(async (response) => {
-			if (!response.ok) {
-				throw await response.json();
-			}
-			return response.blob();
+			return response.data;
 		})
 		.then((blob) => {
 			const url = window.URL.createObjectURL(blob);

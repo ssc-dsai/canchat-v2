@@ -1,3 +1,4 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const createNewKnowledge = async (
@@ -8,22 +9,20 @@ export const createNewKnowledge = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/create`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			name: name,
 			description: description,
 			access_control: accessControl
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -41,7 +40,7 @@ export const createNewKnowledge = async (
 export const getKnowledgeBases = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -50,8 +49,7 @@ export const getKnowledgeBases = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -72,7 +70,7 @@ export const getKnowledgeBases = async (token: string = '') => {
 export const getKnowledgeBaseList = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/list`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/list`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -81,8 +79,7 @@ export const getKnowledgeBaseList = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -103,7 +100,7 @@ export const getKnowledgeBaseList = async (token: string = '') => {
 export const getKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/${id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -112,8 +109,7 @@ export const getKnowledgeById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -142,23 +138,21 @@ type KnowledgeUpdateForm = {
 export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/${id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
 			data: form?.data ? form.data : undefined,
 			access_control: form.access_control
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -180,20 +174,18 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 export const addFileToKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/add`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/add`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			file_id: fileId
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -215,20 +207,18 @@ export const addFileToKnowledgeById = async (token: string, id: string, fileId: 
 export const updateFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			file_id: fileId
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -250,20 +240,18 @@ export const updateFileFromKnowledgeById = async (token: string, id: string, fil
 export const removeFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/remove`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/remove`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			file_id: fileId
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -285,7 +273,7 @@ export const removeFileFromKnowledgeById = async (token: string, id: string, fil
 export const resetKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/reset`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/${id}/reset`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -294,8 +282,7 @@ export const resetKnowledgeById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -317,7 +304,7 @@ export const resetKnowledgeById = async (token: string, id: string) => {
 export const deleteKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/delete`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/knowledge/${id}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -326,8 +313,7 @@ export const deleteKnowledgeById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
