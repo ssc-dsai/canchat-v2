@@ -1,22 +1,21 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import type { Banner } from '$lib/types';
 
 export const importConfig = async (token: string, config) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/import`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/import`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			config: config
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -34,7 +33,7 @@ export const importConfig = async (token: string, config) => {
 export const exportConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/export`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/export`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -42,8 +41,7 @@ export const exportConfig = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -61,7 +59,7 @@ export const exportConfig = async (token: string) => {
 export const getModelsConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/models`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -69,8 +67,7 @@ export const getModelsConfig = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -88,19 +85,17 @@ export const getModelsConfig = async (token: string) => {
 export const setModelsConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/models`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			...config
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -118,19 +113,17 @@ export const setModelsConfig = async (token: string, config: object) => {
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/suggestions`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/suggestions`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			suggestions: promptSuggestions
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -148,7 +141,7 @@ export const setDefaultPromptSuggestions = async (token: string, promptSuggestio
 export const getBanners = async (token: string): Promise<Banner[]> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/banners`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/banners`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -156,8 +149,7 @@ export const getBanners = async (token: string): Promise<Banner[]> => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -175,19 +167,17 @@ export const getBanners = async (token: string): Promise<Banner[]> => {
 export const setBanners = async (token: string, banners: Banner[]) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/banners`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/banners`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			banners: banners
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);

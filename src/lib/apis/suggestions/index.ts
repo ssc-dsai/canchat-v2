@@ -1,4 +1,4 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import axiosInstance from '$lib/axiosInstance';
 
 type SuggestionItem = {
 	email: string;
@@ -18,7 +18,7 @@ export const createSuggestion = async (token: string, suggestion: SuggestionItem
 		});
 	}
 
-	return await fetch(`${WEBUI_API_BASE_URL}/jira/task`, {
+	return await axiosInstance(`${WEBUI_API_BASE_URL}/jira/task`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

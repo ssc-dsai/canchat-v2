@@ -1,3 +1,4 @@
+import axiosInstance from '$lib/axiosInstance';
 import { MCP_API_BASE_URL } from '$lib/constants';
 
 export const verifyMCPConnection = async (
@@ -7,21 +8,19 @@ export const verifyMCPConnection = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/verify`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/verify`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({
+		data: {
 			url,
 			key
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -38,17 +37,12 @@ export const verifyMCPConnection = async (
 export const getMCPConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/config`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/config`, {
 		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -65,18 +59,17 @@ export const getMCPConfig = async (token: string = '') => {
 export const updateMCPConfig = async (token: string = '', config: object) => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/config/update`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify(config)
+		data: config
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -93,17 +86,12 @@ export const updateMCPConfig = async (token: string = '', config: object) => {
 export const getMCPURLs = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/urls`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/urls`, {
 		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -120,20 +108,18 @@ export const getMCPURLs = async (token: string = '') => {
 export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/urls/update`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/urls/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({
+		data: {
 			urls
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -150,17 +136,12 @@ export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 export const getMCPTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/tools`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/tools`, {
 		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -181,21 +162,19 @@ export const callMCPTool = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/tools/call`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/tools/call`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({
+		data: {
 			tool_name,
 			parameters
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -212,17 +191,12 @@ export const callMCPTool = async (
 export const getBuiltinServers = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/builtin`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/builtin`, {
 		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -239,7 +213,7 @@ export const getBuiltinServers = async (token: string = '') => {
 export const restartBuiltinServer = async (token: string = '', serverName: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/builtin/${serverName}/restart`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/builtin/${serverName}/restart`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -248,8 +222,7 @@ export const restartBuiltinServer = async (token: string = '', serverName: strin
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -268,17 +241,12 @@ export const restartBuiltinServer = async (token: string = '', serverName: strin
 export const getExternalServers = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/external`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external`, {
 		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -295,18 +263,17 @@ export const getExternalServers = async (token: string = '') => {
 export const createExternalServer = async (token: string = '', serverData: object) => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/external`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify(serverData)
+		data: serverData
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -323,17 +290,12 @@ export const createExternalServer = async (token: string = '', serverData: objec
 export const getExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
 		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -354,18 +316,17 @@ export const updateExternalServer = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
 		method: 'PUT',
 		headers: {
 			Accept: 'application/json',
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify(serverData)
+		data: serverData
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -382,7 +343,7 @@ export const updateExternalServer = async (
 export const deleteExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -391,8 +352,7 @@ export const deleteExternalServer = async (token: string = '', serverId: string 
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -409,7 +369,7 @@ export const deleteExternalServer = async (token: string = '', serverId: string 
 export const startExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}/start`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}/start`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -418,8 +378,7 @@ export const startExternalServer = async (token: string = '', serverId: string =
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -436,7 +395,7 @@ export const startExternalServer = async (token: string = '', serverId: string =
 export const stopExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}/stop`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}/stop`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -445,8 +404,7 @@ export const stopExternalServer = async (token: string = '', serverId: string = 
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -463,7 +421,7 @@ export const stopExternalServer = async (token: string = '', serverId: string = 
 export const restartExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}/restart`, {
+	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}/restart`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -472,8 +430,7 @@ export const restartExternalServer = async (token: string = '', serverId: string
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;

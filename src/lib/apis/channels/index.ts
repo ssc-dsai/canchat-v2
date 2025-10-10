@@ -1,3 +1,4 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { t } from 'i18next';
 
@@ -11,18 +12,17 @@ type ChannelForm = {
 export const createNewChannel = async (token: string = '', channel: ChannelForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/create`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/channels/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ ...channel })
+		data: { ...channel }
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -43,7 +43,7 @@ export const createNewChannel = async (token: string = '', channel: ChannelForm)
 export const getChannels = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/channels/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -52,8 +52,7 @@ export const getChannels = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -74,7 +73,7 @@ export const getChannels = async (token: string = '') => {
 export const getChannelById = async (token: string = '', channel_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/channels/${channel_id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -83,8 +82,7 @@ export const getChannelById = async (token: string = '', channel_id: string) => 
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -109,18 +107,17 @@ export const updateChannelById = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ ...channel })
+		data: { ...channel }
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -141,7 +138,7 @@ export const updateChannelById = async (
 export const deleteChannelById = async (token: string = '', channel_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/delete`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/channels/${channel_id}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -150,8 +147,7 @@ export const deleteChannelById = async (token: string = '', channel_id: string) 
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -177,7 +173,7 @@ export const getChannelMessages = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await axiosInstance(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages?skip=${skip}&limit=${limit}`,
 		{
 			method: 'GET',
@@ -189,8 +185,7 @@ export const getChannelMessages = async (
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -217,7 +212,7 @@ export const getChannelThreadMessages = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await axiosInstance(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/thread?skip=${skip}&limit=${limit}`,
 		{
 			method: 'GET',
@@ -229,8 +224,7 @@ export const getChannelThreadMessages = async (
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -258,18 +252,17 @@ type MessageForm = {
 export const sendMessage = async (token: string = '', channel_id: string, message: MessageForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/post`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/post`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ ...message })
+		data: { ...message }
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -295,7 +288,7 @@ export const updateMessage = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await axiosInstance(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/update`,
 		{
 			method: 'POST',
@@ -304,12 +297,11 @@ export const updateMessage = async (
 				'Content-Type': 'application/json',
 				authorization: `Bearer ${token}`
 			},
-			body: JSON.stringify({ ...message })
+			data: { ...message }
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -335,7 +327,7 @@ export const addReaction = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await axiosInstance(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/reactions/add`,
 		{
 			method: 'POST',
@@ -344,12 +336,11 @@ export const addReaction = async (
 				'Content-Type': 'application/json',
 				authorization: `Bearer ${token}`
 			},
-			body: JSON.stringify({ name })
+			data: { name }
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -375,7 +366,7 @@ export const removeReaction = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await axiosInstance(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/reactions/remove`,
 		{
 			method: 'POST',
@@ -384,12 +375,11 @@ export const removeReaction = async (
 				'Content-Type': 'application/json',
 				authorization: `Bearer ${token}`
 			},
-			body: JSON.stringify({ name })
+			data: { name }
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -410,7 +400,7 @@ export const removeReaction = async (
 export const deleteMessage = async (token: string = '', channel_id: string, message_id: string) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await axiosInstance(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/delete`,
 		{
 			method: 'DELETE',
@@ -422,8 +412,7 @@ export const deleteMessage = async (token: string = '', channel_id: string, mess
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;

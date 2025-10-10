@@ -1,22 +1,21 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const createNewFolder = async (token: string, name: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			name: name
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -33,7 +32,7 @@ export const createNewFolder = async (token: string, name: string) => {
 export const getFolders = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -42,8 +41,7 @@ export const getFolders = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -64,7 +62,7 @@ export const getFolders = async (token: string = '') => {
 export const getFolderById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -73,8 +71,7 @@ export const getFolderById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -95,20 +92,18 @@ export const getFolderById = async (token: string, id: string) => {
 export const updateFolderNameById = async (token: string, id: string, name: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			name: name
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -133,20 +128,18 @@ export const updateFolderIsExpandedById = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/expanded`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update/expanded`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			is_expanded: isExpanded
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -167,20 +160,18 @@ export const updateFolderIsExpandedById = async (
 export const updateFolderParentIdById = async (token: string, id: string, parentId?: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/parent`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update/parent`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			parent_id: parentId
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -206,20 +197,18 @@ type FolderItems = {
 export const updateFolderItemsById = async (token: string, id: string, items: FolderItems) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/items`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update/items`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			items: items
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -240,7 +229,7 @@ export const updateFolderItemsById = async (token: string, id: string, items: Fo
 export const deleteFolderById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -249,8 +238,7 @@ export const deleteFolderById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;

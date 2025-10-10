@@ -1,3 +1,4 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const createDomain = async (
@@ -6,18 +7,17 @@ export const createDomain = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/create`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify(domain)
+		data: domain
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -35,7 +35,7 @@ export const createDomain = async (
 export const getDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -44,8 +44,7 @@ export const getDomains = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -63,7 +62,7 @@ export const getDomains = async (token: string = '') => {
 export const getAvailableDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/available`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/available`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -72,8 +71,7 @@ export const getAvailableDomains = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -95,18 +93,17 @@ export const updateDomainById = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify(domain)
+		data: domain
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -124,7 +121,7 @@ export const updateDomainById = async (
 export const deleteDomainById = async (token: string, domainId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/delete`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -133,8 +130,7 @@ export const deleteDomainById = async (token: string, domainId: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
