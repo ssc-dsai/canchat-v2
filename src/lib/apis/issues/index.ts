@@ -1,4 +1,4 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import axiosInstance from '$lib/axiosInstance';
 
 type IssueItem = {
 	email: string;
@@ -20,7 +20,7 @@ export const createIssue = async (token: string, issue: IssueItem) => {
 		});
 	}
 
-	return await fetch(`${WEBUI_API_BASE_URL}/jira/bug`, {
+	return await axiosInstance(`${WEBUI_API_BASE_URL}/jira/bug`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

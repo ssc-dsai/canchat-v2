@@ -1,10 +1,11 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getUserPosition } from '$lib/utils';
 
 export const getUserGroups = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/groups`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/groups`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -12,8 +13,7 @@ export const getUserGroups = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -31,7 +31,7 @@ export const getUserGroups = async (token: string) => {
 export const getUserDefaultPermissions = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/default/permissions`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/default/permissions`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -39,8 +39,7 @@ export const getUserDefaultPermissions = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -58,19 +57,17 @@ export const getUserDefaultPermissions = async (token: string) => {
 export const updateUserDefaultPermissions = async (token: string, permissions: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/default/permissions`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/default/permissions`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			...permissions
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -88,20 +85,18 @@ export const updateUserDefaultPermissions = async (token: string, permissions: o
 export const updateUserRole = async (token: string, id: string, role: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/update/role`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/update/role`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			id: id,
 			role: role
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -119,7 +114,7 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 export const getUsers = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -127,8 +122,7 @@ export const getUsers = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -145,7 +139,7 @@ export const getUsers = async (token: string) => {
 
 export const getUserSettings = async (token: string) => {
 	let error = null;
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/user/settings`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -153,8 +147,7 @@ export const getUserSettings = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -172,19 +165,17 @@ export const getUserSettings = async (token: string) => {
 export const updateUserSettings = async (token: string, settings: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/user/settings/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			...settings
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -249,7 +240,7 @@ export const detectAndUpdateUserTimezone = async (token: string) => {
 export const getUserById = async (token: string, userId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/${userId}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -257,8 +248,7 @@ export const getUserById = async (token: string, userId: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -275,7 +265,7 @@ export const getUserById = async (token: string, userId: string) => {
 
 export const getUserInfo = async (token: string) => {
 	let error = null;
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/user/info`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -283,8 +273,7 @@ export const getUserInfo = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -301,7 +290,7 @@ export const getUserInfo = async (token: string) => {
 
 export const getUserRole = async (token: string) => {
 	let error = null;
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/role`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/user/role`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -309,8 +298,7 @@ export const getUserRole = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -328,19 +316,17 @@ export const getUserRole = async (token: string) => {
 export const updateUserInfo = async (token: string, info: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/user/info/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			...info
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -371,7 +357,7 @@ export const getAndUpdateUserLocation = async (token: string) => {
 export const deleteUserById = async (token: string, userId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/${userId}`, {
 		method: 'DELETE',
 		headers: {
 			'Content-Type': 'application/json',
@@ -379,8 +365,7 @@ export const deleteUserById = async (token: string, userId: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);
@@ -405,22 +390,20 @@ type UserUpdateForm = {
 export const updateUserById = async (token: string, userId: string, user: UserUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/users/${userId}/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			profile_image_url: user.profile_image_url,
 			email: user.email,
 			name: user.name,
 			password: user.password !== '' ? user.password : undefined
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			console.log(err);

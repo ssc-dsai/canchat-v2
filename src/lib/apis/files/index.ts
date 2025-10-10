@@ -1,3 +1,4 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const uploadFile = async (token: string, file: File) => {
@@ -5,17 +6,16 @@ export const uploadFile = async (token: string, file: File) => {
 	data.append('file', file);
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/files/`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: data
+		data: data
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -33,7 +33,7 @@ export const uploadFile = async (token: string, file: File) => {
 export const uploadDir = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/upload/dir`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/files/upload/dir`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -41,8 +41,7 @@ export const uploadDir = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -59,7 +58,7 @@ export const uploadDir = async (token: string) => {
 export const getFiles = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/files/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -68,8 +67,7 @@ export const getFiles = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -90,7 +88,7 @@ export const getFiles = async (token: string = '') => {
 export const getFileById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/files/${id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -99,8 +97,7 @@ export const getFileById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -121,20 +118,18 @@ export const getFileById = async (token: string, id: string) => {
 export const updateFileDataContentById = async (token: string, id: string, content: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/data/content/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/files/${id}/data/content/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			content: content
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -155,16 +150,15 @@ export const updateFileDataContentById = async (token: string, id: string, conte
 export const getFileContentById = async (id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/content`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/files/${id}/content`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json'
 		},
-		credentials: 'include'
+		withCredentials: true
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return await res.blob();
+			res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -183,7 +177,7 @@ export const getFileContentById = async (id: string) => {
 export const deleteFileById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/files/${id}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -192,8 +186,7 @@ export const deleteFileById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -214,7 +207,7 @@ export const deleteFileById = async (token: string, id: string) => {
 export const deleteAllFiles = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/all`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/files/all`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -223,8 +216,7 @@ export const deleteAllFiles = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;

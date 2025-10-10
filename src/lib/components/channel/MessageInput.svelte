@@ -14,7 +14,7 @@
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import { uploadFile } from '$lib/apis/files';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import axiosInstance from '$lib/axiosInstance';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';

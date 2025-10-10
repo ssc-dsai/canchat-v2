@@ -1,9 +1,10 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/config`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/config`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -12,8 +13,7 @@ export const getConfig = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -34,20 +34,18 @@ export const getConfig = async (token: string = '') => {
 export const updateConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/config`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/config`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			...config
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -78,7 +76,7 @@ export const getAllFeedbacks = async (
 		params.append('search', search.trim());
 	}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/paginated?${params}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/paginated?${params}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -87,8 +85,7 @@ export const getAllFeedbacks = async (
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -114,7 +111,7 @@ export const getFeedbacksCount = async (token: string = '', search?: string) => 
 		params.append('search', search.trim());
 	}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/count?${params}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/count?${params}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -123,8 +120,7 @@ export const getFeedbacksCount = async (token: string = '', search?: string) => 
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -146,7 +142,7 @@ export const getFeedbacksCount = async (token: string = '', search?: string) => 
 export const getAllFeedbacksLegacy = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -155,8 +151,7 @@ export const getAllFeedbacksLegacy = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -177,7 +172,7 @@ export const getAllFeedbacksLegacy = async (token: string = '') => {
 export const exportAllFeedbacks = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/export`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/export`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -186,8 +181,7 @@ export const exportAllFeedbacks = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -208,20 +202,18 @@ export const exportAllFeedbacks = async (token: string = '') => {
 export const createNewFeedback = async (token: string, feedback: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedback`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			...feedback
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -239,7 +231,7 @@ export const createNewFeedback = async (token: string, feedback: object) => {
 export const getFeedbackById = async (token: string, feedbackId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -248,8 +240,7 @@ export const getFeedbackById = async (token: string, feedbackId: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -270,20 +261,18 @@ export const getFeedbackById = async (token: string, feedbackId: string) => {
 export const updateFeedbackById = async (token: string, feedbackId: string, feedback: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			...feedback
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -301,7 +290,7 @@ export const updateFeedbackById = async (token: string, feedbackId: string, feed
 export const deleteFeedbackById = async (token: string, feedbackId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -310,8 +299,7 @@ export const deleteFeedbackById = async (token: string, feedbackId: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;

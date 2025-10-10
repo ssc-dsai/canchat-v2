@@ -1,3 +1,4 @@
+import axiosInstance from '$lib/axiosInstance';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 type PromptItem = {
@@ -10,21 +11,19 @@ type PromptItem = {
 export const createNewPrompt = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/create`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			...prompt,
 			command: `/${prompt.command}`
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -55,7 +54,7 @@ export const getPrompts = async (
 		params.append('search', search.trim());
 	}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/paginated?${params}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/paginated?${params}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -64,8 +63,7 @@ export const getPrompts = async (
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -99,7 +97,7 @@ export const getPromptList = async (
 		params.append('search', search.trim());
 	}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/list/paginated?${params}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/list/paginated?${params}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -108,8 +106,7 @@ export const getPromptList = async (
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -135,7 +132,7 @@ export const getPromptsCount = async (token: string = '', search?: string) => {
 		params.append('search', search.trim());
 	}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/count?${params}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/count?${params}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -144,8 +141,7 @@ export const getPromptsCount = async (token: string = '', search?: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -167,7 +163,7 @@ export const getPromptsCount = async (token: string = '', search?: string) => {
 export const getPromptsLegacy = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -176,8 +172,7 @@ export const getPromptsLegacy = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -198,7 +193,7 @@ export const getPromptsLegacy = async (token: string = '') => {
 export const getPromptListLegacy = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/list`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/list`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -207,8 +202,7 @@ export const getPromptListLegacy = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -232,7 +226,7 @@ export const getPromptByCommand = async (token: string, command: string) => {
 	// URL encode the command to properly handle special characters like question marks
 	const encodedCommand = encodeURIComponent(command);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -241,8 +235,7 @@ export const getPromptByCommand = async (token: string, command: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -267,21 +260,19 @@ export const updatePromptByCommand = async (token: string, prompt: PromptItem) =
 	// URL encode the command to properly handle special characters like question marks
 	const encodedCommand = encodeURIComponent(prompt.command);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
+		data: {
 			...prompt,
 			command: `/${prompt.command}`
-		})
-	})
+		}})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
@@ -308,7 +299,7 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 	// URL encode the command to properly handle special characters like question marks
 	const encodedCommand = encodeURIComponent(command);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/delete`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -317,8 +308,7 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data
 		})
 		.then((json) => {
 			return json;
