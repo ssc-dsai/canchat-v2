@@ -1,10 +1,10 @@
 import axiosInstance from '$lib/axiosInstance';
-import { RETRIEVAL_API_BASE_URL } from '$lib/constants';
+import { RETRIEVAL_API_BASE_PATH } from '$lib/constants';
 
 export const getRAGConfig = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/config`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/config`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -52,7 +52,7 @@ type RAGConfigForm = {
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/config/update`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/config/update`, {
 		method: 'POST',
 		data: {
 			...payload
@@ -77,7 +77,7 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 export const getRAGTemplate = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/template`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/template`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -99,7 +99,7 @@ export const getRAGTemplate = async (token: string) => {
 export const getQuerySettings = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/query/settings`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/query/settings`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -127,7 +127,7 @@ type QuerySettings = {
 export const updateQuerySettings = async (token: string, settings: QuerySettings) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/query/settings/update`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/query/settings/update`, {
 		method: 'POST',
 		data: {
 			...settings
@@ -152,7 +152,7 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 export const getEmbeddingConfig = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/embedding`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/embedding`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -186,7 +186,7 @@ type EmbeddingModelUpdateForm = {
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/embedding/update`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/embedding/update`, {
 		method: 'POST',
 		data: {
 			...payload
@@ -211,7 +211,7 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 export const getRerankingConfig = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/reranking`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/reranking`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -237,7 +237,7 @@ type RerankingModelUpdateForm = {
 export const updateRerankingConfig = async (token: string, payload: RerankingModelUpdateForm) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/reranking/update`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/reranking/update`, {
 		method: 'POST',
 		data: {
 			...payload
@@ -272,7 +272,7 @@ export const processFile = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/process/file`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/process/file`, {
 		method: 'POST',
 		data: {
 			file_id: file_id,
@@ -298,7 +298,7 @@ export const processFile = async (
 export const processYoutubeVideo = async (token: string, url: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/process/youtube`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/process/youtube`, {
 		method: 'POST',
 		data: {
 			url: url
@@ -323,7 +323,7 @@ export const processYoutubeVideo = async (token: string, url: string) => {
 export const processWeb = async (token: string, collection_name: string, url: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/process/web`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/process/web`, {
 		method: 'POST',
 		data: {
 			url: url,
@@ -353,7 +353,7 @@ export const processWebSearch = async (
 ): Promise<SearchDocument | null> => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/process/web/search`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/process/web/search`, {
 		method: 'POST',
 		data: {
 			query,
@@ -384,7 +384,7 @@ export const queryDoc = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/query/doc`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/query/doc`, {
 		method: 'POST',
 		data: {
 			collection_name: collection_name,
@@ -415,7 +415,7 @@ export const queryCollection = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/query/collection`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/query/collection`, {
 		method: 'POST',
 		data: {
 			collection_names: collection_names,
@@ -441,7 +441,7 @@ export const queryCollection = async (
 export const resetUploadDir = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/reset/uploads`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/reset/uploads`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -466,7 +466,7 @@ export const resetUploadDir = async (token: string) => {
 export const resetVectorDB = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/reset/db`, {
+	const res = await axiosInstance(`${RETRIEVAL_API_BASE_PATH}/reset/db`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

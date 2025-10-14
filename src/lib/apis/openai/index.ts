@@ -1,9 +1,9 @@
-import { OPENAI_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { OPENAI_API_BASE_PATH, WEBUI_API_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/config`, {
+	const res = await fetch(`${OPENAI_API_BASE_PATH}/config`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -42,7 +42,7 @@ type OpenAIConfig = {
 export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfig) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/config/update`, {
+	const res = await fetch(`${OPENAI_API_BASE_PATH}/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -77,7 +77,7 @@ export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfi
 export const getOpenAIUrls = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/urls`, {
+	const res = await fetch(`${OPENAI_API_BASE_PATH}/urls`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -109,7 +109,7 @@ export const getOpenAIUrls = async (token: string = '') => {
 export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/urls/update`, {
+	const res = await fetch(`${OPENAI_API_BASE_PATH}/urls/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -144,7 +144,7 @@ export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 export const getOpenAIKeys = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/keys`, {
+	const res = await fetch(`${OPENAI_API_BASE_PATH}/keys`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -176,7 +176,7 @@ export const getOpenAIKeys = async (token: string = '') => {
 export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/keys/update`, {
+	const res = await fetch(`${OPENAI_API_BASE_PATH}/keys/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -212,7 +212,7 @@ export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 	let error = null;
 
 	const res = await fetch(
-		`${OPENAI_API_BASE_URL}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}`,
+		`${OPENAI_API_BASE_PATH}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}`,
 		{
 			method: 'GET',
 			headers: {
@@ -245,7 +245,7 @@ export const verifyOpenAIConnection = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/verify`, {
+	const res = await fetch(`${OPENAI_API_BASE_PATH}/verify`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -341,7 +341,7 @@ export const synthesizeOpenAISpeech = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/audio/speech`, {
+	const res = await fetch(`${OPENAI_API_BASE_PATH}/audio/speech`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
