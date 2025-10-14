@@ -5,12 +5,7 @@ export const getModels = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/models/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -35,12 +30,7 @@ export const getBaseModels = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/models/base`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -90,14 +80,12 @@ export const getModelById = async (token: string, id: string) => {
 	const searchParams = new URLSearchParams();
 	searchParams.append('id', id);
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/models/model?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+	const res = await axiosInstance(
+		`${WEBUI_API_BASE_PATH}/models/model?${searchParams.toString()}`,
+		{
+			method: 'GET'
 		}
-	})
+	)
 		.then(async (res) => {
 			return res.data;
 		})
@@ -127,12 +115,7 @@ export const toggleModelById = async (token: string, id: string) => {
 	const res = await axiosInstance(
 		`${WEBUI_API_BASE_PATH}/models/model/toggle?${searchParams.toString()}`,
 		{
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+			method: 'POST'
 		}
 	)
 		.then(async (res) => {
@@ -197,12 +180,7 @@ export const deleteModelById = async (token: string, id: string) => {
 	const res = await axiosInstance(
 		`${WEBUI_API_BASE_PATH}/models/model/delete?${searchParams.toString()}`,
 		{
-			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+			method: 'DELETE'
 		}
 	)
 		.then(async (res) => {
@@ -229,12 +207,7 @@ export const deleteAllModels = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/models/delete/all`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'DELETE'
 	})
 		.then(async (res) => {
 			return res.data;

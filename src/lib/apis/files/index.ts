@@ -59,12 +59,7 @@ export const getFiles = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/files/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -89,12 +84,7 @@ export const getFileById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/files/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -174,12 +164,7 @@ export const deleteFileById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/files/${id}`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'DELETE'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -204,12 +189,7 @@ export const deleteAllFiles = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/files/all`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'DELETE'
 	})
 		.then(async (res) => {
 			return res.data;

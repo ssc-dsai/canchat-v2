@@ -30,12 +30,7 @@ export const getTools = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/tools/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -60,12 +55,7 @@ export const getToolList = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/tools/list`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -90,12 +80,7 @@ export const exportTools = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/tools/export`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -120,12 +105,7 @@ export const getToolById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/tools/id/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -180,12 +160,7 @@ export const deleteToolById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/tools/id/${id}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'DELETE'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -211,12 +186,7 @@ export const getToolValvesById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -242,12 +212,7 @@ export const getToolValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves/spec`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -302,12 +267,7 @@ export const getUserValvesById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves/user`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -333,12 +293,7 @@ export const getUserValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves/user/spec`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
