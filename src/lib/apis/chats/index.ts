@@ -179,9 +179,12 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 	searchParams.append('text', normalizedText);
 	searchParams.append('page', `${page}`);
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/chats/search?${searchParams.toString()}`, {
-		method: 'GET'
-	})
+	const res = await axiosInstance(
+		`${WEBUI_API_BASE_PATH}/chats/search?${searchParams.toString()}`,
+		{
+			method: 'GET'
+		}
+	)
 		.then(async (res) => {
 			return res.data;
 		})

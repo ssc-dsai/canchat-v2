@@ -40,11 +40,7 @@ export const getChannels = async (token: string = '') => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/channels/`, {
 		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+
 	})
 		.then(async (res) => {
 			return res.data;
@@ -70,11 +66,7 @@ export const getChannelById = async (token: string = '', channel_id: string) => 
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/channels/${channel_id}`, {
 		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+
 	})
 		.then(async (res) => {
 			return res.data;
@@ -130,11 +122,7 @@ export const deleteChannelById = async (token: string = '', channel_id: string) 
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/delete`, {
 		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+
 	})
 		.then(async (res) => {
 			return res.data;
@@ -167,11 +155,7 @@ export const getChannelMessages = async (
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages?skip=${skip}&limit=${limit}`,
 		{
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+
 		}
 	)
 		.then(async (res) => {
@@ -206,11 +190,7 @@ export const getChannelThreadMessages = async (
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/thread?skip=${skip}&limit=${limit}`,
 		{
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+
 		}
 	)
 		.then(async (res) => {
@@ -277,11 +257,7 @@ export const updateMessage = async (
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/update`,
 		{
 			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
+,
 			data: { ...message }
 		}
 	)
@@ -316,11 +292,7 @@ export const addReaction = async (
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/reactions/add`,
 		{
 			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
+,
 			data: { name }
 		}
 	)
@@ -355,11 +327,7 @@ export const removeReaction = async (
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/reactions/remove`,
 		{
 			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
+,
 			data: { name }
 		}
 	)
@@ -389,11 +357,7 @@ export const deleteMessage = async (token: string = '', channel_id: string, mess
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/delete`,
 		{
 			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+
 		}
 	)
 		.then(async (res) => {
