@@ -1,10 +1,10 @@
 import axiosInstance from '$lib/axiosInstance';
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const getMemories = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/memories/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -31,7 +31,7 @@ export const getMemories = async (token: string) => {
 export const addNewMemory = async (token: string, content: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/memories/add`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/add`, {
 		method: 'POST',
 		data: {
 			content: content
@@ -56,7 +56,7 @@ export const addNewMemory = async (token: string, content: string) => {
 export const updateMemoryById = async (token: string, id: string, content: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/memories/${id}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/${id}/update`, {
 		method: 'POST',
 		data: {
 			content: content
@@ -81,7 +81,7 @@ export const updateMemoryById = async (token: string, id: string, content: strin
 export const queryMemory = async (token: string, content: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/memories/query`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/query`, {
 		method: 'POST',
 		data: {
 			content: content
@@ -106,7 +106,7 @@ export const queryMemory = async (token: string, content: string) => {
 export const deleteMemoryById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/memories/${id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/${id}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -137,7 +137,7 @@ export const deleteMemoryById = async (token: string, id: string) => {
 export const deleteMemoriesByUserId = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/memories/delete/user`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/delete/user`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

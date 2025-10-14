@@ -1,5 +1,5 @@
 import axiosInstance from '$lib/axiosInstance';
-import { MCP_API_BASE_URL } from '$lib/constants';
+import { MCP_API_BASE_PATH } from '$lib/constants';
 
 export const verifyMCPConnection = async (
 	token: string = '',
@@ -8,7 +8,7 @@ export const verifyMCPConnection = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/verify`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/verify`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -38,7 +38,7 @@ export const verifyMCPConnection = async (
 export const getMCPConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/config`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/config`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -59,7 +59,7 @@ export const getMCPConfig = async (token: string = '') => {
 export const updateMCPConfig = async (token: string = '', config: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/config/update`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -86,7 +86,7 @@ export const updateMCPConfig = async (token: string = '', config: object) => {
 export const getMCPURLs = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/urls`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/urls`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -107,7 +107,7 @@ export const getMCPURLs = async (token: string = '') => {
 export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/urls/update`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/urls/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -136,7 +136,7 @@ export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 export const getMCPTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/tools`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/tools`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -161,7 +161,7 @@ export const callMCPTool = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/tools/call`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/tools/call`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -191,7 +191,7 @@ export const callMCPTool = async (
 export const getBuiltinServers = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/builtin`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/builtin`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -212,7 +212,7 @@ export const getBuiltinServers = async (token: string = '') => {
 export const restartBuiltinServer = async (token: string = '', serverName: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/builtin/${serverName}/restart`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/builtin/${serverName}/restart`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -240,7 +240,7 @@ export const restartBuiltinServer = async (token: string = '', serverName: strin
 export const getExternalServers = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -261,7 +261,7 @@ export const getExternalServers = async (token: string = '') => {
 export const createExternalServer = async (token: string = '', serverData: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -288,7 +288,7 @@ export const createExternalServer = async (token: string = '', serverData: objec
 export const getExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -313,7 +313,7 @@ export const updateExternalServer = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
 		method: 'PUT',
 		headers: {
 			Accept: 'application/json',
@@ -340,7 +340,7 @@ export const updateExternalServer = async (
 export const deleteExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -366,7 +366,7 @@ export const deleteExternalServer = async (token: string = '', serverId: string 
 export const startExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}/start`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}/start`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -392,7 +392,7 @@ export const startExternalServer = async (token: string = '', serverId: string =
 export const stopExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}/stop`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}/stop`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -418,7 +418,7 @@ export const stopExternalServer = async (token: string = '', serverId: string = 
 export const restartExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}/restart`, {
+	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}/restart`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

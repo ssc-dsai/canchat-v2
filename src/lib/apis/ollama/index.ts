@@ -1,5 +1,5 @@
 import axiosInstance from '$lib/axiosInstance';
-import { OLLAMA_API_BASE_URL } from '$lib/constants';
+import { OLLAMA_API_BASE_PATH } from '$lib/constants';
 
 export const verifyOllamaConnection = async (
 	token: string = '',
@@ -8,7 +8,7 @@ export const verifyOllamaConnection = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/verify`, {
+	const res = await axiosInstance(`${OLLAMA_API_BASE_PATH}/verify`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -38,7 +38,7 @@ export const verifyOllamaConnection = async (
 export const getOllamaConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/config`, {
+	const res = await axiosInstance(`${OLLAMA_API_BASE_PATH}/config`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -70,7 +70,7 @@ type OllamaConfig = {
 export const updateOllamaConfig = async (token: string = '', config: OllamaConfig) => {
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/config/update`, {
+	const res = await axiosInstance(`${OLLAMA_API_BASE_PATH}/config/update`, {
 		method: 'POST',
 
 		data: {
@@ -100,7 +100,7 @@ export const updateOllamaConfig = async (token: string = '', config: OllamaConfi
 export const getOllamaUrls = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/urls`, {
+	const res = await axiosInstance(`${OLLAMA_API_BASE_PATH}/urls`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -126,7 +126,7 @@ export const getOllamaUrls = async (token: string = '') => {
 export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/urls/update`, {
+	const res = await axiosInstance(`${OLLAMA_API_BASE_PATH}/urls/update`, {
 		method: 'POST',
 
 		data: {
@@ -157,7 +157,7 @@ export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	let error = null;
 
 	const res = await axiosInstance(
-		`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`,
+		`${OLLAMA_API_BASE_PATH}/api/version${urlIdx ? `/${urlIdx}` : ''}`,
 		{
 			method: 'GET'
 		}
@@ -186,7 +186,7 @@ export const getOllamaModels = async (token: string = '', urlIdx: null | number 
 	let error = null;
 
 	const res = await axiosInstance(
-		`${OLLAMA_API_BASE_URL}/api/tags${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		`${OLLAMA_API_BASE_PATH}/api/tags${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'GET'
 		}
@@ -222,7 +222,7 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 		conversation = '[no existing conversation]';
 	}
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/generate`, {
+	const res = await axiosInstance(`${OLLAMA_API_BASE_PATH}/api/generate`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -252,7 +252,7 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 export const generateEmbeddings = async (token: string = '', model: string, text: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/embeddings`, {
+	const res = await axiosInstance(`${OLLAMA_API_BASE_PATH}/api/embeddings`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -273,7 +273,7 @@ export const generateEmbeddings = async (token: string = '', model: string, text
 export const generateTextCompletion = async (token: string = '', model: string, text: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/generate`, {
+	const res = await axiosInstance(`${OLLAMA_API_BASE_PATH}/api/generate`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -296,7 +296,7 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 	let controller = new AbortController();
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/chat`, {
+	const res = await axiosInstance(`${OLLAMA_API_BASE_PATH}/api/chat`, {
 		signal: controller.signal,
 		method: 'POST',
 		data: body
@@ -316,7 +316,7 @@ export const createModel = async (token: string, payload: object, urlIdx: string
 	let error = null;
 
 	const res = await axiosInstance(
-		`${OLLAMA_API_BASE_URL}/api/create${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		`${OLLAMA_API_BASE_PATH}/api/create${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
 			headers: {
@@ -342,7 +342,7 @@ export const deleteModel = async (token: string, tagName: string, urlIdx: string
 	let error = null;
 
 	const res = await axiosInstance(
-		`${OLLAMA_API_BASE_URL}/api/delete${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		`${OLLAMA_API_BASE_PATH}/api/delete${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'DELETE',
 			data: {
@@ -380,7 +380,7 @@ export const pullModel = async (token: string, tagName: string, urlIdx: number |
 	const controller = new AbortController();
 
 	const res = await axiosInstance(
-		`${OLLAMA_API_BASE_URL}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		`${OLLAMA_API_BASE_PATH}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			signal: controller.signal,
 			method: 'POST',
@@ -412,7 +412,7 @@ export const downloadModel = async (
 	let error = null;
 
 	const res = await axiosInstance(
-		`${OLLAMA_API_BASE_URL}/models/download${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		`${OLLAMA_API_BASE_PATH}/models/download${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
 			headers: {
@@ -447,7 +447,7 @@ export const uploadModel = async (token: string, file: File, urlIdx: string | nu
 	formData.append('file', file);
 
 	const res = await axiosInstance(
-		`${OLLAMA_API_BASE_URL}/models/upload${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		`${OLLAMA_API_BASE_PATH}/models/upload${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
 			headers: {

@@ -1,10 +1,10 @@
 import axiosInstance from '$lib/axiosInstance';
-import { AUDIO_API_BASE_URL } from '$lib/constants';
+import { AUDIO_API_BASE_PATH } from '$lib/constants';
 
 export const getAudioConfig = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/config`, {
+	const res = await axiosInstance(`${AUDIO_API_BASE_PATH}/config`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -33,7 +33,7 @@ type OpenAIConfigForm = {
 export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
 	let error = null;
 
-	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/config/update`, {
+	const res = await axiosInstance(`${AUDIO_API_BASE_PATH}/config/update`, {
 		method: 'POST',
 		data: {
 			...payload
@@ -60,7 +60,7 @@ export const transcribeAudio = async (token: string, file: File) => {
 	data.append('file', file);
 
 	let error = null;
-	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/transcriptions`, {
+	const res = await axiosInstance(`${AUDIO_API_BASE_PATH}/transcriptions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -92,7 +92,7 @@ export const synthesizeOpenAISpeech = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/speech`, {
+	const res = await axiosInstance(`${AUDIO_API_BASE_PATH}/speech`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -128,7 +128,7 @@ interface AvailableModelsResponse {
 export const getModels = async (token: string = ''): Promise<AvailableModelsResponse> => {
 	let error = null;
 
-	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/models`, {
+	const res = await axiosInstance(`${AUDIO_API_BASE_PATH}/models`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -151,7 +151,7 @@ export const getModels = async (token: string = ''): Promise<AvailableModelsResp
 export const getVoices = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/voices`, {
+	const res = await axiosInstance(`${AUDIO_API_BASE_PATH}/voices`, {
 		method: 'GET'
 	})
 		.then(async (res) => {

@@ -1,10 +1,10 @@
 import axiosInstance from '$lib/axiosInstance';
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const getGravatarUrl = async (email: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/gravatar?email=${email}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/gravatar?email=${email}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
@@ -25,7 +25,7 @@ export const getGravatarUrl = async (email: string) => {
 export const formatPythonCode = async (code: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/code/format`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/code/format`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
@@ -57,7 +57,7 @@ export const formatPythonCode = async (code: string) => {
 export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 	let error = null;
 
-	const blob = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/pdf`, {
+	const blob = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/pdf`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
@@ -82,7 +82,7 @@ export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 export const getHTMLFromMarkdown = async (md: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/markdown`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/markdown`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
@@ -106,7 +106,7 @@ export const getHTMLFromMarkdown = async (md: string) => {
 export const downloadDatabase = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/db/download`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/db/download`, {
 		method: 'GET',
 		responseType: 'blob'
 	})
@@ -136,7 +136,7 @@ export const downloadDatabase = async (token: string) => {
 export const downloadLiteLLMConfig = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/utils/litellm/config`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/litellm/config`, {
 		method: 'GET',
 		responseType: 'blob'
 	})
