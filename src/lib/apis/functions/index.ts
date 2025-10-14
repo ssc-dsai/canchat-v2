@@ -6,16 +6,12 @@ export const createNewFunction = async (token: string, func: object) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...func
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -42,7 +38,7 @@ export const getFunctions = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -72,7 +68,7 @@ export const exportFunctions = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -102,7 +98,7 @@ export const getFunctionById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -126,16 +122,12 @@ export const updateFunctionById = async (token: string, id: string, func: object
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...func
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -166,7 +158,7 @@ export const deleteFunctionById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -197,7 +189,7 @@ export const toggleFunctionById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -228,7 +220,7 @@ export const toggleGlobalById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -259,7 +251,7 @@ export const getFunctionValvesById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -290,7 +282,7 @@ export const getFunctionValvesSpecById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -314,16 +306,12 @@ export const updateFunctionValvesById = async (token: string, id: string, valves
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...valves
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -354,7 +342,7 @@ export const getUserValvesById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -385,7 +373,7 @@ export const getUserValvesSpecById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -409,16 +397,12 @@ export const updateUserValvesById = async (token: string, id: string, valves: ob
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...valves
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;

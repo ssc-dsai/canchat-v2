@@ -13,7 +13,7 @@ export const getModels = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -43,7 +43,7 @@ export const getBaseModels = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -66,15 +66,10 @@ export const createNewModel = async (token: string, model: object) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/models/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: model
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -104,7 +99,7 @@ export const getModelById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -129,16 +124,19 @@ export const toggleModelById = async (token: string, id: string) => {
 	const searchParams = new URLSearchParams();
 	searchParams.append('id', id);
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/models/model/toggle?${searchParams.toString()}`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+	const res = await axiosInstance(
+		`${WEBUI_API_BASE_URL}/models/model/toggle?${searchParams.toString()}`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
-	})
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -163,17 +161,15 @@ export const updateModelById = async (token: string, id: string, model: object) 
 	const searchParams = new URLSearchParams();
 	searchParams.append('id', id);
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/models/model/update?${searchParams.toString()}`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		data: model
-	})
+	const res = await axiosInstance(
+		`${WEBUI_API_BASE_URL}/models/model/update?${searchParams.toString()}`,
+		{
+			method: 'POST',
+			data: model
+		}
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -198,16 +194,19 @@ export const deleteModelById = async (token: string, id: string) => {
 	const searchParams = new URLSearchParams();
 	searchParams.append('id', id);
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/models/model/delete?${searchParams.toString()}`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+	const res = await axiosInstance(
+		`${WEBUI_API_BASE_URL}/models/model/delete?${searchParams.toString()}`,
+		{
+			method: 'DELETE',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
-	})
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -238,7 +237,7 @@ export const deleteAllModels = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;

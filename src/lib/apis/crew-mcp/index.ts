@@ -16,7 +16,7 @@ export const getCrewMCPStatus = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -42,7 +42,7 @@ export const getCrewMCPTools = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -73,11 +73,6 @@ export const queryCrewMCP = async (
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			query: query,
 			model: model,

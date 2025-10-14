@@ -18,9 +18,10 @@ export const verifyOllamaConnection = async (
 		data: {
 			url,
 			key
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `Ollama: ${err?.error?.message ?? 'Network Problem'}`;
@@ -38,11 +39,10 @@ export const getOllamaConfig = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/config`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -75,9 +75,10 @@ export const updateOllamaConfig = async (token: string = '', config: OllamaConfi
 
 		data: {
 			...config
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -100,11 +101,10 @@ export const getOllamaUrls = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/urls`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -131,9 +131,10 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 
 		data: {
 			urls: urls
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -155,12 +156,14 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
-		method: 'GET',
-
-	})
+	const res = await axiosInstance(
+		`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`,
+		{
+			method: 'GET'
+		}
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -182,12 +185,14 @@ export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 export const getOllamaModels = async (token: string = '', urlIdx: null | number = null) => {
 	let error = null;
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/tags${urlIdx !== null ? `/${urlIdx}` : ''}`, {
-		method: 'GET',
-
-	})
+	const res = await axiosInstance(
+		`${OLLAMA_API_BASE_URL}/api/tags${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		{
+			method: 'GET'
+		}
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -219,11 +224,6 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 
 	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/generate`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			model: model,
 			prompt: `Conversation:
@@ -233,8 +233,8 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 
 			Response:
 			`
-		}})
-	.catch((err) => {
+		}
+	}).catch((err) => {
 		console.log(err);
 		if ('detail' in err) {
 			error = err.detail;
@@ -254,15 +254,11 @@ export const generateEmbeddings = async (token: string = '', model: string, text
 
 	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/embeddings`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			model: model,
 			prompt: text
-	}}).catch((err) => {
+		}
+	}).catch((err) => {
 		error = err;
 		return null;
 	});
@@ -279,16 +275,12 @@ export const generateTextCompletion = async (token: string = '', model: string, 
 
 	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/generate`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			model: model,
 			prompt: text,
 			stream: true
-	}}).catch((err) => {
+		}
+	}).catch((err) => {
 		error = err;
 		return null;
 	});
@@ -307,11 +299,6 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/chat`, {
 		signal: controller.signal,
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: body
 	}).catch((err) => {
 		error = err;
@@ -360,9 +347,11 @@ export const deleteModel = async (token: string, tagName: string, urlIdx: string
 			method: 'DELETE',
 			data: {
 				name: tagName
-			}})
+			}
+		}
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			console.log(json);
@@ -390,17 +379,16 @@ export const pullModel = async (token: string, tagName: string, urlIdx: number |
 	let error = null;
 	const controller = new AbortController();
 
-	const res = await axiosInstance(`${OLLAMA_API_BASE_URL}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`, {
-		signal: controller.signal,
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		data: {
-			name: tagName
-	}}).catch((err) => {
+	const res = await axiosInstance(
+		`${OLLAMA_API_BASE_URL}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		{
+			signal: controller.signal,
+			method: 'POST',
+			data: {
+				name: tagName
+			}
+		}
+	).catch((err) => {
 		console.log(err);
 		error = err;
 
@@ -434,8 +422,9 @@ export const downloadModel = async (
 			},
 			data: {
 				url: download_url
-			}})
-	.catch((err) => {
+			}
+		}
+	).catch((err) => {
 		console.log(err);
 		error = err;
 

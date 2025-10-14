@@ -6,16 +6,12 @@ export const createNewTool = async (token: string, tool: object) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/tools/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...tool
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -42,7 +38,7 @@ export const getTools = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -72,7 +68,7 @@ export const getToolList = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -102,7 +98,7 @@ export const exportTools = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -132,7 +128,7 @@ export const getToolById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -156,16 +152,12 @@ export const updateToolById = async (token: string, id: string, tool: object) =>
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/tools/id/${id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...tool
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -196,7 +188,7 @@ export const deleteToolById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -227,7 +219,7 @@ export const getToolValvesById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -258,7 +250,7 @@ export const getToolValvesSpecById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -282,16 +274,12 @@ export const updateToolValvesById = async (token: string, id: string, valves: ob
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...valves
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -322,7 +310,7 @@ export const getUserValvesById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -353,7 +341,7 @@ export const getUserValvesSpecById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -377,16 +365,12 @@ export const updateUserValvesById = async (token: string, id: string, valves: ob
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...valves
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;

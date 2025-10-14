@@ -15,7 +15,7 @@ export const uploadFile = async (token: string, file: File) => {
 		data: data
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -41,7 +41,7 @@ export const uploadDir = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -67,7 +67,7 @@ export const getFiles = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -97,7 +97,7 @@ export const getFileById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -120,16 +120,12 @@ export const updateFileDataContentById = async (token: string, id: string, conte
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/files/${id}/data/content/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			content: content
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -186,7 +182,7 @@ export const deleteFileById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -216,7 +212,7 @@ export const deleteAllFiles = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;

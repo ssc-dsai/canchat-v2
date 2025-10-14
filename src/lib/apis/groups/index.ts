@@ -6,16 +6,12 @@ export const createNewGroup = async (token: string, group: object) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/groups/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...group
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -42,7 +38,7 @@ export const getGroups = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -72,7 +68,7 @@ export const getGroupById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -96,16 +92,12 @@ export const updateGroupById = async (token: string, id: string, group: object) 
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/groups/id/${id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...group
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -136,7 +128,7 @@ export const deleteGroupById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
