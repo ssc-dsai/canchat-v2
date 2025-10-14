@@ -319,11 +319,7 @@ export const createModel = async (token: string, payload: object, urlIdx: string
 		`${OLLAMA_API_BASE_PATH}/api/create${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${token}`
-			},
+,
 			data: payload
 		}
 	).catch((err) => {
@@ -415,11 +411,7 @@ export const downloadModel = async (
 		`${OLLAMA_API_BASE_PATH}/models/download${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${token}`
-			},
+,
 			data: {
 				url: download_url
 			}

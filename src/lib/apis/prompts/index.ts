@@ -51,12 +51,7 @@ export const getPrompts = async (
 	}
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/prompts/paginated?${params}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -94,12 +89,7 @@ export const getPromptList = async (
 	}
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/prompts/list/paginated?${params}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -129,12 +119,7 @@ export const getPromptsCount = async (token: string = '', search?: string) => {
 	}
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/prompts/count?${params}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -160,12 +145,7 @@ export const getPromptsLegacy = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/prompts/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -190,12 +170,7 @@ export const getPromptListLegacy = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/prompts/list`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -223,12 +198,7 @@ export const getPromptByCommand = async (token: string, command: string) => {
 	const encodedCommand = encodeURIComponent(command);
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/prompts/command/${encodedCommand}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -297,12 +267,7 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 	const res = await axiosInstance(
 		`${WEBUI_API_BASE_PATH}/prompts/command/${encodedCommand}/delete`,
 		{
-			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+			method: 'DELETE'
 		}
 	)
 		.then(async (res) => {

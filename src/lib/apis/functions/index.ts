@@ -30,12 +30,7 @@ export const getFunctions = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -60,12 +55,7 @@ export const exportFunctions = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/export`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -90,12 +80,7 @@ export const getFunctionById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -150,12 +135,7 @@ export const deleteFunctionById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'DELETE'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -181,12 +161,7 @@ export const toggleFunctionById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/toggle`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'POST'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -212,12 +187,7 @@ export const toggleGlobalById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/toggle/global`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'POST'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -243,12 +213,7 @@ export const getFunctionValvesById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -274,12 +239,7 @@ export const getFunctionValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves/spec`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -334,12 +294,7 @@ export const getUserValvesById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves/user`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -365,12 +320,7 @@ export const getUserValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves/user/spec`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
