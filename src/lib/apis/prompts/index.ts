@@ -13,17 +13,13 @@ export const createNewPrompt = async (token: string, prompt: PromptItem) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...prompt,
 			command: `/${prompt.command}`
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -63,7 +59,7 @@ export const getPrompts = async (
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -106,7 +102,7 @@ export const getPromptList = async (
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -141,7 +137,7 @@ export const getPromptsCount = async (token: string = '', search?: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -172,7 +168,7 @@ export const getPromptsLegacy = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -202,7 +198,7 @@ export const getPromptListLegacy = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -235,7 +231,7 @@ export const getPromptByCommand = async (token: string, command: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -260,19 +256,18 @@ export const updatePromptByCommand = async (token: string, prompt: PromptItem) =
 	// URL encode the command to properly handle special characters like question marks
 	const encodedCommand = encodeURIComponent(prompt.command);
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		data: {
-			...prompt,
-			command: `/${prompt.command}`
-		}})
+	const res = await axiosInstance(
+		`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/update`,
+		{
+			method: 'POST',
+			data: {
+				...prompt,
+				command: `/${prompt.command}`
+			}
+		}
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -299,16 +294,19 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 	// URL encode the command to properly handle special characters like question marks
 	const encodedCommand = encodeURIComponent(command);
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+	const res = await axiosInstance(
+		`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/delete`,
+		{
+			method: 'DELETE',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
-	})
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;

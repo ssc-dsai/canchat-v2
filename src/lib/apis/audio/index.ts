@@ -5,14 +5,10 @@ export const getAudioConfig = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/config`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -39,15 +35,12 @@ export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm
 
 	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/config/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			...payload
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -76,7 +69,7 @@ export const transcribeAudio = async (token: string, file: File) => {
 		data: data
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -109,9 +102,10 @@ export const synthesizeOpenAISpeech = async (
 			input: text,
 			voice: speaker,
 			...(model && { model })
-		}})
+		}
+	})
 		.then(async (res) => {
-			res.data
+			res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -135,14 +129,10 @@ export const getModels = async (token: string = ''): Promise<AvailableModelsResp
 	let error = null;
 
 	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/models`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -162,14 +152,10 @@ export const getVoices = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${AUDIO_API_BASE_URL}/voices`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;

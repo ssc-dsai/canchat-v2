@@ -4,7 +4,7 @@ import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 export const getModels = async (token: string = '', base: boolean = false) => {
 	let error = null;
 	const res = await axiosInstance(`/api/models${base ? '/base' : ''}`, {
-		method: 'GET',
+		method: 'GET'
 		// headers: {
 		// 	Accept: 'application/json',
 		// 	'Content-Type': 'application/json',
@@ -12,7 +12,7 @@ export const getModels = async (token: string = '', base: boolean = false) => {
 		// }
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch(async (err) => {
 			error = err;
@@ -44,7 +44,7 @@ export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
 		data: body
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -78,7 +78,7 @@ export const chatAction = async (token: string, action_id: string, body: ChatAct
 		data: body
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -101,11 +101,10 @@ export const stopTask = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await await axiosInstance(`/api/tasks/stop/${id}`, {
-		method: 'POST',
-
+		method: 'POST'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -128,11 +127,10 @@ export const getTaskConfig = async (token: string = '') => {
 	let error = null;
 
 	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/config`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -156,7 +154,7 @@ export const updateTaskConfig = async (token: string, config: object) => {
 		data: config
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -185,18 +183,14 @@ export const generateTitle = async (
 
 	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/title/completions`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			model: model,
 			messages: messages,
 			...(chat_id && { chat_id: chat_id })
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -223,18 +217,14 @@ export const generateTags = async (
 
 	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/tags/completions`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			model: model,
 			messages: messages,
 			...(chat_id && { chat_id: chat_id })
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -293,18 +283,14 @@ export const generateEmoji = async (
 
 	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/emoji/completions`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			model: model,
 			prompt: prompt,
 			...(chat_id && { chat_id: chat_id })
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -340,19 +326,15 @@ export const generateQueries = async (
 
 	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/queries/completions`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			model: model,
 			messages: messages,
 			prompt: prompt,
 			type: type
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -409,20 +391,16 @@ export const generateAutoCompletion = async (
 	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/auto/completions`, {
 		signal: controller.signal,
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			model: model,
 			prompt: prompt,
 			...(messages && { messages: messages }),
 			type: type,
 			stream: false
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -477,18 +455,13 @@ export const generateMoACompletion = async (
 	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/moa/completions`, {
 		signal: controller.signal,
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			model: model,
 			prompt: prompt,
 			responses: responses,
 			stream: true
-		}})
-	.catch((err) => {
+		}
+	}).catch((err) => {
 		console.log(err);
 		error = err;
 		return null;
@@ -505,11 +478,10 @@ export const getPipelinesList = async (token: string = '') => {
 	let error = null;
 
 	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/pipelines/list`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -542,7 +514,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 		data: formData
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -570,9 +542,10 @@ export const downloadPipeline = async (token: string, url: string, urlIdx: strin
 		data: {
 			url: url,
 			urlIdx: urlIdx
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -600,9 +573,10 @@ export const deletePipeline = async (token: string, id: string, urlIdx: string) 
 		data: {
 			id: id,
 			urlIdx: urlIdx
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -629,12 +603,14 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/pipelines/?${searchParams.toString()}`, {
-		method: 'GET',
-
-	})
+	const res = await await axiosInstance(
+		`${WEBUI_API_BASE_URL}/pipelines/?${searchParams.toString()}`,
+		{
+			method: 'GET'
+		}
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -670,7 +646,7 @@ export const getPipelineValves = async (token: string, pipeline_id: string, urlI
 		}
 	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -705,7 +681,7 @@ export const getPipelineValvesSpec = async (token: string, pipeline_id: string, 
 		}
 	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -746,7 +722,7 @@ export const updatePipelineValves = async (
 		}
 	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -777,7 +753,7 @@ export const getBackendConfig = async () => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -802,7 +778,7 @@ export const getChangelog = async () => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -821,14 +797,10 @@ export const getModelFilterConfig = async (token: string) => {
 	let error = null;
 
 	const res = await await axiosInstance(`/api/config/model/filter`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -852,16 +824,13 @@ export const updateModelFilterConfig = async (
 
 	const res = await await axiosInstance(`/api/config/model/filter`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			enabled: enabled,
 			models: models
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -880,14 +849,10 @@ export const getWebhookUrl = async (token: string) => {
 	let error = null;
 
 	const res = await await axiosInstance(`/api/webhook`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -907,15 +872,12 @@ export const updateWebhookUrl = async (token: string, url: string) => {
 
 	const res = await await axiosInstance(`/api/webhook`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			url: url
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -934,14 +896,10 @@ export const getCommunitySharingEnabledStatus = async (token: string) => {
 	let error = null;
 
 	const res = await await axiosInstance(`/api/community_sharing`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -960,14 +918,10 @@ export const toggleCommunitySharingEnabledStatus = async (token: string) => {
 	let error = null;
 
 	const res = await await axiosInstance(`/api/community_sharing/toggle`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -986,14 +940,10 @@ export const getModelConfig = async (token: string): Promise<GlobalModelConfig> 
 	let error = null;
 
 	const res = await await axiosInstance(`/api/config/models`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -1031,15 +981,12 @@ export const updateModelConfig = async (token: string, config: GlobalModelConfig
 
 	const res = await await axiosInstance(`/api/config/models`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			models: config
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);

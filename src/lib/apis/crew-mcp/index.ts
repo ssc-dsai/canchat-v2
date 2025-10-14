@@ -1,5 +1,5 @@
-import axiosInstance from "$lib/axiosInstance";
-import { WEBUI_API_BASE_URL } from "$lib/constants";
+import axiosInstance from '$lib/axiosInstance';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getCrewMCPStatus = async (token: string = '') => {
 	let error = null;
@@ -13,7 +13,7 @@ export const getCrewMCPStatus = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -39,7 +39,7 @@ export const getCrewMCPTools = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -65,20 +65,16 @@ export const queryCrewMCP = async (
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			query: query,
 			model: model,
 			selected_tools: selectedTools,
 			chat_id: chatId,
 			session_id: sessionId
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
