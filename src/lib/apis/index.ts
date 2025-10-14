@@ -1,5 +1,5 @@
 import axiosInstance from '$lib/axiosInstance';
-import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
 
 export const getModels = async (token: string = '', base: boolean = false) => {
 	let error = null;
@@ -126,7 +126,7 @@ export const stopTask = async (token: string, id: string) => {
 export const getTaskConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/config`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/config`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -148,7 +148,7 @@ export const getTaskConfig = async (token: string = '') => {
 export const updateTaskConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/config/update`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/config/update`, {
 		method: 'POST',
 
 		data: config
@@ -181,7 +181,7 @@ export const generateTitle = async (
 ) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/title/completions`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/title/completions`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -215,7 +215,7 @@ export const generateTags = async (
 ) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/tags/completions`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/tags/completions`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -281,7 +281,7 @@ export const generateEmoji = async (
 ) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/emoji/completions`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/emoji/completions`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -324,7 +324,7 @@ export const generateQueries = async (
 ) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/queries/completions`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/queries/completions`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -388,7 +388,7 @@ export const generateAutoCompletion = async (
 	const controller = new AbortController();
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/auto/completions`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/auto/completions`, {
 		signal: controller.signal,
 		method: 'POST',
 		data: {
@@ -452,7 +452,7 @@ export const generateMoACompletion = async (
 	const controller = new AbortController();
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/tasks/moa/completions`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/moa/completions`, {
 		signal: controller.signal,
 		method: 'POST',
 		data: {
@@ -477,7 +477,7 @@ export const generateMoACompletion = async (
 export const getPipelinesList = async (token: string = '') => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/pipelines/list`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/pipelines/list`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -505,7 +505,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 	formData.append('file', file);
 	formData.append('urlIdx', urlIdx);
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/pipelines/upload`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/pipelines/upload`, {
 		method: 'POST',
 		headers: {
 			...(token && { authorization: `Bearer ${token}` })
@@ -536,7 +536,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 export const downloadPipeline = async (token: string, url: string, urlIdx: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/pipelines/add`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/pipelines/add`, {
 		method: 'POST',
 
 		data: {
@@ -567,7 +567,7 @@ export const downloadPipeline = async (token: string, url: string, urlIdx: strin
 export const deletePipeline = async (token: string, id: string, urlIdx: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_URL}/pipelines/delete`, {
+	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/pipelines/delete`, {
 		method: 'DELETE',
 
 		data: {
@@ -604,7 +604,7 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 	}
 
 	const res = await await axiosInstance(
-		`${WEBUI_API_BASE_URL}/pipelines/?${searchParams.toString()}`,
+		`${WEBUI_API_BASE_PATH}/pipelines/?${searchParams.toString()}`,
 		{
 			method: 'GET'
 		}

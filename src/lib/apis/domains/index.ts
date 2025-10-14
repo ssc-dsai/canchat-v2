@@ -1,5 +1,5 @@
 import axiosInstance from '$lib/axiosInstance';
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const createDomain = async (
 	token: string,
@@ -7,7 +7,7 @@ export const createDomain = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/create`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/create`, {
 		method: 'POST',
 		data: domain
 	})
@@ -30,7 +30,7 @@ export const createDomain = async (
 export const getDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -57,7 +57,7 @@ export const getDomains = async (token: string = '') => {
 export const getAvailableDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/available`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/available`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -88,7 +88,7 @@ export const updateDomainById = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/id/${domainId}/update`, {
 		method: 'POST',
 		data: domain
 	})
@@ -111,7 +111,7 @@ export const updateDomainById = async (
 export const deleteDomainById = async (token: string, domainId: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/delete`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/id/${domainId}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

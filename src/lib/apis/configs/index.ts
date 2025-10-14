@@ -1,11 +1,11 @@
 import axiosInstance from '$lib/axiosInstance';
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 import type { Banner } from '$lib/types';
 
 export const importConfig = async (token: string, config) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/import`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/configs/import`, {
 		method: 'POST',
 		data: {
 			config: config
@@ -30,7 +30,7 @@ export const importConfig = async (token: string, config) => {
 export const exportConfig = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/export`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/configs/export`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -52,7 +52,7 @@ export const exportConfig = async (token: string) => {
 export const getModelsConfig = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/models`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/configs/models`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -74,7 +74,7 @@ export const getModelsConfig = async (token: string) => {
 export const setModelsConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/models`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/configs/models`, {
 		method: 'POST',
 		data: {
 			...config
@@ -99,7 +99,7 @@ export const setModelsConfig = async (token: string, config: object) => {
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/suggestions`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/configs/suggestions`, {
 		method: 'POST',
 		data: {
 			suggestions: promptSuggestions
@@ -124,7 +124,7 @@ export const setDefaultPromptSuggestions = async (token: string, promptSuggestio
 export const getBanners = async (token: string): Promise<Banner[]> => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/banners`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/configs/banners`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -146,7 +146,7 @@ export const getBanners = async (token: string): Promise<Banner[]> => {
 export const setBanners = async (token: string, banners: Banner[]) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/banners`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/configs/banners`, {
 		method: 'POST',
 		data: {
 			banners: banners

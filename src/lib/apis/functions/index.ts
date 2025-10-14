@@ -1,10 +1,10 @@
 import axiosInstance from '$lib/axiosInstance';
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const createNewFunction = async (token: string, func: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/create`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/create`, {
 		method: 'POST',
 		data: {
 			...func
@@ -29,7 +29,7 @@ export const createNewFunction = async (token: string, func: object) => {
 export const getFunctions = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -59,7 +59,7 @@ export const getFunctions = async (token: string = '') => {
 export const exportFunctions = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/export`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/export`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -89,7 +89,7 @@ export const exportFunctions = async (token: string = '') => {
 export const getFunctionById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -120,7 +120,7 @@ export const getFunctionById = async (token: string, id: string) => {
 export const updateFunctionById = async (token: string, id: string, func: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/update`, {
 		method: 'POST',
 		data: {
 			...func
@@ -149,7 +149,7 @@ export const updateFunctionById = async (token: string, id: string, func: object
 export const deleteFunctionById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/delete`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -180,7 +180,7 @@ export const deleteFunctionById = async (token: string, id: string) => {
 export const toggleFunctionById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/toggle`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/toggle`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -211,7 +211,7 @@ export const toggleFunctionById = async (token: string, id: string) => {
 export const toggleGlobalById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/toggle/global`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/toggle/global`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -242,7 +242,7 @@ export const toggleGlobalById = async (token: string, id: string) => {
 export const getFunctionValvesById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -273,7 +273,7 @@ export const getFunctionValvesById = async (token: string, id: string) => {
 export const getFunctionValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/spec`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves/spec`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -304,7 +304,7 @@ export const getFunctionValvesSpecById = async (token: string, id: string) => {
 export const updateFunctionValvesById = async (token: string, id: string, valves: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves/update`, {
 		method: 'POST',
 		data: {
 			...valves
@@ -333,7 +333,7 @@ export const updateFunctionValvesById = async (token: string, id: string, valves
 export const getUserValvesById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves/user`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -364,7 +364,7 @@ export const getUserValvesById = async (token: string, id: string) => {
 export const getUserValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user/spec`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves/user/spec`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -395,7 +395,7 @@ export const getUserValvesSpecById = async (token: string, id: string) => {
 export const updateUserValvesById = async (token: string, id: string, valves: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/functions/id/${id}/valves/user/update`, {
 		method: 'POST',
 		data: {
 			...valves

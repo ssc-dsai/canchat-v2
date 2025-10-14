@@ -7,7 +7,7 @@ import axiosInstance from "$lib/axiosInstance";
 export const getCrewMCPStatus = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/crew-mcp/status`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/crew-mcp/status`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -33,7 +33,7 @@ export const getCrewMCPStatus = async (token: string = '') => {
 export const getCrewMCPTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/crew-mcp/tools`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/crew-mcp/tools`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

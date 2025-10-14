@@ -1,10 +1,10 @@
 import axiosInstance from '$lib/axiosInstance';
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const createNewFolder = async (token: string, name: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/folders/`, {
 		method: 'POST',
 		data: {
 			name: name
@@ -28,7 +28,7 @@ export const createNewFolder = async (token: string, name: string) => {
 export const getFolders = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/folders/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -58,7 +58,7 @@ export const getFolders = async (token: string = '') => {
 export const getFolderById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/folders/${id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -88,7 +88,7 @@ export const getFolderById = async (token: string, id: string) => {
 export const updateFolderNameById = async (token: string, id: string, name: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/folders/${id}/update`, {
 		method: 'POST',
 		data: {
 			name: name
@@ -120,7 +120,7 @@ export const updateFolderIsExpandedById = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update/expanded`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/folders/${id}/update/expanded`, {
 		method: 'POST',
 		data: {
 			is_expanded: isExpanded
@@ -148,7 +148,7 @@ export const updateFolderIsExpandedById = async (
 export const updateFolderParentIdById = async (token: string, id: string, parentId?: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update/parent`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/folders/${id}/update/parent`, {
 		method: 'POST',
 		data: {
 			parent_id: parentId
@@ -181,7 +181,7 @@ type FolderItems = {
 export const updateFolderItemsById = async (token: string, id: string, items: FolderItems) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update/items`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/folders/${id}/update/items`, {
 		method: 'POST',
 		data: {
 			items: items
@@ -209,7 +209,7 @@ export const updateFolderItemsById = async (token: string, id: string, items: Fo
 export const deleteFolderById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}`, {
+	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/folders/${id}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
