@@ -14,15 +14,10 @@ export const createNewChannel = async (token: string = '', channel: ChannelForm)
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/channels/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: { ...channel }
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -52,7 +47,7 @@ export const getChannels = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -82,7 +77,7 @@ export const getChannelById = async (token: string = '', channel_id: string) => 
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -109,15 +104,10 @@ export const updateChannelById = async (
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: { ...channel }
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -147,7 +137,7 @@ export const deleteChannelById = async (token: string = '', channel_id: string) 
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -185,7 +175,7 @@ export const getChannelMessages = async (
 		}
 	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -224,7 +214,7 @@ export const getChannelThreadMessages = async (
 		}
 	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -254,15 +244,10 @@ export const sendMessage = async (token: string = '', channel_id: string, messag
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/post`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: { ...message }
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -301,7 +286,7 @@ export const updateMessage = async (
 		}
 	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -340,7 +325,7 @@ export const addReaction = async (
 		}
 	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -379,7 +364,7 @@ export const removeReaction = async (
 		}
 	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -412,7 +397,7 @@ export const deleteMessage = async (token: string = '', channel_id: string, mess
 		}
 	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;

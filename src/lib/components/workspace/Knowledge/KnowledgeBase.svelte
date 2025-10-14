@@ -681,7 +681,9 @@
 								<div class=" flex-1 text-xl font-medium">
 									<a
 										class="hover:text-gray-500 hover:dark:text-gray-100 hover:underline flex-grow line-clamp-1"
-										href={selectedFile.id ? `${WEBUI_API_BASE_URL}/files/${selectedFile.id}/content` : '#'}
+										href={selectedFile.id
+											? `${WEBUI_API_BASE_URL}/files/${selectedFile.id}/content`
+											: '#'}
 										target="_blank"
 									>
 										{selectedFile?.meta?.name}

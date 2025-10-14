@@ -5,11 +5,10 @@ export const getConfig = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${IMAGES_API_BASE_URL}/config`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -36,9 +35,10 @@ export const updateConfig = async (token: string = '', config: object) => {
 
 		data: {
 			...config
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -61,11 +61,10 @@ export const verifyConfigUrl = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${IMAGES_API_BASE_URL}/config/url/verify`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -88,11 +87,10 @@ export const getImageGenerationConfig = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${IMAGES_API_BASE_URL}/image/config`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -120,7 +118,7 @@ export const updateImageGenerationConfig = async (token: string = '', config: ob
 		data: { ...config }
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -143,11 +141,10 @@ export const getImageGenerationModels = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${IMAGES_API_BASE_URL}/models`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -174,9 +171,10 @@ export const imageGenerations = async (token: string = '', prompt: string) => {
 
 		data: {
 			prompt: prompt
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);

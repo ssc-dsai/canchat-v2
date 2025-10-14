@@ -11,7 +11,7 @@ export const getGravatarUrl = async (email: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -32,9 +32,10 @@ export const formatPythonCode = async (code: string) => {
 		},
 		data: {
 			code: code
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -64,7 +65,8 @@ export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 		data: {
 			title: title,
 			messages: messages
-		}})
+		}
+	})
 		.then(async (res) => {
 			return res.data;
 		})
@@ -87,9 +89,10 @@ export const getHTMLFromMarkdown = async (md: string) => {
 		},
 		data: {
 			md: md
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -108,7 +111,7 @@ export const downloadDatabase = async (token: string) => {
 		responseType: 'blob'
 	})
 		.then(async (response) => {
-			return response.data
+			return response.data;
 		})
 		.then((blob) => {
 			const url = window.URL.createObjectURL(blob);

@@ -18,9 +18,10 @@ export const verifyMCPConnection = async (
 		data: {
 			url,
 			key
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -38,11 +39,10 @@ export const getMCPConfig = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${MCP_API_BASE_URL}/config`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -69,7 +69,7 @@ export const updateMCPConfig = async (token: string = '', config: object) => {
 		data: config
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -87,11 +87,10 @@ export const getMCPURLs = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${MCP_API_BASE_URL}/urls`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -117,9 +116,10 @@ export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 		},
 		data: {
 			urls
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -137,11 +137,10 @@ export const getMCPTools = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${MCP_API_BASE_URL}/tools`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -172,9 +171,10 @@ export const callMCPTool = async (
 		data: {
 			tool_name,
 			parameters
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -192,11 +192,10 @@ export const getBuiltinServers = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/builtin`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -222,7 +221,7 @@ export const restartBuiltinServer = async (token: string = '', serverName: strin
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -242,11 +241,10 @@ export const getExternalServers = async (token: string = '') => {
 	let error = null;
 
 	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -273,7 +271,7 @@ export const createExternalServer = async (token: string = '', serverData: objec
 		data: serverData
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -291,11 +289,10 @@ export const getExternalServer = async (token: string = '', serverId: string = '
 	let error = null;
 
 	const res = await axiosInstance(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
-		method: 'GET',
-
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -326,7 +323,7 @@ export const updateExternalServer = async (
 		data: serverData
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -352,7 +349,7 @@ export const deleteExternalServer = async (token: string = '', serverId: string 
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -378,7 +375,7 @@ export const startExternalServer = async (token: string = '', serverId: string =
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -404,7 +401,7 @@ export const stopExternalServer = async (token: string = '', serverId: string = 
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
@@ -430,7 +427,7 @@ export const restartExternalServer = async (token: string = '', serverId: string
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;

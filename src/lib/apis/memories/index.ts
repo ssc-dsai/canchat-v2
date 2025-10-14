@@ -13,7 +13,7 @@ export const getMemories = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -33,16 +33,12 @@ export const addNewMemory = async (token: string, content: string) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/memories/add`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			content: content
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -62,16 +58,12 @@ export const updateMemoryById = async (token: string, id: string, content: strin
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/memories/${id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			content: content
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -91,16 +83,12 @@ export const queryMemory = async (token: string, content: string) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/memories/query`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			content: content
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -127,7 +115,7 @@ export const deleteMemoryById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -158,7 +146,7 @@ export const deleteMemoriesByUserId = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;

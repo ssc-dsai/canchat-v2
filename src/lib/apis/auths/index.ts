@@ -5,14 +5,10 @@ export const getAdminDetails = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/admin/details`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -31,14 +27,10 @@ export const getAdminConfig = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/admin/config`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -58,14 +50,10 @@ export const updateAdminConfig = async (token: string, body: object) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/admin/config`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: body
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -85,14 +73,10 @@ export const getSessionUser = async (token: string) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/`, {
 		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		withCredentials: true
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -119,9 +103,10 @@ export const ldapUserSignIn = async (user: string, password: string) => {
 		data: {
 			user: user,
 			password: password
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -148,7 +133,7 @@ export const getLdapConfig = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -174,9 +159,10 @@ export const updateLdapConfig = async (token: string = '', enable_ldap: boolean)
 		},
 		data: {
 			enable_ldap: enable_ldap
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -202,7 +188,7 @@ export const getLdapServer = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -229,7 +215,7 @@ export const updateLdapServer = async (token: string = '', body: object) => {
 		data: body
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -256,9 +242,10 @@ export const userSignIn = async (email: string, password: string) => {
 		data: {
 			email: email,
 			password: password
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -293,9 +280,10 @@ export const userSignUp = async (
 			email: email,
 			password: password,
 			profile_image_url: profile_image_url
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -351,9 +339,10 @@ export const addUser = async (
 			email: email,
 			password: password,
 			role: role
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -380,9 +369,10 @@ export const updateUserProfile = async (token: string, name: string, profileImag
 		data: {
 			name: name,
 			profile_image_url: profileImageUrl
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -409,9 +399,10 @@ export const updateUserPassword = async (token: string, password: string, newPas
 		data: {
 			password: password,
 			new_password: newPassword
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -430,14 +421,10 @@ export const getSignUpEnabledStatus = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/signup/enabled`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -456,14 +443,10 @@ export const getDefaultUserRole = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/signup/user/role`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -483,15 +466,12 @@ export const updateDefaultUserRole = async (token: string, role: string) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/signup/user/role`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			role: role
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -510,14 +490,10 @@ export const toggleSignUpEnabledStatus = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/signup/enabled/toggle`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -536,14 +512,10 @@ export const getJWTExpiresDuration = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/token/expires`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -563,15 +535,12 @@ export const updateJWTExpiresDuration = async (token: string, duration: string) 
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/token/expires/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			duration: duration
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -590,14 +559,10 @@ export const createAPIKey = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/api_key`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'POST'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -614,14 +579,10 @@ export const getAPIKey = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/api_key`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -638,14 +599,10 @@ export const deleteAPIKey = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/auths/api_key`, {
-		method: 'DELETE',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'DELETE'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);

@@ -13,7 +13,7 @@ export const getConfig = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -36,16 +36,12 @@ export const updateConfig = async (token: string, config: object) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/config`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...config
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -76,16 +72,19 @@ export const getAllFeedbacks = async (
 		params.append('search', search.trim());
 	}
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/paginated?${params}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+	const res = await axiosInstance(
+		`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/paginated?${params}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
-	})
+	)
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -120,7 +119,7 @@ export const getFeedbacksCount = async (token: string = '', search?: string) => 
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -151,7 +150,7 @@ export const getAllFeedbacksLegacy = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -181,7 +180,7 @@ export const exportAllFeedbacks = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -204,16 +203,12 @@ export const createNewFeedback = async (token: string, feedback: object) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...feedback
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -240,7 +235,7 @@ export const getFeedbackById = async (token: string, feedbackId: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -263,16 +258,12 @@ export const updateFeedbackById = async (token: string, feedbackId: string, feed
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			...feedback
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -299,7 +290,7 @@ export const deleteFeedbackById = async (token: string, feedbackId: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;

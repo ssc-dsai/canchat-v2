@@ -5,14 +5,10 @@ export const getRAGConfig = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/config`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -58,15 +54,12 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/config/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			...payload
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -85,14 +78,10 @@ export const getRAGTemplate = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/template`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -111,14 +100,10 @@ export const getQuerySettings = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/query/settings`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -144,15 +129,12 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/query/settings/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			...settings
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -171,14 +153,10 @@ export const getEmbeddingConfig = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/embedding`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -210,15 +188,12 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/embedding/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			...payload
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -237,14 +212,10 @@ export const getRerankingConfig = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/reranking`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -268,15 +239,12 @@ export const updateRerankingConfig = async (token: string, payload: RerankingMod
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/reranking/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			...payload
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -306,17 +274,13 @@ export const processFile = async (
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/process/file`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			file_id: file_id,
 			collection_name: collection_name ? collection_name : undefined
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -336,16 +300,12 @@ export const processYoutubeVideo = async (token: string, url: string) => {
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/process/youtube`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			url: url
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -365,17 +325,13 @@ export const processWeb = async (token: string, collection_name: string, url: st
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/process/web`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			url: url,
 			collection_name: collection_name
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -399,16 +355,13 @@ export const processWebSearch = async (
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/process/web/search`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			query,
 			collection_name: collection_name ?? ''
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -433,18 +386,14 @@ export const queryDoc = async (
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/query/doc`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			collection_name: collection_name,
 			query: query,
 			k: k
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -468,18 +417,14 @@ export const queryCollection = async (
 
 	const res = await axiosInstance(`${RETRIEVAL_API_BASE_URL}/query/collection`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			collection_names: collection_names,
 			query: query,
 			k: k
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -504,7 +449,7 @@ export const resetUploadDir = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -529,7 +474,7 @@ export const resetVectorDB = async (token: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;

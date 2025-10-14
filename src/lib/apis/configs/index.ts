@@ -7,15 +7,12 @@ export const importConfig = async (token: string, config) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/import`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			config: config
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -34,14 +31,10 @@ export const exportConfig = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/export`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -60,14 +53,10 @@ export const getModelsConfig = async (token: string) => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/models`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -87,15 +76,12 @@ export const setModelsConfig = async (token: string, config: object) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/models`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			...config
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -115,15 +101,12 @@ export const setDefaultPromptSuggestions = async (token: string, promptSuggestio
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/suggestions`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			suggestions: promptSuggestions
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -142,14 +125,10 @@ export const getBanners = async (token: string): Promise<Banner[]> => {
 	let error = null;
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/banners`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+		method: 'GET'
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -169,15 +148,12 @@ export const setBanners = async (token: string, banners: Banner[]) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/configs/banners`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
 		data: {
 			banners: banners
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);

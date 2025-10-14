@@ -6,16 +6,12 @@ export const createNewFolder = async (token: string, name: string) => {
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			name: name
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -41,7 +37,7 @@ export const getFolders = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -71,7 +67,7 @@ export const getFolderById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -94,16 +90,12 @@ export const updateFolderNameById = async (token: string, id: string, name: stri
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			name: name
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -130,16 +122,12 @@ export const updateFolderIsExpandedById = async (
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update/expanded`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			is_expanded: isExpanded
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -162,16 +150,12 @@ export const updateFolderParentIdById = async (token: string, id: string, parent
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update/parent`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			parent_id: parentId
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -199,16 +183,12 @@ export const updateFolderItemsById = async (token: string, id: string, items: Fo
 
 	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/folders/${id}/update/items`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: {
 			items: items
-		}})
+		}
+	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -238,7 +218,7 @@ export const deleteFolderById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			return res.data
+			return res.data;
 		})
 		.then((json) => {
 			return json;
