@@ -68,41 +68,9 @@ jobs:
           push: true
           tags: ${{ steps.image_tag.outputs.name }} 
 
-      # - name: Pull Ollama CPU Image
-      #   id: pull_cpu_image
-      #   run: |
-      #     if [ -z "$(docker images -aq ${{ env.REGISTRY }}/${{ github.repository_owner }}/ollama_cpu:latest 2> /dev/null)" ]; then
-      #       echo "Image not found in local registry."
-      #       if docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/ollama_cpu:latest 2>/dev/null >/dev/null; then
-      #         echo "result=success" >> $GITHUB_OUTPUT
-      #         echo "Success"
-      #       else
-      #         echo "result=fail" >> $GITHUB_OUTPUT
-      #         echo "Fail"
-      #       fi
-      #     else
-      #       echo "result=success" >> $GITHUB_OUTPUT
-      #       exit 0
-      #     fi
-      # - name: Checkout CANChat-V2 Ollama CPU
-      #   if: steps.pull_cpu_image.outputs.result != 'success'
-      #   uses: actions/checkout@v4
-      #   with:
-      #     sparse-checkout: test/ollama_cpu
-      #     sparse-checkout-cone-mode: false
-
-
-      # - name: Build and push Ollama CPU Docker image
-      #   if: steps.pull_cpu_image.outputs.result != 'success'
-      #   uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
-      #   with:
-      #     context: test/ollama_cpu/.
-      #     push: true
-      #     tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/ollama_cpu:latest
-            
   tests:
     name: 'Playwright E2E Tests'
-    runs-on: self-hosted
+    runs-on: arc-ssc-dsai
     needs: 
       build_and_push_playwright_image
 
@@ -120,15 +88,6 @@ jobs:
           - 6333:6333
           - 6334:6334
 
-      # ollama_cpu:
-      #   image: ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/ollama_cpu:latest
-      #   ports:
-      #     - 11434:11434
-      #   credentials:
-      #     username: ${{ github.actor }}
-      #     password: ${{ secrets.GITHUB_TOKEN }}
-
-             
     steps:      
       - run: docker images -a
       - run: docker images -aq
@@ -202,8 +161,8 @@ jobs:
           path: ./test/e2e/playwright-report/
           retention-days: 30
 
-      # - name: Remove Docker Containers
-      #   if: ${{ always() }}
-      #   run: |
-      #     docker rm -f canchat 
-      #     docker rm -f playwright 
+      - name: Remove Docker Containers
+        if: ${{ always() }}
+        run: |
+          docker rm -f canchat 
+          docker rm -f playwright 
