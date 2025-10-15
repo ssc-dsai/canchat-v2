@@ -1,0 +1,209 @@
+name: Build Cache and Run E2E Tests (self-hosted)
+
+on:
+  workflow_dispatch:
+  push:
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: e2e-playwright
+
+
+jobs:
+  build_and_push_playwright_image:
+    name: 'Pull and refresh Docker images'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.image_tag.outputs.name }}
+      registry: ${{ env.REGISTRY }}
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+      
+    steps:
+      - name: Checkout CANChat-V2
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: 'test/e2e'
+          sparse-checkout-cone-mode: false
+
+      - name: Get Playwright image tag
+        id: image_tag
+        run: |        
+          name=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME}}:$(/bin/date -u "+%Y%m")
+          echo $name
+          echo "name=$name" >> $GITHUB_OUTPUT
+          
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Playwright Image
+        id: pull_playwright_image
+        run: |
+          if [ -z "$(docker images -aq ${{ steps.image_tag.outputs.name }} 2> /dev/null)" ]; then
+            echo "Image not found in local registry."
+            if docker pull ${{ steps.image_tag.outputs.name }} 2>/dev/null >/dev/null; then
+              echo "result=success" >> $GITHUB_OUTPUT
+              echo "Success"
+            else
+              echo "result=fail" >> $GITHUB_OUTPUT
+              echo "Fail"
+            fi
+          else
+            echo "result=success" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+      - name: Build and push Playwright Docker image
+        if: steps.pull_playwright_image.outputs.result != 'success'
+        id: push
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: test/e2e/.
+          push: true
+          tags: ${{ steps.image_tag.outputs.name }} 
+
+      # - name: Pull Ollama CPU Image
+      #   id: pull_cpu_image
+      #   run: |
+      #     if [ -z "$(docker images -aq ${{ env.REGISTRY }}/${{ github.repository_owner }}/ollama_cpu:latest 2> /dev/null)" ]; then
+      #       echo "Image not found in local registry."
+      #       if docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/ollama_cpu:latest 2>/dev/null >/dev/null; then
+      #         echo "result=success" >> $GITHUB_OUTPUT
+      #         echo "Success"
+      #       else
+      #         echo "result=fail" >> $GITHUB_OUTPUT
+      #         echo "Fail"
+      #       fi
+      #     else
+      #       echo "result=success" >> $GITHUB_OUTPUT
+      #       exit 0
+      #     fi
+      # - name: Checkout CANChat-V2 Ollama CPU
+      #   if: steps.pull_cpu_image.outputs.result != 'success'
+      #   uses: actions/checkout@v4
+      #   with:
+      #     sparse-checkout: test/ollama_cpu
+      #     sparse-checkout-cone-mode: false
+
+
+      # - name: Build and push Ollama CPU Docker image
+      #   if: steps.pull_cpu_image.outputs.result != 'success'
+      #   uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+      #   with:
+      #     context: test/ollama_cpu/.
+      #     push: true
+      #     tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/ollama_cpu:latest
+            
+  tests:
+    name: 'Playwright E2E Tests'
+    runs-on: self-hosted
+    needs: 
+      build_and_push_playwright_image
+
+    permissions:
+      contents: read
+      packages: read
+      attestations: read
+      id-token: write
+
+    timeout-minutes: 60
+    services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+          - 6334:6334
+
+      # ollama_cpu:
+      #   image: ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/ollama_cpu:latest
+      #   ports:
+      #     - 11434:11434
+      #   credentials:
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+
+             
+    steps:      
+      - run: docker images -a
+      - run: docker images -aq
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ needs.build_and_push_playwright_image.outputs.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name:  Start CANChat Environment
+        env:
+          ENABLE_EVALUATION_ARENA_MODELS: false
+
+        run: |
+            # docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --network host --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:dev /bin/bash -c 'bash start.sh'
+            # docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:dev /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && bash start.sh'
+            docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:dev /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
+              unset OPENAI_API_KEY && \
+              unset OPENAI_API_BASE_URL && \
+              unset WEBUI_SECRET_KEY && \
+              unset USE_RERANKING_MODEL_DOCKER && \
+              unset RAG_RERANKING_MODEL && \
+              sh dev.sh'
+      - name: Wait for CANChat to be ready
+        run: |
+          for i in {1..120}; do
+            if [ -z $(docker ps --filter "name=canchat" --filter "health=healthy" --format '{{.Names}}') ]; then
+              echo "Waiting for CANChat..."
+              sleep 5
+            else
+              echo "CANChat is ready."
+              exit 0
+            fi
+
+          done
+          echo "CANChat failed to start in time" >&2
+          exit 1
+          
+      - name:  Start Playwright Environment
+        run: |
+            docker run --name playwright --add-host=host.docker.internal:host-gateway --network host -td --rm ${{ needs.build_and_push_playwright_image.outputs.image_tag }}
+            docker cp ./test/e2e/. playwright:/app/
+
+
+      - name: Checkout CANChat-V2
+        uses: actions/checkout@v4
+
+      - name: Get timestamp
+        id: timestamps
+        shell: bash
+        run: |
+          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT
+
+      - name: Run Playwright tests 
+        run: |
+            docker exec playwright npx playwright test tests/releases/
+
+      - name: Copy report from playwright
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p test/e2e/playwright-report
+          docker cp playwright:/app/playwright-report/. test/e2e/playwright-report
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ steps.timestamps.outputs.timestamp }}
+          path: ./test/e2e/playwright-report/
+          retention-days: 30
+
+      # - name: Remove Docker Containers
+      #   if: ${{ always() }}
+      #   run: |
+      #     docker rm -f canchat 
+      #     docker rm -f playwright 

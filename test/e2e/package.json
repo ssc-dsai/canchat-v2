@@ -1,21 +1,9 @@
 {
-  "name": "canchat_uat_server",
-  "version": "1.0.0",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
-    "@types/dotenv": "^6.1.1",
-    "@types/node": "^22.15.24"
+    "@playwright/test": "^1.55.1",
+    "@types/node": "^24.6.2"
   },
-  "scripts": {},
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "dotenv": "^16.5.0"
+    "dotenv": "^17.2.3"
   }
 }

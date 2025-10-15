@@ -1,4 +1,4 @@
-import { test as setup, expect } from '@playwright/test';
+import { test as setup, expect, Page } from '@playwright/test';
 import path from 'path';
 const fs = require('fs');
 
@@ -6,7 +6,7 @@ const data = fs.readFileSync(path.join(__dirname, 'creds.json'));
 const credentials = JSON.parse(data);
 const adminUser = credentials.users.find(u => u.username === 'admin');
 
-async function populateAccounts({ page }) {
+async function populateAccounts({ page }: { page: Page }) {
   // Remove all files in ../playwright/.auth
   const authDir = path.join(__dirname, '../playwright/.auth');
   if (fs.existsSync(authDir)) {
@@ -90,6 +90,7 @@ setup('authenticate', async ({ page }) => {
     await page.getByText('Sign Out').click();
   }
 
-  await page.screenshot({ path: 'playwright-viz/auth_fail.png', fullPage: true });
+  await page.screenshot({ path: 'playwright-report/screenshots/auth_fail.png', fullPage: true });
+  await page.close();
 
 });

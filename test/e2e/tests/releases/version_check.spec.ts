@@ -13,5 +13,6 @@ test('version_check', async ({ page }, testInfo) => {
   const dirPath = __dirname;
   const subdirs = require('fs').readdirSync(dirPath).filter(f => require('fs').statSync(require('path').join(dirPath, f)).isDirectory());
   const lastSubdir = subdirs.sort().pop() ?? '';
+  console.log('Expecting version to contain:', lastSubdir);
   await expect(page.locator('body')).toContainText(lastSubdir, { timeout: 1000 });
 });

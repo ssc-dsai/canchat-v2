@@ -1,4 +1,4 @@
-import { defineConfig, devices,  Page  } from '@playwright/test';
+import { defineConfig, devices, Page } from '@playwright/test';
 
 /**
  * Read environment variables from file.
@@ -6,8 +6,8 @@ import { defineConfig, devices,  Page  } from '@playwright/test';
  */
 import dotenv from 'dotenv';
 import path from 'path';
-dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+process.env.TEST_PATH = __dirname;
 
 export default defineConfig({
   testDir: './tests',
@@ -24,7 +24,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:5173",
+    baseURL: "http://localhost:8080",
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -33,87 +33,80 @@ export default defineConfig({
     screenshot: 'only-on-failure',
 
     // Record video only when retrying a test for the first time.
-    video: 'on-first-retry'
-  },
+    video: 'on-first-retry',
 
+  },
+  expect: {
+    timeout: 3000,
+  },
   /* Configure projects for major browsers */
   projects: [
     // Setup project
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
     {
       name: 'chromium-admin',
-      use: { ...devices['Desktop Chrome'], 
+      use: {
+        ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/admin.json',
       },
       dependencies: ['setup'],
     },
     {
       name: 'firefox-admin',
-      use: { ...devices['Desktop Firefox'], 
+      use: {
+        ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/admin.json',
       },
       dependencies: ['setup'],
     },
     {
       name: 'chromium-globalanalyst',
-      use: { ...devices['Desktop Chrome'], 
+      use: {
+        ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/globalanalyst.json',
       },
       dependencies: ['setup'],
     },
     {
       name: 'firefox-globalanalyst',
-      use: { ...devices['Desktop Firefox'], 
+      use: {
+        ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/globalanalyst.json',
       },
       dependencies: ['setup'],
-    },    
+    },
     {
       name: 'chromium-analyst',
-      use: { ...devices['Desktop Chrome'], 
+      use: {
+        ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/analyst.json',
       },
       dependencies: ['setup'],
     },
     {
       name: 'firefox-analyst',
-      use: { ...devices['Desktop Firefox'], 
+      use: {
+        ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/analyst.json',
       },
       dependencies: ['setup'],
-    },    
+    },
     {
       name: 'chromium-user',
-      use: { ...devices['Desktop Chrome'], 
+      use: {
+        ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/user.json',
       },
       dependencies: ['setup'],
     },
     {
       name: 'firefox-user',
-      use: { ...devices['Desktop Firefox'], 
+      use: {
+        ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/user.json',
       },
       dependencies: ['setup'],
     },
-    // {
-    //   name: 'chromium',
-    //   use: { ...devices['Desktop Chrome'] },
-    // },
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
   ],
 
-
-
-
-  
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });

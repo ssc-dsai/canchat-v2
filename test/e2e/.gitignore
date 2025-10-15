@@ -10,3 +10,4 @@ test-results/
 tests-examples/
 
 *.code-workspace
+tests/launch.spec.ts
