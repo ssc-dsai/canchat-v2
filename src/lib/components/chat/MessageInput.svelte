@@ -218,7 +218,7 @@
 				fileItem.id = uploadedFile.id;
 				fileItem.collection_name =
 					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
-				fileItem.url = `${WEBUI_API_BASE_PATH}/files/${uploadedFile.id}`;
+				fileItem.url = `${WEBUI_BASE_URL}${WEBUI_API_BASE_PATH}/files/${uploadedFile.id}`;
 
 				files = files;
 			} else {

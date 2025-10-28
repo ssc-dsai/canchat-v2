@@ -1,4 +1,4 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { MCP_API_BASE_PATH } from '$lib/constants';
 
 export const verifyMCPConnection = async (
@@ -8,13 +8,8 @@ export const verifyMCPConnection = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/verify`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/verify`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
 		data: {
 			url,
 			key
@@ -38,7 +33,7 @@ export const verifyMCPConnection = async (
 export const getMCPConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/config`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/config`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -59,13 +54,8 @@ export const getMCPConfig = async (token: string = '') => {
 export const updateMCPConfig = async (token: string = '', config: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/config/update`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/config/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
 		data: config
 	})
 		.then(async (res) => {
@@ -86,7 +76,7 @@ export const updateMCPConfig = async (token: string = '', config: object) => {
 export const getMCPURLs = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/urls`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/urls`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -107,13 +97,8 @@ export const getMCPURLs = async (token: string = '') => {
 export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/urls/update`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/urls/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
 		data: {
 			urls
 		}
@@ -136,7 +121,7 @@ export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 export const getMCPTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/tools`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/tools`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -161,13 +146,8 @@ export const callMCPTool = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/tools/call`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/tools/call`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
 		data: {
 			tool_name,
 			parameters
@@ -191,7 +171,7 @@ export const callMCPTool = async (
 export const getBuiltinServers = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/builtin`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/builtin`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -212,13 +192,8 @@ export const getBuiltinServers = async (token: string = '') => {
 export const restartBuiltinServer = async (token: string = '', serverName: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/builtin/${serverName}/restart`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		}
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/builtin/${serverName}/restart`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -240,7 +215,7 @@ export const restartBuiltinServer = async (token: string = '', serverName: strin
 export const getExternalServers = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -261,13 +236,8 @@ export const getExternalServers = async (token: string = '') => {
 export const createExternalServer = async (token: string = '', serverData: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
 		data: serverData
 	})
 		.then(async (res) => {
@@ -288,7 +258,7 @@ export const createExternalServer = async (token: string = '', serverData: objec
 export const getExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -313,13 +283,8 @@ export const updateExternalServer = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
 		method: 'PUT',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
 		data: serverData
 	})
 		.then(async (res) => {
@@ -340,13 +305,8 @@ export const updateExternalServer = async (
 export const deleteExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		}
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
+		method: 'DELETE'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -366,13 +326,8 @@ export const deleteExternalServer = async (token: string = '', serverId: string 
 export const startExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}/start`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		}
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}/start`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -392,13 +347,8 @@ export const startExternalServer = async (token: string = '', serverId: string =
 export const stopExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}/stop`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		}
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}/stop`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -418,13 +368,8 @@ export const stopExternalServer = async (token: string = '', serverId: string = 
 export const restartExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${MCP_API_BASE_PATH}/servers/external/${serverId}/restart`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		}
+	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}/restart`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
 			return res.data;
