@@ -1,17 +1,14 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const getModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/models/`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
-		})
-		.then((json) => {
-			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -29,14 +26,11 @@ export const getModels = async (token: string = '') => {
 export const getBaseModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/models/base`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/base`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
-		})
-		.then((json) => {
-			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -54,7 +48,7 @@ export const getBaseModels = async (token: string = '') => {
 export const createNewModel = async (token: string, model: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/models/create`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/create`, {
 		method: 'POST',
 		data: model
 	})
@@ -77,20 +71,14 @@ export const createNewModel = async (token: string, model: object) => {
 export const getModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await axiosInstance(
-		`${WEBUI_API_BASE_PATH}/models/model?${searchParams.toString()}`,
-		{
-			method: 'GET'
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/model`, {
+		method: 'GET',
+		params: {
+			id: id
 		}
-	)
+	})
 		.then(async (res) => {
 			return res.data;
-		})
-		.then((json) => {
-			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -109,20 +97,14 @@ export const getModelById = async (token: string, id: string) => {
 export const toggleModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await axiosInstance(
-		`${WEBUI_API_BASE_PATH}/models/model/toggle?${searchParams.toString()}`,
-		{
-			method: 'POST'
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/model/toggle`, {
+		method: 'POST',
+		params: {
+			id: id
 		}
-	)
+	})
 		.then(async (res) => {
 			return res.data;
-		})
-		.then((json) => {
-			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -144,18 +126,15 @@ export const updateModelById = async (token: string, id: string, model: object) 
 	const searchParams = new URLSearchParams();
 	searchParams.append('id', id);
 
-	const res = await axiosInstance(
-		`${WEBUI_API_BASE_PATH}/models/model/update?${searchParams.toString()}`,
-		{
-			method: 'POST',
-			data: model
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/model/update`, {
+		method: 'POST',
+		data: model,
+		params: {
+			id: id
 		}
-	)
+	})
 		.then(async (res) => {
 			return res.data;
-		})
-		.then((json) => {
-			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -173,21 +152,14 @@ export const updateModelById = async (token: string, id: string, model: object) 
 
 export const deleteModelById = async (token: string, id: string) => {
 	let error = null;
-
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await axiosInstance(
-		`${WEBUI_API_BASE_PATH}/models/model/delete?${searchParams.toString()}`,
-		{
-			method: 'DELETE'
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/model/delete`, {
+		method: 'DELETE',
+		params: {
+			id: id
 		}
-	)
+	})
 		.then(async (res) => {
 			return res.data;
-		})
-		.then((json) => {
-			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -206,14 +178,11 @@ export const deleteModelById = async (token: string, id: string) => {
 export const deleteAllModels = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/models/delete/all`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/delete/all`, {
 		method: 'DELETE'
 	})
 		.then(async (res) => {
 			return res.data;
-		})
-		.then((json) => {
-			return json;
 		})
 		.catch((err) => {
 			error = err;

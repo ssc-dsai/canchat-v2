@@ -1,4 +1,4 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const createDomain = async (
@@ -7,7 +7,7 @@ export const createDomain = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/create`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/create`, {
 		method: 'POST',
 		data: domain
 	})
@@ -30,7 +30,7 @@ export const createDomain = async (
 export const getDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -52,7 +52,7 @@ export const getDomains = async (token: string = '') => {
 export const getAvailableDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/available`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/available`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -78,7 +78,7 @@ export const updateDomainById = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/id/${domainId}/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/id/${domainId}/update`, {
 		method: 'POST',
 		data: domain
 	})
@@ -101,7 +101,7 @@ export const updateDomainById = async (
 export const deleteDomainById = async (token: string, domainId: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/domains/id/${domainId}/delete`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/id/${domainId}/delete`, {
 		method: 'DELETE'
 	})
 		.then(async (res) => {

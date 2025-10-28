@@ -1,13 +1,13 @@
-import { WEBUI_API_BASE_URL } from "$lib/constants";
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 import { get } from 'svelte/store';
 import { socket } from '$lib/stores';
 import type { Socket } from 'socket.io-client';
-import axiosInstance from "$lib/axiosInstance";
+import canchatAPI from '$lib/canchatAPI';
 
 export const getCrewMCPStatus = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/crew-mcp/status`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/crew-mcp/status`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -28,7 +28,7 @@ export const getCrewMCPStatus = async (token: string = '') => {
 export const getCrewMCPTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/crew-mcp/tools`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/crew-mcp/tools`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -61,7 +61,7 @@ export const queryCrewMCP = async (
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes timeout
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/crew-mcp/query`, {
 		method: 'POST',
 		data: {
 			query: query,

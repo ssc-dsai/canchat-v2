@@ -1,13 +1,13 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const getGravatarUrl = async (email: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/gravatar?email=${email}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/gravatar`, {
 		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json'
+		params: {
+			email: email
 		}
 	})
 		.then(async (res) => {
@@ -25,11 +25,8 @@ export const getGravatarUrl = async (email: string) => {
 export const formatPythonCode = async (code: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/code/format`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/code/format`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
 		data: {
 			code: code
 		}
@@ -57,11 +54,8 @@ export const formatPythonCode = async (code: string) => {
 export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 	let error = null;
 
-	const blob = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/pdf`, {
+	const blob = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/pdf`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
 		data: {
 			title: title,
 			messages: messages
@@ -82,11 +76,8 @@ export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 export const getHTMLFromMarkdown = async (md: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/markdown`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/markdown`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
 		data: {
 			md: md
 		}
@@ -106,7 +97,7 @@ export const getHTMLFromMarkdown = async (md: string) => {
 export const downloadDatabase = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/db/download`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/db/download`, {
 		method: 'GET',
 		responseType: 'blob'
 	})
@@ -118,36 +109,6 @@ export const downloadDatabase = async (token: string) => {
 			const a = document.createElement('a');
 			a.href = url;
 			a.download = 'webui.db';
-			document.body.appendChild(a);
-			a.click();
-			window.URL.revokeObjectURL(url);
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-};
-
-export const downloadLiteLLMConfig = async (token: string) => {
-	let error = null;
-
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/utils/litellm/config`, {
-		method: 'GET',
-		responseType: 'blob'
-	})
-		.then(async (response) => {
-			return response.data;
-		})
-		.then((blob) => {
-			const url = window.URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = 'config.yaml';
 			document.body.appendChild(a);
 			a.click();
 			window.URL.revokeObjectURL(url);

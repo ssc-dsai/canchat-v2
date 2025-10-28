@@ -1,11 +1,11 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 import { getUserPosition } from '$lib/utils';
 
 export const getUserGroups = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/groups`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/groups`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -27,7 +27,7 @@ export const getUserGroups = async (token: string) => {
 export const getUserDefaultPermissions = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/default/permissions`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/default/permissions`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -49,7 +49,7 @@ export const getUserDefaultPermissions = async (token: string) => {
 export const updateUserDefaultPermissions = async (token: string, permissions: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/default/permissions`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/default/permissions`, {
 		method: 'POST',
 		data: {
 			...permissions
@@ -74,7 +74,7 @@ export const updateUserDefaultPermissions = async (token: string, permissions: o
 export const updateUserRole = async (token: string, id: string, role: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/update/role`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/update/role`, {
 		method: 'POST',
 		data: {
 			id: id,
@@ -100,7 +100,7 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 export const getUsers = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -121,7 +121,7 @@ export const getUsers = async (token: string) => {
 
 export const getUserSettings = async (token: string) => {
 	let error = null;
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/user/settings`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/user/settings`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -143,7 +143,7 @@ export const getUserSettings = async (token: string) => {
 export const updateUserSettings = async (token: string, settings: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/user/settings/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/user/settings/update`, {
 		method: 'POST',
 		data: {
 			...settings
@@ -215,7 +215,7 @@ export const detectAndUpdateUserTimezone = async (token: string) => {
 export const getUserById = async (token: string, userId: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/${userId}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/${userId}`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -236,7 +236,7 @@ export const getUserById = async (token: string, userId: string) => {
 
 export const getUserInfo = async (token: string) => {
 	let error = null;
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/user/info`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/user/info`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -257,7 +257,7 @@ export const getUserInfo = async (token: string) => {
 
 export const getUserRole = async (token: string) => {
 	let error = null;
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/user/role`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/user/role`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -279,7 +279,7 @@ export const getUserRole = async (token: string) => {
 export const updateUserInfo = async (token: string, info: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/user/info/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/user/info/update`, {
 		method: 'POST',
 		data: {
 			...info
@@ -317,7 +317,7 @@ export const getAndUpdateUserLocation = async (token: string) => {
 export const deleteUserById = async (token: string, userId: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/${userId}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/${userId}`, {
 		method: 'DELETE'
 	})
 		.then(async (res) => {
@@ -346,7 +346,7 @@ type UserUpdateForm = {
 export const updateUserById = async (token: string, userId: string, user: UserUpdateForm) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/users/${userId}/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/${userId}/update`, {
 		method: 'POST',
 		data: {
 			profile_image_url: user.profile_image_url,

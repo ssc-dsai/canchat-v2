@@ -1,4 +1,4 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 import { t } from 'i18next';
 
@@ -12,7 +12,7 @@ type ChannelForm = {
 export const createNewChannel = async (token: string = '', channel: ChannelForm) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/channels/create`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/create`, {
 		method: 'POST',
 		data: { ...channel }
 	})
@@ -38,9 +38,8 @@ export const createNewChannel = async (token: string = '', channel: ChannelForm)
 export const getChannels = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/channels/`, {
-		method: 'GET',
-
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -64,9 +63,8 @@ export const getChannels = async (token: string = '') => {
 export const getChannelById = async (token: string = '', channel_id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/channels/${channel_id}`, {
-		method: 'GET',
-
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/${channel_id}`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -94,7 +92,7 @@ export const updateChannelById = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/update`, {
 		method: 'POST',
 		data: { ...channel }
 	})
@@ -120,9 +118,8 @@ export const updateChannelById = async (
 export const deleteChannelById = async (token: string = '', channel_id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/delete`, {
-		method: 'DELETE',
-
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/delete`, {
+		method: 'DELETE'
 	})
 		.then(async (res) => {
 			return res.data;
@@ -151,11 +148,10 @@ export const getChannelMessages = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(
+	const res = await canchatAPI(
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages?skip=${skip}&limit=${limit}`,
 		{
-			method: 'GET',
-
+			method: 'GET'
 		}
 	)
 		.then(async (res) => {
@@ -186,11 +182,10 @@ export const getChannelThreadMessages = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(
+	const res = await canchatAPI(
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/thread?skip=${skip}&limit=${limit}`,
 		{
-			method: 'GET',
-
+			method: 'GET'
 		}
 	)
 		.then(async (res) => {
@@ -222,7 +217,7 @@ type MessageForm = {
 export const sendMessage = async (token: string = '', channel_id: string, message: MessageForm) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/post`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/post`, {
 		method: 'POST',
 		data: { ...message }
 	})
@@ -253,11 +248,10 @@ export const updateMessage = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(
+	const res = await canchatAPI(
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/update`,
 		{
 			method: 'POST',
-,
 			data: { ...message }
 		}
 	)
@@ -288,11 +282,10 @@ export const addReaction = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(
+	const res = await canchatAPI(
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/reactions/add`,
 		{
 			method: 'POST',
-,
 			data: { name }
 		}
 	)
@@ -323,11 +316,10 @@ export const removeReaction = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(
+	const res = await canchatAPI(
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/reactions/remove`,
 		{
 			method: 'POST',
-,
 			data: { name }
 		}
 	)
@@ -353,11 +345,10 @@ export const removeReaction = async (
 export const deleteMessage = async (token: string = '', channel_id: string, message_id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(
+	const res = await canchatAPI(
 		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/delete`,
 		{
-			method: 'DELETE',
-
+			method: 'DELETE'
 		}
 	)
 		.then(async (res) => {

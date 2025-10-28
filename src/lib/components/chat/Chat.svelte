@@ -485,7 +485,7 @@
 			};
 
 			// Attempt to fetch the file
-			const fileResponse = await axiosInstance(fileData.url, fetchOptions);
+			const fileResponse = await fetch(fileData.url, fetchOptions);
 
 			if (!fileResponse.ok) {
 				const errorText = await fileResponse.text();

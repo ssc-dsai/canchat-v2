@@ -1,4 +1,4 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const createNewKnowledge = async (
@@ -9,7 +9,7 @@ export const createNewKnowledge = async (
 ) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/create`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/create`, {
 		method: 'POST',
 		data: {
 			name: name,
@@ -36,7 +36,7 @@ export const createNewKnowledge = async (
 export const getKnowledgeBases = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -61,7 +61,7 @@ export const getKnowledgeBases = async (token: string = '') => {
 export const getKnowledgeBaseList = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/list`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/list`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -86,7 +86,7 @@ export const getKnowledgeBaseList = async (token: string = '') => {
 export const getKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/${id}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/${id}`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -119,14 +119,9 @@ type KnowledgeUpdateForm = {
 export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/${id}/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/${id}/update`, {
 		method: 'POST',
-		data: {
-			name: form?.name ? form.name : undefined,
-			description: form?.description ? form.description : undefined,
-			data: form?.data ? form.data : undefined,
-			access_control: form.access_control
-		}
+		data: form
 	})
 		.then(async (res) => {
 			return res.data;
@@ -151,7 +146,7 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 export const addFileToKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/${id}/file/add`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/${id}/file/add`, {
 		method: 'POST',
 		data: {
 			file_id: fileId
@@ -180,7 +175,7 @@ export const addFileToKnowledgeById = async (token: string, id: string, fileId: 
 export const updateFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/${id}/file/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/${id}/file/update`, {
 		method: 'POST',
 		data: {
 			file_id: fileId
@@ -209,7 +204,7 @@ export const updateFileFromKnowledgeById = async (token: string, id: string, fil
 export const removeFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/${id}/file/remove`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/${id}/file/remove`, {
 		method: 'POST',
 		data: {
 			file_id: fileId
@@ -238,7 +233,7 @@ export const removeFileFromKnowledgeById = async (token: string, id: string, fil
 export const resetKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/${id}/reset`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/${id}/reset`, {
 		method: 'POST'
 	})
 		.then(async (res) => {
@@ -264,7 +259,7 @@ export const resetKnowledgeById = async (token: string, id: string) => {
 export const deleteKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/knowledge/${id}/delete`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/knowledge/${id}/delete`, {
 		method: 'DELETE'
 	})
 		.then(async (res) => {

@@ -1,18 +1,13 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { WEBUI_API_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
 
 export const getModels = async (token: string = '', base: boolean = false) => {
 	let error = null;
-	const res = await axiosInstance(`/api/models${base ? '/base' : ''}`, {
+	const res = await canchatAPI(`/api/models${base ? '/base' : ''}`, {
 		method: 'GET'
-		// headers: {
-		// 	Accept: 'application/json',
-		// 	'Content-Type': 'application/json',
-		// 	...(token && { authorization: `Bearer ${token}` })
-		// }
 	})
 		.then(async (res) => {
-			return res.data;
+			return res.data.data;
 		})
 		.catch(async (err) => {
 			error = err;
@@ -24,8 +19,7 @@ export const getModels = async (token: string = '', base: boolean = false) => {
 		throw error;
 	}
 
-	let models = res?.data ?? [];
-	return models;
+	return res || [];
 };
 
 type ChatCompletedForm = {
@@ -38,9 +32,8 @@ type ChatCompletedForm = {
 export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/chat/completed`, {
+	const res = await await canchatAPI(`/api/chat/completed`, {
 		method: 'POST',
-
 		data: body
 	})
 		.then(async (res) => {
@@ -72,7 +65,7 @@ type ChatActionForm = {
 export const chatAction = async (token: string, action_id: string, body: ChatActionForm) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/chat/actions/${action_id}`, {
+	const res = await await canchatAPI(`/api/chat/actions/${action_id}`, {
 		method: 'POST',
 
 		data: body
@@ -100,7 +93,7 @@ export const chatAction = async (token: string, action_id: string, body: ChatAct
 export const stopTask = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/tasks/stop/${id}`, {
+	const res = await await canchatAPI(`/api/tasks/stop/${id}`, {
 		method: 'POST'
 	})
 		.then(async (res) => {
@@ -126,7 +119,7 @@ export const stopTask = async (token: string, id: string) => {
 export const getTaskConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/config`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/tasks/config`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -148,7 +141,7 @@ export const getTaskConfig = async (token: string = '') => {
 export const updateTaskConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/config/update`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/tasks/config/update`, {
 		method: 'POST',
 
 		data: config
@@ -181,7 +174,7 @@ export const generateTitle = async (
 ) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/title/completions`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/tasks/title/completions`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -215,7 +208,7 @@ export const generateTags = async (
 ) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/tags/completions`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/tasks/tags/completions`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -281,7 +274,7 @@ export const generateEmoji = async (
 ) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/emoji/completions`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/tasks/emoji/completions`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -320,11 +313,11 @@ export const generateQueries = async (
 	model: string,
 	messages: object[],
 	prompt: string,
-	type?: string = 'web_search'
+	type: string = 'web_search'
 ) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/queries/completions`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/tasks/queries/completions`, {
 		method: 'POST',
 		data: {
 			model: model,
@@ -388,7 +381,7 @@ export const generateAutoCompletion = async (
 	const controller = new AbortController();
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/auto/completions`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/tasks/auto/completions`, {
 		signal: controller.signal,
 		method: 'POST',
 		data: {
@@ -452,7 +445,7 @@ export const generateMoACompletion = async (
 	const controller = new AbortController();
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/tasks/moa/completions`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/tasks/moa/completions`, {
 		signal: controller.signal,
 		method: 'POST',
 		data: {
@@ -477,7 +470,7 @@ export const generateMoACompletion = async (
 export const getPipelinesList = async (token: string = '') => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/pipelines/list`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/pipelines/list`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -505,7 +498,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 	formData.append('file', file);
 	formData.append('urlIdx', urlIdx);
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/pipelines/upload`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/pipelines/upload`, {
 		method: 'POST',
 		headers: {
 			...(token && { authorization: `Bearer ${token}` })
@@ -536,7 +529,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 export const downloadPipeline = async (token: string, url: string, urlIdx: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/pipelines/add`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/pipelines/add`, {
 		method: 'POST',
 
 		data: {
@@ -567,7 +560,7 @@ export const downloadPipeline = async (token: string, url: string, urlIdx: strin
 export const deletePipeline = async (token: string, id: string, urlIdx: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`${WEBUI_API_BASE_PATH}/pipelines/delete`, {
+	const res = await await canchatAPI(`${WEBUI_API_BASE_PATH}/pipelines/delete`, {
 		method: 'DELETE',
 
 		data: {
@@ -603,7 +596,7 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await await axiosInstance(
+	const res = await await canchatAPI(
 		`${WEBUI_API_BASE_PATH}/pipelines/?${searchParams.toString()}`,
 		{
 			method: 'GET'
@@ -634,15 +627,10 @@ export const getPipelineValves = async (token: string, pipeline_id: string, urlI
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await axiosInstance(
+	const res = await canchatAPI(
 		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves?${searchParams.toString()}`,
 		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				...(token && { authorization: `Bearer ${token}` })
-			}
+			method: 'GET'
 		}
 	)
 		.then(async (res) => {
@@ -669,7 +657,7 @@ export const getPipelineValvesSpec = async (token: string, pipeline_id: string, 
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await axiosInstance(
+	const res = await canchatAPI(
 		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves/spec?${searchParams.toString()}`,
 		{
 			method: 'GET',
@@ -709,7 +697,7 @@ export const updatePipelineValves = async (
 		searchParams.append('urlIdx', urlIdx);
 	}
 
-	const res = await axiosInstance(
+	const res = await canchatAPI(
 		`${WEBUI_BASE_URL}/api/v1/pipelines/${pipeline_id}/valves/update?${searchParams.toString()}`,
 		{
 			method: 'POST',
@@ -745,7 +733,7 @@ export const updatePipelineValves = async (
 export const getBackendConfig = async () => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/config`, {
+	const res = await await canchatAPI(`/api/config`, {
 		method: 'GET',
 		withCredentials: true,
 		headers: {
@@ -771,7 +759,7 @@ export const getBackendConfig = async () => {
 export const getChangelog = async () => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/changelog`, {
+	const res = await await canchatAPI(`/api/changelog`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
@@ -796,7 +784,7 @@ export const getChangelog = async () => {
 export const getModelFilterConfig = async (token: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/config/model/filter`, {
+	const res = await await canchatAPI(`/api/config/model/filter`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -822,7 +810,7 @@ export const updateModelFilterConfig = async (
 ) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/config/model/filter`, {
+	const res = await await canchatAPI(`/api/config/model/filter`, {
 		method: 'POST',
 		data: {
 			enabled: enabled,
@@ -848,7 +836,7 @@ export const updateModelFilterConfig = async (
 export const getWebhookUrl = async (token: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/webhook`, {
+	const res = await await canchatAPI(`/api/webhook`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -870,7 +858,7 @@ export const getWebhookUrl = async (token: string) => {
 export const updateWebhookUrl = async (token: string, url: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/webhook`, {
+	const res = await await canchatAPI(`/api/webhook`, {
 		method: 'POST',
 		data: {
 			url: url
@@ -895,7 +883,7 @@ export const updateWebhookUrl = async (token: string, url: string) => {
 export const getCommunitySharingEnabledStatus = async (token: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/community_sharing`, {
+	const res = await await canchatAPI(`/api/community_sharing`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -917,7 +905,7 @@ export const getCommunitySharingEnabledStatus = async (token: string) => {
 export const toggleCommunitySharingEnabledStatus = async (token: string) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/community_sharing/toggle`, {
+	const res = await await canchatAPI(`/api/community_sharing/toggle`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -939,7 +927,7 @@ export const toggleCommunitySharingEnabledStatus = async (token: string) => {
 export const getModelConfig = async (token: string): Promise<GlobalModelConfig> => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/config/models`, {
+	const res = await await canchatAPI(`/api/config/models`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -979,7 +967,7 @@ export type GlobalModelConfig = ModelConfig[];
 export const updateModelConfig = async (token: string, config: GlobalModelConfig) => {
 	let error = null;
 
-	const res = await await axiosInstance(`/api/config/models`, {
+	const res = await await canchatAPI(`/api/config/models`, {
 		method: 'POST',
 		data: {
 			models: config
