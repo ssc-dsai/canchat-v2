@@ -1,10 +1,10 @@
-import axiosInstance from '$lib/axiosInstance';
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import canchatAPI from '$lib/canchatAPI';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const getConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/config`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/config`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -29,7 +29,7 @@ export const getConfig = async (token: string = '') => {
 export const updateConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/config`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/config`, {
 		method: 'POST',
 		data: {
 			...config
@@ -57,22 +57,14 @@ export const getAllFeedbacks = async (
 ) => {
 	let error = null;
 
-	const { page = 1, limit = 10, search } = options;
-	const params = new URLSearchParams({
-		page: page.toString(),
-		limit: limit.toString()
-	});
-
-	if (search && search.trim()) {
-		params.append('search', search.trim());
-	}
-
-	const res = await axiosInstance(
-		`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/paginated?${params}`,
-		{
-			method: 'GET'
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/feedbacks/all/paginated`, {
+		method: 'GET',
+		params: {
+			page: options?.limit,
+			limit: options?.page,
+			search: options?.search
 		}
-	)
+	})
 		.then(async (res) => {
 			return res.data;
 		})
@@ -95,13 +87,11 @@ export const getAllFeedbacks = async (
 export const getFeedbacksCount = async (token: string = '', search?: string) => {
 	let error = null;
 
-	const params = new URLSearchParams();
-	if (search && search.trim()) {
-		params.append('search', search.trim());
-	}
-
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/count?${params}`, {
-		method: 'GET'
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/feedbacks/count`, {
+		method: 'GET',
+		params: {
+			search: search
+		}
 	})
 		.then(async (res) => {
 			return res.data;
@@ -126,7 +116,7 @@ export const getFeedbacksCount = async (token: string = '', search?: string) => 
 export const getAllFeedbacksLegacy = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/feedbacks/all`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -151,7 +141,7 @@ export const getAllFeedbacksLegacy = async (token: string = '') => {
 export const exportAllFeedbacks = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedbacks/all/export`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/feedbacks/all/export`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -176,7 +166,7 @@ export const exportAllFeedbacks = async (token: string = '') => {
 export const createNewFeedback = async (token: string, feedback: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/feedback`, {
 		method: 'POST',
 		data: {
 			...feedback
@@ -201,7 +191,7 @@ export const createNewFeedback = async (token: string, feedback: object) => {
 export const getFeedbackById = async (token: string, feedbackId: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/feedback/${feedbackId}`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -226,7 +216,7 @@ export const getFeedbackById = async (token: string, feedbackId: string) => {
 export const updateFeedbackById = async (token: string, feedbackId: string, feedback: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/feedback/${feedbackId}`, {
 		method: 'POST',
 		data: {
 			...feedback
@@ -251,7 +241,7 @@ export const updateFeedbackById = async (token: string, feedbackId: string, feed
 export const deleteFeedbackById = async (token: string, feedbackId: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_URL}/evaluations/feedback/${feedbackId}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/evaluations/feedback/${feedbackId}`, {
 		method: 'DELETE'
 	})
 		.then(async (res) => {

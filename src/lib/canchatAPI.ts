@@ -2,7 +2,7 @@ import axios from 'axios';
 import { WEBUI_BASE_URL } from './constants';
 import { goto } from '$app/navigation';
 
-const axiosInstance = axios.create({
+const canchatAPI = axios.create({
 	baseURL: WEBUI_BASE_URL,
 	headers: {
 		Accept: 'application/json',
@@ -11,11 +11,14 @@ const axiosInstance = axios.create({
 });
 
 // Request interceptor to add authorization token
-axiosInstance.interceptors.request.use(
+canchatAPI.interceptors.request.use(
 	(config) => {
 		const token = localStorage.getItem('token');
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
+		} else {
+			// If no token, must get a new one.
+			// goto("/auth")
 		}
 		return config;
 	},
@@ -25,7 +28,7 @@ axiosInstance.interceptors.request.use(
 );
 
 // Response interceptor to handle 401 errors
-axiosInstance.interceptors.response.use(
+canchatAPI.interceptors.response.use(
 	(response) => {
 		return response;
 	},
@@ -34,11 +37,11 @@ axiosInstance.interceptors.response.use(
 			console.error('Unauthorized: Redirecting to auth page.');
 			localStorage.removeItem('token'); // Clear invalid token
 
-			window.location.href = '/auth'; // Simple redirect for any SPA or general app
+			goto('/auth');
 			return new Promise(() => {}); // Prevent further execution in the component
 		}
 		return Promise.reject(error);
 	}
 );
 
-export default axiosInstance;
+export default canchatAPI;

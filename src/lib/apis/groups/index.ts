@@ -1,10 +1,10 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const createNewGroup = async (token: string, group: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/groups/create`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/create`, {
 		method: 'POST',
 		data: {
 			...group
@@ -29,7 +29,7 @@ export const createNewGroup = async (token: string, group: object) => {
 export const getGroups = async (token: string = '') => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/groups/`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -54,7 +54,7 @@ export const getGroups = async (token: string = '') => {
 export const getGroupById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/groups/id/${id}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/id/${id}`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -80,7 +80,7 @@ export const getGroupById = async (token: string, id: string) => {
 export const updateGroupById = async (token: string, id: string, group: object) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/groups/id/${id}/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/id/${id}/update`, {
 		method: 'POST',
 		data: {
 			...group
@@ -109,7 +109,7 @@ export const updateGroupById = async (token: string, id: string, group: object) 
 export const deleteGroupById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/groups/id/${id}/delete`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/id/${id}/delete`, {
 		method: 'DELETE'
 	})
 		.then(async (res) => {

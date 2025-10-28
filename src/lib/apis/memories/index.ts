@@ -1,10 +1,10 @@
-import axiosInstance from '$lib/axiosInstance';
+import canchatAPI from '$lib/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const getMemories = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/`, {
 		method: 'GET'
 	})
 		.then(async (res) => {
@@ -26,7 +26,7 @@ export const getMemories = async (token: string) => {
 export const addNewMemory = async (token: string, content: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/add`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/add`, {
 		method: 'POST',
 		data: {
 			content: content
@@ -51,7 +51,7 @@ export const addNewMemory = async (token: string, content: string) => {
 export const updateMemoryById = async (token: string, id: string, content: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/${id}/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/${id}/update`, {
 		method: 'POST',
 		data: {
 			content: content
@@ -76,7 +76,7 @@ export const updateMemoryById = async (token: string, id: string, content: strin
 export const queryMemory = async (token: string, content: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/query`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/query`, {
 		method: 'POST',
 		data: {
 			content: content
@@ -101,7 +101,7 @@ export const queryMemory = async (token: string, content: string) => {
 export const deleteMemoryById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/${id}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/${id}`, {
 		method: 'DELETE'
 	})
 		.then(async (res) => {
@@ -127,7 +127,7 @@ export const deleteMemoryById = async (token: string, id: string) => {
 export const deleteMemoriesByUserId = async (token: string) => {
 	let error = null;
 
-	const res = await axiosInstance(`${WEBUI_API_BASE_PATH}/memories/delete/user`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/delete/user`, {
 		method: 'DELETE'
 	})
 		.then(async (res) => {
