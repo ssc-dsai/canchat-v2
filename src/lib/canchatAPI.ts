@@ -16,9 +16,6 @@ canchatAPI.interceptors.request.use(
 		const token = localStorage.getItem('token');
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
-		} else {
-			// If no token, must get a new one.
-			// goto("/auth")
 		}
 		return config;
 	},
