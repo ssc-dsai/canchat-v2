@@ -40,7 +40,7 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
 
 	let largeScreen = true;
 
