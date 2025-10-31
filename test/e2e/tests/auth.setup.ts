@@ -1,5 +1,6 @@
 import { test as setup, expect, Page } from '@playwright/test';
 import path from 'path';
+import { showAdminSettings } from '../src/utils/navigation';
 const fs = require('fs');
 
 const data = fs.readFileSync(path.join(__dirname, 'creds.json'));
@@ -25,10 +26,8 @@ async function populateAccounts({ page }: { page: Page }) {
 
   await page.waitForURL('/');
   await page.getByRole('button', { name: 'Okay, Let\'s Go!' }).click();
-  await page.getByRole('button', { name: 'User profile' }).click();
-  await page.getByRole('menuitem', { name: 'Admin Panel' }).click();
-  await page.getByRole('link', { name: 'Users' }).click();
 
+  await showAdminSettings(page,'Users & Access', 'Overview');
 
   for (const user of credentials.users) {
     if (user.username != 'admin') {
@@ -40,10 +39,16 @@ async function populateAccounts({ page }: { page: Page }) {
       await page.getByRole('button', { name: 'Save' }).click();
     }
   }
-  await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
-  await page.getByRole('button', { name: 'admin User Menu' }).click();
-  await page.getByText('Sign Out').click();
 
+  await showAdminSettings(page,'Settings', 'Models');
+  await page.getByRole('button', { name: 'modelfile profile chatgpt-4o-' }).click();
+  await page.locator("//div[@contenteditable='true'][@data-placeholder='Enter English description']").fill('chatgpt');
+  await page.locator("//div[@contenteditable='true'][@data-placeholder='Enter French description']").fill('chatgpt');
+  await page.locator('#models').selectOption('public');
+  await page.getByRole('button', { name: 'Save & Update' }).click();
+
+  await page.getByRole('button', { name: 'User profile' }).click();
+  await page.getByText('Sign Out').click();
 }
 
 
@@ -90,7 +95,6 @@ setup('authenticate', async ({ page }) => {
     await page.getByText('Sign Out').click();
   }
 
-  await page.screenshot({ path: 'playwright-report/screenshots/auth_fail.png', fullPage: true });
   await page.close();
 
 });

@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { showSidebar } from '../../../src/utils/navigation';
+import { showSidebar, waitToSettle } from '../../../src/utils/navigation';
 
 test('PR#248 -- fix(admin-settings/interface/banners): ensure the correct language is displayed on first render', async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes('admin'), 'Only admin profile check required');
   try {
     await page.goto('/');
-
     await showSidebar(page);
+
     await page.getByRole('button', { name: 'User profile' }).click();
     await page.getByRole('menuitem', { name: 'Admin Panel' }).click();
     await page.getByRole('link', { name: 'Settings' }).click();
@@ -14,10 +14,14 @@ test('PR#248 -- fix(admin-settings/interface/banners): ensure the correct langua
     await page.locator('.p-1').first().click();
     await page.locator('.p-1').first().click();
     await page.locator('.w-fit.rounded-xl').first().selectOption('success');
+
+    await waitToSettle(page);
     await page.locator('.flex > select:nth-child(2)').selectOption('en-GB');
     await page.getByRole('textbox', { name: 'Content' }).fill('English');
     await page.locator('.p-1').first().click();
     await page.locator('div:nth-child(2) > .flex.flex-row > select').first().selectOption('success');
+    
+    await waitToSettle(page);
     await page.locator('div:nth-child(2) > .flex.flex-row > select:nth-child(2)').selectOption('fr-CA');
     await page.getByRole('textbox', { name: 'Content' }).nth(1).fill('francais');
 
