@@ -104,8 +104,6 @@ jobs:
           ENABLE_EVALUATION_ARENA_MODELS: false
 
         run: |
-            # docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --network host --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:dev /bin/bash -c 'bash start.sh'
-            # docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:dev /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && bash start.sh'
             docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:dev /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
               unset OPENAI_API_KEY && \
               unset OPENAI_API_BASE_URL && \
@@ -130,7 +128,7 @@ jobs:
           
       - name:  Start Playwright Environment
         run: |
-            docker run --name playwright --add-host=host.docker.internal:host-gateway --network host -td --rm ${{ needs.build_and_push_playwright_image.outputs.image_tag }}
+            docker run --name playwright --add-host=host.docker.internal:host-gateway --network host -td --rm ${{ needs.build_and_push_playwright_image.outputs.image_tag }} /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > /app/.env'
             docker cp ./test/e2e/. playwright:/app/
 
       - name: Get timestamp

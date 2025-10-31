@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 process.env.TEST_PATH = __dirname;
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig({
   testDir: './tests',
@@ -44,12 +45,22 @@ export default defineConfig({
     // Setup project
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
     {
+      name: 'core',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'playwright/.auth/admin.json',
+      },
+      testDir: './tests/core',
+      dependencies: ['setup'],
+    },
+    {
       name: 'chromium-admin',
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/admin.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['core'],
+      testDir: './tests/releases',
     },
     {
       name: 'firefox-admin',
@@ -57,7 +68,8 @@ export default defineConfig({
         ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/admin.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['core'],
+      testDir: './tests/releases',
     },
     {
       name: 'chromium-globalanalyst',
@@ -65,7 +77,8 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/globalanalyst.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['core'],
+      testDir: './tests/releases',
     },
     {
       name: 'firefox-globalanalyst',
@@ -73,7 +86,8 @@ export default defineConfig({
         ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/globalanalyst.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['core'],
+      testDir: './tests/releases',
     },
     {
       name: 'chromium-analyst',
@@ -81,7 +95,8 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/analyst.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['core'],
+      testDir: './tests/releases',
     },
     {
       name: 'firefox-analyst',
@@ -89,7 +104,8 @@ export default defineConfig({
         ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/analyst.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['core'],
+      testDir: './tests/releases',
     },
     {
       name: 'chromium-user',
@@ -97,7 +113,8 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/user.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['core'],
+      testDir: './tests/releases',
     },
     {
       name: 'firefox-user',
@@ -105,7 +122,8 @@ export default defineConfig({
         ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/user.json',
       },
-      dependencies: ['setup'],
+      dependencies: ['core'],
+      testDir: './tests/releases',
     },
   ],
 

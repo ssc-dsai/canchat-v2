@@ -11,3 +11,4 @@ tests-examples/
 
 *.code-workspace
 tests/launch.spec.ts
+restart.sh

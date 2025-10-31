@@ -1,9 +1,10 @@
 {
   "devDependencies": {
-    "@playwright/test": "^1.55.1",
-    "@types/node": "^24.6.2"
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.6.2",
+    "dotenv": "^17.2.3"
   },
   "dependencies": {
-    "dotenv": "^17.2.3"
+    "openai": "^6.7.0"
   }
 }

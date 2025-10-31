@@ -31,6 +31,6 @@ test('PR#232 -- feat(metrics): implement export functionality for metrics data a
         // page.on('download', download => download.path().then(console.log));
     } else {
         await expect(page.getByRole('link', { name: 'Metrics' })).not.toBeVisible();
-        console.count('Metrics link not visible for user.');
+        console.log('Metrics link not visible for user.');
     }
 });
