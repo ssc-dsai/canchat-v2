@@ -128,7 +128,7 @@ jobs:
           
       - name:  Start Playwright Environment
         run: |
-            docker run --name playwright --add-host=host.docker.internal:host-gateway --network host -td --rm ${{ needs.build_and_push_playwright_image.outputs.image_tag }} /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > /app/.env'
+            docker run --name playwright --add-host=host.docker.internal:host-gateway --network host -td --rm ${{ needs.build_and_push_playwright_image.outputs.image_tag }} /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > /app/.env && bash'
             docker cp ./test/e2e/. playwright:/app/
 
       - name: Get timestamp
