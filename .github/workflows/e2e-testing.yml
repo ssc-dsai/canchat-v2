@@ -87,6 +87,8 @@ jobs:
         ports:
           - 6333:6333
           - 6334:6334
+        options: >-
+          --add-host host.docker.internal:host-gateway
 
     steps:      
       - name: Checkout CANChat-V2
