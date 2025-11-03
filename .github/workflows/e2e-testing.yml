@@ -70,7 +70,7 @@ jobs:
 
   tests:
     name: 'Playwright E2E Tests'
-    runs-on: arc-ssc-dsai
+    runs-on: azure-runner
     needs: 
       build_and_push_playwright_image
 
