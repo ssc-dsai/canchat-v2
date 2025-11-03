@@ -1,7 +1,7 @@
 import { Page } from '@playwright/test';
 import path from 'path';
 
-const testPath = process.env.TEST_PATH || '/app/test/e2e';
+const testPath = process.env.BASE_PATH || '/app/test/e2e';
 
 interface StorageFile {
     cookies?: any[];

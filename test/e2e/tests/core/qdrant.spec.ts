@@ -5,7 +5,9 @@ import { sendChatMessage } from '../../src/utils/navigation';
 
 
 test('Test - Qdrant Availability', async ({ page }, testInfo) => {
-  test.setTimeout(180000); // Set timeout to 3 minutes
+  const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120000;
+  test.setTimeout(timeout); // Set timeout to LONG_TIMEOUT
+  
   await page.goto('/');
 
   // Define the test file path

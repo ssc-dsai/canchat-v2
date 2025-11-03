@@ -7,8 +7,12 @@ import { defineConfig, devices, Page } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
 
-process.env.TEST_PATH = __dirname;
+// Env variables
+process.env.BASE_PATH = __dirname;
 dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// Long test timeout
+process.env.LONG_TIMEOUT = '180000';
 
 export default defineConfig({
   testDir: './tests',
@@ -28,7 +32,7 @@ export default defineConfig({
     baseURL: "http://localhost:8080",
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    trace: 'on',
 
     // Capture screenshot after each test failure.
     screenshot: 'only-on-failure',

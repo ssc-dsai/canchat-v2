@@ -3,7 +3,8 @@ import { setUserContext } from '../../src/utils/utils';
 import { showAdminSettings, toggleSwitch, sendChatMessage, showStartPage } from '../../src/utils/navigation';
 
 test('Test - MCP Availability', async ({ page }, testInfo) => {
-  test.setTimeout(180000); // Set timeout to 3 minutes
+  const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120000;
+  test.setTimeout(timeout); // Set timeout to LONG_TIMEOUT
   
   await showStartPage(page);
   await showAdminSettings(page, "Settings", "MCP");
