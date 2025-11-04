@@ -104,6 +104,7 @@ jobs:
       - name: Force local Docker image update
         run: |
           docker images --format '{{.Repository}}:{{.Tag}}' | xargs -I {} bash -c 'docker inspect --format="{{index .RepoDigests 0}}" {} && docker pull {};';
+        continue-on-error: true 
 
 
       - name:  Start CANChat Environment
