@@ -3,6 +3,9 @@ import { setUserContext } from '../../src/utils/utils';
 import { showAdminSettings, toggleSwitch, sendChatMessage, showStartPage } from '../../src/utils/navigation';
 
 test('Test - Wiki Grounding Availability', async ({ page }, testInfo) => {
+  const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120000;
+  test.setTimeout(timeout); // Set timeout to LONG_TIMEOUT
+  
   await showStartPage(page);
 
   await page.getByLabel('More').click();

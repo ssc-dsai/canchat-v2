@@ -143,7 +143,7 @@ jobs:
 
       - name: Run Playwright tests 
         run: |
-            docker exec playwright npx playwright test tests/releases/
+            CI=true docker exec playwright npx playwright test tests/releases/
 
       - name: Copy report from playwright
         if: ${{ !cancelled() }}
