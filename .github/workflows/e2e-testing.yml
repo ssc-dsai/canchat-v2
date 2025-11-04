@@ -101,6 +101,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Force local Docker image update
+        run: |
+          docker images --format '{{.Repository}}:{{.Tag}}' | xargs -I {} bash -c 'docker inspect --format="{{index .RepoDigests 0}}" {} && docker pull {};';
+
+
       - name:  Start CANChat Environment
         env:
           ENABLE_EVALUATION_ARENA_MODELS: false
