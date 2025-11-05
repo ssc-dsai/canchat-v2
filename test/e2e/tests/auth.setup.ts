@@ -25,7 +25,7 @@ async function populateAccounts({ page }: { page: Page }) {
   await page.getByRole('textbox', { name: 'Enter Your Password' }).fill(adminUser.password);
   await page.getByRole('button', { name: 'Create Admin Account' }).click();
 
-  await waitToSettle(page);
+  await waitToSettle(page, 2000);
   await page.getByRole('button', { name: 'Okay, Let\'s Go!' }).click();
 
   await showAdminSettings(page,'Users & Access', 'Overview');
@@ -55,6 +55,7 @@ async function populateAccounts({ page }: { page: Page }) {
 
 setup('authenticate', async ({ page }) => {
   // If it's the first login, run setup('populateAccounts')
+  
   await showPage(page, '/auth');
 
   try {
@@ -72,8 +73,8 @@ setup('authenticate', async ({ page }) => {
       continue;
     }
 
-    await page.waitForTimeout(500);
-    await page.goto('/auth');
+    
+    await showPage(page, '/auth');
     await page.getByRole('textbox', { name: 'Enter Your Email' }).fill(user.email);
     await page.getByRole('textbox', { name: 'Enter Your Password' }).fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
