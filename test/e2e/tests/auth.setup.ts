@@ -1,6 +1,6 @@
 import { test as setup, expect, Page } from '@playwright/test';
 import path from 'path';
-import { showAdminSettings } from '../src/utils/navigation';
+import { showAdminSettings, showPage } from '../src/utils/navigation';
 const fs = require('fs');
 
 const data = fs.readFileSync(path.join(__dirname, 'creds.json'));
@@ -16,7 +16,8 @@ async function populateAccounts({ page }: { page: Page }) {
     }
   }
 
-  await page.goto('/auth');
+  await showPage(page, '/auth');
+
   // First login
   await page.getByRole('button').filter({ hasText: /^$/ }).click();
   await page.getByRole('textbox', { name: 'Enter Your Full Name' }).fill(adminUser.username);
@@ -54,7 +55,7 @@ async function populateAccounts({ page }: { page: Page }) {
 
 setup('authenticate', async ({ page }) => {
   // If it's the first login, run setup('populateAccounts')
-  await page.goto('/auth');
+  await showPage(page, '/auth');
 
   try {
     await page.getByRole('button').filter({ hasText: /^$/ }).first().waitFor({ state: 'visible', timeout: 1000 });

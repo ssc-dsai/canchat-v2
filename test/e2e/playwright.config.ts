@@ -129,6 +129,7 @@ export default defineConfig({
       dependencies: ['core'],
       testDir: './tests/releases',
     },
+    { name: 'test', testMatch: /launch.spec.ts/ },
   ],
 
 });
