@@ -1,6 +1,6 @@
 import { test as setup, expect, Page } from '@playwright/test';
 import path from 'path';
-import { showAdminSettings, showPage } from '../src/utils/navigation';
+import { showAdminSettings, showPage, waitToSettle } from '../src/utils/navigation';
 const fs = require('fs');
 
 const data = fs.readFileSync(path.join(__dirname, 'creds.json'));
@@ -25,7 +25,7 @@ async function populateAccounts({ page }: { page: Page }) {
   await page.getByRole('textbox', { name: 'Enter Your Password' }).fill(adminUser.password);
   await page.getByRole('button', { name: 'Create Admin Account' }).click();
 
-  await page.waitForURL('/');
+  await waitToSettle(page);
   await page.getByRole('button', { name: 'Okay, Let\'s Go!' }).click();
 
   await showAdminSettings(page,'Users & Access', 'Overview');
