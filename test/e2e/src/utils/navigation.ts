@@ -95,8 +95,8 @@ export async function showStartPage(page: Page, language: 'en' | 'fr' = 'en') {
 
 export async function showPage(page: Page, url: string) {
     await page.goto(url);
-    await waitToSettle(page);
     await page.locator("//img[@id='logo'][@alt='CANChat Logo'][@src='/static/splash.png']").waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+    await waitToSettle(page);
 
 }
 
