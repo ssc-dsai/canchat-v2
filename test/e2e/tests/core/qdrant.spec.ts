@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { sendChatMessage } from '../../src/utils/navigation';
+import { sendChatMessage, waitToSettle } from '../../src/utils/navigation';
 
 
 test('Test - Qdrant Availability', async ({ page }, testInfo) => {
@@ -26,6 +26,8 @@ test('Test - Qdrant Availability', async ({ page }, testInfo) => {
     state: 'detached',
     timeout: 30000
   });
+
+  await waitToSettle(page, 5000);
 
   const response = await sendChatMessage(page, 'Summarize the uploaded document.');
   console.log(`RAG response: ${response}`);

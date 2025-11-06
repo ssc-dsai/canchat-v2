@@ -75,6 +75,7 @@ setup('authenticate', async ({ page }) => {
 
     
     await showPage(page, '/auth');
+    await waitToSettle(page, 500);
     await page.getByRole('textbox', { name: 'Enter Your Email' }).fill(user.email);
     await page.getByRole('textbox', { name: 'Enter Your Password' }).fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
@@ -83,6 +84,7 @@ setup('authenticate', async ({ page }) => {
     // Sometimes login flow sets cookies in the process of several redirects.
     // Wait for the final URL to ensure that the cookies are actually set.
     await page.waitForURL('/');
+    await waitToSettle(page, 500);
     //await expect(page.getByRole('heading', { name: /^Hello,/ })).toBeVisible();
 
     const okButton = page.getByRole('button').filter({ hasText: 'Okay, Let\'s Go!' }).first();
