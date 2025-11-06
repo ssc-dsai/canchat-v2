@@ -1,6 +1,6 @@
 import { test as setup, expect, Page } from '@playwright/test';
 import path from 'path';
-import { showAdminSettings } from '../src/utils/navigation';
+import { showAdminSettings, showPage, waitToSettle } from '../src/utils/navigation';
 const fs = require('fs');
 
 const data = fs.readFileSync(path.join(__dirname, 'creds.json'));
@@ -16,7 +16,8 @@ async function populateAccounts({ page }: { page: Page }) {
     }
   }
 
-  await page.goto('/auth');
+  await showPage(page, '/auth');
+
   // First login
   await page.getByRole('button').filter({ hasText: /^$/ }).click();
   await page.getByRole('textbox', { name: 'Enter Your Full Name' }).fill(adminUser.username);
@@ -24,7 +25,7 @@ async function populateAccounts({ page }: { page: Page }) {
   await page.getByRole('textbox', { name: 'Enter Your Password' }).fill(adminUser.password);
   await page.getByRole('button', { name: 'Create Admin Account' }).click();
 
-  await page.waitForURL('/');
+  await waitToSettle(page, 2000);
   await page.getByRole('button', { name: 'Okay, Let\'s Go!' }).click();
 
   await showAdminSettings(page,'Users & Access', 'Overview');
@@ -54,7 +55,8 @@ async function populateAccounts({ page }: { page: Page }) {
 
 setup('authenticate', async ({ page }) => {
   // If it's the first login, run setup('populateAccounts')
-  await page.goto('/auth');
+  
+  await showPage(page, '/auth');
 
   try {
     await page.getByRole('button').filter({ hasText: /^$/ }).first().waitFor({ state: 'visible', timeout: 1000 });
@@ -71,8 +73,8 @@ setup('authenticate', async ({ page }) => {
       continue;
     }
 
-    await page.waitForTimeout(500);
-    await page.goto('/auth');
+    
+    await showPage(page, '/auth');
     await page.getByRole('textbox', { name: 'Enter Your Email' }).fill(user.email);
     await page.getByRole('textbox', { name: 'Enter Your Password' }).fill(user.password);
     await page.getByRole('button', { name: 'Sign in' }).click();

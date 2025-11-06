@@ -15,6 +15,9 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 process.env.LONG_TIMEOUT = '180000';
 
 export default defineConfig({
+  /* Global test timeout */
+  timeout: 60000,
+  /* Directory for test files */
   testDir: './tests',
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -129,6 +132,7 @@ export default defineConfig({
       dependencies: ['core'],
       testDir: './tests/releases',
     },
+    { name: 'test', testMatch: /launch.spec.ts/ },
   ],
 
 });

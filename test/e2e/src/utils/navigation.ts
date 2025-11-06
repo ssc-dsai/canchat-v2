@@ -88,12 +88,17 @@ export async function waitToSettle(page: Page, stableMs: number = 500, timeoutMs
 }
 
 export async function showStartPage(page: Page, language: 'en' | 'fr' = 'en') {
-    await page.goto('/');
-    await waitToSettle(page);
+    await showPage(page, '/');    
     await showSidebar(page, 'show');
     await setLanguage(page, language);
 }
 
+export async function showPage(page: Page, url: string) {
+    await page.goto(url);
+    await page.locator("//img[@id='logo'][@alt='CANChat Logo'][@src='/static/splash.png']").waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+    await waitToSettle(page);
+
+}
 
 export async function sendChatMessage(page: Page, message: string, idleMessage: string = ''): Promise<string> {
     await waitToSettle(page);

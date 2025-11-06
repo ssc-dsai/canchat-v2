@@ -70,7 +70,7 @@ jobs:
 
   tests:
     name: 'Playwright E2E Tests'
-    runs-on:  [self-hosted, azure]
+    runs-on: arc-ssc-dsai
     needs: 
       build_and_push_playwright_image
 
@@ -101,18 +101,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Force local Docker image update
+        run: |
+          docker images --format '{{.Repository}}:{{.Tag}}' | xargs -I {} bash -c 'docker inspect --format="{{index .RepoDigests 0}}" {} && docker pull {};';
+          docker rmi $(docker images -f "dangling=true" -q)
+        continue-on-error: true 
+
+
       - name:  Start CANChat Environment
         env:
           ENABLE_EVALUATION_ARENA_MODELS: false
 
         run: |
             docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:dev /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
+              echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
               unset OPENAI_API_KEY && \
               unset OPENAI_API_BASE_URL && \
               unset WEBUI_SECRET_KEY && \
               unset USE_RERANKING_MODEL_DOCKER && \
               unset RAG_RERANKING_MODEL && \
-              sh dev.sh'
+              bash start.sh'
+    
       - name: Wait for CANChat to be ready
         run: |
           for i in {1..120}; do
