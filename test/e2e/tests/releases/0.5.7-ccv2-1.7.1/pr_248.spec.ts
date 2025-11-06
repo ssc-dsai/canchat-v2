@@ -12,7 +12,6 @@ test('PR#248 -- fix(admin-settings/interface/banners): ensure the correct langua
     await page.getByRole('link', { name: 'Settings' }).click();
     await page.getByRole('button', { name: 'Interface' }).click();
     await page.locator('.p-1').first().click();
-    await page.locator('.p-1').first().click();
     await page.locator('.w-fit.rounded-xl').first().selectOption('success');
 
     await waitToSettle(page);
