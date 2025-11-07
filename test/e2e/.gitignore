@@ -11,4 +11,5 @@ tests-examples/
 
 *.code-workspace
 tests/launch.spec.ts
+tests/releases-backlog
 restart.sh
