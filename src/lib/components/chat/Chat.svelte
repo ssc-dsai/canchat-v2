@@ -116,7 +116,7 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let wikiGroundingEnabled = false;
-	let wikiGroundingMode = 'off'; // 'off', 'auto', 'always'
+	let wikiGroundingMode = 'off'; // 'off', 'on'
 
 	let chat = null;
 	let tags = [];
@@ -151,7 +151,7 @@
 			selectedToolIds = storedInput?.selectedToolIds || [];
 			webSearchEnabled = storedInput?.webSearchEnabled || false;
 			wikiGroundingEnabled = storedInput?.wikiGroundingEnabled || false;
-			wikiGroundingMode = storedInput?.wikiGroundingMode || 'off';
+			wikiGroundingMode = storedInput?.wikiGroundingEnabled ? 'on' : 'off';
 			imageGenerationEnabled = storedInput?.imageGenerationEnabled || false;
 
 			loaded = false;
@@ -632,15 +632,13 @@
 				selectedModels = urlModels;
 			}
 		} else {
-			if (sessionStorage.selectedModels) {
-				selectedModels = JSON.parse(sessionStorage.selectedModels);
-				sessionStorage.removeItem('selectedModels');
-			} else {
-				if ($settings?.models) {
-					selectedModels = $settings?.models;
-				} else if ($config?.default_models) {
-					selectedModels = $config?.default_models.split(',');
-				}
+			// Clear sessionStorage to ensure we use default models for new chats
+			sessionStorage.removeItem('selectedModels');
+
+			if ($settings?.models) {
+				selectedModels = $settings?.models;
+			} else if ($config?.default_models) {
+				selectedModels = $config?.default_models.split(',');
 			}
 		}
 
@@ -1534,13 +1532,20 @@
 			params?.system || $settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content: `${promptTemplate(
-							params?.system ?? $settings?.system ?? '',
-							$user.name,
-							$settings?.userLocation
-								? await getAndUpdateUserLocation(localStorage.token)
-								: undefined
-						)}${
+						content: `${await (async () => {
+							// Get user's timezone preference
+							const { timezoneService } = await import('$lib/services/timezone');
+							const userTimezone = timezoneService.getUserTimezone();
+
+							return promptTemplate(
+								params?.system ?? $settings?.system ?? '',
+								$user.name,
+								$settings?.userLocation
+									? await getAndUpdateUserLocation(localStorage.token)
+									: undefined,
+								userTimezone
+							);
+						})()}${
 							(responseMessage?.userContext ?? null)
 								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 								: ''

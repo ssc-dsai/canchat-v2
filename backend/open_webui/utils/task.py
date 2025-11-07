@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 from typing import Optional
 import uuid
+from zoneinfo import ZoneInfo
 
 
 from open_webui.utils.misc import get_last_user_message, get_messages_content
@@ -55,12 +56,13 @@ def get_task_model_id(
 def prompt_template(
     template: str, user_name: Optional[str] = None, user_location: Optional[str] = None
 ) -> str:
-    # Get the current date
-    current_date = datetime.now()
+    # Get the current date/time in Eastern Time zone (handles EST/EDT automatically)
+    eastern_tz = ZoneInfo("America/New_York")
+    current_date = datetime.now(eastern_tz)
 
     # Format the date to YYYY-MM-DD
     formatted_date = current_date.strftime("%Y-%m-%d")
-    formatted_time = current_date.strftime("%I:%M:%S %p")
+    formatted_time = current_date.strftime("%I:%M:%S %p %Z")
     formatted_weekday = current_date.strftime("%A")
 
     template = template.replace("{{CURRENT_DATE}}", formatted_date)
@@ -118,7 +120,7 @@ def replace_prompt_variable(template: str, prompt: str) -> str:
 
 
 def replace_messages_variable(
-    template: str, messages: Optional[list[str]] = None
+    template: str, messages: Optional[list[str]] = None, filter_reasoning: bool = False
 ) -> str:
     def replacement_function(match):
         full_match = match.group(0)
@@ -131,22 +133,22 @@ def replace_messages_variable(
 
         # Process messages based on the number of messages required
         if full_match == "{{MESSAGES}}":
-            return get_messages_content(messages)
+            return get_messages_content(messages, filter_reasoning)
         elif start_length is not None:
-            return get_messages_content(messages[: int(start_length)])
+            return get_messages_content(messages[: int(start_length)], filter_reasoning)
         elif end_length is not None:
-            return get_messages_content(messages[-int(end_length) :])
+            return get_messages_content(messages[-int(end_length) :], filter_reasoning)
         elif middle_length is not None:
             mid = int(middle_length)
 
             if len(messages) <= mid:
-                return get_messages_content(messages)
+                return get_messages_content(messages, filter_reasoning)
             # Handle middle truncation: split to get start and end portions of the messages list
             half = mid // 2
             start_msgs = messages[:half]
             end_msgs = messages[-half:] if mid % 2 == 0 else messages[-(half + 1) :]
-            formatted_start = get_messages_content(start_msgs)
-            formatted_end = get_messages_content(end_msgs)
+            formatted_start = get_messages_content(start_msgs, filter_reasoning)
+            formatted_end = get_messages_content(end_msgs, filter_reasoning)
             return f"{formatted_start}\n{formatted_end}"
         return ""
 
@@ -203,9 +205,10 @@ def rag_template(template: str, context: str, query: str):
 def title_generation_template(
     template: str, messages: list[dict], user: Optional[dict] = None
 ) -> str:
-    prompt = get_last_user_message(messages)
+    # Filter reasoning content from messages for title generation
+    prompt = get_last_user_message(messages, filter_reasoning=True)
     template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
+    template = replace_messages_variable(template, messages, filter_reasoning=True)
 
     template = prompt_template(
         template,
@@ -222,9 +225,10 @@ def title_generation_template(
 def tags_generation_template(
     template: str, messages: list[dict], user: Optional[dict] = None
 ) -> str:
-    prompt = get_last_user_message(messages)
+    # Filter reasoning content from messages for tags generation
+    prompt = get_last_user_message(messages, filter_reasoning=True)
     template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
+    template = replace_messages_variable(template, messages, filter_reasoning=True)
 
     template = prompt_template(
         template,
@@ -240,9 +244,10 @@ def tags_generation_template(
 def image_prompt_generation_template(
     template: str, messages: list[dict], user: Optional[dict] = None
 ) -> str:
-    prompt = get_last_user_message(messages)
+    # Filter reasoning content from messages for image prompt generation
+    prompt = get_last_user_message(messages, filter_reasoning=True)
     template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
+    template = replace_messages_variable(template, messages, filter_reasoning=True)
 
     template = prompt_template(
         template,
@@ -280,7 +285,8 @@ def autocomplete_generation_template(
 ) -> str:
     template = template.replace("{{TYPE}}", type if type else "")
     template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
+    # Filter reasoning content from messages for autocomplete generation
+    template = replace_messages_variable(template, messages, filter_reasoning=True)
 
     template = prompt_template(
         template,
@@ -296,9 +302,10 @@ def autocomplete_generation_template(
 def query_generation_template(
     template: str, messages: list[dict], user: Optional[dict] = None
 ) -> str:
-    prompt = get_last_user_message(messages)
+    # Filter reasoning content from messages for query generation
+    prompt = get_last_user_message(messages, filter_reasoning=True)
     template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
+    template = replace_messages_variable(template, messages, filter_reasoning=True)
 
     template = prompt_template(
         template,

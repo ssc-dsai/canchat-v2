@@ -552,3 +552,108 @@ export const getRangeMetrics = async (
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
 };
+
+export const getInterPromptLatencyHistogram = async (
+	token: string,
+	domain?: string,
+	model?: string
+): Promise<{
+	bins: string[];
+	counts: number[];
+	total_latencies: number;
+}> => {
+	try {
+		let url = `${WEBUI_API_BASE_URL}/metrics/inter-prompt-latency`;
+		const params = new URLSearchParams();
+
+		if (domain !== null && domain !== undefined) {
+			params.append('domain', domain);
+		}
+
+		if (model !== null && model !== undefined) {
+			params.append('model', model);
+		}
+
+		if (params.toString()) {
+			url += `?${params.toString()}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return { bins: [], counts: [], total_latencies: 0 };
+			}
+			const error = await res.json();
+			throw new Error(
+				`Error ${res.status}: ${error.detail || 'Failed to get inter-prompt latency histogram'}`
+			);
+		}
+
+		const data = await res.json();
+		return data;
+	} catch (err) {
+		console.error('Error fetching inter-prompt latency histogram:', err);
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};
+
+export const exportMetricsData = async (
+	token: string,
+	startDate: string,
+	endDate: string,
+	domain?: string
+): Promise<Blob> => {
+	try {
+		const url = domain
+			? `${WEBUI_API_BASE_URL}/metrics/export?start_date=${startDate}&end_date=${endDate}&domain=${domain}`
+			: `${WEBUI_API_BASE_URL}/metrics/export?start_date=${startDate}&end_date=${endDate}`;
+
+		const res = await fetch(url, {
+			method: 'POST',
+			headers: {
+				Accept: 'text/csv',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to export metrics data'}`);
+		}
+
+		return await res.blob();
+	} catch (err) {
+		console.error('Error exporting metrics data:', err);
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};
+
+export const getExportLogs = async (token: string): Promise<any[]> => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/metrics/export/logs`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get export logs'}`);
+		}
+
+		const data = await res.json();
+		return data.export_logs || [];
+	} catch (err) {
+		console.error('Error fetching export logs:', err);
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};

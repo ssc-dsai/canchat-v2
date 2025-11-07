@@ -5,6 +5,85 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.9.0] - 2025-11-05
+
+### Added
+
+- **💻 Chat Lifetime Management**: Implemented chat lifetime management with automated cleanups.
+- **⚙️ Wiki Grounding Configuration**: Added max concurrency configuration and updated related retrieval functions to support async operations.
+- **🧠 Reasoning Filter**: Added a reasoning filter to message handling for title and tag generation.
+
+### Changed
+
+- **⚠️ Prompt Warning**: Revised warning text to clarify that records are transitory.
+
+### Fixed
+
+- **📊 Metrics Records**: When using multiple models, record metrics are now collected.
+- **📅 Same-Day Metrics Extraction**: Fixed an issue where metrics extraction for the same day was failing.
+- **🌍 Translation Improvements**: Enhanced some translations to ensure a more consistent and accessible user experience.
+- **🔄 Asynchronous Vector DB Calls**: Fixed issues related to async calls to vector databases for improved reliability.
+- **🌐 Web Search Retrievals**: Resolved issues with asynchronous calls during web search retrievals to enhance performance and accuracy.
+
+## [0.5.7-ccv2-1.8.2] - 2025-10-14
+
+### Fixed
+
+- **📌 Pin pydantic dependency**: Pinning to 2.11.10 do to issues with 2.12.1 and 2.12.2.
+
+## [0.5.7-ccv2-1.8.1] - 2025-10-14
+
+### Changed
+
+- **💬 WebSearch Toggle**: add beta label to toggle.
+
+## [0.5.7-ccv2-1.8.0] - 2025-10-03
+
+### Added
+
+- **💻 Metrics Export**: Added functionality for exporting metrics data and logs.
+- **🔗 Group Assignment & Management**: Implemented domain-based group assignment and management
+
+### Changed
+
+- **⚙️ Advanced Params UI Defaults**: Setted "Advanced Params" collapsible to closed by default in Controls.
+- **⚙️ Feature Toggles**: Prevented Web Search and Wiki Grounding functionalities from being enabled simultaneously.
+
+### Removed
+
+- **🔧 Build Optimization**: Removed unused hatch build configurations to allow improvements with uv.
+- **🔗 Dependency Clean-up**: Removed the unused torch dependency from requirements.
+
+## [0.5.7-ccv2-1.7.1] - 2025-09-22
+
+### Enhanced
+
+- **🗑️ Chat Deletion Reactivity**: When a Chat is deleted, it is immediately removed from the UI.
+- **🕰️ Current Time in Context**: The context will always contain the current time.
+- **🌐 Wiki-Grounding: Better Temporal Understanding**:
+
+### Fixed
+
+- **🌐 Wiki-Grounding: Query Locking**: Prevent some errors by seperating resource access by query.
+
+## [0.5.7-ccv2-1.7.0] - 2025-09-05
+
+### Added
+
+- **🌐 Wiki-Grounding**: New functionality which can add information from Wikipedia to chats to enhance a model’s knowledge.
+- **📶 Inter-Prompt Latency**: Provide a histogram on inter-prompt latency in metrics.
+
+### Enhanced
+
+- **🤖 User Search**: Allows for more fields to be used when searching in users.
+- **🔠 Alphabetical Models List**: Ensured that models are in alphabetical order when displayed.
+
+### Fixed
+
+- **💬 Default Model on New Chat**: Fixed the default model not always being used when a new chat is created.
+- **🪪 Role Update**: Fixed setting a user's role via the Edit User modal.
+- **</> Prompt Retrieval**: Made the calls async to prevent lockup on large requests.
+
 ## [0.5.7-ccv2-1.6.2] - 2025-08-21
 
 ### Fixed
