@@ -3,6 +3,8 @@ name: Build Cache and Run E2E Tests (self-hosted)
 on:
   workflow_dispatch:
   push:
+    branches:
+      - dev
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: e2e-playwright
