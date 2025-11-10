@@ -1,28 +1,28 @@
 {
-    "users": [
-        {
-            "username": "admin",
-            "name": "admin",
-            "email": "admin@canchat.ca",
-            "password": "admin"
-        },
-        {
-            "username": "user",
-            "name": "user",
-            "email": "user@canchat.ca",
-            "password": "user"
-        },
-        {
-            "username": "analyst",
-            "name": "analyst",
-            "email": "analyst@canchat.ca",
-            "password": "analyst"
-        },
-        {
-            "username": "globalanalyst",
-            "name": "global analyst",
-            "email": "globalanalyst@canchat.ca",
-            "password": "globalanalyst"
-        }
-    ]
+	"users": [
+		{
+			"username": "admin",
+			"name": "admin",
+			"email": "admin@canchat.ca",
+			"password": "admin"
+		},
+		{
+			"username": "user",
+			"name": "user",
+			"email": "user@canchat.ca",
+			"password": "user"
+		},
+		{
+			"username": "analyst",
+			"name": "analyst",
+			"email": "analyst@canchat.ca",
+			"password": "analyst"
+		},
+		{
+			"username": "globalanalyst",
+			"name": "global analyst",
+			"email": "globalanalyst@canchat.ca",
+			"password": "globalanalyst"
+		}
+	]
 }
