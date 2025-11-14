@@ -103,6 +103,8 @@ cp -RPp .env.example .env
 
 - This command copies the `.env.example` file to a new file named `.env`.
 - The `.env` file is where you'll configure environment variables for the frontend.
+- If you have a mac you need to comment out certain lines as instructed.
+- Reach out to a team member for the API Key to complete the config.
 
 **Customize `.env`:**  
 Open the `.env` file in your code editor (e.g., VS Code). For local development, the default settings in `.env.example` should suffice, but you can customize them if needed.
