@@ -1,0 +1,15 @@
+ignore/
+
+# Playwright
+blob-report/
+node_modules/
+playwright/.cache/
+playwright/.auth/
+playwright-report/
+test-results/
+tests-examples/
+
+*.code-workspace
+tests/launch.spec.ts
+tests/releases-backlog
+restart.sh

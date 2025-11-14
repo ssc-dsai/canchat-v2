@@ -140,6 +140,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env.*
 
 # Spyder project settings
 .spyderproject
@@ -310,3 +311,4 @@ cypress/screenshots
 
 # Qdrant
 /qdrant_storage
+test/e2e/playwright.config.ts.bak
