@@ -344,6 +344,9 @@ cp -RPp .env.example .env
 
 - Cette commande copie le fichier `.env.example` dans un nouveau fichier nommé `.env`.
 - Le fichier `.env` est où vous pourrez configurer les variables d’environnement pour le frontend.
+- Si vous avez un Mac, vous devez commenter certaines lignes comme indiqué.
+- Contactez un membre de l’équipe pour obtenir la clé API afin de compléter la configuration.
+
   **Personnaliser `.env` :**  
   Ouvrez le fichier `.env` dans votre éditeur de code (VS Code, par exemple). Pour le développement local, les paramètres par défaut devraient suffire, mais vous pouvez les personnaliser si nécessaire.
   > **Important :** Si vous prévoyez de contribuer au dépôt, **ne commitez pas d’informations sensibles dans votre fichier `.env`**. Vérifiez toujours vos variables d’environnement avant d’effectuer un commit pour vous assurer qu’aucune information privée ou confidentielle n'est exposée.
