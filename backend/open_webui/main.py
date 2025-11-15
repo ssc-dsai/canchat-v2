@@ -30,7 +30,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import Response
+from starlette.responses import Response, StreamingResponse
 
 
 from open_webui.socket.main import (
@@ -361,7 +361,6 @@ https://github.com/open-webui/open-webui
 async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
-
     # Initialize FastMCP manager
     try:
         from mcp_backend.management.mcp_manager import get_mcp_manager
@@ -379,6 +378,73 @@ async def lifespan(app: FastAPI):
 
     except Exception as e:
         log.error(f"Failed to initialize FastMCP manager: {e}")
+
+    # Redis Auto-Start for Local Development Only
+    # NOTE: This is automatically disabled in production/K8s/Docker environments via REDIS_AUTO_START=false
+    # - Bare metal local development: REDIS_AUTO_START defaults to true
+    # - Docker/container deployments: REDIS_AUTO_START defaults to false (provide REDIS_URL instead)
+    # - Production/K8s: Always set REDIS_AUTO_START=false and configure external Redis service
+    # Production deployments use external Redis services (AWS ElastiCache, Azure Redis, etc.)
+    # This convenience feature is only for local `python main.py` development workflows
+    redis_process = None
+    try:
+        import subprocess
+        import socket
+        from open_webui.env import REDIS_URL, REDIS_AUTO_START
+        from urllib.parse import urlparse
+
+        # Parse Redis URL to get host and port
+        parsed_url = urlparse(REDIS_URL)
+        redis_host = parsed_url.hostname or "localhost"
+        redis_port = parsed_url.port or 6379
+
+        # Check if Redis is already running
+        def is_redis_running():
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex((redis_host, redis_port))
+                sock.close()
+                return result == 0
+            except:
+                return False
+
+        if not is_redis_running():
+            if REDIS_AUTO_START:
+                log.info(
+                    f"🚀 Starting Redis server on {redis_host}:{redis_port} (local development)"
+                )
+                redis_process = subprocess.Popen(
+                    ["redis-server", "--port", str(redis_port), "--bind", redis_host],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                # Give Redis a moment to start
+                await asyncio.sleep(2)
+
+                if is_redis_running():
+                    log.info(
+                        "✅ Redis server started successfully for local development"
+                    )
+                    app.state.redis_process = redis_process
+                else:
+                    log.warning("⚠️ Redis server may not have started properly")
+            else:
+                log.info(
+                    "⚠️ Redis auto-start disabled. Expecting external Redis service."
+                )
+                log.info(
+                    f"💡 Configure REDIS_URL={REDIS_URL} to point to your Redis service"
+                )
+        else:
+            log.info("✅ Redis server already running")
+
+    except Exception as e:
+        log.warning(f"⚠️ Could not start Redis server: {e}")
+        if REDIS_AUTO_START:
+            log.info("💡 Please ensure Redis is running manually: redis-server")
+        else:
+            log.info("💡 Please ensure your Redis service is available")
 
     # Initialize Wikipedia grounding models in background
     async def initialize_wiki_grounding():
@@ -477,6 +543,20 @@ async def lifespan(app: FastAPI):
             log.info("Chat lifetime scheduler cleanup completed")
         except Exception as e:
             log.error(f"Error during chat lifetime scheduler cleanup: {e}")
+
+        # Cleanup Redis server if we started it locally (REDIS_AUTO_START=true)
+        if hasattr(app.state, "redis_process") and app.state.redis_process:
+            try:
+                log.info("🛑 Shutting down Redis server")
+                app.state.redis_process.terminate()
+                app.state.redis_process.wait(timeout=5)
+                log.info("✅ Redis server shutdown completed")
+            except Exception as e:
+                log.warning(f"⚠️ Error shutting down Redis server: {e}")
+                try:
+                    app.state.redis_process.kill()
+                except:
+                    pass
 
 
 app = FastAPI(
@@ -896,18 +976,41 @@ async def commit_session_after_request(request: Request, call_next):
 
         # Ensure we always return a response
         if response is None:
-            log.error(
-                f"No response generated in commit_session_after_request for {request.url.path}"
-            )
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"detail": "No response generated"},
-            )
+            # Don't log errors for streaming endpoints or websockets - this is expected
+            if (
+                "/ws/" in request.url.path
+                or "stream" in request.url.path
+                or "/api/chat/completions" in request.url.path
+            ):
+                log.debug(
+                    f"Streaming/WebSocket endpoint returned None response for {request.url.path} (expected)"
+                )
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content={"detail": "Streaming response completed"},
+                )
+            else:
+                log.error(
+                    f"No response generated in commit_session_after_request for {request.url.path}"
+                )
+                return JSONResponse(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    content={"detail": "No response generated"},
+                )
         return response
     except Exception as e:
-        log.error(
-            f"Error in commit_session_after_request middleware for {request.url.path}: {e}"
-        )
+        # Only silence "No response returned" errors for streaming endpoints
+        if "No response returned" in str(e) and (
+            request.url.path.startswith("/api/chat/")
+            or request.url.path.startswith("/api/models")
+            or request.url.path.startswith("/ws/")
+        ):
+            # This is expected for streaming responses, don't log as error
+            pass
+        else:
+            log.error(
+                f"Error in commit_session_after_request middleware for {request.url.path}: {e}"
+            )
         try:
             Session.rollback()
         except Exception as rollback_error:
@@ -979,14 +1082,40 @@ async def inspect_websocket(request: Request, call_next):
         response = await call_next(request)
         # Ensure we always return a response
         if response is None:
-            log.error(f"No response generated for {request.url.path}")
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"detail": "No response generated"},
-            )
+            # Don't log errors for streaming endpoints or websockets - this is expected
+            if (
+                "/ws/" in request.url.path
+                or "stream" in request.url.path
+                or "/api/chat/completions" in request.url.path
+                or "/api/models" in request.url.path
+            ):
+                log.debug(
+                    f"Streaming/WebSocket/Model endpoint returned None response for {request.url.path} (expected)"
+                )
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content={"detail": "Streaming response completed"},
+                )
+            else:
+                log.error(f"No response generated for {request.url.path}")
+                return JSONResponse(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    content={"detail": "No response generated"},
+                )
         return response
     except Exception as e:
-        log.error(f"Error in inspect_websocket middleware for {request.url.path}: {e}")
+        # Only silence "No response returned" errors for streaming endpoints
+        if "No response returned" in str(e) and (
+            request.url.path.startswith("/api/chat/")
+            or request.url.path.startswith("/api/models")
+            or request.url.path.startswith("/ws/")
+        ):
+            # This is expected for streaming responses, don't log as error
+            pass
+        else:
+            log.error(
+                f"Error in inspect_websocket middleware for {request.url.path}: {e}"
+            )
         # For WebSocket upgrade requests, return a proper error response
         if (
             "/ws/socket.io" in request.url.path

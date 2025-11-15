@@ -309,4 +309,4 @@ cypress/screenshots
 .vscode/settings.json
 
 # Qdrant
-/qdrant_storage
+/qdrant_storage*.rdb
