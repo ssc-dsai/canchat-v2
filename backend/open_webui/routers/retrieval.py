@@ -19,7 +19,6 @@ from fastapi import (
     status,
     APIRouter,
 )
-from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
 
