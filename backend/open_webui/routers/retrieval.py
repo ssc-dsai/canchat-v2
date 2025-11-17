@@ -554,8 +554,10 @@ async def update_rag_config(
                     batch_size=5,  # Smaller batches for UI responsiveness
                     max_concurrent=3,  # Lower concurrency to avoid overwhelming DB
                 )
+                duration = result.get("total_duration_seconds", 0)
+                collections_cleaned = result.get("collections_cleaned", 0)
                 log.info(
-                    f"✅ Successfully cleaned up web search cache: {result.get('collections_cleaned', 0)} collections removed"
+                    f"✅ Successfully cleaned up web search cache: {collections_cleaned} collections removed in {duration:.2f} seconds"
                 )
             except Exception as e:
                 log.warning(f"⚠️ Failed to cleanup web search cache: {str(e)}")
@@ -2226,6 +2228,10 @@ async def cleanup_expired_web_searches_safe(
         batch_size: Number of collections to process in each batch
         max_concurrent: Maximum concurrent deletion operations
     """
+    import time
+
+    start_time = time.time()
+
     try:
         cleanup_summary = {
             "collections_checked": 0,
@@ -2233,6 +2239,7 @@ async def cleanup_expired_web_searches_safe(
             "vectors_cleaned": 0,
             "errors": [],
             "batches_processed": 0,
+            "start_time": start_time,
         }
 
         if not VECTOR_DB_CLIENT:
@@ -2372,16 +2379,30 @@ async def cleanup_expired_web_searches_safe(
 
             log.info(f"✅ Completed batch {batch_num}/{total_batches}")
 
-        log.info(f"🎉 Web search cleanup completed: {cleanup_summary}")
+        # Add completion timing
+        end_time = time.time()
+        total_duration = end_time - start_time
+        cleanup_summary["end_time"] = end_time
+        cleanup_summary["total_duration_seconds"] = total_duration
+
+        log.info(
+            f"🎉 Web search cleanup completed in {total_duration:.2f} seconds: {cleanup_summary}"
+        )
         return cleanup_summary
 
     except Exception as e:
-        log.error(f"Critical error during web search cleanup: {e}")
+        # Add timing even for errors
+        end_time = time.time()
+        total_duration = end_time - start_time if "start_time" in locals() else 0
+        log.error(
+            f"Critical error during web search cleanup after {total_duration:.2f} seconds: {e}"
+        )
         return {
             "error": str(e),
             "collections_cleaned": cleanup_summary.get("collections_cleaned", 0),
             "vectors_cleaned": 0,
             "batches_processed": cleanup_summary.get("batches_processed", 0),
+            "total_duration_seconds": total_duration,
         }
 
 
