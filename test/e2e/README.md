@@ -1,3 +1,3 @@
-# canchat_uat_server
+# E2E Github Action Workflow
 
-CANChat V2 UAT Server
+![e2e Testing Workflow](docs/workflow.png)
