@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - dev
+      - chat-718
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: e2e-playwright
