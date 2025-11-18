@@ -48,7 +48,7 @@ jobs:
 
       - name: Save JSON report
         run: bandit -r . -c .bandit.yaml -f json -o bandit_report.json
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: bandit-json-report
           path: bandit_report.json
