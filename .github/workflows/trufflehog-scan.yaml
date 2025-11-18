@@ -22,19 +22,19 @@ jobs:
           fetch-depth: 0
 
       - name: Run TruffleHog OSS
-        id: trufflehog  # <-- Added ID here
-        uses: trufflesecurity/trufflehog@main # <-- Fixed tag
+        id: trufflehog
+        uses: trufflesecurity/trufflehog@main
         with:
-          extra_args: -x trufflehog-excludes.txt --format json --output trufflehog-results.json --results=verified,unknown,unverified --fail
+          extra_args: -j -x trufflehog-excludes.txt --results=verified,unknown,unverified --fail
 
       - name: Upload scan results
         if: always()
-        uses: actions/upload-artifact@v4 # <-- Switched to V4 for latest
+        uses: actions/upload-artifact@v4
         with:
           name: trufflehog-report
-          path: trufflehog-results.json
+          path: trufflehog-output.json
 
       - name: Show summary
-        if: steps.trufflehog.outcome == 'failure' # <-- Referencing the new ID
+        if: steps.trufflehog.outcome == 'failure'
         run: |
           echo "TruffleHog found potential secrets. Review the uploaded report artifact."
