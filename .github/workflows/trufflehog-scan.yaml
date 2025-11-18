@@ -25,7 +25,8 @@ jobs:
         id: trufflehog
         uses: trufflesecurity/trufflehog@main
         with:
-          extra_args: -j > trufflehog-output.json -x trufflehog-excludes.txt --results=verified,unknown,unverified
+          output_file: trufflehog-output.json
+          extra_args: -j -x trufflehog-excludes.txt --results=verified,unknown,unverified
 
       - name: Upload scan results
         if: always()
