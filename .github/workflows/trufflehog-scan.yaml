@@ -1,0 +1,41 @@
+name: TruffleHog Secret Scan
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+  # Add this line for manual testing:
+  workflow_dispatch:
+
+jobs:
+  trufflehog-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog OSS
+        id: trufflehog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          output_file: trufflehog-output.json
+          extra_args: -j -x trufflehog-excludes.txt --results=verified,unknown,unverified
+
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trufflehog-report
+          path: trufflehog-output.json
+
+      - name: Show summary
+        if: steps.trufflehog.outcome == 'failure'
+        run: |
+          echo "TruffleHog found potential secrets. Review the uploaded report artifact."
