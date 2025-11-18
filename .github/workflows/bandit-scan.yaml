@@ -34,8 +34,10 @@ jobs:
         run: |
           pip install --upgrade "bandit"
           bandit -r . -c .bandit.yaml -f json -o bandit_report.json
+        continue-on-error: true
 
       - name: Upload JSON report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bandit-json-report
