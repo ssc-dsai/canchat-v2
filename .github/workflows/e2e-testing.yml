@@ -5,10 +5,6 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
-permissions:
-  pull-requests: write
-  contents: read
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: e2e-playwright
@@ -85,6 +81,7 @@ jobs:
       packages: read
       attestations: read
       id-token: write
+      pull-requests: write
 
     timeout-minutes: 60
     services:
@@ -177,13 +174,14 @@ jobs:
           retention-days: 30
 
       - uses: daun/playwright-report-summary@v3
-        if: always()
+        if: ${{ !cancelled() }}
         id: playwright_summary
         with:
           report-file: ./test/e2e/playwright-report/results.json
           create-comment: false
 
       - uses: marocchino/sticky-pull-request-comment@v2
+        if: ${{ !cancelled() }}
         with:
           header: "Playwright Report"
           message: "${{ steps.playwright_summary.outputs.summary }}\n\n\n[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"
