@@ -1,0 +1,35 @@
+name: Bearer Security Scan
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rule_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Bearer scan
+        uses: bearer/bearer-action@v2
+        with:
+          severity: 'critical,high,medium'
+          format: 'json'
+          output: 'bearer_report.json'
+
+      - name: Upload Bearer JSON report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bearer-report
+          path: bearer_report.json
