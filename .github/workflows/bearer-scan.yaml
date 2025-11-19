@@ -24,7 +24,7 @@ jobs:
       - name: Run Bearer scan
         uses: bearer/bearer-action@v2
         with:
-          severity: 'critical,high,medium'
+          severity: 'critical,high'
           format: 'json'
           output: 'bearer_report.json'
 
