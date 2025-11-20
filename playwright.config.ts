@@ -1,15 +1,7 @@
-import { defineConfig, devices, Page } from '@playwright/test';
-
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-import dotenv from 'dotenv';
-import path from 'path';
+import { defineConfig, devices} from '@playwright/test';
 
 // Env variables
-process.env.BASE_PATH = __dirname;
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+process.env.BASE_PATH = process.cwd();
 
 // Long test timeout
 process.env.LONG_TIMEOUT = '180000';
@@ -49,6 +41,12 @@ export default defineConfig({
 	expect: {
 		timeout: 3000
 	},
+	webServer: {
+		command: 'npm run start',
+		url: 'http://localhost:8080',
+		timeout: 120 * 1000,
+		reuseExistingServer: !process.env.CI,
+  	},
 	/* Configure projects for major browsers */
 	projects: [
 		// Setup project
@@ -57,82 +55,82 @@ export default defineConfig({
 			name: 'core',
 			use: {
 				...devices['Desktop Chrome'],
-				storageState: 'playwright/.auth/admin.json'
+				storageState: 'tests/playwright/.auth/admin.json'
 			},
-			testDir: './tests/core',
+			testDir: './tests/e2e/core',
 			dependencies: ['setup']
 		},
 		{
 			name: 'chromium-admin',
 			use: {
 				...devices['Desktop Chrome'],
-				storageState: 'playwright/.auth/admin.json'
+				storageState: 'tests/playwright/.auth/admin.json'
 			},
 			dependencies: ['core'],
-			testDir: './tests/releases'
+			testDir: './tests/e2e/releases'
 		},
 		{
 			name: 'firefox-admin',
 			use: {
 				...devices['Desktop Firefox'],
-				storageState: 'playwright/.auth/admin.json'
+				storageState: 'tests/playwright/.auth/admin.json'
 			},
 			dependencies: ['core'],
-			testDir: './tests/releases'
+			testDir: './tests/e2e/releases'
 		},
 		{
 			name: 'chromium-globalanalyst',
 			use: {
 				...devices['Desktop Chrome'],
-				storageState: 'playwright/.auth/globalanalyst.json'
+				storageState: 'tests/playwright/.auth/globalanalyst.json'
 			},
 			dependencies: ['core'],
-			testDir: './tests/releases'
+			testDir: './tests/e2e/releases'
 		},
 		{
 			name: 'firefox-globalanalyst',
 			use: {
 				...devices['Desktop Firefox'],
-				storageState: 'playwright/.auth/globalanalyst.json'
+				storageState: 'tests/playwright/.auth/globalanalyst.json'
 			},
 			dependencies: ['core'],
-			testDir: './tests/releases'
+			testDir: './tests/e2e/releases'
 		},
 		{
 			name: 'chromium-analyst',
 			use: {
 				...devices['Desktop Chrome'],
-				storageState: 'playwright/.auth/analyst.json'
+				storageState: 'tests/playwright/.auth/analyst.json'
 			},
 			dependencies: ['core'],
-			testDir: './tests/releases'
+			testDir: './tests/e2e/releases'
 		},
 		{
 			name: 'firefox-analyst',
 			use: {
 				...devices['Desktop Firefox'],
-				storageState: 'playwright/.auth/analyst.json'
+				storageState: 'tests/playwright/.auth/analyst.json'
 			},
 			dependencies: ['core'],
-			testDir: './tests/releases'
+			testDir: './tests/e2e/releases'
 		},
 		{
 			name: 'chromium-user',
 			use: {
 				...devices['Desktop Chrome'],
-				storageState: 'playwright/.auth/user.json'
+				storageState: 'tests/playwright/.auth/user.json'
 			},
 			dependencies: ['core'],
-			testDir: './tests/releases'
+			testDir: './tests/e2e/releases'
 		},
 		{
 			name: 'firefox-user',
 			use: {
 				...devices['Desktop Firefox'],
-				storageState: 'playwright/.auth/user.json'
+				storageState: 'tests/playwright/.auth/user.json'
 			},
 			dependencies: ['core'],
-			testDir: './tests/releases'
+			testDir: './tests/e2e/releases'
 		},
 		{ name: 'test', testMatch: /launch.spec.ts/ }
 	]

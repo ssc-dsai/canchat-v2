@@ -6,8 +6,8 @@ import {
 	sendChatMessage,
 	showStartPage,
 	showSidebar
-} from '../../src/utils/navigation';
-import { describeLocalImage } from '../../src/utils/openai';
+} from '../src/utils/navigation';
+import { describeLocalImage } from '../src/utils/openai';
 
 test('Test - Image Generation Availability', async ({ page }, testInfo) => {
 	const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120000;

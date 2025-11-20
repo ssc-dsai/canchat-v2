@@ -1,7 +1,9 @@
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import path from 'path';
 
-const testPath = process.env.BASE_PATH || '/app/test/e2e';
+
+const base_path = process.env.BASE_PATH ? process.env.BASE_PATH : '/app';
+
 
 interface StorageFile {
 	cookies?: any[];
@@ -28,7 +30,7 @@ export async function setUserContext(page: Page, username: string): Promise<Page
 		throw new Error('Browser is not available from this context');
 	}
 
-	const authPath = path.join(testPath, `./playwright/.auth/${username}.json`);
+	const authPath = path.join(base_path, `tests/playwright/.auth/${username}.json`);
 
 	const newContext = await browser.newContext({ storageState: authPath });
 

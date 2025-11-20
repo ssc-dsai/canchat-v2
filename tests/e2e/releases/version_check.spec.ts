@@ -1,7 +1,8 @@
 // Checks the version displays correctly
 
 import fs from 'fs';
-import path from 'path';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { test, expect } from '@playwright/test';
 
 test('version_check', async ({ page }, testInfo) => {
@@ -12,19 +13,10 @@ test('version_check', async ({ page }, testInfo) => {
 	await page.getByRole('button', { name: 'User profile' }).click();
 	await page.getByRole('menuitem', { name: 'Settings' }).click();
 	await page.getByRole('button', { name: 'About' }).click();
-
-	// Read version.json file
-	const versionFilePath = path.join(__dirname, 'version.json');
-	if (!fs.existsSync(versionFilePath)) {
-		throw new Error(`version.json not found at ${versionFilePath}`);
-	}
-
-	const versionData = JSON.parse(fs.readFileSync(versionFilePath, 'utf-8'));
-	const version = versionData.version ?? versionData?.appVersion ?? '';
-
-	if (!version) {
-		throw new Error(`No valid version found in version.json`);
-	}
+	
+	// Read version from package.json
+	const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'));
+	const version = `${pkg.version}`;
 
 	console.log('Expecting version to contain:', version);
 

@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { setUserContext } from '../../src/utils/utils';
+import { setUserContext } from '../src/utils/utils';
 import {
 	showAdminSettings,
 	toggleSwitch,
 	sendChatMessage,
 	showStartPage
-} from '../../src/utils/navigation';
+} from '../src/utils/navigation';
 
 test('Test - MCP Availability', async ({ page }, testInfo) => {
 	const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120000;

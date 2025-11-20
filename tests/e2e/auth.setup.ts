@@ -1,15 +1,22 @@
-import { test as setup, expect, Page } from '@playwright/test';
+import type { expect, Page } from '@playwright/test';
+import {test as setup} from '@playwright/test';
+import fs from 'fs';
 import path from 'path';
-import { showAdminSettings, showPage, waitToSettle } from '../src/utils/navigation';
-const fs = require('fs');
+import { showAdminSettings, showPage, waitToSettle } from './src/utils/navigation';
 
-const data = fs.readFileSync(path.join(__dirname, 'creds.json'));
+const data = fs.readFileSync(
+  path.join(process.cwd(), 'tests/e2e', 'creds.json'),
+  'utf8'
+);
+
 const credentials = JSON.parse(data);
 const adminUser = credentials.users.find((u) => u.username === 'admin');
+const base_path = process.env.BASE_PATH ? process.env.BASE_PATH : '/app';
+
 
 async function populateAccounts({ page }: { page: Page }) {
 	// Remove all files in ../playwright/.auth
-	const authDir = path.join(__dirname, '../playwright/.auth');
+	const authDir = path.join(base_path, 'tests/playwright/.auth');
 	if (fs.existsSync(authDir)) {
 		for (const file of fs.readdirSync(authDir)) {
 			fs.unlinkSync(path.join(authDir, file));
@@ -71,8 +78,8 @@ setup('authenticate', async ({ page }) => {
 	} catch {}
 
 	for (const user of credentials.users) {
-		// If path.join(__dirname, `../playwright/.auth/${user.username}.json`) already exists, skip login
-		const authFile = path.join(__dirname, `../playwright/.auth/${user.username}.json`);
+		// If path.join(base_path, `../playwright/.auth/${user.username}.json`) already exists, skip login
+		const authFile = path.join(base_path, `tests/playwright/.auth/${user.username}.json`);
 		if (fs.existsSync(authFile)) {
 			console.log(`Skipping login for ${user.username}, already authenticated.`);
 			continue;

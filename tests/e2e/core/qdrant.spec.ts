@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { sendChatMessage, waitToSettle } from '../../src/utils/navigation';
+import { sendChatMessage, waitToSettle } from '../src/utils/navigation';
 
 test('Test - Qdrant Availability', async ({ page }, testInfo) => {
 	const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120000;

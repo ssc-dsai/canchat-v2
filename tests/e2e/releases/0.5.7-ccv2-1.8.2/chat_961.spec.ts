@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { showSidebar, showStartPage, setLanguage } from '../../../src/utils/navigation';
+import { showSidebar, showStartPage, setLanguage } from '../../src/utils/navigation';
 import { text } from 'stream/consumers';
 
 test('PR#264 -- enh: revised prompt warning text', async ({ page }, testInfo) => {

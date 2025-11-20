@@ -64,6 +64,14 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Playwright
+playwright/
+playwright-report/
+test-results/
+/tests/e2e/test
+/tests/e2e/releases-backlog
+.ignore
+
 # Translations
 *.mo
 *.pot
