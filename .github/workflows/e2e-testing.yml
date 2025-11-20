@@ -1,84 +1,16 @@
-name: Build Cache and Run E2E Tests (self-hosted)
+name: Run E2E Tests
 
 on:
   workflow_dispatch:
   pull_request:
     types: [opened, reopened, synchronize]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: e2e-playwright
-
-
 jobs:
-  build_and_push_playwright_image:
-    name: 'Pull and refresh Docker images'
-    runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.image_tag.outputs.name }}
-      registry: ${{ env.REGISTRY }}
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
-      
-    steps:
-      - name: Checkout CANChat-V2
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: 'test/e2e'
-          sparse-checkout-cone-mode: false
-
-      - name: Get Playwright image tag
-        id: image_tag
-        run: |        
-          name=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME}}:$(/bin/date -u "+%Y%m")
-          echo $name
-          echo "name=$name" >> $GITHUB_OUTPUT
-          
-      - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull Playwright Image
-        id: pull_playwright_image
-        run: |
-          if [ -z "$(docker images -aq ${{ steps.image_tag.outputs.name }} 2> /dev/null)" ]; then
-            echo "Image not found in local registry."
-            if docker pull ${{ steps.image_tag.outputs.name }} 2>/dev/null >/dev/null; then
-              echo "result=success" >> $GITHUB_OUTPUT
-              echo "Success"
-            else
-              echo "result=fail" >> $GITHUB_OUTPUT
-              echo "Fail"
-            fi
-          else
-            echo "result=success" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-      - name: Build and push Playwright Docker image
-        if: steps.pull_playwright_image.outputs.result != 'success'
-        id: push
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
-        with:
-          context: test/e2e/.
-          push: true
-          tags: ${{ steps.image_tag.outputs.name }} 
-
   tests:
     name: 'Playwright E2E Tests'
     runs-on: arc-ssc-dsai
-    needs: 
-      build_and_push_playwright_image
-
     permissions:
       contents: read
-      packages: read
       attestations: read
       id-token: write
       pull-requests: write
@@ -97,54 +29,27 @@ jobs:
       - name: Checkout CANChat-V2
         uses: actions/checkout@v4
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-        with:
-          registry: ${{ needs.build_and_push_playwright_image.outputs.registry }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Force local Docker image update
+      - name:  Setup Miniconda
         run: |
-          docker images --format '{{.Repository}}:{{.Tag}}' | xargs -I {} bash -c 'docker inspect --format="{{index .RepoDigests 0}}" {} && docker pull {};';
-          docker rmi $(docker images -f "dangling=true" -q)
-        continue-on-error: true 
+            wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+            bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
+            rm Miniconda3-latest-Linux-x86_64.sh
+            ~/miniconda/bin/conda init
+            source ~/.bashrc
+            conda create -n canchat python=3.11 -y
+            conda activate canchat
 
-
-      - name:  Start CANChat Environment
-        env:
-          ENABLE_EVALUATION_ARENA_MODELS: false
-
+      - name:  Setup Node 22
         run: |
-            docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:dev /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
-              echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
-              unset OPENAI_API_KEY && \
-              unset OPENAI_API_BASE_URL && \
-              unset WEBUI_SECRET_KEY && \
-              unset USE_RERANKING_MODEL_DOCKER && \
-              unset RAG_RERANKING_MODEL && \
-              bash start.sh'
-    
-      - name: Wait for CANChat to be ready
-        run: |
-          for i in {1..120}; do
-            if [ -z $(docker ps --filter "name=canchat" --filter "health=healthy" --format '{{.Names}}') ]; then
-              echo "Waiting for CANChat..."
-              sleep 5
-            else
-              echo "CANChat is ready."
-              exit 0
-            fi
+            apt update && sudo apt install libatomic1 -y
+            wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+            export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm install 22
+            nvm use 22
 
-          done
-          echo "CANChat failed to start in time" >&2
-          exit 1
-          
-      - name:  Start Playwright Environment
-        run: |
-            docker run --name playwright --add-host=host.docker.internal:host-gateway --network host -td --rm ${{ needs.build_and_push_playwright_image.outputs.image_tag }} /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > /app/.env && bash'
-            docker cp ./test/e2e/. playwright:/app/
-            docker exec playwright npm install
+      - name:  Setup CANChat Environment
+        run:  npm run setup
 
 
       - name: Get timestamp
@@ -153,16 +58,9 @@ jobs:
         run: |
           echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT
 
-      - name: Run Playwright tests 
-        run: |
-            CI=true docker exec playwright npx playwright test tests/releases/
-
-
-      - name: Copy report from playwright
-        if: ${{ !cancelled() }}
-        run: |
-          mkdir -p test/e2e/playwright-report
-          docker cp playwright:/app/playwright-report/. test/e2e/playwright-report
+          
+      - name:  Start Playwright Tests
+        run: npm run test
 
       - name: Upload Report
         id: upload_report
@@ -170,14 +68,14 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: playwright-report-${{ steps.timestamps.outputs.timestamp }}
-          path: ./test/e2e/playwright-report/
+          path: ./playwright-report/
           retention-days: 30
 
       - uses: daun/playwright-report-summary@v3
         if: ${{ !cancelled() }}
         id: playwright_summary
         with:
-          report-file: ./test/e2e/playwright-report/results.json
+          report-file: ./playwright-report/results.json
           create-comment: false
 
       - uses: marocchino/sticky-pull-request-comment@v2
@@ -185,9 +83,4 @@ jobs:
         with:
           header: "Playwright Report"
           message: "${{ steps.playwright_summary.outputs.summary }}\n\n\n[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"
-          
-      - name: Remove Docker Containers
-        if: ${{ always() }}
-        run: |
-          docker rm -f canchat 
-          docker rm -f playwright 
+

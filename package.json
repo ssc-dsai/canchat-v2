@@ -11,6 +11,7 @@
 		"test:report": "npx playwright show-report",
 		"test:setup": "npx playwright install --with-deps --force",
 		"test:setup:headless": "npx playwright install --with-deps --only-shell --force",
+		"setup": "npm run test:setup && npm run backend:setup && npm run build",
 		"dev": "npm run pyodide:fetch && vite dev --host",
 		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
 		"build": "npm run pyodide:fetch && vite build",
