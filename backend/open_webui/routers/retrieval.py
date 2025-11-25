@@ -541,26 +541,14 @@ async def update_rag_config(
             new_bypass_value
         )
 
-        # If toggle changed from OFF to ON (False to True), cleanup existing web search cache
-        if not old_bypass_value and new_bypass_value:
-            log.info(
-                "🧹 Bypass embedding toggle changed from OFF to ON - cleaning up web search cache"
-            )
-            try:
-                # Use smaller batches and lower concurrency for UI-triggered cleanup
-                result = await cleanup_expired_web_searches_safe(
-                    max_age_days=0,
-                    force_delete_all=True,
-                    batch_size=5,  # Smaller batches for UI responsiveness
-                    max_concurrent=3,  # Lower concurrency to avoid overwhelming DB
-                )
-                duration = result.get("total_duration_seconds", 0)
-                collections_cleaned = result.get("collections_cleaned", 0)
+        # Log toggle state changes for transparency
+        if old_bypass_value != new_bypass_value:
+            if new_bypass_value:
+                log.info("🔄 Web search embedding disabled - will return raw results")
+            else:
                 log.info(
-                    f"✅ Successfully cleaned up web search cache: {collections_cleaned} collections removed in {duration:.2f} seconds"
+                    "🔄 Web search embedding enabled - will create vector collections"
                 )
-            except Exception as e:
-                log.warning(f"⚠️ Failed to cleanup web search cache: {str(e)}")
 
         request.app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
         request.app.state.config.SEARXNG_QUERY_URL = (
@@ -1359,7 +1347,7 @@ async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
-        # REMOVED WEB SEARCH CACHING: Always perform fresh search for information currency
+        # Always perform fresh web search (no caching) but allow embedding based on toggle
         log.info(
             f"Performing fresh web search for query '{form_data.query}' with engine '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
         )
@@ -1377,18 +1365,16 @@ async def process_web_search(
     log.debug(f"web_results: {web_results}")
 
     try:
-        # Generate a unique collection name for this session (not for caching)
-        # Use timestamp + hash to ensure uniqueness and avoid conflicts
+        # Generate a unique collection name for this search (timestamp-based, not hash-based)
         collection_name = form_data.collection_name
         if collection_name == "" or collection_name is None:
-            # Generate a temporary unique collection name (not for caching)
             import time
+            import uuid
 
+            # Use timestamp + random UUID to ensure uniqueness without hash-based caching
             timestamp = int(time.time())
-            search_hash = get_web_search_hash(
-                form_data.query, request.app.state.config.RAG_WEB_SEARCH_ENGINE
-            )
-            collection_name = f"websearch_temp_{timestamp}_{search_hash[:8]}"
+            unique_id = str(uuid.uuid4())[:8]
+            collection_name = f"websearch_{timestamp}_{unique_id}"
 
         urls = [result.link for result in web_results]
         loader = get_web_loader(
@@ -1398,7 +1384,7 @@ async def process_web_search(
         )
         docs = loader.load()
 
-        # Add timestamp metadata for cache management
+        # Add metadata for tracking
         for doc in docs:
             if not hasattr(doc, "metadata"):
                 doc.metadata = {}
@@ -1411,21 +1397,38 @@ async def process_web_search(
                 }
             )
 
-        # ALWAYS bypass embedding for web searches to ensure fresh results
-        # Web searches should not be cached as they need to provide current information
-        return {
-            "status": True,
-            "collection_name": None,
-            "docs": [
-                {
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                }
-                for doc in docs
-            ],
-            "filenames": urls,
-            "loaded_count": len(docs),
-        }
+        # Restore conditional behavior: embed based on toggle setting
+        if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+            # Return raw results without embedding
+            return {
+                "status": True,
+                "collection_name": None,
+                "docs": [
+                    {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                    }
+                    for doc in docs
+                ],
+                "filenames": urls,
+                "loaded_count": len(docs),
+            }
+        else:
+            # Embed results into vector database for RAG usage
+            await save_docs_to_vector_db(
+                request,
+                docs,
+                collection_name,
+                overwrite=True,
+                user=user,
+            )
+
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filenames": urls,
+                "loaded_count": len(docs),
+            }
     except Exception as e:
         log.exception(e)
         raise HTTPException(
