@@ -65,7 +65,7 @@ coverage.xml
 cover/
 
 # Playwright
-playwright/
+playwright/.auth
 playwright-report/
 test-results/
 /tests/e2e/test

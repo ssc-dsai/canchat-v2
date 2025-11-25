@@ -8,6 +8,7 @@
 		"backend:setup": "npm run backend:check && pip install -r backend/requirements.txt",
 		"backend:check": "python --version | grep -q 'Python 3.11' || (echo 'Error: Python 3.11 required' && exit 1)",
 		"test": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test'",
+		"test:headed": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --headed'",
 		"test:report": "npx playwright show-report",
 		"test:setup": "npx playwright install --with-deps --force",
 		"test:setup:headless": "npx playwright install --with-deps --only-shell --force",
