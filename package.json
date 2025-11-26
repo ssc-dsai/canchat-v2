@@ -12,6 +12,8 @@
 		"test:report": "npx playwright show-report",
 		"test:setup": "npx playwright install --with-deps --force",
 		"test:setup:headless": "npx playwright install --with-deps --only-shell --force",
+		"coverage:build": "export NODE_OPTIONS='--max-old-space-size=8192' && VITE_COVERAGE=true npm run build",
+		"coverage:test": "npm run test && npx nyc report",
 		"setup": "npm run test:setup && npm run backend:setup && npm run build",
 		"dev": "npm run pyodide:fetch && vite dev --host",
 		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
@@ -30,6 +32,7 @@
 		"pyodide:fetch": "node scripts/prepare-pyodide.js"
 	},
 	"devDependencies": {
+		"@istanbuljs/nyc-config-typescript": "^1.0.2",
 		"@playwright/test": "^1.56.1",
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
@@ -45,6 +48,7 @@
 		"eslint-plugin-cypress": "^3.4.0",
 		"eslint-plugin-svelte": "^2.43.0",
 		"i18next-parser": "^9.0.1",
+		"nyc": "^17.1.0",
 		"postcss": "^8.4.31",
 		"prettier": "^3.3.3",
 		"prettier-plugin-svelte": "^3.2.6",
@@ -57,6 +61,7 @@
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
 		"vite": "^5.4.14",
+		"vite-plugin-istanbul": "^7.2.1",
 		"vitest": "^1.6.0"
 	},
 	"type": "module",
