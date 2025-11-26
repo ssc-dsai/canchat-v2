@@ -22,7 +22,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition"
+					class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
 					type="button"
 					on:click={() => {
 						valves[property] =
