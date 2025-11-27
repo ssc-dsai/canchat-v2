@@ -224,7 +224,7 @@
 
 					<button
 						id="landing-page-mode-button"
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleLandingPageMode();
 						}}
@@ -244,7 +244,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Chat Bubble UI')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleChatBubble();
 							ariaMessage.set(
@@ -272,7 +272,7 @@
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+							class="p-1 px-3 text-xs flex rounded transition"
 							on:click={() => {
 								toggleShowUsername();
 							}}
@@ -293,7 +293,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Widescreen Mode')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleWidescreenMode();
 						}}
@@ -315,7 +315,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleNotificationSound();
 						}}
@@ -338,7 +338,7 @@
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+							class="p-1 px-3 text-xs flex rounded transition"
 							on:click={() => {
 								toggleShowChangelog();
 							}}
@@ -361,7 +361,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Title Auto-Generation')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleTitleAutoGenerate();
 						}}
@@ -381,7 +381,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Chat Tags Auto-Generation')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleAutoTags();
 						}}
@@ -403,7 +403,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleResponseAutoCopy();
 						}}
@@ -425,7 +425,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleRichTextInput();
 						}}
@@ -447,7 +447,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleLargeTextAsFile();
 						}}
@@ -467,7 +467,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Allow User Location')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleUserLocation();
 						}}
@@ -487,7 +487,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Haptic Feedback')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleHapticFeedback();
 						}}
@@ -509,7 +509,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							togglesScrollOnBranchChange();
 						}}
@@ -531,7 +531,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Allow Voice Interruption in Call')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleVoiceInterruption();
 						}}
@@ -551,7 +551,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Display Emoji in Call')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleEmojiInCall();
 						}}
@@ -573,7 +573,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Image Compression')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleImageCompression();
 						}}

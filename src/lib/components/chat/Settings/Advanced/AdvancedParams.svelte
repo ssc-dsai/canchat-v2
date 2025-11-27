@@ -74,7 +74,7 @@
 					{$i18n.t('Stream Chat Response')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition"
 					on:click={() => {
 						params.stream_response =
 							(params?.stream_response ?? null) === null
@@ -112,7 +112,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-seed"
 					on:click={() => {
@@ -162,7 +162,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-stop-sequence"
 					on:click={() => {
@@ -210,7 +210,7 @@
 					{$i18n.t('Temperature')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-temperature"
 					on:click={() => {
@@ -268,7 +268,7 @@
 					{$i18n.t('Reasoning Effort')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-reasoning-effort"
 					on:click={() => {
@@ -315,7 +315,7 @@
 					{$i18n.t('Mirostat')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-mirostat"
 					on:click={() => {
@@ -373,7 +373,7 @@
 					{$i18n.t('Mirostat Eta')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-mirostat-eta"
 					on:click={() => {
@@ -432,7 +432,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-mirostat-tau"
 					on:click={() => {
@@ -490,7 +490,7 @@
 					{$i18n.t('Top K')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-top-k"
 					on:click={() => {
@@ -549,7 +549,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-top-p"
 					on:click={() => {
@@ -607,7 +607,7 @@
 					{$i18n.t('Min P')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-min-p"
 					on:click={() => {
@@ -666,7 +666,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-frequency-penalty"
 					on:click={() => {
@@ -725,7 +725,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-repeat-last-n"
 					on:click={() => {
@@ -784,7 +784,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-tfs-z"
 					on:click={() => {
@@ -843,7 +843,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-num_keep"
 					on:click={() => {
@@ -901,7 +901,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-num_predict"
 					on:click={() => {
@@ -958,7 +958,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					on:click={() => {
 						params.num_keep = (params?.num_keep ?? null) === null ? 24 : null;
@@ -1014,7 +1014,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					aria-describedby="tooltip-num_batch"
 					on:click={() => {
@@ -1071,7 +1071,7 @@
 						{$i18n.t('use_mmap (Ollama)')}
 					</div>
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 						type="button"
 						on:click={() => {
 							params.use_mmap = (params?.use_mmap ?? null) === null ? true : null;
@@ -1112,7 +1112,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 						type="button"
 						on:click={() => {
 							params.use_mlock = (params?.use_mlock ?? null) === null ? true : null;
@@ -1154,7 +1154,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 						type="button"
 						on:click={() => {
 							params.num_thread = (params?.num_thread ?? null) === null ? 2 : null;
@@ -1210,7 +1210,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 						type="button"
 						on:click={() => {
 							params.num_gpu = (params?.num_gpu ?? null) === null ? 0 : null;
@@ -1257,7 +1257,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Template')}</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
 					type="button"
 					on:click={() => {
 						params.template = (params?.template ?? null) === null ? '' : null;

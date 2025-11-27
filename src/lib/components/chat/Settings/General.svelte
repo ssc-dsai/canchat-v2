@@ -163,7 +163,7 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleNotification();
 						}}
@@ -219,7 +219,7 @@
 							<div class=" self-center text-xs font-medium">{$i18n.t('Keep Alive')}</div>
 
 							<button
-								class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+								class="p-1 px-3 text-xs flex rounded transition"
 								type="button"
 								on:click={() => {
 									keepAlive = keepAlive === null ? '5m' : null;
@@ -250,7 +250,7 @@
 							<div class=" self-center text-sm font-medium">{$i18n.t('Request Mode')}</div>
 
 							<button
-								class="p-1 px-3 text-xs flex rounded transition border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+								class="p-1 px-3 text-xs flex rounded transition"
 								on:click={() => {
 									toggleRequestFormat();
 								}}
