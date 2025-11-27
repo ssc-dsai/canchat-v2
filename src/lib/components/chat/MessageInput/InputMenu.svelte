@@ -246,7 +246,10 @@
 						<div class=" line-clamp-1">{$i18n.t('Image')}</div>
 					</div>
 
-					<Switch state={imageGenerationEnabled} />
+					<Switch 
+						state={imageGenerationEnabled} 
+						ariaLabel={$i18n.t('Toggle Image Generation')}
+					/>
 				</button>
 			{/if}
 
@@ -278,7 +281,11 @@
 							<div class=" line-clamp-1">{$i18n.t('Web Search (Beta)')}</div>
 						</div>
 
-						<Switch state={webSearchEnabled} disabled={wikiGroundingEnabled} />
+						<Switch 
+							state={webSearchEnabled}
+							ariaLabel={$i18n.t('Toggle Web Search')}
+							disabled={wikiGroundingEnabled} 
+						/>
 					</button>
 				</Tooltip>
 			{/if}
