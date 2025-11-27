@@ -3,8 +3,8 @@ import { type Page, type Locator, expect } from '@playwright/test';
 
 export class ChatPage extends BasePage {
 	readonly messageInput: Locator;
-	readonly sendButton: Locator;
-	readonly stopGenerationButton: Locator;
+	sendButton!: Locator;
+	stopGenerationButton!: Locator;
 	readonly regenerateButton: Locator;
 	readonly responseMessages: Locator;
 	readonly responseSelector = '#response-content-container';
@@ -14,12 +14,25 @@ export class ChatPage extends BasePage {
 
 		this.messageInput = page.locator('#chat-input');
 
-		this.sendButton = page.getByRole('button', { name: this.t['Send message'] || 'Send message' });
-		this.stopGenerationButton = page.getByRole('button', { name: this.t['Stop'] || 'Stop' });
 		this.regenerateButton = page.locator('div:nth-child(8) > .visible');
 
 		this.responseMessages = page.locator('#response-content-container');
 		this.responseSelector = '#response-content-container';
+
+		this.updateLanguage(lang);
+	}
+
+	/**
+	 * Override to update Chat-specific locators
+	 * @param lang The new language to switch to ('en-GB' or 'fr-CA')
+	 */
+	override updateLanguage(lang: Language) {
+		super.updateLanguage(lang);
+
+		this.sendButton = this.page.getByRole('button', {
+			name: this.t['Send message'] || 'Send message'
+		});
+		this.stopGenerationButton = this.page.getByRole('button', { name: this.t['Stop'] || 'Stop' });
 	}
 
 	/**

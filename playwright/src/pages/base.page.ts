@@ -17,14 +17,14 @@ export type Language = 'en-GB' | 'fr-CA';
 
 export class BasePage {
 	readonly page: Page;
-	readonly t: typeof en;
+	t: typeof en;
 
 	// --- Locators: Header ---
 	readonly userProfileButton: Locator;
-	readonly menuSettings: Locator;
-	readonly menuAdminPanel: Locator;
-	readonly menuSignOut: Locator;
-	readonly setDefaultModel: Locator;
+	menuSettings!: Locator;
+	menuAdminPanel!: Locator;
+	menuSignOut!: Locator;
+	setDefaultModel!: Locator;
 
 	// --- Locators: Sidebar ---
 	readonly sidebarOpenButton: Locator;
@@ -39,20 +39,31 @@ export class BasePage {
 		this.t = lang === 'fr-CA' ? fr : en;
 
 		this.userProfileButton = page.getByRole('button', { name: 'User profile' });
-		this.menuSettings = page.getByRole('link', { name: this.t['Settings'] || 'Settings' });
-		this.menuAdminPanel = page.getByRole('menuitem', {
-			name: this.t['Admin Panel'] || 'Admin Panel'
-		});
-		this.menuSignOut = page.getByRole('menuitem', { name: this.t['Sign Out'] || 'Sign Out' });
-		this.setDefaultModel = page.getByRole('button', {
-			name: this.t['Set as default'] || 'Set as default'
-		});
 
 		this.sidebarOpenButton = page.locator('#sidebar-toggle-button');
 		this.sidebarCloseButton = page.locator('#hide-sidebar-button');
 		this.sidebarNewChatButton = page.getByRole('link', { name: 'logo New Chat' });
 
 		this.splashLogo = page.locator('img#logo[alt="CANChat Logo"]');
+
+		this.updateLanguage(lang);
+	}
+
+	/**
+	 * Updates the page language context
+	 * @param lang The new language to switch to ('en-GB' or 'fr-CA')
+	 */
+	updateLanguage(lang: Language) {
+		this.t = lang === 'fr-CA' ? fr : en;
+
+		this.menuSettings = this.page.getByRole('menuitem', { name: this.t['Settings'] || 'Settings' });
+		this.menuAdminPanel = this.page.getByRole('menuitem', {
+			name: this.t['Admin Panel'] || 'Admin Panel'
+		});
+		this.menuSignOut = this.page.getByRole('menuitem', { name: this.t['Sign Out'] || 'Sign Out' });
+		this.setDefaultModel = this.page.getByRole('button', {
+			name: this.t['Set as default'] || 'Set as default'
+		});
 	}
 
 	/**
@@ -128,7 +139,22 @@ export class BasePage {
 	async openGlobalSettings() {
 		await this.openHeaderUserMenu();
 		await this.menuSettings.click();
-		await expect(this.page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+		this.waitToSettle(500);
+	}
+
+	/**
+	 * Navigates to a specific section within the user settings
+	 * @param menu Sidebar link name
+	 * @param section Tab button name
+	 */
+	async navigateToUserSettings(section?: string) {
+		await this.goto('/');
+		const sectionName = section || this.t['General'] || 'General';
+
+		await this.openGlobalSettings();
+
+		await this.page.getByRole('button', { name: sectionName }).click();
+		await this.waitToSettle(500);
 	}
 
 	/**

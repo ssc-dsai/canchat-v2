@@ -2,14 +2,23 @@ import { BasePage, type Language } from './base.page';
 import { type Page, type Locator, expect } from '@playwright/test';
 
 export class AdminPage extends BasePage {
-	readonly saveButton: Locator;
+	saveButton!: Locator;
 	readonly addUserButton: Locator;
 
 	constructor(page: Page, lang: Language = 'en-GB') {
 		super(page, lang);
 
-		this.saveButton = page.getByRole('button', { name: this.t['Save'] || 'Save' });
 		this.addUserButton = page.locator('[id="add-user\\9 \\9 \\9 \\9 "]');
+		this.updateLanguage(lang);
+	}
+
+	/**
+	 * Override the base method to update Admin-specific locators
+	 * @param lang The new language to switch to ('en-GB' or 'fr-CA')
+	 */
+	override updateLanguage(lang: Language) {
+		super.updateLanguage(lang);
+		this.saveButton = this.page.getByRole('button', { name: this.t['Save'] || 'Save' });
 	}
 
 	/**
@@ -26,7 +35,7 @@ export class AdminPage extends BasePage {
 	 * @param menu Sidebar link name
 	 * @param section Tab button name
 	 */
-	async navigateToSettings(menu?: string, section?: string) {
+	async navigateToAdminSettings(menu?: string, section?: string) {
 		await this.goto('/');
 		const menuName = menu || this.t['Settings'] || 'Settings';
 		const sectionName = section || this.t['General'] || 'General';
@@ -62,7 +71,10 @@ export class AdminPage extends BasePage {
 	 * @param enable the desired state
 	 */
 	async configureImageGeneration(provider: 'dall-e-2' | 'dall-e-3', enable: boolean) {
-		await this.navigateToSettings(this.t['Settings'] || 'Settings', this.t['Images'] || 'Images');
+		await this.navigateToAdminSettings(
+			this.t['Settings'] || 'Settings',
+			this.t['Images'] || 'Images'
+		);
 
 		// Image Generation (Experimental) Switch
 		await this.toggleSwitch(this.page.getByRole('switch').first(), true);
@@ -77,7 +89,7 @@ export class AdminPage extends BasePage {
 	 * Navigates to MCP settings and toggles the master switch.
 	 */
 	async configureMCP(enable: boolean) {
-		await this.navigateToSettings(this.t['Settings'], 'MCP');
+		await this.navigateToAdminSettings(this.t['Settings'], 'MCP');
 		await this.toggleSwitch(this.page.getByRole('switch', { name: 'Enable MCP API' }), true);
 	}
 
@@ -99,7 +111,7 @@ export class AdminPage extends BasePage {
 	 * @param modelName The name of the model
 	 */
 	async openModelSettings(modelName: string) {
-		await this.navigateToSettings(this.t['Settings'], 'Models');
+		await this.navigateToAdminSettings(this.t['Settings'], 'Models');
 		await this.page.getByRole('button', { name: `modelfile profile ${modelName}` }).click();
 		await expect(this.page.locator('#models')).toBeVisible();
 	}

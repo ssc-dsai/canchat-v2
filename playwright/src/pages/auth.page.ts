@@ -2,35 +2,44 @@ import { BasePage, type Language } from './base.page';
 import { type Page, type Locator, expect } from '@playwright/test';
 
 export class AuthPage extends BasePage {
-	readonly emailInput: Locator;
-	readonly passwordInput: Locator;
-	readonly signInButton: Locator;
-	readonly createAccountButton: Locator;
-	readonly nameInput: Locator;
-	readonly onboardingButton: Locator;
+	emailInput!: Locator;
+	passwordInput!: Locator;
+	signInButton!: Locator;
+	createAccountButton!: Locator;
+	nameInput!: Locator;
+	onboardingButton!: Locator;
 	readonly isFirstRunButton: Locator;
 
 	constructor(page: Page, lang: Language = 'en-GB') {
 		super(page, lang);
 
-		this.emailInput = page.getByRole('textbox', {
+		this.isFirstRunButton = page.getByRole('button').filter({ hasText: /^$/ });
+		this.updateLanguage(lang);
+	}
+
+	/**
+	 * Override to update Chat-specific locators
+	 * @param lang The new language to switch to ('en-GB' or 'fr-CA')
+	 */
+	override updateLanguage(lang: Language) {
+		super.updateLanguage(lang);
+
+		this.emailInput = this.page.getByRole('textbox', {
 			name: this.t['Enter Your Email'] || 'Enter Your Email'
 		});
-		this.passwordInput = page.getByRole('textbox', {
+		this.passwordInput = this.page.getByRole('textbox', {
 			name: this.t['Enter Your Password'] || 'Enter Your Password'
 		});
-		this.signInButton = page.getByRole('button', { name: this.t['Sign in'] || 'Sign in' });
-		this.createAccountButton = page.getByRole('button', {
+		this.signInButton = this.page.getByRole('button', { name: this.t['Sign in'] || 'Sign in' });
+		this.createAccountButton = this.page.getByRole('button', {
 			name: this.t['Create Admin Account'] || 'Create Admin Account'
 		});
-		this.nameInput = page.getByRole('textbox', {
+		this.nameInput = this.page.getByRole('textbox', {
 			name: this.t['Enter Your Full Name'] || 'Enter Your Full Name'
 		});
-		this.onboardingButton = page.getByRole('button', {
+		this.onboardingButton = this.page.getByRole('button', {
 			name: this.t["Okay, Let's Go!"] || "Okay, Let's Go!"
 		});
-
-		this.isFirstRunButton = page.getByRole('button').filter({ hasText: /^$/ });
 	}
 
 	/**
