@@ -18,7 +18,7 @@ export class AdminPage extends BasePage {
 	 */
 	override updateLanguage(lang: Language) {
 		super.updateLanguage(lang);
-		this.saveButton = this.page.getByRole('button', { name: this.t['Save'] || 'Save' });
+		this.saveButton = this.page.getByRole('button', { name: this.getTranslation('Save') });
 	}
 
 	/**
@@ -37,14 +37,12 @@ export class AdminPage extends BasePage {
 	 */
 	async navigateToAdminSettings(menu?: string, section?: string) {
 		await this.goto('/');
-		const menuName = menu || this.t['Settings'] || 'Settings';
-		const sectionName = section || this.t['General'] || 'General';
 
 		await this.navigateToAdminPanel();
 
-		await this.page.getByRole('link', { name: menuName }).click();
+		await this.page.getByRole('link', { name: menu }).click();
 
-		const sectionTab = this.page.getByRole('button', { name: sectionName });
+		const sectionTab = this.page.getByRole('button', { name: section });
 		await expect(sectionTab).toBeVisible();
 		await sectionTab.click();
 		await this.waitToSettle(500);
@@ -72,8 +70,8 @@ export class AdminPage extends BasePage {
 	 */
 	async configureImageGeneration(provider: 'dall-e-2' | 'dall-e-3', enable: boolean) {
 		await this.navigateToAdminSettings(
-			this.t['Settings'] || 'Settings',
-			this.t['Images'] || 'Images'
+			this.getTranslation('Settings'),
+			this.getTranslation('Images')
 		);
 
 		// Image Generation (Experimental) Switch
@@ -89,16 +87,19 @@ export class AdminPage extends BasePage {
 	 * Navigates to MCP settings and toggles the master switch.
 	 */
 	async configureMCP(enable: boolean) {
-		await this.navigateToAdminSettings(this.t['Settings'], 'MCP');
-		await this.toggleSwitch(this.page.getByRole('switch', { name: 'Enable MCP API' }), true);
+		await this.navigateToAdminSettings(this.getTranslation('Settings'), this.getTranslation('MCP'));
+		await this.toggleSwitch(
+			this.page.getByRole('switch', { name: this.getTranslation('Enable MCP API') }),
+			true
+		);
 	}
 
 	/**
 	 * Verifies that a specific MCP server hows the expected status.
 	 * @param serverName the server name
-	 * @param status the status of the server
+	 * @param status the status of the server 'running' | 'stopped' | 'initializing'
 	 */
-	async verifyMCPServerStatus(serverName: string, status: 'running' | 'stopped' | 'initializing') {
+	async verifyMCPServerStatus(serverName: string, status: string) {
 		const statusBadge = this.page.locator(
 			`//div[normalize-space(text())='${serverName}']/../../..//span[normalize-space(text())='${status}']`
 		);
@@ -111,7 +112,10 @@ export class AdminPage extends BasePage {
 	 * @param modelName The name of the model
 	 */
 	async openModelSettings(modelName: string) {
-		await this.navigateToAdminSettings(this.t['Settings'], 'Models');
+		await this.navigateToAdminSettings(
+			this.getTranslation('Settings'),
+			this.getTranslation('Models')
+		);
 		await this.page.getByRole('button', { name: `modelfile profile ${modelName}` }).click();
 		await expect(this.page.locator('#models')).toBeVisible();
 	}
@@ -136,9 +140,9 @@ export class AdminPage extends BasePage {
 
 	/**
 	 * Updates the visibility dropdown (Public or Private)
-	 * @param visibility The value option
+	 * @param visibility The value option 'public' | 'private'
 	 */
-	async updateModelVisibility(visibility: 'public' | 'private') {
+	async updateModelVisibility(visibility: string) {
 		await this.page.locator('#models').selectOption(visibility);
 	}
 
@@ -146,7 +150,7 @@ export class AdminPage extends BasePage {
 	 * Save the changes made to the model
 	 */
 	async saveModelSettings() {
-		await this.page.getByRole('button', { name: 'Save & Update' }).click();
+		await this.page.getByRole('button', { name: this.getTranslation('Save & Update') }).click();
 	}
 
 	/**
@@ -160,9 +164,15 @@ export class AdminPage extends BasePage {
 		console.log(`Creating user: ${name}`);
 		await this.addUserButton.click();
 		await this.page.getByRole('combobox').selectOption(role);
-		await this.page.getByRole('textbox', { name: 'Enter Your Full Name' }).fill(name);
-		await this.page.getByRole('textbox', { name: 'Enter Your Email' }).fill(email);
-		await this.page.getByRole('textbox', { name: 'Enter Your Password' }).fill(password);
+		await this.page
+			.getByRole('textbox', { name: this.getTranslation('Enter Your Full Name') })
+			.fill(name);
+		await this.page
+			.getByRole('textbox', { name: this.getTranslation('Enter Your Email') })
+			.fill(email);
+		await this.page
+			.getByRole('textbox', { name: this.getTranslation('Enter Your Password') })
+			.fill(password);
 		await this.saveButton.click();
 	}
 }

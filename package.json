@@ -8,6 +8,8 @@
 		"backend:setup": "npm run backend:check && pip install -r backend/requirements.txt",
 		"backend:check": "python --version | grep -q 'Python 3.11' || (echo 'Error: Python 3.11 required' && exit 1)",
 		"test": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test'",
+		"test:en": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --project=chromium-en --project=firefox-en'",
+		"test:fr": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --project=chromium-fr --project=firefox-fr'",
 		"test:headed": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --headed'",
 		"test:report": "npx playwright show-report",
 		"test:setup": "npx playwright install --with-deps --force",

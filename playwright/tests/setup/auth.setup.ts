@@ -39,7 +39,7 @@ setup('global setup: seed data & authenticate', async ({ page }) => {
 		en: 'English Description',
 		fr: 'French Description'
 	});
-	await adminPage.updateModelVisibility('public');
+	await adminPage.updateModelVisibility(adminPage.getTranslation('public'));
 	await adminPage.saveModelSettings();
 	await adminPage.updateChatModel('chatgpt-4o-latest');
 	await adminPage.setDefaultChatModel();
@@ -59,7 +59,10 @@ async function performAdminRegistration(page: Page, authPage: AuthPage) {
 
 async function seedUserAccounts(page: Page, adminPage: AdminPage) {
 	console.log('Checking User Accounts...');
-	await adminPage.navigateToSettings('Users & Access', 'Overview');
+	await adminPage.navigateToAdminSettings(
+		adminPage.getTranslation('Users & Access'),
+		adminPage.getTranslation('Overview')
+	);
 
 	for (const user of standardUsers) {
 		const userExists = await page.getByText(user.email).isVisible();

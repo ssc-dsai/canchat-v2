@@ -1,22 +1,34 @@
 import { test, expect } from '../../../src/fixtures/base-fixture';
+import { Language } from '../../../src/pages/base.page';
 
 test.describe('Feature: Model Context Protocol (MCP)', () => {
 	test.setTimeout(240000);
 
-	test('MCP - Time Server', async ({ adminPage, userPage }) => {
+	test('MCP - Time Server', async ({ adminPage, userPage, locale }) => {
 		// Admin Setup
 		await test.step('Admin enables MCP API and verifies services', async () => {
+			await adminPage.verifyPageLanguage(locale as Language);
 			await adminPage.configureMCP(true);
-			await adminPage.verifyMCPServerStatus('Time Server', 'running');
+			await adminPage.verifyMCPServerStatus(
+				adminPage.getTranslation('Time Server'),
+				adminPage.getTranslation('running')
+			);
 			await adminPage.signOut();
 		});
 
 		// User - Time Tool Test
 		await test.step('User can use MCP Time tool', async () => {
 			await userPage.goto('/');
-			await userPage.toggleChatTool('MCP: Current Time', true);
-			await expect(userPage.page.locator('#chat-container')).toContainText('MCP: Current Time');
-			await userPage.sendMessage('What is the time?', true, 'Consulting CrewAI agents...');
+			await userPage.verifyPageLanguage(locale as Language);
+			await userPage.toggleChatTool(userPage.getTranslation('MCP: Current Time'), true);
+			await expect(userPage.page.locator('#chat-container')).toContainText(
+				userPage.getTranslation('MCP: Current Time')
+			);
+			await userPage.sendMessage(
+				'What is the time?',
+				true,
+				userPage.getTranslation('Consulting CrewAI agents...')
+			);
 
 			if (await userPage.isNetworkErrorPresent()) {
 				console.log('Network error detected. Retrying...');
@@ -31,23 +43,30 @@ test.describe('Feature: Model Context Protocol (MCP)', () => {
 		});
 	});
 
-	test('MCP - News Headlines', async ({ adminPage, userPage }) => {
+	test('MCP - News Headlines', async ({ adminPage, userPage, locale }) => {
 		// Admin Setup
 		await test.step('Admin enables MCP API and verifies services', async () => {
+			await adminPage.verifyPageLanguage(locale as Language);
 			await adminPage.configureMCP(true);
-			await adminPage.verifyMCPServerStatus('Time Server', 'running');
+			await adminPage.verifyMCPServerStatus(
+				adminPage.getTranslation('Time Server'),
+				adminPage.getTranslation('running')
+			);
 			await adminPage.signOut();
 		});
 
 		// User - News Tool Test
 		await test.step('User can use MCP News tool', async () => {
-			await userPage.toggleChatTool('MCP: News Headlines', true);
-			await expect(userPage.page.locator('#chat-container')).toContainText('MCP: News Headline');
+			await userPage.verifyPageLanguage(locale as Language);
+			await userPage.toggleChatTool(userPage.getTranslation('MCP: News Headlines'), true);
+			await expect(userPage.page.locator('#chat-container')).toContainText(
+				userPage.getTranslation('MCP: News Headlines')
+			);
 
 			await userPage.sendMessage(
 				'What are the current headlines?',
 				true,
-				'Consulting CrewAI agents...'
+				userPage.getTranslation('Consulting CrewAI agents...')
 			);
 
 			await expect(userPage.responseMessages.last()).not.toContainText(

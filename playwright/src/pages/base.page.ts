@@ -25,6 +25,8 @@ export class BasePage {
 	menuAdminPanel!: Locator;
 	menuSignOut!: Locator;
 	setDefaultModel!: Locator;
+	readonly headerLanguageButtonEN: Locator;
+	readonly headerLanguageButtonFR: Locator;
 
 	// --- Locators: Sidebar ---
 	readonly sidebarOpenButton: Locator;
@@ -43,6 +45,8 @@ export class BasePage {
 		this.sidebarOpenButton = page.locator('#sidebar-toggle-button');
 		this.sidebarCloseButton = page.locator('#hide-sidebar-button');
 		this.sidebarNewChatButton = page.getByRole('link', { name: 'logo New Chat' });
+		this.headerLanguageButtonEN = page.getByRole('button', { name: 'EN', exact: true });
+		this.headerLanguageButtonFR = page.getByRole('button', { name: 'FR', exact: true });
 
 		this.splashLogo = page.locator('img#logo[alt="CANChat Logo"]');
 
@@ -67,11 +71,27 @@ export class BasePage {
 	}
 
 	/**
+	 * Switch the page language if required
+	 * @param lang The new language to switch to ('en-GB' or 'fr-CA')
+	 */
+	async verifyPageLanguage(lang: Language) {
+		if (lang == 'fr-CA') {
+			if (await this.headerLanguageButtonFR.isVisible()) {
+				await this.headerLanguageButtonFR.click();
+			}
+		} else {
+			if (await this.headerLanguageButtonEN.isVisible()) {
+				await this.headerLanguageButtonEN.click();
+			}
+		}
+	}
+
+	/**
 	 * Navigates to the application root and waits for the splash screen to vanish
 	 */
 	async goto(path: string = '/') {
 		await this.page.goto(path);
-		await this.splashLogo.waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+		await this.splashLogo.waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});
 		await expect(this.page.locator('body')).toBeVisible();
 	}
 
@@ -200,5 +220,14 @@ export class BasePage {
 	 */
 	async setDefaultChatModel() {
 		await this.setDefaultModel.click();
+	}
+
+	/**
+	 * Retrieves the translation for a given key.
+	 * Returns the key itself if the translation is missing.
+	 * @param key The text/key to translate
+	 */
+	getTranslation(key: string): string {
+		return (this.t as any)[key] || key;
 	}
 }

@@ -1,18 +1,28 @@
 import { test, expect } from '../../../src/fixtures/base-fixture';
 import { describeLocalImage } from '../../../src/utils/openai';
-import * as path from 'path';
+import { Language } from '../../../src/pages/base.page';
 
 test.describe('Feature: Image Generation', () => {
-	test('user can generate images using dall-e-2', async ({ adminPage, userPage }, testInfo) => {
+	test('user can generate images using dall-e-2', async ({
+		adminPage,
+		userPage,
+		locale
+	}, testInfo) => {
 		test.setTimeout(240000);
 
 		// Enable image generation globally
+		await adminPage.verifyPageLanguage(locale as Language);
 		await adminPage.configureImageGeneration('dall-e-2', true);
 
 		await userPage.goto('/');
+		await userPage.verifyPageLanguage(locale as Language);
 		await userPage.enableImageGenerationCapability();
 
-		await userPage.sendMessage('Make a picture of the Easter Bunny.', true, 'Generating an image');
+		await userPage.sendMessage(
+			'Make a picture of the Easter Bunny.',
+			true,
+			userPage.getTranslation('Generating an image')
+		);
 
 		const imageElement = userPage.getLastImage();
 		await expect(imageElement).toBeVisible({ timeout: 120000 });

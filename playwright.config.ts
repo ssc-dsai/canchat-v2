@@ -18,7 +18,8 @@ export default defineConfig({
 	/* Retry on CI only */
 	retries: process.env.CI ? 2 : 0,
 	/* Opt out of parallel tests on CI. */
-	workers: process.env.CI ? 1 : undefined,
+	//workers: process.env.CI ? 1 : undefined,
+	workers: 3,
 	/* Reporter to use. See https://playwright.dev/docs/test-reporters */
 	reporter: [
 		['html', { open: 'never' }],
@@ -57,18 +58,40 @@ export default defineConfig({
 
 		// --- Tests Environment ---
 		{
-			name: 'chromium',
+			name: 'chromium-en',
 			use: {
-				...devices['Desktop Chrome']
+				...devices['Desktop Chrome'],
+				locale: 'en-GB'
 			},
 			testDir: './playwright/tests/e2e',
 			dependencies: ['setup']
 		},
 
 		{
-			name: 'firefox',
+			name: 'chromium-fr',
 			use: {
-				...devices['Desktop Firefox']
+				...devices['Desktop Chrome'],
+				locale: 'fr-CA'
+			},
+			testDir: './playwright/tests/e2e',
+			dependencies: ['setup']
+		},
+
+		{
+			name: 'firefox-en',
+			use: {
+				...devices['Desktop Firefox'],
+				locale: 'en-GB'
+			},
+			testDir: './playwright/tests/e2e',
+			dependencies: ['setup']
+		},
+
+		{
+			name: 'firefox-fr',
+			use: {
+				...devices['Desktop Firefox'],
+				locale: 'fr-CA'
 			},
 			testDir: './playwright/tests/e2e',
 			dependencies: ['setup']

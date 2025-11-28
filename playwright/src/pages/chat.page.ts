@@ -117,7 +117,9 @@ export class ChatPage extends BasePage {
 		}
 
 		await this.page.keyboard.press('Escape');
-		await expect(this.page.locator('#chat-container')).toContainText('Image generation');
+		await expect(this.page.locator('#chat-container')).toContainText(
+			this.getTranslation('Image generation')
+		);
 	}
 
 	/**
@@ -149,19 +151,21 @@ export class ChatPage extends BasePage {
 		const fileChooserPromise = this.page.waitForEvent('filechooser');
 
 		await this.page.getByLabel('More').click();
-		await this.page.getByText('Upload Files').click();
+		await this.page.getByText(this.getTranslation('Upload Files')).click();
 
 		const fileChooser = await fileChooserPromise;
 		await fileChooser.setFiles(filePath);
 
 		await this.page
 			.locator('li')
-			.filter({ hasText: 'File uploaded successfully' })
+			.filter({ hasText: this.getTranslation('File uploaded successfully') })
 			.waitFor({ state: 'visible', timeout: 180000 });
-		await this.page.locator('li', { hasText: 'File uploaded successfully' }).waitFor({
-			state: 'detached',
-			timeout: 30000
-		});
+		await this.page
+			.locator('li', { hasText: this.getTranslation('File uploaded successfully') })
+			.waitFor({
+				state: 'detached',
+				timeout: 30000
+			});
 	}
 
 	/**

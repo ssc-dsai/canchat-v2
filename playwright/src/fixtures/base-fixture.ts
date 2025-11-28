@@ -3,9 +3,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { authFixture } from './auth-fixture';
-import { BasePage, type Language } from '../pages/base.page';
 import { ChatPage } from '../pages/chat.page';
 import { AdminPage } from '../pages/admin.page';
+import { Language } from '../pages/base.page';
 
 // Define coverage output directory
 const istanbulCLIOutput = path.join(process.cwd(), '.nyc_output');
@@ -26,12 +26,6 @@ async function setupCoverage(context: BrowserContext) {
 			);
 		}
 	});
-
-	await context.addInitScript(() =>
-		window.addEventListener('beforeunload', () =>
-			(window as any).collectIstanbulCoverage(JSON.stringify((window as any).__coverage__))
-		)
-	);
 }
 
 /**
@@ -54,16 +48,14 @@ type PageFixtures = {
 	guestPage: ChatPage;
 };
 
-const TEST_LANG = (process.env.TEST_LANG as Language) || 'en-GB';
-
 export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 	// --- Admin Fixture ---
-	adminPage: async ({ browser, authFiles }, use) => {
+	adminPage: async ({ browser, authFiles, locale }, use) => {
 		const context = await browser.newContext({ storageState: authFiles.admin });
 		await setupCoverage(context);
 
 		const page = await context.newPage();
-		const adminPage = new AdminPage(page, TEST_LANG);
+		const adminPage = new AdminPage(page, locale as Language);
 		await adminPage.goto('/');
 
 		await use(adminPage);
@@ -73,12 +65,12 @@ export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 	},
 
 	// --- Standard User Fixture ---
-	userPage: async ({ browser, authFiles }, use) => {
+	userPage: async ({ browser, authFiles, locale }, use) => {
 		const context = await browser.newContext({ storageState: authFiles.user });
 		await setupCoverage(context);
 
 		const page = await context.newPage();
-		const chatPage = new ChatPage(page, TEST_LANG);
+		const chatPage = new ChatPage(page, locale as Language);
 		await chatPage.goto('/');
 
 		await use(chatPage);
@@ -88,12 +80,12 @@ export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 	},
 
 	// --- Analyst Fixture ---
-	analystPage: async ({ browser, authFiles }, use) => {
+	analystPage: async ({ browser, authFiles, locale }, use) => {
 		const context = await browser.newContext({ storageState: authFiles.analyst });
 		await setupCoverage(context);
 
 		const page = await context.newPage();
-		const chatPage = new ChatPage(page, TEST_LANG);
+		const chatPage = new ChatPage(page, locale as Language);
 		await chatPage.goto('/');
 
 		await use(chatPage);
@@ -103,12 +95,12 @@ export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 	},
 
 	// --- Global Analyst Fixture ---
-	globalAnalystPage: async ({ browser, authFiles }, use) => {
+	globalAnalystPage: async ({ browser, authFiles, locale }, use) => {
 		const context = await browser.newContext({ storageState: authFiles.globalAnalyst });
 		await setupCoverage(context);
 
 		const page = await context.newPage();
-		const chatPage = new ChatPage(page, TEST_LANG);
+		const chatPage = new ChatPage(page, locale as Language);
 		await chatPage.goto('/');
 
 		await use(chatPage);
@@ -118,12 +110,12 @@ export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 	},
 
 	// --- Guest/No-Auth Fixture ---
-	guestPage: async ({ browser }, use) => {
+	guestPage: async ({ browser, locale }, use) => {
 		const context = await browser.newContext();
 		await setupCoverage(context);
 
 		const page = await context.newPage();
-		const chatPage = new ChatPage(page, TEST_LANG);
+		const chatPage = new ChatPage(page, locale as Language);
 		await chatPage.goto('/auth');
 
 		await use(chatPage);
