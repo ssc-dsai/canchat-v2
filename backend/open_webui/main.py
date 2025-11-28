@@ -67,6 +67,9 @@ from open_webui.routers import (
 )
 from mcp_backend.routers import mcp, crew_mcp
 
+from open_webui.metrics.service import MetricsService
+from open_webui.metrics.exporters.in_memory import InMemoryMetrics
+
 from open_webui.routers.retrieval import (
     get_embedding_function,
     load_embedding_model,
@@ -362,6 +365,12 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
+    # Initialize metrics service
+    try:
+        MetricsService(metrics_exporter=InMemoryMetrics).start()
+    except Exception as e:
+        log.error(f"Failed to initialize the metrics service: {e}")
+    
     # Initialize FastMCP manager
     try:
         from mcp_backend.management.mcp_manager import get_mcp_manager
