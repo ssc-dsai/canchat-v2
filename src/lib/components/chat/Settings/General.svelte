@@ -172,7 +172,7 @@
 						}}
 						type="button"
 						aria-labelledby="notification-label"
-            			aria-pressed="{notificationEnabled}"
+						aria-pressed={notificationEnabled}
 						aria-label={$i18n.t('Toggle Notification Setting')}
 					>
 						{#if notificationEnabled === true}
