@@ -34,7 +34,7 @@ jobs:
 
       - name:  Set up Node 22
         run: |
-            apt update && sudo apt install libatomic1 -y
+            apt update && sudo apt install wget libatomic1 -y
             wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
             export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
