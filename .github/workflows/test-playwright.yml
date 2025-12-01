@@ -1,0 +1,158 @@
+name: Testing - Playwright
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - dev
+    types: [opened, reopened, synchronize]
+
+jobs:
+  tests:
+    name: 'Playwright E2E Tests'
+    runs-on: arc-ssc-dsai
+    permissions:
+      contents: read
+      packages: write
+      attestations: read
+      id-token: write
+      pull-requests: write
+
+    timeout-minutes: 60
+    services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+          - 6334:6334
+        options: >-
+          --add-host host.docker.internal:host-gateway
+
+    steps:      
+      - name: Checkout CANChat-V2
+        uses: actions/checkout@v4
+
+      - name:  Set up Node 22
+        run: |
+            apt update && sudo apt install libatomic1 -y
+            wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+            export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm install 22
+            nvm use 22
+
+      - name:  Set up Playwright dependencies
+        run:  npm run test:setup
+          
+      # - name:  Set up CANChat coverage
+      #   run:  npm run coverage:build   
+        
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${{ env.REGISTRY }}/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+          
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ needs.build_and_push_playwright_image.outputs.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata for Docker images (default latest tag)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ github.head_ref }} 
+            type=sha,prefix=git-
+
+      - name: Build Docker image (latest)
+        uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          push: false
+          labels: ${{ steps.meta.outputs.labels }}
+          # outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }}
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }},mode=max
+
+
+      - name:  Start CANChat Environment
+          ENABLE_EVALUATION_ARENA_MODELS: false
+        run: |
+            docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:${{ github.head_ref }} /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
+              echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
+              unset OPENAI_API_KEY && \
+              unset OPENAI_API_BASE_URL && \
+              unset WEBUI_SECRET_KEY && \
+              unset USE_RERANKING_MODEL_DOCKER && \
+              unset RAG_RERANKING_MODEL && \
+              bash start.sh'
+    
+      - name: Wait for CANChat to be ready
+        run: |
+          for i in {1..120}; do
+            if [ -z $(docker ps --filter "name=canchat" --filter "health=healthy" --format '{{.Names}}') ]; then
+              echo "Waiting for CANChat..."
+              sleep 5
+            else
+              echo "CANChat is ready."
+              exit 0
+            fi
+
+          done
+          echo "CANChat failed to start in time" >&2
+          exit 1
+          
+      - name:  Start Playwright Environment
+        run: |
+            docker run --name playwright --add-host=host.docker.internal:host-gateway --network host -td --rm ${{ needs.build_and_push_playwright_image.outputs.image_tag }} /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > /app/.env && bash'
+            docker cp ./test/e2e/. playwright:/app/
+            docker exec playwright npm install
+
+
+      - name: Get timestamp
+        id: timestamps
+        shell: bash
+        run: |
+          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT
+
+          
+      - name:  Start Playwright Tests
+        run: npm run coverage:test
+
+      - name: Upload Report
+        id: upload_report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ steps.timestamps.outputs.timestamp }}
+          path: ./playwright-report/
+          retention-days: 30
+
+      - uses: daun/playwright-report-summary@v3
+        if: ${{ !cancelled() }}
+        id: playwright_summary
+        with:
+          report-file: ./playwright-report/results.json
+          create-comment: false
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        if: ${{ !cancelled() }}
+        with:
+          header: "Playwright Report"
+          message: "${{ steps.playwright_summary.outputs.summary }}\n\n\n[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"
+

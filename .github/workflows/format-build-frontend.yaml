@@ -35,7 +35,12 @@ jobs:
       - name: Check for Changes After Format
         run: git diff --exit-code
 
+      - name: Build Frontend for coverage tests
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        run: npm run coverage:build
+
       - name: Build Frontend
+        if: !(github.event_name == 'push' && github.ref == 'refs/heads/dev')
         run: npm run build
 
   test-frontend:
