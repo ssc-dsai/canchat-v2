@@ -40,7 +40,7 @@ jobs:
         run: npm run coverage:build
 
       - name: Build Frontend
-        if: !(github.event_name == 'push' && github.ref == 'refs/heads/dev')
+        if: github.event_name != 'push' || github.ref != 'refs/heads/dev'
         run: npm run build
 
   test-frontend:
