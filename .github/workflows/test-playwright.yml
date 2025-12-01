@@ -43,10 +43,7 @@ jobs:
 
       - name:  Set up Playwright dependencies
         run:  npm run test:setup
-          
-      # - name:  Set up CANChat coverage
-      #   run:  npm run coverage:build   
-        
+                  
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -91,7 +88,6 @@ jobs:
 
 
       - name:  Start CANChat Environment
-          ENABLE_EVALUATION_ARENA_MODELS: false
         run: |
             docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --name canchat --rm ${{ needs.build_and_push_playwright_image.outputs.registry }}/${{ github.repository_owner }}/canchat-v2:${{ github.head_ref }} /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
               echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
