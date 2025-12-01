@@ -32,14 +32,10 @@ jobs:
       - name: Checkout CANChat-V2
         uses: actions/checkout@v4
 
-      - name:  Set up Node 22
-        run: |
-            apt update && sudo apt install wget libatomic1 -y
-            wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
-            export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            nvm install 22
-            nvm use 22
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # Or specify any other version you want to use
 
       - name:  Set up Playwright dependencies
         run:  npm run test:setup
