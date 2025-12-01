@@ -59,6 +59,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
@@ -75,7 +77,7 @@ jobs:
         id: build
         with:
           context: .
-          push: false
+          load: true
           labels: ${{ steps.meta.outputs.labels }}
           # outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           build-args: |
