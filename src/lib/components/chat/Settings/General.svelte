@@ -161,7 +161,9 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
+					<div id="notification-label" class=" self-center text-xs font-medium">
+						{$i18n.t('Notifications')}
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -169,6 +171,9 @@
 							toggleNotification();
 						}}
 						type="button"
+						aria-labelledby="notification-label"
+            			aria-pressed="{notificationEnabled}"
+						aria-label="{$i18n.t('Toggle Notification Setting')}"
 					>
 						{#if notificationEnabled === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
