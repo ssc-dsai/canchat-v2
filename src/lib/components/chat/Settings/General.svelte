@@ -184,7 +184,9 @@
 			<hr class=" dark:border-gray-850 my-3" />
 
 			<div>
-				<label for="system-prompt" class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</label>
+				<label for="system-prompt" class=" my-2.5 text-sm font-medium"
+					>{$i18n.t('System Prompt')}</label
+				>
 				<Tooltip content={$i18n.t('Enter system prompt here')} placement="top-start">
 					<textarea
 						id="system-prompt"
@@ -202,7 +204,7 @@
 						class=" text-xs font-medium text-gray-500"
 						type="button"
 						aria-controls="advanced-params-content"
-        				aria-expanded={showAdvanced}
+						aria-expanded={showAdvanced}
 						on:click={() => {
 							showAdvanced = !showAdvanced;
 							ariaMessage.set(
