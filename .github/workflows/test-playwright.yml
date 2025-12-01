@@ -7,6 +7,9 @@ on:
       - dev
     types: [opened, reopened, synchronize]
 
+env:
+  REGISTRY: ghcr.io
+
 jobs:
   tests:
     name: 'Playwright E2E Tests'
@@ -47,9 +50,8 @@ jobs:
         env:
           IMAGE_NAME: '${{ github.repository }}'
           
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+      - name: Log in to the GitHub Container registry
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -109,13 +111,6 @@ jobs:
           echo "CANChat failed to start in time" >&2
           exit 1
           
-      - name:  Start Playwright Environment
-        run: |
-            docker run --name playwright --add-host=host.docker.internal:host-gateway --network host -td --rm ${{ needs.build_and_push_playwright_image.outputs.image_tag }} /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > /app/.env && bash'
-            docker cp ./test/e2e/. playwright:/app/
-            docker exec playwright npm install
-
-
       - name: Get timestamp
         id: timestamps
         shell: bash
