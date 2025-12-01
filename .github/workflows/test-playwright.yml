@@ -87,7 +87,12 @@ jobs:
 
       - name:  Start CANChat Environment
         run: |
-            docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway --name canchat --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:${{ github.head_ref }} /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
+            docker run -d -p 8080:8080 \
+            --add-host=host.docker.internal:host-gateway \
+            --name canchat \
+            --mount type=bind,src=./build,dst=/app/build \
+            --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:${{ github.head_ref }} \
+            /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
               echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
               unset OPENAI_API_KEY && \
               unset OPENAI_API_BASE_URL && \
