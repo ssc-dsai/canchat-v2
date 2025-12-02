@@ -49,11 +49,11 @@ jobs:
       - name:  Copy env variables
         run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
 
-      - name:  Set up Playwright dependencies
-        run:  npm run test:setup   
-
-      - name:  Build frontend w coverage
-        run:  npm run coverage:build      
+      - name:  Set up Node dependencies & build
+        run:  |
+          npm run ci
+          npm run test:setup   
+          npm run coverage:build      
 
       - name: Set repository and image name to lowercase
         run: |
