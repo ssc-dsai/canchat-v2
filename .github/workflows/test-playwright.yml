@@ -51,7 +51,7 @@ jobs:
 
       - name:  Set up Node dependencies & build
         run:  |
-          npm run ci
+          npm ci
           npm run test:setup   
           npm run coverage:build      
 
