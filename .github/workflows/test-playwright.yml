@@ -120,8 +120,10 @@ jobs:
         id: timestamps
         shell: bash
         run: |
-          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT
-
+          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT      
+          
+      - name:  Copy env variables
+        run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
           
       - name:  Start Playwright Tests
         run: npm run coverage:test
