@@ -35,8 +35,26 @@ jobs:
       - name: Checkout CANChat-V2
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-                  
+      - name: Get timestamp
+        id: timestamps
+        shell: bash
+        run: |
+          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT      
+          
+      - name:  Copy env variables
+        run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
+
+      - name:  Set up Playwright dependencies
+        run:  npm run test:setup   
+
+      - name:  Build frontend w coverage
+        run:  npm run coverage:build      
+
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -78,7 +96,6 @@ jobs:
           cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }}
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }},mode=max
 
-
       - name:  Start CANChat Environment
         run: |
             docker run -d -p 8080:8080 \
@@ -110,26 +127,6 @@ jobs:
           echo "CANChat failed to start in time" >&2
           exit 1
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Get timestamp
-        id: timestamps
-        shell: bash
-        run: |
-          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT      
-          
-      - name:  Copy env variables
-        run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
-
-      - name:  Set up Playwright dependencies
-        run:  npm run test:setup       
-
-      - name:  Build frontend w coverage
-        run:  npm run coverage:build      
-          
       - name:  Start Playwright Tests
         run: npm run coverage:test
 
