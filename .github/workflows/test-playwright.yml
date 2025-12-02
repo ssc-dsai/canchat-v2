@@ -35,13 +35,7 @@ jobs:
       - name: Checkout CANChat-V2
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
 
-      - name:  Set up Playwright dependencies
-        run:  npm run test:setup
                   
       - name: Set repository and image name to lowercase
         run: |
@@ -115,7 +109,12 @@ jobs:
           done
           echo "CANChat failed to start in time" >&2
           exit 1
-          
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Get timestamp
         id: timestamps
         shell: bash
@@ -124,6 +123,12 @@ jobs:
           
       - name:  Copy env variables
         run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
+
+      - name:  Set up Playwright dependencies
+        run:  npm run test:setup       
+
+      - name:  Build frontend w coverage
+        run:  npm run coverage:build      
           
       - name:  Start Playwright Tests
         run: npm run coverage:test
