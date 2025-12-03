@@ -152,3 +152,7 @@ jobs:
           header: "Playwright Report"
           message: "${{ steps.playwright_summary.outputs.summary }}\n\n\n[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"
 
+      - name: Remove Docker Container
+        if: ${{ always() }}
+        run: |
+          docker rm -f canchat 
