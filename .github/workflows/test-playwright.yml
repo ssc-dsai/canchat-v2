@@ -86,10 +86,8 @@ jobs:
             BUILD_HASH=${{ github.sha }}
             BUILD_MODE=coverage:build
           tags: ${{ steps.meta.outputs.tags }}
-          # cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-coverage
-          # cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-coverage,mode=max
-          # cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }}
-          # cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }},mode=max
+          cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }}
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }},mode=max
 
 
       - name:  Start CANChat Environment
