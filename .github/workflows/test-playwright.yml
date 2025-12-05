@@ -46,15 +46,6 @@ jobs:
         run: |
           echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT      
           
-      - name:  Copy env variables
-        run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
-
-      - name:  Set up Node dependencies & build
-        run:  |
-          npm ci
-          npm run test:setup   
-          npm run coverage:build      
-
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
@@ -79,7 +70,8 @@ jobs:
           images: |
             ${{ env.FULL_IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ github.head_ref }} 
+            type=raw,coverage 
+            type=raw,${{ github.head_ref }} 
             type=sha,prefix=git-
 
       - name: Build Docker image (latest)
@@ -92,18 +84,22 @@ jobs:
           # outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           build-args: |
             BUILD_HASH=${{ github.sha }}
+            BUILD_MODE=coverage:build
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }}
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }},mode=max
+          # cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-coverage
+          # cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-coverage,mode=max
+          # cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }}
+          # cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }},mode=max
+
 
       - name:  Start CANChat Environment
         run: |
             docker run -d -p 8080:8080 \
             --add-host=host.docker.internal:host-gateway \
+            -d \
             --name canchat \
-            --mount type=bind,src=./build,dst=/app/build \
-            --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:${{ github.head_ref }} \
-            /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
+            --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:coverage \
+            /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env && \
               echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
               unset OPENAI_API_KEY && \
               unset OPENAI_API_BASE_URL && \
@@ -112,9 +108,18 @@ jobs:
               unset RAG_RERANKING_MODEL && \
               bash start.sh'
     
+      - name:  Copy env variables
+        run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
+
+      - name:  Set up Node dependencies & build
+        run:  |
+          npm ci
+          npm run test:setup
+
+
       - name: Wait for CANChat to be ready
         run: |
-          for i in {1..120}; do
+          for i in {1..300}; do
             if [ -z $(docker ps --filter "name=canchat" --filter "health=healthy" --format '{{.Names}}') ]; then
               echo "Waiting for CANChat..."
               sleep 5
@@ -156,11 +161,3 @@ jobs:
         if: ${{ always() }}
         run: |
           docker rm -f canchat 
-            
-      - name: debug
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright
-          path: ./playwright/
-          retention-days: 5
