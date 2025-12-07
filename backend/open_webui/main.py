@@ -369,11 +369,13 @@ async def lifespan(app: FastAPI):
     try:
         # meter imported earlier than fastapi to ensure it's set up correctly.
         app.state.metrics_meter = meter
-        log.info(f"Metrics service initialized with the following meter: {app.state.metrics_meter.name}")
+        log.info(
+            f"Metrics service initialized with the following meter: {app.state.metrics_meter.name}"
+        )
 
     except Exception as e:
         log.error(f"Failed to initialize the metrics service: {e}")
-    
+
     # Initialize FastMCP manager
     try:
         from mcp_backend.management.mcp_manager import get_mcp_manager
