@@ -11,6 +11,9 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
 
+# Needs to be imported before fastapi to ensure instrumentation is set up correctly
+from open_webui.instrumentation import meter
+
 
 from fastapi import (
     Depends,
@@ -65,11 +68,8 @@ from open_webui.routers import (
     jira,
     utils,
 )
+
 from mcp_backend.routers import mcp, crew_mcp
-
-from open_webui.metrics.service import MetricsService
-from open_webui.metrics.exporters.in_memory import InMemoryMetrics
-
 from open_webui.routers.retrieval import (
     get_embedding_function,
     load_embedding_model,
@@ -367,7 +367,10 @@ async def lifespan(app: FastAPI):
 
     # Initialize metrics service
     try:
-        MetricsService(metrics_exporter=InMemoryMetrics).start()
+        # meter imported earlier than fastapi to ensure it's set up correctly.
+        app.state.metrics_meter = meter
+        log.info(f"Metrics service initialized with the following meter: {app.state.metrics_meter.name}")
+
     except Exception as e:
         log.error(f"Failed to initialize the metrics service: {e}")
     
