@@ -116,14 +116,14 @@
 				}}
 			>
 				<Tooltip content={$i18n.t('Help')} placement="bottom">
-					<button
+					<div
 						class="flex cursor-pointer p-2 rounded-xl text-gray-900 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-850 transition"
 						aria-label="Help"
 					>
 						<div class="m-auto self-center">
 							<QuestionMarkCircle className="size-5" strokeWidth="2" />
 						</div>
-					</button>
+					</div>
 				</Tooltip>
 			</HelpMenu>
 		</div>
