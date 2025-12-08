@@ -27,7 +27,6 @@ jobs:
           output: 'bearer_report.json'
 
       - name: Upload Bearer JSON report
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bearer-report
@@ -35,7 +34,6 @@ jobs:
 
       - name: Check for critical and high findings
         id: check_findings
-        if: always()
         run: |
           if [ -f bearer_report.json ]; then
             # Count critical and high severity findings
