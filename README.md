@@ -319,6 +319,7 @@ Pour commencer, utilisez `git clone` afin de télécharger le dépôt de CANChat
 1. Ouvrez votre terminal (ou Git Bash si vous êtes sous Windows).
 2. Naviguez vers le répertoire où vous voulez stocker le projet.
 3. Exécutez les commandes suivantes :
+
    ```bash
    git clone https://github.com/ssc-dsai/canchat-v2.git
    cd canchat-v2
