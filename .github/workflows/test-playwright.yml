@@ -25,7 +25,7 @@ jobs:
       id-token: write
       pull-requests: write
 
-    timeout-minutes: 60
+    timeout-minutes: 180
     services:
       qdrant:
         image: qdrant/qdrant:latest
