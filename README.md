@@ -160,7 +160,6 @@ Run the backend in a **separate terminal** to manage your workflows cleanly.
 #### 3.1 Using VS Code Integrated Terminals (Optional)
 
 - Open a new terminal in VS Code: go to `Terminal` > `New Terminal` or use the shortcut:
-
   - **Windows/Linux:** `Ctrl + Shift +`
   - **macOS:** `Cmd + Shift +`
 
@@ -324,6 +323,7 @@ Pour commencer, utilisez `git clone` afin de télécharger le dépôt de CANChat
    git clone https://github.com/ssc-dsai/canchat-v2.git
    cd canchat-v2
    ```
+
    - La commande `git clone` télécharge les fichiers du projet depuis GitHub.
    - La commande `cd canchat-v2` vous permet d’entrer dans le répertoire nouvellement créé.
    -
