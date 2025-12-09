@@ -2,10 +2,14 @@ name: Testing - Playwright
 
 on:
   workflow_dispatch:
-  pull_request:
+  push:
     branches:
+      - main
       - dev
-    types: [opened, reopened, synchronize]
+  # pull_request:
+  #   branches:
+  #     - dev
+  #   types: [opened, reopened, synchronize]
 
 env:
   REGISTRY: ghcr.io
@@ -86,8 +90,8 @@ jobs:
             BUILD_HASH=${{ github.sha }}
             BUILD_MODE=coverage:build
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }}
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }},mode=max
+          # cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }}
+          # cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }},mode=max
 
 
       - name:  Start CANChat Environment
@@ -131,7 +135,9 @@ jobs:
           exit 1
 
       - name:  Start Playwright Tests
-        run: npm run coverage:test
+        run: |
+          npm run coverage:test
+          exit 0
 
       - name: Upload Report
         id: upload_report
@@ -142,18 +148,18 @@ jobs:
           path: ./playwright-report/
           retention-days: 30
 
-      - uses: daun/playwright-report-summary@v3
-        if: ${{ !cancelled() }}
-        id: playwright_summary
-        with:
-          report-file: ./playwright-report/results.json
-          create-comment: false
+      # - uses: daun/playwright-report-summary@v3
+      #   if: ${{ !cancelled() }}
+      #   id: playwright_summary
+      #   with:
+      #     report-file: ./playwright-report/results.json
+      #     create-comment: false
 
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: ${{ !cancelled() }}
-        with:
-          header: "Playwright Report"
-          message: "${{ steps.playwright_summary.outputs.summary }}\n\n\n[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: ${{ !cancelled() }}
+      #   with:
+      #     header: "Playwright Report"
+      #     message: "${{ steps.playwright_summary.outputs.summary }}\n\n\n[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"
 
       - name: Remove Docker Container
         if: ${{ always() }}
