@@ -20,7 +20,7 @@ jobs:
 
       - name: Run Bearer scan
         uses: bearer/bearer-action@v2
-        continue-on-error: true
+        # continue-on-error: true
         with:
           severity: 'critical,high'
           format: 'json'
