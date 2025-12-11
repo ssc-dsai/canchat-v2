@@ -91,6 +91,8 @@ from open_webui.config import (
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
+    # Metrics
+    METRIC_DEFINITIONS,
     # MCP (Model Context Protocol)
     ENABLE_MCP_API,
     MCP_BASE_URLS,
@@ -367,8 +369,12 @@ async def lifespan(app: FastAPI):
 
     # Initialize metrics service
     try:
+        from open_webui.metrics.service import MetricsService
+        
         # meter imported earlier than fastapi to ensure it's set up correctly.
         app.state.metrics_meter = meter
+        app.state.metrics_service = MetricsService(app.state.metrics_meter, METRIC_DEFINITIONS)
+        
         log.info(
             f"Metrics service initialized with the following meter: {app.state.metrics_meter.name}"
         )
