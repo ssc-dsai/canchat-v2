@@ -370,11 +370,13 @@ async def lifespan(app: FastAPI):
     # Initialize metrics service
     try:
         from open_webui.metrics.service import MetricsService
-        
+
         # meter imported earlier than fastapi to ensure it's set up correctly.
         app.state.metrics_meter = meter
-        app.state.metrics_service = MetricsService(app.state.metrics_meter, METRIC_DEFINITIONS)
-        
+        app.state.metrics_service = MetricsService(
+            app.state.metrics_meter, METRIC_DEFINITIONS
+        )
+
         log.info(
             f"Metrics service initialized with the following meter: {app.state.metrics_meter.name}"
         )

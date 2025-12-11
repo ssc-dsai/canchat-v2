@@ -1,6 +1,7 @@
 from opentelemetry.metrics import Meter, Counter, Histogram, ObservableGauge
 from pydantic import BaseModel, ValidationError
 
+
 class MetricsDefinition(BaseModel):
     name: str
     type: str
@@ -9,13 +10,16 @@ class MetricsDefinition(BaseModel):
 
 
 class MetricsService:
-    def __init__(self, meter: Meter, definitions: list[dict] | list[MetricsDefinition] | None = None):
+    def __init__(
+        self,
+        meter: Meter,
+        definitions: list[dict] | list[MetricsDefinition] | None = None,
+    ):
         self._meter = meter
         self._registry: dict[str, object] = {}
 
         if definitions:
             self._registry = self._create_registry_from_definitions(definitions)
-
 
     def _create_registry_from_definitions(self, definitions):
         registry = {}
@@ -23,7 +27,8 @@ class MetricsService:
         for raw_def in definitions:
             try:
                 definition = (
-                    raw_def if isinstance(raw_def, MetricsDefinition)
+                    raw_def
+                    if isinstance(raw_def, MetricsDefinition)
                     else MetricsDefinition(**raw_def)
                 )
 
@@ -127,7 +132,9 @@ class MetricsService:
 
         return inst
 
-    def create_counter(self, name: str, description: str = "", unit: str = "") -> Counter:
+    def create_counter(
+        self, name: str, description: str = "", unit: str = ""
+    ) -> Counter:
         definition = MetricsDefinition(
             name=name,
             type="counter",
@@ -136,7 +143,9 @@ class MetricsService:
         )
         return self.add_instrument(definition)
 
-    def create_histogram(self, name: str, description: str = "", unit: str = "") -> Histogram:
+    def create_histogram(
+        self, name: str, description: str = "", unit: str = ""
+    ) -> Histogram:
         definition = MetricsDefinition(
             name=name,
             type="histogram",
@@ -145,7 +154,9 @@ class MetricsService:
         )
         return self.add_instrument(definition)
 
-    def create_gauge(self, name: str, description: str = "", unit: str = "") -> ObservableGauge:
+    def create_gauge(
+        self, name: str, description: str = "", unit: str = ""
+    ) -> ObservableGauge:
         definition = MetricsDefinition(
             name=name,
             type="gauge",
