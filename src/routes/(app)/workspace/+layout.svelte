@@ -24,6 +24,9 @@
 	$: hasMetricsAccess =
 		$user?.role === 'admin' || $user?.role === 'analyst' || $user?.role === 'global_analyst';
 
+	// Check if user has department usage access based on role
+	$: hasDepartmentUsageAccess = $user?.role === 'admin' || $user?.role === 'global_analyst';
+
 	onMount(async () => {
 		// Wait for user data to be loaded before making navigation decisions
 		if (!$user) {
@@ -52,6 +55,8 @@
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
 				goto('/');
 			} else if ($page.url.pathname.includes('/metrics') && !hasMetricsAccess) {
+				goto('/');
+			} else if ($page.url.pathname.includes('/departments') && !hasDepartmentUsageAccess) {
 				goto('/');
 			}
 		}
@@ -149,6 +154,19 @@
 								href="/workspace/metrics"
 							>
 								{$i18n.t('Metrics')}
+							</a>
+						{/if}
+
+						{#if hasDepartmentUsageAccess}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/metrics'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/departments"
+							>
+								{$i18n.t('Departments')}
 							</a>
 						{/if}
 					</div>
