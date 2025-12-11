@@ -1,10 +1,7 @@
 import os
 from opentelemetry.metrics import set_meter_provider, get_meter
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import (
-    PeriodicExportingMetricReader,
-    ConsoleMetricExporter,
-)
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.resources import Resource
 
@@ -29,10 +26,6 @@ resource = Resource.create(
 )
 
 readers = [
-    PeriodicExportingMetricReader(
-        ConsoleMetricExporter(),
-        export_interval_millis=INSTRUMENTATION_EXPORT_INTERVAL_MS,
-    ),
     PeriodicExportingMetricReader(
         OTLPMetricExporter(endpoint=INSTRUMENTATION_ENDPOINT),
         export_interval_millis=INSTRUMENTATION_EXPORT_INTERVAL_MS,
