@@ -2,14 +2,13 @@ name: Testing - Playwright
 
 on:
   workflow_dispatch:
-  push:
+  workflow_run:
+    workflows: ["Create and publish Docker images with specific build args"]
     branches:
-      - main
-      - dev
-  # pull_request:
-  #   branches:
-  #     - dev
-  #   types: [opened, reopened, synchronize]
+        - dev
+        - main
+    types:
+      - completed
 
 env:
   REGISTRY: ghcr.io
@@ -20,12 +19,11 @@ jobs:
     runs-on: arc-ssc-dsai
     permissions:
       contents: read
-      packages: write
+      packages: read
       attestations: read
       id-token: write
-      pull-requests: write
 
-    timeout-minutes: 180
+    timeout-minutes: 60
     services:
       qdrant:
         image: qdrant/qdrant:latest
@@ -44,19 +42,6 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Get timestamp
-        id: timestamps
-        shell: bash
-        run: |
-          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT      
-          
-      - name: Set repository and image name to lowercase
-        run: |
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=${{ env.REGISTRY }}/${IMAGE_NAME,,}" >>${GITHUB_ENV}
-        env:
-          IMAGE_NAME: '${{ github.repository }}'
-          
       - name: Log in to the GitHub Container registry
         uses: docker/login-action@v3
         with:
@@ -64,34 +49,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata for Docker images (default latest tag)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.FULL_IMAGE_NAME }}
-          tags: |
-            type=raw,coverage 
-            type=raw,${{ github.head_ref }} 
-            type=sha,prefix=git-
-
-      - name: Build Docker image (latest)
-        uses: docker/build-push-action@v6
-        id: build
-        with:
-          context: .
-          load: true
-          labels: ${{ steps.meta.outputs.labels }}
-          # outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          build-args: |
-            BUILD_HASH=${{ github.sha }}
-            BUILD_MODE=coverage:build
-          tags: ${{ steps.meta.outputs.tags }}
-          # cache-from: ${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }}
-          # cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}:cache-${{ github.base_ref }},mode=max
+      - name: Force local Docker image update
+        run: |
+          docker images --format '{{.Repository}}:{{.Tag}}' | xargs -I {} bash -c 'docker inspect --format="{{index .RepoDigests 0}}" {} && docker pull {};';
+          docker rmi $(docker images -f "dangling=true" -q)
+        continue-on-error: true 
 
 
       - name:  Start CANChat Environment
@@ -100,7 +62,7 @@ jobs:
             --add-host=host.docker.internal:host-gateway \
             -d \
             --name canchat \
-            --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:coverage \
+            --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:${{ github.ref_name }} \
             /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env && \
               echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
               unset OPENAI_API_KEY && \
@@ -139,6 +101,11 @@ jobs:
           npm run coverage:test
           exit 0
 
+      - name: Get timestamp
+        id: timestamps
+        shell: bash
+        run: |
+          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT
       - name: Upload Report
         id: upload_report
         uses: actions/upload-artifact@v4
@@ -157,6 +124,7 @@ jobs:
           create-comment: false
 
       - name: Output test summary to action
+        if: ${{ !cancelled() }}
         run: |
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -164,12 +132,6 @@ jobs:
           echo "${{ steps.playwright_summary.outputs.summary }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"  >> $GITHUB_STEP_SUMMARY
-
-      # - uses: marocchino/sticky-pull-request-comment@v2
-      #   if: ${{ !cancelled() }}
-      #   with:
-      #     header: "Playwright Report"
-      #     message: "${{ steps.playwright_summary.outputs.summary }}\n\n\n[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"
 
       - name: Remove Docker Container
         if: ${{ always() }}
