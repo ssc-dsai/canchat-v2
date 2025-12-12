@@ -10,7 +10,7 @@ INSTRUMENTATION_SERVICE_NAME = os.environ.get(
     "INSTRUMENTATION_SERVICE_NAME", "canchat-service"
 )
 INSTRUMENTATION_METER_NAME = os.environ.get(
-    "INSTRUMENTATION_SERVICE_NAME", "canchat-meter"
+    "INSTRUMENTATION_METER_NAME", "canchat-meter"
 )
 INSTRUMENTATION_ENDPOINT = os.environ.get(
     "INSTRUMENTATION_ENDPOINT", "http://localhost:4318/v1/metrics"
