@@ -212,7 +212,7 @@
 		<!-- if $showControls -->
 
 		{#if $showControls}
-			<PaneResizer 
+			<PaneResizer
 				class="relative flex w-2 items-center justify-center bg-background group"
 				tabindex="-1"
 				aria-hidden="true"
