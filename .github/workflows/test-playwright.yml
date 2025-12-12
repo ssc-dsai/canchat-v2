@@ -17,9 +17,7 @@ env:
 jobs:
   tests:
     name: 'Playwright E2E Tests'
-    runs-on: 
-      - arc-ssc-dsai
-      - azure
+    runs-on: arc-ssc-dsai
     permissions:
       contents: read
       packages: write
