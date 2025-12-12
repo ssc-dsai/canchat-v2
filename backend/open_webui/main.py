@@ -975,6 +975,22 @@ async def inspect_websocket(request: Request, call_next):
     if "/ws/socket.io" in request.url.path:
         log.debug(f"Socket.io request: {request.url.path}?{request.url.query}")
         log.debug(f"Transport: {request.query_params.get('transport')}")
+
+        all_headers = dict(request.headers)
+        log.warning(f"🔍 ALL WebSocket Headers: {all_headers}")
+        log.warning(
+            f"🔍 Upgrade Header: '{request.headers.get('Upgrade')}' (exists: {request.headers.get('Upgrade') is not None})"
+        )
+        log.warning(
+            f"🔍 Connection Header: '{request.headers.get('Connection')}' (exists: {request.headers.get('Connection') is not None})"
+        )
+        log.warning(
+            f"🔍 X-Forwarded-* Headers: {[(k, v) for k, v in all_headers.items() if k.lower().startswith('x-forwarded')]}"
+        )
+        log.warning(
+            f"🔍 Client Info: {request.client}, Host: {request.headers.get('host')}"
+        )
+
         log.debug(
             f"Headers: Upgrade={request.headers.get('Upgrade')}, Connection={request.headers.get('Connection')}"
         )
@@ -986,16 +1002,21 @@ async def inspect_websocket(request: Request, call_next):
     ):
         upgrade = (request.headers.get("Upgrade") or "").lower()
         connection = (request.headers.get("Connection") or "").lower().split(",")
-        # Check that there's the correct headers for an upgrade, else reject the connection
-        # This is to work around this upstream issue: https://github.com/miguelgrinberg/python-engineio/issues/367
-        if upgrade != "websocket" or "upgrade" not in connection:
-            log.warning(
-                f"Invalid WebSocket upgrade request: upgrade={upgrade}, connection={connection}"
-            )
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": "Invalid WebSocket upgrade request"},
-            )
+
+        # Log what we would have validated
+        log.warning(f"⚠️ WebSocket validation BYPASSED for K8s compatibility")
+        log.warning(
+            f"⚠️ Would have checked: upgrade='{upgrade}', connection={connection}"
+        )
+
+        # if upgrade != "websocket" or "upgrade" not in connection:
+        #     log.warning(
+        #         f"Invalid WebSocket upgrade request: upgrade={upgrade}, connection={connection}"
+        #     )
+        #     return JSONResponse(
+        #         status_code=status.HTTP_400_BAD_REQUEST,
+        #         content={"detail": "Invalid WebSocket upgrade request"},
+        #     )
 
     try:
         response = await call_next(request)
