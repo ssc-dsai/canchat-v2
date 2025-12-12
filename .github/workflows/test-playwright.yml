@@ -2,6 +2,12 @@ name: Testing - Playwright
 
 on:
   workflow_dispatch:
+    inputs:
+      ref_name:
+        description: 'Override branch name'
+        type: string
+        required: false
+        default: ''
   workflow_run:
     workflows: ["Create and publish Docker images with specific build args"]
     branches:
@@ -55,6 +61,16 @@ jobs:
           docker rmi $(docker images -f "dangling=true" -q)
         continue-on-error: true 
 
+      - name: Override ref_name
+        id: ref_name
+        run: |
+          if [ -n "${{ github.event.inputs.ref_name }}" ]; then
+            echo "ref_name=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.workflow_run.head_branch }}" ]; then
+            echo "ref_name=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+          else
+            echo "ref_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
 
       - name:  Start CANChat Environment
         run: |
@@ -62,7 +78,7 @@ jobs:
             --add-host=host.docker.internal:host-gateway \
             -d \
             --name canchat \
-            --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:${{ github.ref_name }} \
+            --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:${{ steps.ref_name.outputs.ref_name }} \
             /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env && \
               echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
               unset OPENAI_API_KEY && \
@@ -106,6 +122,7 @@ jobs:
         shell: bash
         run: |
           echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT
+
       - name: Upload Report
         id: upload_report
         uses: actions/upload-artifact@v4
