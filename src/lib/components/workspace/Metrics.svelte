@@ -19,7 +19,9 @@
 		getRangeMetrics,
 		getInterPromptLatencyHistogram,
 		exportMetricsData,
-		getExportLogs
+		getExportLogs,
+		getModelConcurrentPrompts
+
 	} from '$lib/apis/metrics';
 	import { Chart, registerables } from 'chart.js';
 	import { user } from '$lib/stores';
@@ -80,13 +82,16 @@
 	let modelPrompts: number = 0,
 		modelDailyPrompts: number = 0;
 
+	let modelConcurrentInterval: number = 300; // 5mins
+
 	// Chart objects
 	let enrolledUsersChart: any,
 		dailyActiveUsersChart: any,
 		dailyPromptsChart: any,
-		dailyTokensChart: any;
-	let modelPromptsChart: any;
-	let interPromptLatencyChart: any;
+		dailyTokensChart: any,
+	 	modelPromptsChart: any,
+		modelConcurrentChart : any,
+	 	interPromptLatencyChart: any;
 
 	// Chart data
 	let enrolledUsersData: any[] = [];
@@ -94,6 +99,7 @@
 	let dailyPromptsData: any[] = [];
 	let dailyTokensData: any[] = [];
 	let modelPromptsData: any[] = [];
+	let modelConcurrentData: any[] = [];
 	let interPromptLatencyData: any = { bins: [], counts: [], total_latencies: 0 };
 
 	// For chart options
@@ -159,6 +165,7 @@
 			dailyPromptsChart,
 			dailyTokensChart,
 			modelPromptsChart,
+			modelConcurrentChart,
 			interPromptLatencyChart
 		];
 		charts.forEach((chart) => {
@@ -197,6 +204,11 @@
 		if (modelPromptsChart) {
 			modelPromptsChart.data.datasets[0].label = $i18n.t('Model Prompts');
 			modelPromptsChart.update();
+		}
+
+		if (modelConcurrentChart) {
+			modelConcurrentChart.data.datasets[0].label = $i18n.t('Model Peak Concurrency');
+			modelConcurrentChart.update();
 		}
 
 		if (interPromptLatencyChart) {
@@ -243,7 +255,7 @@
 	$: isAnalyst = $user?.role === 'analyst';
 
 	// Function to update all charts with new data
-	async function updateCharts(selectedDomain: string | null, selectedModel: string | null) {
+	async function updateCharts(selectedDomain: string | null, selectedModel: string | null, modelConcurrentInterval: number) {
 		// Don't update charts if either date is empty (from clearing date inputs)
 		if (!startDate || !endDate) {
 			return;
@@ -311,6 +323,7 @@
 						selectedModel,
 						updatedDomain
 					);
+					modelConcurrentData = await getModelConcurrentPrompts(localStorage.token, modelConcurrentInterval, selectedModel, updatedDomain)
 				}
 
 				// Fetch inter-prompt latency data (don't filter by model since this is a user behavior metric)
@@ -465,14 +478,14 @@
 		}
 
 		// Model chart - for models tab
-		if (activeTab === 'models' && selectedModel && modelPromptsData.length > 0) {
-			const canvas = document.getElementById('modelOverTimeChart');
-			const ctx = canvas?.getContext('2d');
-			if (ctx) {
+		if (activeTab === 'models' && selectedModel && modelPromptsData.length > 0 && modelConcurrentData.length > 0 ) {
+			const OverTimecanvas = document.getElementById('modelOverTimeChart');
+			const OvertimeCtx = OverTimecanvas?.getContext('2d');
+			if (OvertimeCtx) {
 				if (modelPromptsChart) {
 					modelPromptsChart.destroy();
 				}
-				modelPromptsChart = new Chart(ctx, {
+				modelPromptsChart = new Chart(OvertimeCtx, {
 					type: 'line',
 					data: {
 						labels: modelPromptsData.map((item) => item.date),
@@ -480,6 +493,35 @@
 							{
 								label: $i18n.t('Model Prompts'),
 								data: modelPromptsData.map((item) => item.count),
+								borderColor: 'rgb(124, 58, 237)',
+								backgroundColor: 'rgba(124, 58, 237, 0.2)',
+								borderWidth: 2,
+								pointBackgroundColor: 'rgb(124, 58, 237)',
+								pointBorderColor: '#fff',
+								pointHoverBackgroundColor: '#fff',
+								pointHoverBorderColor: 'rgb(124, 58, 237)',
+								tension: 0.1
+							}
+						]
+					},
+					options: chartOptions
+				});
+			}
+
+			const concurrentCanvas = document.getElementById('modelConcurrentChart');
+			const concurrentCtx = concurrentCanvas?.getContext('2d');
+			if (concurrentCtx) {
+				if (modelConcurrentChart) {
+					modelConcurrentChart.destroy();
+				}
+				modelConcurrentChart = new Chart(concurrentCtx, {
+					type: 'line',
+					data: {
+						labels: modelConcurrentData.map((item) => item.time),
+						datasets: [
+							{
+								label: $i18n.t('Peak Concurrent Prompts'),
+								data: modelConcurrentData.map((item) => item.count),
 								borderColor: 'rgb(124, 58, 237)',
 								backgroundColor: 'rgba(124, 58, 237, 0.2)',
 								borderWidth: 2,
@@ -562,27 +604,30 @@
 	}
 
 	// Improved setActiveTab function
-	function setActiveTab(tab: string) {
+	async function setActiveTab(tab: string) {
 		activeTab = tab;
 
 		// Additional data loading for model-specific tab
 		if (tab === 'models' && selectedModel) {
-			getModelPrompts(localStorage.token, selectedModel, selectedDomain)
-				.then((data) => {
-					modelPrompts = data;
-					return getModelDailyPrompts(localStorage.token, selectedModel, selectedDomain);
-				})
-				.then((data) => {
-					modelDailyPrompts = data;
-					// Use the existing date range when calculating model historical data
-					const days = calculateDaysFromDateRange(startDate, endDate);
-					return getModelHistoricalPrompts(localStorage.token, days, selectedModel, selectedDomain);
-				})
-				.then((data) => {
-					modelPromptsData = data;
-					initializeCharts();
-				})
-				.catch((error) => console.error('Error loading model data:', error));
+			try {
+				// Fetch model prompts
+				modelPrompts = await getModelPrompts(localStorage.token, selectedModel, selectedDomain);
+
+				// Fetch daily prompts
+				modelDailyPrompts = await getModelDailyPrompts(localStorage.token, selectedModel, selectedDomain);
+
+				// Calculate days and fetch historical data
+				const days = calculateDaysFromDateRange(startDate, endDate);
+				modelPromptsData = await getModelHistoricalPrompts(localStorage.token, days, selectedModel, selectedDomain);
+
+				// Fetch concurrent prompts data and log it
+				modelConcurrentData = await getModelConcurrentPrompts(localStorage.token, modelConcurrentInterval, selectedModel, selectedDomain);
+
+				// Initialize charts after all data is loaded
+				initializeCharts();
+			} catch (error) {
+				console.error('Error loading model data:', error);
+			}
 		} else if (tab === 'business') {
 			// Just update charts for now
 			setTimeout(() => {
@@ -651,7 +696,7 @@
 			// Remove costAnalysis fetch
 
 			// Also update the chart data based on the selected date range
-			await updateCharts(selectedDomain, selectedModel);
+			await updateCharts(selectedDomain, selectedModel, modelConcurrentInterval);
 		} catch (error) {
 			console.error('Error fetching range metrics:', error);
 		}
@@ -701,7 +746,7 @@
 				selectedModel = models[0];
 			}
 
-			await updateCharts(selectedDomain, selectedModel);
+			await updateCharts(selectedDomain, selectedModel, modelConcurrentInterval);
 			updateRangeMetrics(); // Load initial range metrics
 
 			// Mark component as loaded
@@ -728,6 +773,7 @@
 		if (dailyPromptsChart) dailyPromptsChart.destroy();
 		if (dailyTokensChart) dailyTokensChart.destroy();
 		if (modelPromptsChart) modelPromptsChart.destroy();
+		if (modelConcurrentChart) modelConcurrentChart.destroy();
 		if (interPromptLatencyChart) interPromptLatencyChart.destroy();
 	});
 
@@ -735,14 +781,20 @@
 	function handleDomainChange(event) {
 		const newDomain = event.target.value || null;
 		selectedDomain = newDomain;
-		updateCharts(selectedDomain, selectedModel);
+		updateCharts(selectedDomain, selectedModel, modelConcurrentInterval);
 	}
 
 	// Handler for model selection changes
 	function handleModelChange(event) {
 		const newModel = event.target.value || null;
 		selectedModel = newModel;
-		updateCharts(selectedDomain, selectedModel);
+		updateCharts(selectedDomain, selectedModel, modelConcurrentInterval);
+	}
+
+	// handler for the concurrent intervals
+	function handleConcurrentIntervalChange(event) {
+		modelConcurrentInterval = parseInt(event.target.value || 300);
+		updateCharts(selectedDomain, selectedModel, modelConcurrentInterval);
 	}
 
 	// Export functionality
@@ -1263,6 +1315,38 @@
 								</h5>
 								<div class="h-80">
 									<canvas id="modelOverTimeChart"></canvas>
+								</div>
+							</div>
+						</div>
+						<div class="grid grid-cols-1 gap-6 mb-6">
+							<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+								<div class="flex justify-between items-center">
+									<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+										{$i18n.t('Daily Peak Concurrency')} - {selectedModel}
+									</h5>
+									<div class="flex items-center space-x-2">
+										<label
+											class="block text-sm font-medium text-gray-800 dark:text-gray-200"
+											for="interval-select"
+										>
+											{$i18n.t('Select Interval:')}
+										</label>
+										<select
+											id="interval-select"
+											bind:value={modelConcurrentInterval}
+											on:change={(e) => {
+												handleConcurrentIntervalChange(e);
+											}}
+											class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+											aria-label={$i18n.t('Select an interval')}>
+											<option value={3600}>1h</option>
+											<option value={1800}>30mins</option>
+											<option value={300}>5mins</option>
+										</select>
+									</div>
+								</div>
+								<div class="h-80">
+									<canvas id="modelConcurrentChart"></canvas>
 								</div>
 							</div>
 						</div>

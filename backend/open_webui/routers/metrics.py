@@ -276,6 +276,31 @@ async def get_model_historical_prompts(
     return {"historical_prompts": historical_data}
 
 
+@router.get("/models/concurrent/prompts")
+async def get_concurrent_prompts(
+    intervals_seconds: int = 300,
+    model: str = None,
+    domain: str = None,
+    user=Depends(get_metrics_user),):
+    """
+    Get peak concurrent prompts. Only accessible by users with admin, global_analyst, or analyst roles.
+    """
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        domain = user.domain
+
+    try:
+        concurrent_prompts = MessageMetrics.get_peak_concurrent_messages_data(intervals_seconds, domain, model)
+        return {"concurrent_prompts": concurrent_prompts}
+
+    except Exception as e:
+        log.exception(f"Error getting concurrent prompts: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get concurrent prompts: {str(e)}",
+        )
+
+
 ############################
 # GetHistoricalDailyUsers
 ############################

@@ -514,6 +514,47 @@ export const getModelHistoricalPrompts = async (
 	}
 };
 
+export const getModelConcurrentPrompts = async (
+	token: string,
+	intervals_seconds: number = 300,
+	model?: string,
+	domain?: string
+): Promise<any[]> => {
+	try {
+		let url = `${WEBUI_API_BASE_URL}/metrics/models/concurrent/prompts?intervals_seconds=${intervals_seconds}`;
+
+		if (model !== null && model !== undefined) {
+			url += `&model=${encodeURIComponent(model)}`;
+		}
+
+		if (domain !== null && domain !== undefined) {
+			url += `&domain=${encodeURIComponent(domain)}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(
+				`Error ${res.status}: ${error.detail || 'Failed to get model concurrent prompts'}`
+			);
+		}
+
+		const data = await res.json();
+		return data.concurrent_prompts || [];
+;
+	} catch (err) {
+		console.error('Error fetching model concurrent prompts:', err);
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};
+
 // New functions for enhanced metrics
 export const getRangeMetrics = async (
 	token: string,

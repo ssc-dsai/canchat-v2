@@ -1,3 +1,4 @@
+from collections import defaultdict
 import time
 from typing import Optional
 import uuid
@@ -239,6 +240,57 @@ class MessageMetricsTable:
                 fallback.append({"date": date_str, "count": 0})
 
             return sorted(fallback, key=lambda x: x["date"])
+
+    def get_peak_concurrent_messages_data(
+        self, intervals_seconds: int = 300, domain: Optional[str] = None, model: Optional[str] = None
+    ) -> list[dict]:
+        try:
+            result = []
+            end_time = current_time = int(time.time())
+            
+            # Calculate the start time for the past 24 hours
+            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
+            start_time = int(
+                time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
+            )
+
+            time_intervals = list(range(start_time, end_time, intervals_seconds))
+            
+            with get_db() as db:
+                query = db.query(MessageMetric).filter(
+                    MessageMetric.created_at >= start_time,
+                    MessageMetric.created_at < end_time,
+                )
+                if domain:
+                    query = query.filter(MessageMetric.user_domain == domain)
+                if model:
+                    query = query.filter(MessageMetric.model == model)
+                
+                # Group messages within each time period
+                message_counts = defaultdict(int)
+                for message in query.all():
+                    # Determine the interval this message belongs to
+                    interval = message.created_at - (message.created_at % intervals_seconds)
+                    message_counts[interval] += 1
+            
+            # Find peak concurrent messages for each time interval
+            for interval_start in time_intervals:
+                interval_end = interval_start + intervals_seconds
+                count = max(
+                    (message_counts[ts] for ts in range(interval_start, interval_end) if ts in message_counts),
+                    default=0
+                )
+                interval_data = {
+                    "time": time.strftime("%H:%M:%S", time.localtime(interval_start)),
+                    "count": count,
+                }
+                result.append(interval_data)
+            
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get peak concurrent messages data: {e}")
+            return []
 
     def get_historical_tokens_data(
         self, days: int = 7, domain: Optional[str] = None
