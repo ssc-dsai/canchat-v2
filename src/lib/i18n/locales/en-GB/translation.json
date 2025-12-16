@@ -1093,7 +1093,6 @@
 	"Select an engine": "",
 	"Select an Ollama instance": "",
 	"Select Domain:": "",
-	"Select domains": "",
 	"Select Engine": "",
 	"Select Government of Canada email domains that will automatically grant access to this group. Users with email addresses from these domains will be automatically added to the group when they log in.": "",
 	"Select Knowledge": "",

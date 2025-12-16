@@ -396,7 +396,7 @@
 								bind:selected={selectedDomains}
 								options={[$i18n.t('All'), ...domains]}
 								allowUserOptions="append"
-								placeholder={$i18n.t('Select domains')}
+								placeholder={$i18n.t('Domains')}
 								style="min-height: 36px; width: 100%;"
 								on:change={(e) => {
 									handleDomainChange(e);
