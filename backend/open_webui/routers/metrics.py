@@ -281,7 +281,8 @@ async def get_concurrent_prompts(
     intervals_seconds: int = 300,
     model: str = None,
     domain: str = None,
-    user=Depends(get_metrics_user),):
+    user=Depends(get_metrics_user),
+):
     """
     Get peak concurrent prompts. Only accessible by users with admin, global_analyst, or analyst roles.
     """
@@ -290,7 +291,9 @@ async def get_concurrent_prompts(
         domain = user.domain
 
     try:
-        concurrent_prompts = MessageMetrics.get_peak_concurrent_messages_data(intervals_seconds, domain, model)
+        concurrent_prompts = MessageMetrics.get_peak_concurrent_messages_data(
+            intervals_seconds, domain, model
+        )
         return {"concurrent_prompts": concurrent_prompts}
 
     except Exception as e:

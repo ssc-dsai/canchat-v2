@@ -548,7 +548,6 @@ export const getModelConcurrentPrompts = async (
 
 		const data = await res.json();
 		return data.concurrent_prompts || [];
-;
 	} catch (err) {
 		console.error('Error fetching model concurrent prompts:', err);
 		throw new Error(err.message || 'An unexpected error occurred');

@@ -21,7 +21,6 @@
 		exportMetricsData,
 		getExportLogs,
 		getModelConcurrentPrompts
-
 	} from '$lib/apis/metrics';
 	import { Chart, registerables } from 'chart.js';
 	import { user } from '$lib/stores';
@@ -89,9 +88,9 @@
 		dailyActiveUsersChart: any,
 		dailyPromptsChart: any,
 		dailyTokensChart: any,
-	 	modelPromptsChart: any,
-		modelConcurrentChart : any,
-	 	interPromptLatencyChart: any;
+		modelPromptsChart: any,
+		modelConcurrentChart: any,
+		interPromptLatencyChart: any;
 
 	// Chart data
 	let enrolledUsersData: any[] = [];
@@ -255,7 +254,11 @@
 	$: isAnalyst = $user?.role === 'analyst';
 
 	// Function to update all charts with new data
-	async function updateCharts(selectedDomain: string | null, selectedModel: string | null, modelConcurrentInterval: number) {
+	async function updateCharts(
+		selectedDomain: string | null,
+		selectedModel: string | null,
+		modelConcurrentInterval: number
+	) {
 		// Don't update charts if either date is empty (from clearing date inputs)
 		if (!startDate || !endDate) {
 			return;
@@ -323,7 +326,12 @@
 						selectedModel,
 						updatedDomain
 					);
-					modelConcurrentData = await getModelConcurrentPrompts(localStorage.token, modelConcurrentInterval, selectedModel, updatedDomain)
+					modelConcurrentData = await getModelConcurrentPrompts(
+						localStorage.token,
+						modelConcurrentInterval,
+						selectedModel,
+						updatedDomain
+					);
 				}
 
 				// Fetch inter-prompt latency data (don't filter by model since this is a user behavior metric)
@@ -478,7 +486,12 @@
 		}
 
 		// Model chart - for models tab
-		if (activeTab === 'models' && selectedModel && modelPromptsData.length > 0 && modelConcurrentData.length > 0 ) {
+		if (
+			activeTab === 'models' &&
+			selectedModel &&
+			modelPromptsData.length > 0 &&
+			modelConcurrentData.length > 0
+		) {
 			const OverTimecanvas = document.getElementById('modelOverTimeChart');
 			const OvertimeCtx = OverTimecanvas?.getContext('2d');
 			if (OvertimeCtx) {
@@ -614,14 +627,28 @@
 				modelPrompts = await getModelPrompts(localStorage.token, selectedModel, selectedDomain);
 
 				// Fetch daily prompts
-				modelDailyPrompts = await getModelDailyPrompts(localStorage.token, selectedModel, selectedDomain);
+				modelDailyPrompts = await getModelDailyPrompts(
+					localStorage.token,
+					selectedModel,
+					selectedDomain
+				);
 
 				// Calculate days and fetch historical data
 				const days = calculateDaysFromDateRange(startDate, endDate);
-				modelPromptsData = await getModelHistoricalPrompts(localStorage.token, days, selectedModel, selectedDomain);
+				modelPromptsData = await getModelHistoricalPrompts(
+					localStorage.token,
+					days,
+					selectedModel,
+					selectedDomain
+				);
 
 				// Fetch concurrent prompts data and log it
-				modelConcurrentData = await getModelConcurrentPrompts(localStorage.token, modelConcurrentInterval, selectedModel, selectedDomain);
+				modelConcurrentData = await getModelConcurrentPrompts(
+					localStorage.token,
+					modelConcurrentInterval,
+					selectedModel,
+					selectedDomain
+				);
 
 				// Initialize charts after all data is loaded
 				initializeCharts();
@@ -1338,7 +1365,8 @@
 												handleConcurrentIntervalChange(e);
 											}}
 											class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-											aria-label={$i18n.t('Select an interval')}>
+											aria-label={$i18n.t('Select an interval')}
+										>
 											<option value={3600}>1h</option>
 											<option value={1800}>30mins</option>
 											<option value={300}>5mins</option>
