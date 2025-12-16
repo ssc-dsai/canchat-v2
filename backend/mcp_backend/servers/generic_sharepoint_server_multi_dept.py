@@ -73,10 +73,8 @@ class DepartmentSharePointConfig:
         self.department_prefix = department_prefix.upper()
 
         # Global settings (shared across all departments)
-        self.use_delegated_access = (
-            clean_env_var(os.getenv("SHP_USE_DELEGATED_ACCESS", "true")).lower()
-            == "true"
-        )
+        # Force delegated access only - no application fallback allowed
+        self.use_delegated_access = True
         self.obo_scope = clean_env_var(
             os.getenv(
                 "SHP_OBO_SCOPE",
@@ -176,7 +174,10 @@ def initialize_department_server(department_prefix: str):
         logger.error(
             f"Failed to initialize SharePoint server for {department_prefix}: {e}"
         )
-        raise
+        # Exit with error code so the MCP server doesn't start with broken config
+        import sys
+
+        sys.exit(1)
 
 
 def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str]:
@@ -191,6 +192,264 @@ def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str
         return user_token
 
     return None
+
+
+async def discover_matching_folders(
+    oauth_client,
+    access_token: str,
+    site_id: str,
+    drive_id: str,
+    folder_pattern: str,
+    max_depth: int = 3,
+) -> List[str]:
+    """
+    Dynamically discover folders that match a given pattern.
+
+    This function searches through SharePoint folder structure to find folders
+    that match the specified pattern (e.g., "Major Projects Office", "MPO").
+
+    Args:
+        oauth_client: SharePoint OAuth client instance
+        access_token: OAuth access token
+        site_id: SharePoint site ID
+        drive_id: SharePoint drive ID
+        folder_pattern: Pattern to match (can be partial folder names)
+        max_depth: Maximum depth to search
+
+    Returns:
+        List of folder paths that match the pattern
+    """
+    logger.info(f"Discovering folders matching pattern: {folder_pattern}")
+
+    # Parse the pattern to extract key terms dynamically
+    pattern_parts = folder_pattern.lower().split("/")
+    target_folder = pattern_parts[-1] if pattern_parts else folder_pattern.lower()
+
+    # Extract key terms dynamically from the target folder pattern
+    key_terms = []
+
+    # Split on common separators and extract meaningful terms
+    terms = re.split(r"[\s\-_()]+", target_folder)
+    key_terms = [term.strip() for term in terms if len(term) > 2]
+
+    # Also include common abbreviations if we can detect them
+    # Look for potential abbreviations (uppercase sequences or known patterns)
+    for term in terms:
+        term = term.strip()
+        if len(term) > 1:
+            # Add the term as-is
+            if term not in key_terms:
+                key_terms.append(term)
+
+            # If it's a multi-word phrase, add individual words
+            if " " in term:
+                individual_words = term.split()
+                for word in individual_words:
+                    if len(word) > 2 and word not in key_terms:
+                        key_terms.append(word)
+
+    logger.info(f"Extracted key terms for folder discovery: {key_terms}")
+
+    matching_folders = []
+
+    async def search_folders_recursive(current_path: str, depth: int = 0):
+        if depth >= max_depth:
+            return
+
+        try:
+            # Get items from current folder
+            success, items_data = await oauth_client.get_drive_items(
+                access_token, site_id, drive_id, current_path
+            )
+
+            if not success:
+                logger.warning(f"Failed to access folder for discovery: {current_path}")
+                return
+
+            items = items_data.get("value", [])
+            folder_items = [item for item in items if item.get("folder")]
+
+            for folder_item in folder_items:
+                folder_name = folder_item.get("name", "")
+                folder_name_lower = folder_name.lower()
+
+                # Check if this folder matches our pattern
+                match_score = 0
+                for term in key_terms:
+                    if term in folder_name_lower:
+                        match_score += 1
+
+                # If we have a good match (at least half the key terms)
+                if match_score >= len(key_terms) // 2 and match_score > 0:
+                    folder_path = (
+                        f"{current_path}/{folder_name}" if current_path else folder_name
+                    )
+                    matching_folders.append(folder_path)
+                    logger.info(
+                        f"Found matching folder: {folder_path} (score: {match_score})"
+                    )
+
+                # Continue searching in subfolders
+                if depth < max_depth - 1:
+                    subfolder_path = (
+                        f"{current_path}/{folder_name}" if current_path else folder_name
+                    )
+                    await search_folders_recursive(subfolder_path, depth + 1)
+
+        except Exception as e:
+            logger.warning(f"Error during folder discovery at {current_path}: {e}")
+
+    # Start discovery from root
+    await search_folders_recursive("", 0)
+
+    if matching_folders:
+        logger.info(
+            f"Discovered {len(matching_folders)} matching folders: {matching_folders}"
+        )
+    else:
+        logger.warning(f"No folders found matching pattern: {folder_pattern}")
+        # Fallback: try using the pattern as-is
+        matching_folders = [folder_pattern]
+
+    return matching_folders
+
+
+async def search_folder_recursive(
+    oauth_client,
+    access_token: str,
+    site_id: str,
+    drive_id: str,
+    folder_path: str,
+    query: str,
+    org_name: str,
+    max_depth: int = 10,
+    current_depth: int = 0,
+) -> Dict[str, Any]:
+    """
+    Recursively search a SharePoint folder and all its subfolders for documents matching the query.
+
+    Args:
+        oauth_client: SharePoint OAuth client instance
+        access_token: OAuth access token
+        site_id: SharePoint site ID
+        drive_id: SharePoint drive ID
+        folder_path: Folder path to search
+        query: Search query
+        org_name: Organization name for metadata
+        max_depth: Maximum recursion depth to prevent infinite loops
+        current_depth: Current recursion depth
+
+    Returns:
+        Dict containing matching documents, total files, and folders searched
+    """
+    logger.info(f"Searching folder recursively: {folder_path} (depth: {current_depth})")
+
+    if current_depth >= max_depth:
+        logger.warning(f"Maximum depth {max_depth} reached for folder: {folder_path}")
+        return {
+            "matching_docs": [],
+            "total_files": 0,
+            "folders_searched": [folder_path],
+        }
+
+    try:
+        # Get items from current folder
+        success, items_data = await oauth_client.get_drive_items(
+            access_token, site_id, drive_id, folder_path
+        )
+
+        if not success:
+            logger.warning(f"Failed to access folder: {folder_path} - {items_data}")
+            return {
+                "matching_docs": [],
+                "total_files": 0,
+                "folders_searched": [folder_path],
+            }
+
+        items = items_data.get("value", [])
+
+        # Separate files and folders
+        file_items = [item for item in items if item.get("file")]
+        folder_items = [item for item in items if item.get("folder")]
+
+        matching_docs = []
+        total_files = len(file_items)
+        folders_searched = [folder_path]
+
+        # Search files in current folder
+        query_words = query.lower().split()
+
+        for item in file_items:
+            name = item.get("name", "")
+            name_lower = name.lower()
+
+            # Match if any significant word from query appears in filename
+            match_found = False
+            for word in query_words:
+                if len(word) > 2 and word in name_lower:  # Skip very short words
+                    match_found = True
+                    break
+
+            # Also check for exact phrase match
+            if query.lower() in name_lower:
+                match_found = True
+
+            if match_found:
+                matching_docs.append(
+                    {
+                        "name": name,
+                        "id": item.get("id"),
+                        "size": item.get("size"),
+                        "lastModified": item.get("lastModifiedDateTime"),
+                        "webUrl": item.get("webUrl"),
+                        "folder_path": folder_path,
+                        "organization": org_name,
+                    }
+                )
+
+        # Recursively search subfolders
+        for subfolder in folder_items:
+            subfolder_name = subfolder.get("name", "")
+
+            # Skip system folders and hidden folders
+            if subfolder_name.startswith(".") or subfolder_name.startswith("~"):
+                continue
+
+            subfolder_path = (
+                f"{folder_path}/{subfolder_name}" if folder_path else subfolder_name
+            )
+
+            # Recursive call
+            subfolder_results = await search_folder_recursive(
+                oauth_client,
+                access_token,
+                site_id,
+                drive_id,
+                subfolder_path,
+                query,
+                org_name,
+                max_depth,
+                current_depth + 1,
+            )
+
+            # Combine results
+            matching_docs.extend(subfolder_results["matching_docs"])
+            total_files += subfolder_results["total_files"]
+            folders_searched.extend(subfolder_results["folders_searched"])
+
+        return {
+            "matching_docs": matching_docs,
+            "total_files": total_files,
+            "folders_searched": folders_searched,
+        }
+
+    except Exception as e:
+        logger.error(f"Error in recursive search for folder {folder_path}: {e}")
+        return {
+            "matching_docs": [],
+            "total_files": 0,
+            "folders_searched": [folder_path],
+        }
 
 
 @generic_sharepoint_server.tool()
@@ -227,19 +486,26 @@ async def search_sharepoint_documents(
         if not user_token:
             user_token = os.getenv("USER_JWT_TOKEN")
 
-        # For local development, don't try OBO if no valid token available
-        if user_token == "user_token_placeholder" or not user_token:
-            logger.info(
-                "No OAuth token available - using application-only authentication for local development"
+        # Validate we have a proper user token for delegated access
+        if (
+            user_token == "user_token_placeholder"
+            or not user_token
+            or not user_token.strip()
+        ):
+            logger.error(
+                "No valid OAuth token available. SharePoint access requires user authentication."
             )
-            user_token = None  # This will trigger application-only flow
-        else:
-            logger.info(
-                f"Using OAuth token for SharePoint OBO flow: {bool(user_token)}"
-            )
-            # Log token type for debugging
-            if user_token and len(user_token) > 20:
-                logger.debug(f"Token type check - starts with: {user_token[:20]}...")
+            return {
+                "status": "error",
+                "error": "Authentication required",
+                "message": "You must be authenticated to access SharePoint documents. Please ensure you're logged in and have the necessary permissions.",
+                "organization": config.org_name if config else "Unknown",
+            }
+
+        logger.info(f"Using OAuth token for SharePoint OBO flow")
+        # Log token type for debugging
+        if user_token and len(user_token) > 20:
+            logger.debug(f"Token type check - starts with: {user_token[:20]}...")
 
         logger.info(f"Searching {config.org_name} SharePoint for: {query}")
 
@@ -250,7 +516,7 @@ async def search_sharepoint_documents(
                 "status": "error",
                 "query": query,
                 "error": "Failed to get access token",
-                "message": "Unable to authenticate with SharePoint using provided credentials",
+                "message": f"Unable to authenticate with {config.org_name} SharePoint. This may be due to insufficient permissions or expired credentials. Please ensure you have the necessary SharePoint access permissions for this organization.",
                 "organization": config.org_name,
             }
 
@@ -291,86 +557,50 @@ async def search_sharepoint_documents(
         # Use first drive for now
         drive_id = drives[0].get("id")
 
-        # Determine which folders to search
-        search_folders = []
+        # Dynamic folder discovery: find folders that match the configured patterns
+        discovered_folders = []
+
         if folder_path:
-            search_folders = [folder_path]
+            # If specific folder path provided, use it directly
+            discovered_folders = [folder_path]
         elif config.default_search_folders:
-            search_folders = config.default_search_folders
-        else:
-            # Default to root if no specific configuration
-            search_folders = [config.doc_library] if config.doc_library else [""]
+            # Discover actual folders that match the configured patterns
+            for pattern in config.default_search_folders:
+                matching_folders = await discover_matching_folders(
+                    oauth_client, access_token, site_id, drive_id, pattern
+                )
+                discovered_folders.extend(matching_folders)
+
+        # If no folders discovered, try root level
+        if not discovered_folders:
+            discovered_folders = [""]
 
         all_matching_documents = []
         search_summary = []
 
-        # Search in each folder
-        for folder in search_folders:
+        # Search in each discovered folder recursively
+        for folder in discovered_folders:
             try:
-                logger.info(f"Searching in folder: {folder}")
+                logger.info(f"Starting recursive search in folder: {folder}")
 
-                # Get documents from the specified folder
-                success, items_data = await oauth_client.get_drive_items(
-                    access_token, site_id, drive_id, folder
+                # Recursively search this folder and all its subfolders
+                folder_results = await search_folder_recursive(
+                    oauth_client,
+                    access_token,
+                    site_id,
+                    drive_id,
+                    folder,
+                    query,
+                    config.org_name,
                 )
 
-                if not success:
-                    search_summary.append(
-                        {
-                            "folder": folder,
-                            "total_documents": 0,
-                            "matching_documents": 0,
-                            "status": "error",
-                            "error": items_data,
-                            "message": f"Failed to access folder: {folder}",
-                        }
-                    )
-                    continue
-
-                items = items_data.get("value", [])
-
-                # Filter items based on query
-                matching_docs = []
-                file_items = [item for item in items if item.get("file")]  # Only files
-
-                for item in file_items:
-                    name = item.get("name", "")
-                    # Flexible matching - check for individual words in the query
-                    query_words = query.lower().split()
-                    name_lower = name.lower()
-
-                    # Match if any significant word from query appears in filename
-                    match_found = False
-                    for word in query_words:
-                        if (
-                            len(word) > 2 and word in name_lower
-                        ):  # Skip very short words
-                            match_found = True
-                            break
-
-                    # Also check for exact phrase match
-                    if query.lower() in name_lower:
-                        match_found = True
-
-                    if match_found:
-                        matching_docs.append(
-                            {
-                                "name": name,
-                                "id": item.get("id"),
-                                "size": item.get("size"),
-                                "lastModified": item.get("lastModifiedDateTime"),
-                                "webUrl": item.get("webUrl"),
-                                "folder_path": folder,
-                                "organization": config.org_name,
-                            }
-                        )
-
-                all_matching_documents.extend(matching_docs)
+                all_matching_documents.extend(folder_results["matching_docs"])
                 search_summary.append(
                     {
                         "folder": folder,
-                        "total_documents": len(file_items),
-                        "matching_documents": len(matching_docs),
+                        "total_documents": folder_results["total_files"],
+                        "matching_documents": len(folder_results["matching_docs"]),
+                        "folders_searched": folder_results["folders_searched"],
                         "status": "success",
                     }
                 )
@@ -394,7 +624,7 @@ async def search_sharepoint_documents(
             "matching_documents": all_matching_documents,
             "total_matches": len(all_matching_documents),
             "search_summary": search_summary,
-            "folders_searched": search_folders,
+            "folders_searched": discovered_folders,
             "organization": config.org_name,
             "message": f"Found {len(all_matching_documents)} matching documents in {config.org_name}",
         }
@@ -468,7 +698,7 @@ async def list_sharepoint_folder_contents(
                 "status": "error",
                 "folder": folder_path,
                 "error": "Failed to obtain access token",
-                "message": "Authentication failed. Check your configuration and user permissions.",
+                "message": f"Authentication failed for {config.org_name} SharePoint. Please ensure you have the necessary permissions and your session is valid.",
                 "organization": config.org_name,
             }
 
@@ -646,7 +876,7 @@ async def get_sharepoint_document_content(
                 "folder": folder_name,
                 "file": file_name,
                 "error": "Failed to obtain access token",
-                "message": "Authentication failed. Check your configuration and user permissions.",
+                "message": f"Authentication failed for {config.org_name} SharePoint. Please ensure you have the necessary permissions to access this file.",
                 "organization": config.org_name,
             }
 
