@@ -316,6 +316,12 @@ async def get_users_per_domain(
     domain: str = None,
     user=Depends(get_department_usage_user)
 ):
+    if user.role not in ["admin", "global_analyst"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    
     # Fetch lists of dicts from the model
     total_users = Users.get_users_count_by_domain(start_timestamp, end_timestamp, domain, False)
     active_users = Users.get_users_count_by_domain(start_timestamp, end_timestamp, domain, True)
