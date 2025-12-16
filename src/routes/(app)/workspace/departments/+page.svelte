@@ -4,7 +4,7 @@
 	import { user } from '$lib/stores';
 	import Departments from '$lib/components/workspace/Departments.svelte';
 
-	// Check if user has metrics access based on role
+	// Check if user has department usage access based on role
 	$: hasDepartmentUsageAccess = $user?.role === 'admin' || $user?.role === 'global_analyst';
 
 	onMount(async () => {
@@ -19,7 +19,7 @@
 			return;
 		}
 
-		// Redirect to home if user doesn't have metrics access
+		// Redirect to home if user doesn't have department usage access
 		if (!hasDepartmentUsageAccess) {
 			await goto('/');
 		}

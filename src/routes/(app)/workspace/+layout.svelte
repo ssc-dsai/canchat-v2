@@ -160,7 +160,7 @@
 						{#if hasDepartmentUsageAccess}
 							<a
 								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
-									'/workspace/metrics'
+									'/workspace/departments'
 								)
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
