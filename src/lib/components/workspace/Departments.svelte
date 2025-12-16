@@ -399,7 +399,6 @@
 								placeholder={$i18n.t('Select domains')}
 								style="min-height: 36px; width: 100%;"
 								on:change={(e) => {
-									console.log(e);
 									handleDomainChange(e);
 								}}
 							/>
