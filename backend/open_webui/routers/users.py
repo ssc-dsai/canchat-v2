@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from open_webui.models.auths_table import Auths
 from open_webui.models.chats import Chats
@@ -15,7 +15,7 @@ from open_webui.models.users import (
 from open_webui.socket.main import get_active_status_by_user_id
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from open_webui.utils.auth import (
     get_admin_user,
@@ -313,7 +313,7 @@ async def update_user_info_by_session_user(
 async def get_users_per_domain(
     start_timestamp: int,
     end_timestamp: int,
-    domain: str = None,
+    domain: List[str] = Query(...),
     user=Depends(get_department_usage_user)
 ):
     if user.role not in ["admin", "global_analyst"]:
@@ -321,6 +321,9 @@ async def get_users_per_domain(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+    
+    if len(domain) == 0:
+        return []
     
     # Fetch lists of dicts from the model
     total_users = Users.get_users_count_by_domain(start_timestamp, end_timestamp, domain, False)

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { MultiSelect } from 'svelte-multiselect';
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { getDomains } from '$lib/apis/metrics';
 	import { getUserByDomain } from '$lib/apis/users';
@@ -28,7 +29,7 @@
 			console.log('End date auto-adjusted:', endDate);
 		}
 
-		updateCharts(selectedDomain);
+		updateCharts(selectedDomains);
 	}
 
 	// Register all Chart.js components
@@ -39,7 +40,7 @@
 
 	// Data variables
 	let domains: string[] = [];
-	let selectedDomain: string | null = null;
+	let selectedDomains: string[] = [];
 
 	// Chart objects
 	let userByDepartmentChart: any;
@@ -48,7 +49,6 @@
 	let isLoadingChartData: boolean = false;
 	let departmentUsageData: any[] = [];
 
-	// For chart options
 	const chartOptions = {
 		responsive: true,
 		maintainAspectRatio: false,
@@ -94,7 +94,6 @@
 		}
 	};
 
-	// Function to update chart theme colors
 	function updateChartThemeColors() {
 		const isDark = document.documentElement.classList.contains('dark');
 		const textColor = isDark ? '#e5e7eb' : '#1f2937';
@@ -121,7 +120,6 @@
 		});
 	}
 
-	// Update chart labels function
 	function updateChartLabels() {
 		if (userByDepartmentChart) {
 			userByDepartmentChart.data.datasets[0].label = $i18n.t('Active Users');
@@ -130,7 +128,6 @@
 		}
 	}
 
-	// Date range controls
 	let dateRangeOptions = [
 		{ value: '7days', label: $i18n.t('Last 7 Days') },
 		{ value: '30days', label: $i18n.t('Last 30 Days') },
@@ -143,8 +140,7 @@
 	let endDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 	let showCustomDateRange = false;
 
-	// Function to update all charts with new data
-	async function updateCharts(selectedDomain: string | null) {
+	async function updateCharts(selectedDomain: string[]) {
 		// Don't update charts if either date is empty (from clearing date inputs)
 		if (!startDate || !endDate) {
 			return;
@@ -172,23 +168,21 @@
 	}
 
 	function initializeCharts() {
-		// Users chart - for both overview and users tabs
-		// Enrolled Users Chart
-		const enrolledChartId = 'userEnrollmentsOverTimeChart';
-		const enrolledCanvas = document.getElementById(enrolledChartId);
-		const enrolledCtx = enrolledCanvas?.getContext('2d');
-		if (enrolledCtx) {
+		const departmentChartId = 'departmentUsageChart';
+		const departmentCanvas = document.getElementById(departmentChartId);
+		const departmentCtx = departmentCanvas?.getContext('2d');
+		if (departmentCtx) {
 			if (userByDepartmentChart) {
 				userByDepartmentChart.destroy();
 			}
 
 			// Calculate dynamic height: 60px per department + padding
 			const chartHeight = Math.max(300, departmentUsageData.length * 100);
-			if (enrolledCanvas) {
-				enrolledCanvas.style.height = `${chartHeight}px`;
+			if (departmentCanvas) {
+				departmentCanvas.style.height = `${chartHeight}px`;
 			}
 
-			userByDepartmentChart = new Chart(enrolledCtx, {
+			userByDepartmentChart = new Chart(departmentCtx, {
 				type: 'bar',
 				data: {
 					labels: departmentUsageData.map((item) => item.department),
@@ -249,7 +243,7 @@
 			endDate = formatDate(tomorrow);
 		}
 		console.log('Date range changed to:', range, { startDate, endDate });
-		updateCharts(selectedDomain);
+		updateCharts(selectedDomains);
 	}
 
 	onMount(() => {
@@ -277,7 +271,7 @@
 		(async () => {
 			try {
 				domains = await getDomains(localStorage.token);
-				await updateCharts(selectedDomain);
+				await updateCharts(selectedDomains);
 				componentLoaded = true;
 			} catch (error) {
 				console.error('Error initializing charts:', error);
@@ -301,11 +295,27 @@
 		if (userByDepartmentChart) userByDepartmentChart.destroy();
 	});
 
-	// Update domain change handler to simplify
-	function handleDomainChange(event: Event) {
-		const newDomain = (event.target as HTMLSelectElement).value || null;
-		selectedDomain = newDomain;
-		updateCharts(selectedDomain);
+	function handleDomainChange(event) {
+		const changeType = event.detail.type;
+		const newDomain = event.detail.option || null;
+		const allLabel = $i18n.t('All');
+
+		if (changeType === 'remove') {
+			selectedDomains = selectedDomains.filter((domain) => domain !== newDomain);
+		} else if (changeType === 'removeAll') {
+			selectedDomains = [];
+		} else if (changeType === 'add') {
+			// If "All" is selected, populate all domains
+			if (newDomain === allLabel) {
+				selectedDomains = [...domains];
+			} else if (!selectedDomains.includes(newDomain)) {
+				selectedDomains = [...selectedDomains, newDomain];
+			}
+		}
+
+		// Filter out "All" before sending to API
+		const domainsToSend = selectedDomains.filter((d) => d !== allLabel);
+		updateCharts(domainsToSend.length > 0 ? domainsToSend : selectedDomains);
 	}
 </script>
 
@@ -313,7 +323,7 @@
 	<div class="flex flex-col h-screen">
 		<div class="p-4 lg:p-6 flex-shrink-0">
 			<div class="mb-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-				<h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">
+				<h2 class="text-2xl min-w-[320px] font-extrabold text-gray-900 dark:text-gray-100">
 					{$i18n.t('Department Usage Dashboard')}
 				</h2>
 
@@ -368,7 +378,7 @@
 								max={formatDate(new Date())}
 								min={startDate}
 								required
-								on:change={() => updateCharts(selectedDomain)}
+								on:change={() => updateCharts(selectedDomains)}
 								class="block w-40 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
 							/>
 						</div>
@@ -381,21 +391,19 @@
 						>
 							{$i18n.t('Select Domain:')}
 						</label>
-						<select
-							id="domain-select"
-							bind:value={selectedDomain}
-							on:change={(e) => {
-								handleDomainChange(e);
-							}}
-							class="block w-36 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-						>
-							<option value={null}>{$i18n.t('All')}</option>
-							{#each domains as domain}
-								<option value={domain}>
-									{domain}
-								</option>
-							{/each}
-						</select>
+						<div class="ms-wrapper">
+							<MultiSelect
+								bind:selected={selectedDomains}
+								options={[$i18n.t('All'), ...domains]}
+								allowUserOptions="append"
+								placeholder={$i18n.t('Select domains')}
+								style="min-height: 36px; width: 100%;"
+								on:change={(e) => {
+									console.log(e);
+									handleDomainChange(e);
+								}}
+							/>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -414,7 +422,7 @@
 							{$i18n.t('Department Users Over Time')}
 						</h5>
 						<div>
-							<canvas id="userEnrollmentsOverTimeChart"></canvas>
+							<canvas id="departmentUsageChart"></canvas>
 						</div>
 					</div>
 				{/if}
@@ -428,3 +436,16 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	/* MultiSelect styles */
+	.ms-wrapper {
+		border-width: 1px;
+		border-color: rgba(180, 180, 180, 1);
+		border-radius: 0.375rem;
+	}
+	:global(.dark) .ms-wrapper {
+		background-color: var(--color-gray-800, #333);
+		border-color: #4b5563;
+	}
+</style>

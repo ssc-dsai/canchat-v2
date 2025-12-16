@@ -441,9 +441,9 @@ class UsersTable:
             return {"total_users": 0, "active_users": 0}
         
     def get_users_count_by_domain(
-        self, start_timestamp: int, end_timestamp: int, domain: str = None, is_active: bool = False
+        self, start_timestamp: int, end_timestamp: int, domain: list[str], is_active: bool = False
     ):
-        """Return user counts grouped by domain for a date range."""
+        """Return user counts grouped by domain for a date range.""" 
         with get_db() as db:
             # Choose timestamp field based on is_active flag
             timestamp_field = User.last_active_at if is_active else User.created_at
@@ -468,8 +468,8 @@ class UsersTable:
                 # For total enrolled users, only filter by end timestamp
                 query = query.filter(timestamp_field < end_timestamp)
 
-            if domain:
-                query = query.filter(User.domain == domain)
+            if "All" not in domain and "Tous" not in domain:
+                query = query.filter(User.domain.in_(domain))
 
             rows = (
                 query

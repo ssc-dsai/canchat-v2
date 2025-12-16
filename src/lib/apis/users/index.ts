@@ -439,11 +439,11 @@ export const getUserByDomain = async (
 	token: string,
 	startDate: number,
 	endDate: number,
-	domain?: string, 
+	domain: string[], 
 ) => {
 	let error = null;
-	const url = `${WEBUI_API_BASE_URL}/users/count-per-domain?start_timestamp=${startDate}&end_timestamp=${endDate}${domain ? `&domain=${domain}` : ''}`;
-
+	const domainParam = domain && domain.join("&domain=") || '';
+	const url = `${WEBUI_API_BASE_URL}/users/count-per-domain?start_timestamp=${startDate}&end_timestamp=${endDate}&domain=${domainParam}`;
 	const res = await fetch(url, {
 		method: 'GET',
 		headers: {
