@@ -314,20 +314,24 @@ async def get_users_per_domain(
     start_timestamp: int,
     end_timestamp: int,
     domain: List[str] = Query(...),
-    user=Depends(get_department_usage_user)
+    user=Depends(get_department_usage_user),
 ):
     if user.role not in ["admin", "global_analyst"]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    
+
     if len(domain) == 0:
         return []
-    
+
     # Fetch lists of dicts from the model
-    total_users = Users.get_users_count_by_domain(start_timestamp, end_timestamp, domain, False)
-    active_users = Users.get_users_count_by_domain(start_timestamp, end_timestamp, domain, True)
+    total_users = Users.get_users_count_by_domain(
+        start_timestamp, end_timestamp, domain, False
+    )
+    active_users = Users.get_users_count_by_domain(
+        start_timestamp, end_timestamp, domain, True
+    )
 
     # Merge by domain to keep department/domain labels aligned
     merged = {}
@@ -499,4 +503,3 @@ async def get_users_enrollment_historical(
 
     historical_data = Users.get_historical_users_data(days, domain_to_use)
     return {"historical_users": historical_data}
-
