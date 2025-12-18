@@ -138,9 +138,6 @@ def initialize_department_server(department_prefix: str):
 
         # Initialize OAuth client with delegated access (credentials are placeholders)
         oauth_client = SharePointOAuthClient(
-            client_id=config.client_id,
-            client_secret=config.client_secret,
-            tenant_id=config.tenant_id,
             site_url=config.site_url,
             use_delegated_access=config.use_delegated_access,
             obo_scope=config.obo_scope,
