@@ -88,14 +88,8 @@ class DepartmentSharePointConfig:
         self.department_prefix = department_prefix.upper()
 
         # Global settings (shared across all departments)
-        # Delegated access setting - can be overridden via environment variable
-        self.use_delegated_access = clean_env_var(
-            os.getenv("SHP_USE_DELEGATED_ACCESS", "true")
-        ).lower() in (
-            "true",
-            "1",
-            "yes",
-        )  # Read from environment, default true
+        # Delegated access is always enabled - no application fallback
+        self.use_delegated_access = True
         self.obo_scope = clean_env_var(
             os.getenv(
                 "SHP_OBO_SCOPE",
@@ -165,7 +159,7 @@ def initialize_department_server(department_prefix: str):
         # Load department-specific configuration
         config = DepartmentSharePointConfig(department_prefix)
 
-        # Initialize OAuth client with department-specific credentials
+        # Initialize OAuth client with delegated access (credentials are placeholders)
         oauth_client = SharePointOAuthClient(
             client_id=os.getenv(f"{department_prefix}_SHP_ID_APP"),
             client_secret=os.getenv(f"{department_prefix}_SHP_ID_APP_SECRET"),
