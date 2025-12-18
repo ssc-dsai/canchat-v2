@@ -4,7 +4,10 @@ API endpoints for CrewAI integration with MCP servers
 """
 
 import logging
+import os
 import sys
+import json
+import aiohttp
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -22,49 +25,44 @@ sys.path.append(str(backend_dir))
 # Initialize HTTPBearer for token extraction
 bearer_security = HTTPBearer(auto_error=False)
 
+# OAuth token extraction headers - K8s vs local development
+GRAPH_ACCESS_TOKEN_HEADER = os.getenv(
+    "GRAPH_ACCESS_TOKEN_HEADER", "x-forwarded-access-token"  # K8s OAuth2 proxy header
+)
 
-def extract_user_token(
-    request: Request,
-    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
-) -> Optional[str]:
-    """Extract the user's OAuth token from the request for OBO flow"""
-    import os
 
-    # Check if we're in localhost development environment
-    is_localhost = (
-        os.getenv("ENVIRONMENT", "").lower()
-        in ["", "local", "localhost", "development"]
-        or "localhost" in os.getenv("WEBUI_BASE_URL", "")
-        or "localhost" in os.getenv("CORS_ALLOW_ORIGIN", "")
-        or os.getenv("ENABLE_SIGNUP", "").lower()
-        == "true"  # Local dev has signup enabled
+def extract_graph_access_token(request: Request) -> Optional[str]:
+    """
+    Extract the Graph API access token from OAuth2 proxy headers.
+    This token will be used by ALL MCP servers for delegated SharePoint access.
+    """
+    # Test token for local development (uncomment to test with real token)
+    # TEST_ACCESS_TOKEN = "use-your-real-access-token-here-for-testing"
+
+    # For testing: uncomment the line below to simulate having a real access token
+    # return TEST_ACCESS_TOKEN
+
+    token = request.headers.get(GRAPH_ACCESS_TOKEN_HEADER)
+    if token and token != "user_token_placeholder":
+        logging.info(
+            f"Found Graph API access token in header {GRAPH_ACCESS_TOKEN_HEADER} (length: {len(token)})"
+        )
+        return token
+
+    logging.warning(
+        f"No Graph API access token found in header {GRAPH_ACCESS_TOKEN_HEADER}"
     )
+    available_headers = list(request.headers.keys())
+    logging.warning(f"Available headers: {available_headers}")
+    return None
 
-    # First priority: OAuth access token from Microsoft login (for SharePoint OBO)
-    if "oauth_access_token" in request.cookies:
-        token = request.cookies.get("oauth_access_token")
-        logging.info("Using OAuth access token for SharePoint OBO flow")
-        return token
 
-    # Second priority: OAuth ID token (may work for some scenarios)
-    elif "oauth_id_token" in request.cookies:
-        token = request.cookies.get("oauth_id_token")
-        logging.info("Using OAuth ID token for SharePoint OBO flow")
-        return token
-
-    # No OAuth tokens found
-    else:
-        if is_localhost:
-            logging.info(
-                "No OAuth tokens found in localhost - will use application-only authentication"
-            )
-            return None
-        else:
-            logging.warning(
-                "No OAuth tokens found in production environment - OAuth2 proxy may not be configured"
-            )
-            # Still return None but with warning - let SharePoint client handle the error
-            return None
+async def get_graph_access_token_for_user(request: Request) -> Optional[str]:
+    """
+    Get the Graph API access token directly from OAuth2 proxy headers.
+    This token will be set globally for ALL MCP servers to use.
+    """
+    return extract_graph_access_token(request)
 
 
 try:
@@ -313,19 +311,51 @@ async def run_crew_query(
         )
 
     try:
-        # Extract user token for SharePoint OBO flow (environment-aware)
-        user_jwt_token = extract_user_token(request_data, auth_token)
+        # Get the Graph API access token directly from OAuth2 proxy headers
+        user_access_token = await get_graph_access_token_for_user(request_data)
 
         log.info(f"Running CrewAI query for user {user.id}: {request.query}")
         log.info(f"Selected tools: {request.selected_tools}")
-        log.info(f"User token available for OBO flow: {bool(user_jwt_token)}")
+        log.info(f"User access token available: {bool(user_access_token)}")
 
-        # Set user token in CrewAI manager for SharePoint OBO authentication
-        # This works in both local (gracefully degraded) and K8s (full OAuth) environments
-        if user_jwt_token and user_jwt_token != "user_token_placeholder":
-            crew_mcp_manager.set_user_token(user_jwt_token)
+        # Set user token globally for ALL MCP servers to use for delegated access
+        if user_access_token:
+            crew_mcp_manager.set_user_token(user_access_token)
+            log.info(
+                "Successfully set user access token for SharePoint delegated access"
+            )
         else:
-            log.info("No OAuth token available - using application-only authentication")
+            # In local development, provide a more helpful error message
+            import os
+
+            environment = os.getenv("ENVIRONMENT", "")
+
+            # Local development is detected by absence of "canchat-" prefix
+            # All k8s environments (dev/staging/prod) start with "canchat-"
+            is_local_dev = not environment.startswith("canchat-")
+
+            if is_local_dev:
+                log.warning(
+                    "Local development environment detected - SharePoint access requires OAuth2 proxy configuration"
+                )
+                # For local development, we should provide a clear message about the limitation
+                if any(
+                    "sharepoint" in str(tool).lower()
+                    for tool in (request.selected_tools or [])
+                ):
+                    return CrewMCPResponse(
+                        result="Microsoft Graph authentication is unavailable in local development mode. "
+                        "This integration depends on OAuth2 proxy services that are configured only in production deployments. "
+                        "For full SharePoint testing, please utilize the staging or production environments where Azure AD authentication is properly established. "
+                        "Local developers can modify the test token configuration in extract_graph_access_token to simulate authenticated requests.",
+                        tools_used=[],
+                        success=False,
+                        error="Local environment lacks OAuth2 proxy for SharePoint access",
+                    )
+            else:
+                log.warning(
+                    "No Graph API access token available - SharePoint access may fail"
+                )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
@@ -407,7 +437,10 @@ async def run_crew_query(
 
 @router.post("/multi")
 async def run_multi_server_crew_query(
-    request: CrewMCPQuery, user=Depends(get_verified_user)
+    request_data: Request,
+    request: CrewMCPQuery,
+    user=Depends(get_verified_user),
+    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
 ) -> CrewMCPResponse:
     """Run a CrewAI query using ALL available MCP servers and tools simultaneously"""
     if not crew_mcp_manager:
@@ -419,9 +452,38 @@ async def run_multi_server_crew_query(
         )
 
     try:
+        # Get the Graph API access token directly from OAuth2 proxy headers
+        user_access_token = await get_graph_access_token_for_user(request_data)
+
         log.info(
             f"Running CrewAI multi-server query for user {user.id}: {request.query}"
         )
+        log.info(f"User access token available: {bool(user_access_token)}")
+
+        # Set user token globally for ALL MCP servers to use for delegated access
+        if user_access_token:
+            crew_mcp_manager.set_user_token(user_access_token)
+            log.info(
+                "Successfully set user access token for SharePoint delegated access"
+            )
+        else:
+            # In local development, provide a more helpful error message
+            import os
+
+            environment = os.getenv("ENVIRONMENT", "")
+
+            # Local development is detected by absence of "canchat-" prefix
+            # All k8s environments (dev/staging/prod) start with "canchat-"
+            is_local_dev = not environment.startswith("canchat-")
+
+            if is_local_dev:
+                log.warning(
+                    "Local development environment detected - SharePoint access requires OAuth2 proxy configuration"
+                )
+            else:
+                log.warning(
+                    "No Graph API access token available - SharePoint access may fail"
+                )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
