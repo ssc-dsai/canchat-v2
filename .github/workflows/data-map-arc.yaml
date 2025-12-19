@@ -8,6 +8,7 @@ on:
         type: string
         required: false
         default: ''
+  push:
 
 jobs:
   tests:
