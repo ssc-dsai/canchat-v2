@@ -1146,13 +1146,11 @@
 									{$i18n.t('Daily Active Users Over Time')}
 								</h5>
 								<div class="relative inline-flex group">
-									<button
-										type="button"
-										aria-describedby="usersOverTimeChart-tooltip"
-										class="inline-flex items-center justify-center rounded-full p-1 text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:text-gray-300 dark:hover:text-white"
+									<span
+										class="inline-flex items-center justify-center rounded-full p-1 text-gray-600 hover:text-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:text-white cursor-help"
 									>
-										<QuestionMarkCircle className="w-5 h-5" strokeWidth="2" />
-									</button>
+										<QuestionMarkCircle className="w-4 h-4" strokeWidth="2" />
+									</span>
 
 									<!-- Tooltip -->
 									<span
