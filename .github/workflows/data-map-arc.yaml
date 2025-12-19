@@ -1,0 +1,39 @@
+name: Data mapping
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref_name:
+        description: 'Override branch name'
+        type: string
+        required: false
+        default: ''
+
+jobs:
+  tests:
+    name: 'Data mapping'
+    runs-on: arc-ssc-dsai
+    permissions:
+      contents: read
+      packages: read
+      attestations: read
+      id-token: write
+
+    timeout-minutes: 60
+
+    steps:      
+      - name: Get hefty dirs
+        run: |
+            du -h / --max-depth=2 | sort -h > dir_sizes.txt
+
+      - name: Get docker disk usage info
+        run: |
+            docker system df -v > docker_sizes.txt
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: reports
+          path: .
+          retention-days: 5
