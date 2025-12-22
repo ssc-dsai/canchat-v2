@@ -176,3 +176,12 @@ def get_metrics_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def get_department_usage_user(user=Depends(get_current_user)):
+    if user.role not in {"admin", "global_analyst"}:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+    return user
