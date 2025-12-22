@@ -70,37 +70,49 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 };
 
 export const sanitizeResponseContent = (content: string): string => {
-  const cleaned = content
-    .replace(/<\|[a-z]*$/, '')
-    .replace(/<\|[a-z]+\|$/, '')
-    .replace(/<$/, '')
-    .replace(/<\|[a-z]+\|>/g, ' ');
+	const cleaned = content
+		.replace(/<\|[a-z]*$/, '')
+		.replace(/<\|[a-z]+\|$/, '')
+		.replace(/<$/, '')
+		.replace(/<\|[a-z]+\|>/g, ' ');
 
-  return sanitizeHtml(cleaned, {
-    allowedTags: [
-		'b', 'i', 'em', 'strong', 'u', 'a', 'p', 'br',
-		'ul', 'ol', 'li', 'blockquote',
-		'pre', 'code', 'span'
-	],
-    allowedAttributes: {
-		'a': ['href', 'title', 'target', 'rel'],
-		'code': ['class'], // e.g., class="language-js"
-		'span': ['class']  // for inline syntax highlighting
-	},
-	// Prevent target="_blank" security issues
-	transformTags: {
-		'a': (tagName, attribs) => {
-			return {
-				tagName: 'a',
-				attribs: {
-					...attribs,
-					target: '_blank',
-					rel: 'noopener noreferrer'
-				}
-			};
+	return sanitizeHtml(cleaned, {
+		allowedTags: [
+			'b',
+			'i',
+			'em',
+			'strong',
+			'u',
+			'a',
+			'p',
+			'br',
+			'ul',
+			'ol',
+			'li',
+			'blockquote',
+			'pre',
+			'code',
+			'span'
+		],
+		allowedAttributes: {
+			a: ['href', 'title', 'target', 'rel'],
+			code: ['class'], // e.g., class="language-js"
+			span: ['class'] // for inline syntax highlighting
+		},
+		// Prevent target="_blank" security issues
+		transformTags: {
+			a: (tagName, attribs) => {
+				return {
+					tagName: 'a',
+					attribs: {
+						...attribs,
+						target: '_blank',
+						rel: 'noopener noreferrer'
+					}
+				};
+			}
 		}
-	},
-  }).trim();
+	}).trim();
 };
 
 export const processResponseContent = (content: string) => {
