@@ -6,6 +6,7 @@
 	import { Chart, registerables } from 'chart.js';
 	import { user } from '$lib/stores';
 	import Spinner from '../common/Spinner.svelte';
+	import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 	function formatDate(date: Date): string {
 		return date.toISOString().split('T')[0];
@@ -33,7 +34,7 @@
 	}
 
 	// Register all Chart.js components
-	Chart.register(...registerables);
+	Chart.register(...registerables, ChartDataLabels);
 	const i18n = getContext('i18n') as any;
 	let unsubscribe: () => void;
 	let componentLoaded = false;
@@ -63,6 +64,18 @@
 			tooltip: {
 				mode: 'nearest',
 				intersect: true
+			},
+			datalabels: {
+				display: true,
+				color: document.documentElement.classList.contains('dark') ? '#ffffff' : '#1f2937',
+				anchor: 'end',
+				align: 'start',
+				offset: -4,
+				formatter: (value) => (value === 0 ? null : value),
+				font: {
+					weight: 'bold',
+					size: 12
+				}
 			}
 		},
 		scales: {
@@ -97,10 +110,12 @@
 	function updateChartThemeColors() {
 		const isDark = document.documentElement.classList.contains('dark');
 		const textColor = isDark ? '#e5e7eb' : '#1f2937';
+		const labelColor = isDark ? '#ffffff' : '#1f2937';
 		const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
 		// Update chart options
 		chartOptions.plugins.legend.labels.color = textColor;
+		chartOptions.plugins.datalabels.color = labelColor;
 		chartOptions.scales.x.ticks.color = textColor;
 		chartOptions.scales.x.grid.color = gridColor;
 		chartOptions.scales.y.ticks.color = textColor;
@@ -110,6 +125,7 @@
 		const charts = [userByDepartmentChart];
 		charts.forEach((chart) => {
 			if (chart) {
+				chart.options.plugins.datalabels.color = labelColor;
 				chart.options.plugins.legend.labels.color = textColor;
 				chart.options.scales.x.ticks.color = textColor;
 				chart.options.scales.x.grid.color = gridColor;
@@ -446,5 +462,11 @@
 	:global(.dark) .ms-wrapper {
 		background-color: var(--color-gray-800, #333);
 		border-color: #4b5563;
+	}
+
+	/* MultiSelect dropdown options list */
+	:global(.dark .multiselect > ul) {
+		background-color: var(--color-gray-800, #333) !important;
+		border-color: #4b5563 !important;
 	}
 </style>
