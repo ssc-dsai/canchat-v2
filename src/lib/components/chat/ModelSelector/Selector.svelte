@@ -589,7 +589,7 @@
 							<ChatBubbleOval className="size-4" strokeWidth="2.5" />
 							<span id="temporary-chat-label">
 								{$i18n.t(`Temporary Chat`)}
-							<span id="temporary-chat-label">
+							</span>
 						</div>
 
 						<span
