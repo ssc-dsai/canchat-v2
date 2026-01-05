@@ -57,31 +57,35 @@
 			legend: {
 				display: true,
 				labels: {
-					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937'
+					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937',
+					font: { size: 14 }
 				},
 				onClick: null // Disable the default click behavior
 			},
 			tooltip: {
 				mode: 'nearest',
-				intersect: true
+				intersect: true,
+				titleFont: { size: 14 },
+				bodyFont: { size: 14 }
 			},
 			datalabels: {
 				display: true,
 				color: document.documentElement.classList.contains('dark') ? '#ffffff' : '#1f2937',
-				anchor: 'end',
-				align: 'start',
+				anchor: 'center',
+				align: 'center',
 				offset: -4,
 				formatter: (value) => (value === 0 ? null : value),
 				font: {
 					weight: 'bold',
-					size: 12
+					size: 14
 				}
 			}
 		},
 		scales: {
 			x: {
 				ticks: {
-					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937'
+					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937',
+					font: { size: 14 }
 				},
 				grid: {
 					color: document.documentElement.classList.contains('dark')
@@ -92,7 +96,8 @@
 			y: {
 				beginAtZero: true,
 				ticks: {
-					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937'
+					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937',
+					font: { size: 14 }
 				},
 				grid: {
 					color: document.documentElement.classList.contains('dark')
@@ -116,9 +121,17 @@
 		// Update chart options
 		chartOptions.plugins.legend.labels.color = textColor;
 		chartOptions.plugins.datalabels.color = labelColor;
+		// Ensure font sizes are consistent
+		chartOptions.plugins.legend.labels.font = { size: 14 };
+		chartOptions.plugins.datalabels.font = { weight: 'bold', size: 14 };
+		chartOptions.plugins.tooltip = chartOptions.plugins.tooltip || {};
+		chartOptions.plugins.tooltip.titleFont = { size: 14 };
+		chartOptions.plugins.tooltip.bodyFont = { size: 14 };
 		chartOptions.scales.x.ticks.color = textColor;
+		chartOptions.scales.x.ticks.font = { size: 14 };
 		chartOptions.scales.x.grid.color = gridColor;
 		chartOptions.scales.y.ticks.color = textColor;
+		chartOptions.scales.y.ticks.font = { size: 14 };
 		chartOptions.scales.y.grid.color = gridColor;
 
 		// Update existing charts with new theme colors
@@ -126,11 +139,19 @@
 		charts.forEach((chart) => {
 			if (chart) {
 				chart.options.plugins.datalabels.color = labelColor;
+				if (!chart.options.plugins.datalabels.font) chart.options.plugins.datalabels.font = {};
+				chart.options.plugins.datalabels.font.size = 14;
 				chart.options.plugins.legend.labels.color = textColor;
+				chart.options.plugins.legend.labels.font = { size: 14 };
 				chart.options.scales.x.ticks.color = textColor;
+				chart.options.scales.x.ticks.font = { size: 14 };
 				chart.options.scales.x.grid.color = gridColor;
 				chart.options.scales.y.ticks.color = textColor;
+				chart.options.scales.y.ticks.font = { size: 14 };
 				chart.options.scales.y.grid.color = gridColor;
+				chart.options.plugins.tooltip = chart.options.plugins.tooltip || {};
+				chart.options.plugins.tooltip.titleFont = { size: 14 };
+				chart.options.plugins.tooltip.bodyFont = { size: 14 };
 				chart.update();
 			}
 		});
@@ -343,7 +364,7 @@
 					{$i18n.t('Department Usage Dashboard')}
 				</h2>
 
-				<div class="flex flex-wrap items-center gap-3">
+				<div class="flex flex-nowrap items-center gap-3">
 					<div>
 						<label
 							class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
