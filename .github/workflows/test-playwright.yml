@@ -79,7 +79,7 @@ jobs:
             -d \
             --name canchat \
             --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:${{ steps.ref_name.outputs.ref_name }} \
-            /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env && \
+            /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ..env && \
               echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
               unset OPENAI_API_KEY && \
               unset OPENAI_API_BASE_URL && \
@@ -94,7 +94,7 @@ jobs:
       - name:  Set up Node dependencies & build
         run:  |
           npm ci
-          npm run test:setup
+          npm run test:setup:headless
 
 
       - name: Wait for CANChat to be ready
@@ -113,6 +113,8 @@ jobs:
           exit 1
 
       - name:  Start Playwright Tests
+        env:
+          REUSE_EXISTING_SERVER: true
         run: |
           npm run test
           exit 0
