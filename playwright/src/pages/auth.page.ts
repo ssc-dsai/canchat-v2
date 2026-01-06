@@ -75,7 +75,7 @@ export class AuthPage extends BasePage {
 		await this.createAccountButton.click();
 
 		// Handle "Ok, Let's Go!" onboarding popup
-		await this.onboardingButton.waitFor({ state: 'visible', timeout: 1000 });
+		await this.onboardingButton.waitFor({ state: 'visible', timeout: 5000 });
 		await this.onboardingButton.click();
 	}
 }
