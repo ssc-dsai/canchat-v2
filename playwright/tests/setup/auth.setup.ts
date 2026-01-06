@@ -32,6 +32,7 @@ setup('global setup: seed data & authenticate', async ({ page }) => {
 	await performAdminRegistration(page, authPage);
 	await seedUserAccounts(page, adminPage);
 	await saveAuthState(page, 'admin.json');
+	await generateUserAuthFiles(page, authPage, adminPage);
 
 	// Make one model visible
 	await adminPage.navigateToAdminSettings('Settings', 'Connections') //temporary
@@ -45,8 +46,6 @@ setup('global setup: seed data & authenticate', async ({ page }) => {
 	await adminPage.updateChatModel('chatgpt-4o-latest');
 	await adminPage.setDefaultChatModel();
 	await adminPage.signOut();
-
-	await generateUserAuthFiles(page, authPage, adminPage);
 
 	console.log('Global Setup Complete!');
 });
