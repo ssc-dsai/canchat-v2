@@ -912,6 +912,7 @@ class ChatTable:
         max_age_days: Optional[int] = None,
         preserve_pinned: bool = True,
         preserve_archived: bool = False,
+        batch_size: int = 100,
     ) -> list[ChatModel]:
         """
         Get chats for cleanup, optionally filtered by age.
@@ -927,20 +928,7 @@ class ChatTable:
         """
         try:
             with get_db() as db:
-                # Build base query selecting only required columns (exclude large 'chat' column)
-                query = db.query(
-                    Chat.id,
-                    Chat.user_id,
-                    Chat.title,
-                    Chat.created_at,
-                    Chat.updated_at,
-                    Chat.share_id,
-                    Chat.archived,
-                    Chat.pinned,
-                    Chat.meta,
-                    Chat.folder_id,
-                    Chat.chat,  # Still need chat column for file extraction, but we'll handle it carefully
-                )
+                query = db.query(Chat)
 
                 # Apply age filter if specified
                 if max_age_days is not None:
@@ -964,8 +952,6 @@ class ChatTable:
                 # Order by created_at to ensure consistent pagination
                 query = query.order_by(Chat.created_at.asc())
 
-                # Process in batches to avoid memory exhaustion
-                batch_size = 100  # Process 100 chats at a time
                 offset = 0
                 result_chats = []
 
@@ -985,23 +971,8 @@ class ChatTable:
                     # Convert batch to ChatModel objects
                     for chat in batch:
                         try:
-                            chat_model = ChatModel(
-                                id=chat.id,
-                                user_id=chat.user_id,
-                                title=chat.title,
-                                chat=chat.chat or {},
-                                created_at=chat.created_at,
-                                updated_at=chat.updated_at,
-                                share_id=chat.share_id,
-                                archived=chat.archived or False,
-                                pinned=chat.pinned or False,
-                                meta=chat.meta or {},
-                                folder_id=chat.folder_id,
-                            )
+                            chat_model = ChatModel.model_validate(chat)
                             result_chats.append(chat_model)
-                            log.debug(
-                                f"Successfully created ChatModel for chat {chat.id} for cleanup"
-                            )
                         except Exception as e:
                             log.error(
                                 f"Error converting chat {chat.id} to ChatModel: {e}"
@@ -1051,7 +1022,7 @@ class ChatTable:
         """
         return self.get_chats_for_cleanup(None, preserve_pinned, preserve_archived)
 
-    def delete_chat_list(self, chat_ids: list[str]) -> dict:
+    def delete_chat_list(self, chat_ids: list[str], batch_size: int = 100) -> dict:
         """
         Delete multiple chats by their IDs and return deletion summary.
         Uses batching for large datasets to prevent memory issues.
@@ -1072,9 +1043,6 @@ class ChatTable:
 
             if not chat_ids:
                 return result
-
-            # Process deletions in batches for better performance and memory management
-            batch_size = 100  # Delete 100 chats at a time
 
             with get_db() as db:
                 for i in range(0, len(chat_ids), batch_size):
