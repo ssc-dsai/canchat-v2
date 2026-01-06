@@ -94,7 +94,7 @@ jobs:
       - name:  Set up Node dependencies & build
         run:  |
           npm ci
-          npm run test:setup:headless
+          npm run test:setup
 
 
       - name: Wait for CANChat to be ready
@@ -113,8 +113,6 @@ jobs:
           exit 1
 
       - name:  Start Playwright Tests
-        env:
-          REUSE_EXISTING_SERVER: true
         run: |
           npm run test
           exit 0
