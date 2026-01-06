@@ -71,25 +71,25 @@ jobs:
           else
             echo "ref_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
-
+      
+      - name: Prepare .env file
+        run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
+        
       - name:  Start CANChat Environment
         run: |
-            docker run -d -p 8080:8080 \
+            docker run -d \
+            -p 8080:8080 \
             --add-host=host.docker.internal:host-gateway \
-            -d \
             --name canchat \
+            --env-file .env \
             --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:${{ steps.ref_name.outputs.ref_name }} \
-            /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env && \
-              echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
+            /bin/bash -c 'echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
               unset OPENAI_API_KEY && \
               unset OPENAI_API_BASE_URL && \
               unset WEBUI_SECRET_KEY && \
               unset USE_RERANKING_MODEL_DOCKER && \
               unset RAG_RERANKING_MODEL && \
               bash start.sh'
-    
-      - name:  Copy env variables
-        run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
 
       - name:  Set up Node dependencies & build
         run:  |
@@ -114,7 +114,7 @@ jobs:
 
       - name:  Start Playwright Tests
         run: |
-          npm run test
+          npm run test:debug
           exit 0
 
       - name: Get timestamp

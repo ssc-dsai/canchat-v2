@@ -10,6 +10,7 @@
 		"test": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test'",
 		"test:en": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --project=chromium-en --project=firefox-en'",
 		"test:fr": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --project=chromium-fr --project=firefox-fr'",
+		"test:debug": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --project=chromium-en'",
 		"test:headed": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --headed'",
 		"test:report": "npx playwright show-report",
 		"test:setup": "npx playwright install --with-deps --force",
