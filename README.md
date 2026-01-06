@@ -103,6 +103,8 @@ cp -RPp .env.example .env
 
 - This command copies the `.env.example` file to a new file named `.env`.
 - The `.env` file is where you'll configure environment variables for the frontend.
+- If you have a mac you need to comment out certain lines as instructed.
+- Reach out to a team member for the API Key to complete the config.
 
 **Customize `.env`:**  
 Open the `.env` file in your code editor (e.g., VS Code). For local development, the default settings in `.env.example` should suffice, but you can customize them if needed.
@@ -158,7 +160,6 @@ Run the backend in a **separate terminal** to manage your workflows cleanly.
 #### 3.1 Using VS Code Integrated Terminals (Optional)
 
 - Open a new terminal in VS Code: go to `Terminal` > `New Terminal` or use the shortcut:
-
   - **Windows/Linux:** `Ctrl + Shift +`
   - **macOS:** `Cmd + Shift +`
 
@@ -318,10 +319,12 @@ Pour commencer, utilisez `git clone` afin de télécharger le dépôt de CANChat
 1. Ouvrez votre terminal (ou Git Bash si vous êtes sous Windows).
 2. Naviguez vers le répertoire où vous voulez stocker le projet.
 3. Exécutez les commandes suivantes :
+
    ```bash
    git clone https://github.com/ssc-dsai/canchat-v2.git
    cd canchat-v2
    ```
+
    - La commande `git clone` télécharge les fichiers du projet depuis GitHub.
    - La commande `cd canchat-v2` vous permet d’entrer dans le répertoire nouvellement créé.
    -
@@ -342,9 +345,13 @@ cp -RPp .env.example .env
 
 - Cette commande copie le fichier `.env.example` dans un nouveau fichier nommé `.env`.
 - Le fichier `.env` est où vous pourrez configurer les variables d’environnement pour le frontend.
-  **Personnaliser `.env` :**  
-  Ouvrez le fichier `.env` dans votre éditeur de code (VS Code, par exemple). Pour le développement local, les paramètres par défaut devraient suffire, mais vous pouvez les personnaliser si nécessaire.
-  > **Important :** Si vous prévoyez de contribuer au dépôt, **ne commitez pas d’informations sensibles dans votre fichier `.env`**. Vérifiez toujours vos variables d’environnement avant d’effectuer un commit pour vous assurer qu’aucune information privée ou confidentielle n'est exposée.
+- Si vous avez un Mac, vous devez commenter certaines lignes comme indiqué.
+- Contactez un membre de l’équipe pour obtenir la clé API afin de compléter la configuration.
+
+**Personnaliser `.env` :**  
+Ouvrez le fichier `.env` dans votre éditeur de code (VS Code, par exemple). Pour le développement local, les paramètres par défaut devraient suffire, mais vous pouvez les personnaliser si nécessaire.
+
+> **Important :** Si vous prévoyez de contribuer au dépôt, **ne commitez pas d’informations sensibles dans votre fichier `.env`**. Vérifiez toujours vos variables d’environnement avant d’effectuer un commit pour vous assurer qu’aucune information privée ou confidentielle n'est exposée.
 
 ---
 
