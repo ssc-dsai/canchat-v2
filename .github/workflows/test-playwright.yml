@@ -114,7 +114,7 @@ jobs:
 
       - name:  Start Playwright Tests
         run: |
-          npm run coverage:test
+          npm run test
           exit 0
 
       - name: Get timestamp
