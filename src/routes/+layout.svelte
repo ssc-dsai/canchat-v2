@@ -129,7 +129,7 @@
 					// Show notification about cleanup
 					const message =
 						data.deleted_count === 1
-							? $i18n.t('1 chat was automatically cleaned up')
+							? $i18n.t('One chat was automatically cleaned up')
 							: `${data.deleted_count} ${$i18n.t('chats were automatically cleaned up')}`;
 					toast.info(message);
 				} catch (error) {
