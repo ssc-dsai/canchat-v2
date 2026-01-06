@@ -733,7 +733,7 @@
 	"Loading more prompts...": "Chargement de plus d'invites...",
 	"Loading...": "Chargement...",
 	"Local": "Local",
-	"Local environment lacks OAuth2 proxy for SharePoint delegated access": "",
+	"Local environment lacks OAuth2 proxy for SharePoint delegated access": "L'environnement local ne dispose pas de proxy OAuth2 pour l'accès délégué SharePoint",
 	"Local Models": "Modèles locaux",
 	"Lost": "Perdu",
 	"Made by OpenWebUI Community": "Réalisé par la communauté OpenWebUI",
