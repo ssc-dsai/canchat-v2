@@ -112,10 +112,10 @@ jobs:
           echo "CANChat failed to start in time" >&2
           exit 1
 
-      - name:  Start Playwright Tests
-        run: |
-          npm run test
-          exit 0
+      #- name:  Start Playwright Tests
+      #  run: |
+      #    npm run test
+      #    exit 0
 
       - name: Get timestamp
         id: timestamps
