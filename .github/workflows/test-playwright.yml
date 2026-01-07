@@ -30,14 +30,14 @@ jobs:
       id-token: write
  
     timeout-minutes: 60
-      services:
-       qdrant:
-         image: qdrant/qdrant:latest
-         ports:
-           - 6333:6333
-           - 6334:6334
-         options: >-
-           --add-host host.docker.internal:host-gateway
+    services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+          - 6334:6334
+        options: >-
+          --add-host host.docker.internal:host-gateway
  
     steps:      
       - name: Checkout CANChat-V2
