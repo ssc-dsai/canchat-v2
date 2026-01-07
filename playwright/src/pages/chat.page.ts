@@ -129,7 +129,7 @@ export class ChatPage extends BasePage {
 	 */
 	async toggleChatTool(toolName: string, enable: boolean) {
 		await this.page.getByLabel('More').click();
-		const toolButton = this.page.getByRole('button', { name: toolName });
+		const toolButton = this.page.getByRole('menuitem', { name: toolName });
 		const toolSwitch = toolButton.getByRole('switch');
 
 		await expect(toolButton).toBeVisible();
