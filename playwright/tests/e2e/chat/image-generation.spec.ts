@@ -17,7 +17,7 @@ test.describe('Feature: Image Generation', () => {
 
 		await userPage.goto('/');
 		await userPage.verifyPageLanguage(locale as Language);
-		await userPage.enableImageGenerationCapability();
+		await userPage.toggleChatTool(userPage.getTranslation('Image'), true);
 
 		await userPage.sendMessage(
 			'Make a picture of the Easter Bunny.',

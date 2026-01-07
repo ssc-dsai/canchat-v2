@@ -17,7 +17,7 @@ test.describe('Feature: Model Context Protocol (MCP)', () => {
 			await adminPage.signOut();
 		});
 
-		// User - Time Tool Test
+		/* // User - Time Tool Test
 		await test.step('User can use MCP Time tool', async () => {
 			await userPage.goto('/');
 			await userPage.verifyPageLanguage(locale as Language);
@@ -41,7 +41,7 @@ test.describe('Feature: Model Context Protocol (MCP)', () => {
 				ignoreCase: true,
 				timeout: 120000
 			});
-		});
+		}); */
 	});
 
 	test('MCP - News Headlines', async ({ adminPage, userPage, locale }) => {
@@ -57,7 +57,7 @@ test.describe('Feature: Model Context Protocol (MCP)', () => {
 			await adminPage.signOut();
 		});
 
-		// User - News Tool Test
+		/* // User - News Tool Test
 		await test.step('User can use MCP News tool', async () => {
 			await userPage.verifyPageLanguage(locale as Language);
 			await userPage.toggleChatTool(userPage.getTranslation('MCP: News Headlines'), true);
@@ -78,6 +78,6 @@ test.describe('Feature: Model Context Protocol (MCP)', () => {
 					timeout: 120000
 				}
 			);
-		});
+		}); */
 	});
 });

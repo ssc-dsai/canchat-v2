@@ -105,24 +105,6 @@ export class ChatPage extends BasePage {
 	}
 
 	/**
-	 * Opens the 'More' menu and enables the Image Generation toggle
-	 */
-	async enableImageGenerationCapability() {
-		await this.page.getByLabel('More').click();
-		const imageSwitch = this.page.getByRole('button', { name: 'Image' }).getByRole('switch');
-
-		if (!(await imageSwitch.isChecked())) {
-			await imageSwitch.click();
-			await expect(imageSwitch).toBeChecked();
-		}
-
-		await this.page.keyboard.press('Escape');
-		await expect(this.page.locator('#chat-container')).toContainText(
-			this.getTranslation('Image generation')
-		);
-	}
-
-	/**
 	 * Opens the 'More' menu and toggles a specific tool/capability
 	 * @param toolName The name of the button in the menu
 	 * @param enable Desired state (true/false)
