@@ -44,12 +44,12 @@ export default defineConfig({
 	expect: {
 		timeout: 5000
 	},
-	webServer: {
+	/* webServer: {
 		command: 'npm run start',
 		url: 'http://localhost:8080',
 		timeout: 120 * 1000,
 		reuseExistingServer: true
-	},
+	}, */
 	/* Configure projects for major browsers */
 	projects: [
 		// --- Global Setup (Runs Once) ---
