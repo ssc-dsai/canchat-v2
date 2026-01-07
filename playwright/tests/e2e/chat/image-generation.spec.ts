@@ -9,6 +9,7 @@ test.describe('Feature: Image Generation', () => {
 		locale
 	}, testInfo) => {
 		test.setTimeout(240000);
+		console.log('Testing: user can generate images using dall-e-2');
 
 		// Enable image generation globally
 		await adminPage.verifyPageLanguage(locale as Language);

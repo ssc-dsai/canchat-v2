@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 test.describe('Feature: Document Upload and Retrieval', () => {
 	test('Uploading a TXT Document', async ({ userPage, locale }, testInfo) => {
+		console.log('Testing: Feature: Document Upload and Retrieval');
 		const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120000;
 		test.setTimeout(timeout);
 

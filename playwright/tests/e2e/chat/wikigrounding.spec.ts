@@ -3,6 +3,7 @@ import { Language } from '../../../src/pages/base.page';
 
 test.describe('Feature: Wiki Grounding', () => {
 	test('Service Availability', async ({ userPage, locale }, testInfo) => {
+		console.log('Testing: Feature: Wiki Grounding');
 		const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120_000;
 		test.setTimeout(timeout);
 
