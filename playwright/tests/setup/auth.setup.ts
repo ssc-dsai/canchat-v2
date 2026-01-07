@@ -34,7 +34,7 @@ setup('global setup: seed data & authenticate', async ({ page }) => {
 	await saveAuthState(page, 'admin.json');
 
 	// Make one model visible
- 	await adminPage.navigateToAdminSettings('Settings', 'Connections') //temporary
+	await adminPage.navigateToAdminSettings('Settings', 'Connections'); //temporary
 	await adminPage.openModelSettings('chatgpt-4o-');
 	await adminPage.updateModelDescription({
 		en: 'English Description',

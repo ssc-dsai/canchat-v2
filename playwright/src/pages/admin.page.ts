@@ -119,7 +119,9 @@ export class AdminPage extends BasePage {
 			this.getTranslation('Settings'),
 			this.getTranslation('Models')
 		);
-		await this.page.getByRole('textbox', { name: 'Search Models' }).waitFor({ state: 'visible', timeout: 5000 });
+		await this.page
+			.getByRole('textbox', { name: 'Search Models' })
+			.waitFor({ state: 'visible', timeout: 5000 });
 		await this.page.getByRole('button', { name: `modelfile profile ${modelName}` }).click();
 		await expect(this.page.locator('#models')).toBeVisible();
 	}
