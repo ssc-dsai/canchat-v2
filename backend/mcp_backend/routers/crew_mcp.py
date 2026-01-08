@@ -35,6 +35,11 @@ def extract_graph_access_token(request: Request) -> Optional[str]:
     """
     Extract the Graph API access token from OAuth2 proxy headers.
     This token will be used by ALL MCP servers for delegated SharePoint access.
+
+    Checks multiple possible header names to support different OAuth2 proxy configurations:
+    - x-forwarded-access-token (default/main UAT proxy)
+    - authorization (fallback for PCO proxy or standard OAuth)
+    - x-auth-request-access-token (alternative OAuth2 proxy config)
     """
     # Test token for local development (uncomment to test with real token)
     # TEST_ACCESS_TOKEN = "use-your-real-access-token-here-for-testing"
@@ -42,15 +47,30 @@ def extract_graph_access_token(request: Request) -> Optional[str]:
     # For testing: uncomment the line below to simulate having a real access token
     # return TEST_ACCESS_TOKEN
 
-    token = request.headers.get(GRAPH_ACCESS_TOKEN_HEADER)
-    if token and token != "user_token_placeholder":
-        logging.info(
-            f"Found Graph API access token in header {GRAPH_ACCESS_TOKEN_HEADER} (length: {len(token)})"
-        )
-        return token
+    # List of possible header names to check (in priority order)
+    possible_headers = [
+        GRAPH_ACCESS_TOKEN_HEADER,  # Primary: x-forwarded-access-token
+        "authorization",  # Fallback: Standard OAuth header
+        "x-auth-request-access-token",  # Alternative OAuth2 proxy header
+        "x-forwarded-authorization",  # Another common proxy header
+    ]
 
+    for header_name in possible_headers:
+        token = request.headers.get(header_name)
+        if token:
+            # Strip "Bearer " prefix if present
+            if token.startswith("Bearer "):
+                token = token[7:]  # Remove "Bearer " (7 characters)
+
+            if token and token != "user_token_placeholder":
+                logging.info(
+                    f"Found Graph API access token in header '{header_name}' (length: {len(token)})"
+                )
+                return token
+
+    # No token found in any header
     logging.warning(
-        f"No Graph API access token found in header {GRAPH_ACCESS_TOKEN_HEADER}"
+        f"No Graph API access token found in any checked headers: {possible_headers}"
     )
     available_headers = list(request.headers.keys())
     logging.warning(f"Available headers: {available_headers}")
@@ -273,6 +293,8 @@ crew_mcp_manager = None
 if CrewMCPManager:
     try:
         crew_mcp_manager = CrewMCPManager()
+        # Initialize MCP adapters once at startup
+        crew_mcp_manager.initialize_mcp_adapters()
     except Exception as e:
         logging.error(f"Failed to initialize CrewMCPManager: {e}")
 
@@ -318,44 +340,29 @@ async def run_crew_query(
         log.info(f"Selected tools: {request.selected_tools}")
         log.info(f"User access token available: {bool(user_access_token)}")
 
-        # Set user token globally for ALL MCP servers to use for delegated access
-        if user_access_token:
-            crew_mcp_manager.set_user_token(user_access_token)
-            log.info(
-                "Successfully set user access token for SharePoint delegated access"
-            )
-        else:
-            # In local development, provide a more helpful error message
-            import os
+        # Check SharePoint authentication mode
+        import os
 
-            environment = os.getenv("ENVIRONMENT", "")
+        use_delegated_access = os.getenv(
+            "SHP_USE_DELEGATED_ACCESS", "true"
+        ).lower() in ("true", "1", "yes")
 
-            # Local development is detected by absence of "canchat-" prefix
-            # All k8s environments (dev/staging/prod) start with "canchat-"
-            is_local_dev = not environment.startswith("canchat-")
-
-            if is_local_dev:
-                log.warning(
-                    "Local development environment detected - SharePoint access requires OAuth2 proxy configuration"
-                )
-                # For local development, we should provide a clear message about the limitation
-                if any(
-                    "sharepoint" in str(tool).lower()
-                    for tool in (request.selected_tools or [])
-                ):
-                    return CrewMCPResponse(
-                        result="Microsoft Graph authentication is unavailable in local development mode. "
-                        "This integration depends on OAuth2 proxy services that are configured only in production deployments. "
-                        "For full SharePoint testing, please utilize the staging or production environments where Azure AD authentication is properly established. "
-                        "Local developers can modify the test token configuration in extract_graph_access_token to simulate authenticated requests.",
-                        tools_used=[],
-                        success=False,
-                        error="Local environment lacks OAuth2 proxy for SharePoint access",
-                    )
+        if use_delegated_access:
+            # Delegated access (OBO flow) - use user token
+            if user_access_token:
+                crew_mcp_manager.set_user_token(user_access_token)
+                log.info("Using SharePoint delegated access (OBO flow) with user token")
             else:
+                crew_mcp_manager.set_user_token(None)
                 log.warning(
-                    "No Graph API access token available - SharePoint access may fail"
+                    "SHP_USE_DELEGATED_ACCESS=true but no user token available - SharePoint access may fail"
                 )
+        else:
+            # Application access (client credentials flow) - no user token needed
+            crew_mcp_manager.set_user_token(None)
+            log.info(
+                "Using SharePoint application access (client credentials flow) - SHP_USE_DELEGATED_ACCESS=false"
+            )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
@@ -372,12 +379,14 @@ async def run_crew_query(
         log.info("Using intelligent crew with manager agent for routing")
 
         # Always use the intelligent crew - it will handle routing internally
-        # Run in executor to prevent blocking the main thread and causing health check failures
+        # Run in dedicated executor to prevent blocking the main thread and causing health check failures
+        # Use max_workers=1 to limit resource usage and prevent thread pool exhaustion
         import asyncio
         import concurrent.futures
 
         loop = asyncio.get_event_loop()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        log.info("Starting crew execution in thread pool executor")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             result = await loop.run_in_executor(
                 executor,
                 crew_mcp_manager.run_intelligent_crew,
@@ -385,7 +394,14 @@ async def run_crew_query(
                 selected_tools,
             )
 
+        log.info(
+            f"Crew execution finished. Result type: {type(result)}, length: {len(result) if result else 0}"
+        )
+
         used_tools = [tool["name"] for tool in tools]  # All tools potentially available
+
+        log.info(f"Crew execution completed. Result length: {len(result)} characters")
+        log.info(f"Crew result preview: {result[:200]}...")
 
         # Generate proper title and tags if chat_id is provided (like standard chat flow)
         if request.chat_id:
@@ -428,11 +444,20 @@ async def run_crew_query(
                 # Completely isolate any background task creation exceptions
                 pass
 
-        return CrewMCPResponse(result=result, tools_used=used_tools, success=True)
+        log.info(
+            f"Returning CrewMCPResponse with success=True, result length={len(result)}"
+        )
+        response = CrewMCPResponse(result=result, tools_used=used_tools, success=True)
+        log.info(f"CrewMCPResponse object created successfully")
+        return response
 
     except Exception as e:
         log.exception(f"Error running CrewAI query: {e}")
-        return CrewMCPResponse(result="", tools_used=[], success=False, error=str(e))
+        error_response = CrewMCPResponse(
+            result="", tools_used=[], success=False, error=str(e)
+        )
+        log.info(f"Returning error response")
+        return error_response
 
 
 @router.post("/multi")
@@ -460,30 +485,29 @@ async def run_multi_server_crew_query(
         )
         log.info(f"User access token available: {bool(user_access_token)}")
 
-        # Set user token globally for ALL MCP servers to use for delegated access
-        if user_access_token:
-            crew_mcp_manager.set_user_token(user_access_token)
-            log.info(
-                "Successfully set user access token for SharePoint delegated access"
-            )
-        else:
-            # In local development, provide a more helpful error message
-            import os
+        # Check SharePoint authentication mode
+        import os
 
-            environment = os.getenv("ENVIRONMENT", "")
+        use_delegated_access = os.getenv(
+            "SHP_USE_DELEGATED_ACCESS", "true"
+        ).lower() in ("true", "1", "yes")
 
-            # Local development is detected by absence of "canchat-" prefix
-            # All k8s environments (dev/staging/prod) start with "canchat-"
-            is_local_dev = not environment.startswith("canchat-")
-
-            if is_local_dev:
-                log.warning(
-                    "Local development environment detected - SharePoint access requires OAuth2 proxy configuration"
-                )
+        if use_delegated_access:
+            # Delegated access (OBO flow) - use user token
+            if user_access_token:
+                crew_mcp_manager.set_user_token(user_access_token)
+                log.info("Using SharePoint delegated access (OBO flow) with user token")
             else:
+                crew_mcp_manager.set_user_token(None)
                 log.warning(
-                    "No Graph API access token available - SharePoint access may fail"
+                    "SHP_USE_DELEGATED_ACCESS=true but no user token available - SharePoint access may fail"
                 )
+        else:
+            # Application access (client credentials flow) - no user token needed
+            crew_mcp_manager.set_user_token(None)
+            log.info(
+                "Using SharePoint application access (client credentials flow) - SHP_USE_DELEGATED_ACCESS=false"
+            )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
@@ -494,8 +518,20 @@ async def run_multi_server_crew_query(
             )
 
         # Run the intelligent crew (same as regular query, since manager handles everything)
+        # Use dedicated executor to prevent blocking the main thread and causing health check failures
+        import asyncio
+        import concurrent.futures
+
         selected_tools = request.selected_tools or []
-        result = crew_mcp_manager.run_intelligent_crew(request.query, selected_tools)
+
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            result = await loop.run_in_executor(
+                executor,
+                crew_mcp_manager.run_intelligent_crew,
+                request.query,
+                selected_tools,
+            )
 
         return CrewMCPResponse(
             result=result, tools_used=[tool["name"] for tool in tools], success=True
