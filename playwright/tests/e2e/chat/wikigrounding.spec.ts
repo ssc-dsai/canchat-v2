@@ -7,7 +7,10 @@ test.describe('Feature: Wiki Grounding', () => {
 		const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120_000;
 		test.setTimeout(timeout);
 		await adminPage.verifyPageLanguage(locale as Language);
-		await adminPage.navigateToAdminSettings(adminPage.getTranslation('Settings'), adminPage.getTranslation('Grounding'));
+		await adminPage.navigateToAdminSettings(
+			adminPage.getTranslation('Settings'),
+			adminPage.getTranslation('Grounding')
+		);
 
 		await userPage.goto('/');
 		await userPage.verifyPageLanguage(locale as Language);
