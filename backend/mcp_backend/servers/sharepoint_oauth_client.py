@@ -49,22 +49,34 @@ class SharePointOAuthClient:
         self.tenant_id = tenant_id or os.getenv("SHP_TENANT_ID")
         self.site_url = site_url or os.getenv("SHP_SITE_URL")
 
-        # Global settings with defaults
-        if use_delegated_access is not None:
-            self.use_delegated_access = use_delegated_access
-        else:
-            self.use_delegated_access = (
-                os.getenv("SHP_USE_DELEGATED_ACCESS", "true").lower() == "true"
-                and os.getenv("USER_JWT_TOKEN") is not None
-            )
+        # Global settings with defaults - check environment override for testing
+        env_delegated = os.getenv("SHP_USE_DELEGATED_ACCESS", "true").lower()
+        self.use_delegated_access = (
+            use_delegated_access
+            if use_delegated_access is not None
+            else (env_delegated in ("true", "1", "yes"))
+        )
 
         self.obo_scope = obo_scope or os.getenv(
             "SHP_OBO_SCOPE",
             "https://graph.microsoft.com/Sites.Read.All https://graph.microsoft.com/Files.Read.All",
         )
 
-        if not all([self.client_id, self.client_secret, self.tenant_id, self.site_url]):
-            raise ValueError("Missing required SharePoint OAuth configuration")
+        # Validation - different requirements based on access mode
+        if self.use_delegated_access:
+            # For delegated access, only site_url is required
+            if not self.site_url:
+                raise ValueError(
+                    "Missing required SharePoint site URL for delegated access"
+                )
+        else:
+            # For application access, all credentials are required
+            if not all(
+                [self.client_id, self.client_secret, self.tenant_id, self.site_url]
+            ):
+                raise ValueError(
+                    "Missing required SharePoint OAuth configuration for application access"
+                )
 
         # OAuth2 endpoints
         self.token_endpoint = (
@@ -75,41 +87,6 @@ class SharePointOAuthClient:
         logger.info(
             f"Initialized SharePoint OAuth client (delegated: {self.use_delegated_access})"
         )
-
-    async def get_application_token(self) -> Optional[str]:
-        """
-        Get application-only access token using client credentials flow
-
-        Returns:
-            Access token string or None if failed
-        """
-        try:
-            token_data = {
-                "grant_type": "client_credentials",
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-                "scope": "https://graph.microsoft.com/.default",
-            }
-
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.token_endpoint, data=token_data
-                ) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        access_token = result.get("access_token")
-                        logger.info("Successfully obtained application token")
-                        return access_token
-                    else:
-                        error_text = await response.text()
-                        logger.error(
-                            f"Application token request failed: {response.status} - {error_text}"
-                        )
-                        return None
-
-        except Exception as e:
-            logger.error(f"Error obtaining application token: {e}")
-            return None
 
     async def get_obo_token(self, user_access_token: str) -> Optional[str]:
         """
@@ -151,9 +128,50 @@ class SharePointOAuthClient:
             logger.error(f"Error obtaining OBO token: {e}")
             return None
 
+    async def get_application_token(self) -> Optional[str]:
+        """
+        Get application access token using client credentials flow.
+
+        Returns:
+            Access token string or None if failed
+        """
+        try:
+            async with aiohttp.ClientSession() as session:
+                token_data = {
+                    "grant_type": "client_credentials",
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                    "scope": "https://graph.microsoft.com/.default",
+                }
+
+                async with session.post(
+                    self.token_endpoint, data=token_data
+                ) as response:
+                    if response.status == 200:
+                        token_response = await response.json()
+                        access_token = token_response.get("access_token")
+
+                        if access_token:
+                            # Suppress verbose logging during parallel processing
+                            return access_token
+                        else:
+                            logger.error("No access token in response")
+                            return None
+                    else:
+                        error_text = await response.text()
+                        logger.error(
+                            f"Token request failed: {response.status} - {error_text}"
+                        )
+                        return None
+
+        except Exception as e:
+            logger.error(f"Error obtaining application token: {e}")
+            return None
+
     async def get_access_token(self, user_token: Optional[str] = None) -> Optional[str]:
         """
-        Get appropriate access token based on configuration
+        Get appropriate access token based on configuration.
+        Supports both delegated access (OBO flow) and application access.
 
         Args:
             user_token: Optional user access token for OBO flow
@@ -161,50 +179,36 @@ class SharePointOAuthClient:
         Returns:
             Access token string or None if failed
         """
-        # Check if we're in localhost development environment
-        is_localhost = (
-            os.getenv("ENVIRONMENT", "").lower()
-            in ["", "local", "localhost", "development"]
-            or "localhost" in os.getenv("WEBUI_BASE_URL", "")
-            or "localhost" in os.getenv("CORS_ALLOW_ORIGIN", "")
-            or os.getenv("ENABLE_SIGNUP", "").lower()
-            == "true"  # Local dev has signup enabled
-        )
-
-        if self.use_delegated_access and user_token:
-            # Skip OBO for placeholder or invalid tokens (localhost only)
-            if user_token == "user_token_placeholder" or not user_token.strip():
-                if is_localhost:
-                    logger.info(
-                        "Invalid user token in localhost - falling back to application access"
-                    )
-                    return await self.get_application_token()
-                else:
-                    logger.error(
-                        "Invalid user token in production environment - authentication required"
-                    )
-                    return None
+        if self.use_delegated_access:
+            # Delegated access requires user token
+            if (
+                not user_token
+                or user_token == "user_token_placeholder"
+                or not user_token.strip()
+            ):
+                logger.error(
+                    "No valid user token provided for OBO flow. Delegated access requires user authentication."
+                )
+                return None
 
             logger.info("Attempting delegated access (OBO flow)")
             obo_token = await self.get_obo_token(user_token)
 
-            # If OBO fails, only fall back to application access in localhost
             if not obo_token:
-                if is_localhost:
-                    logger.info(
-                        "OBO flow failed in localhost - falling back to application access"
-                    )
-                    return await self.get_application_token()
-                else:
-                    logger.error(
-                        "OBO flow failed in production environment - authentication required"
-                    )
-                    return None
+                logger.error(
+                    "OBO flow failed. User may not have appropriate SharePoint permissions."
+                )
+                return None
 
             return obo_token
         else:
-            logger.info("Using application access (client credentials)")
+            # Application access - use client credentials flow
+            logger.info("Attempting application access (client credentials flow)")
             return await self.get_application_token()
+            return None
+
+        logger.info("Successfully obtained OBO token")
+        return obo_token
 
     def get_site_identifier(self) -> str:
         """

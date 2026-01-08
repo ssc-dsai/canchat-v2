@@ -73,7 +73,7 @@
 		stopTask
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
-	import { queryCrewMCP } from '$lib/apis/crew-mcp';
+	import { queryCrewMCPWebSocket } from '$lib/apis/crew-mcp';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -1410,18 +1410,41 @@
 							await tick();
 							scrollToBottom();
 
-							const crewResponse = await queryCrewMCP(
-								localStorage.token,
+							const crewResponse = await queryCrewMCPWebSocket(
 								prompt,
 								model.id,
 								selectedToolIds,
 								$chatId,
-								$socket?.id
+								(statusMessage: string) => {
+									// Update UI with status from CrewAI
+									responseMessage.content = statusMessage;
+									history.messages[responseMessageId] = responseMessage;
+									tick();
+								}
 							);
 
 							if (crewResponse && crewResponse.result) {
-								// Update message content with CrewAI response
-								responseMessage.content = crewResponse.result;
+								// Check if the result is a SharePoint error message and translate it
+								let displayResult = crewResponse.result;
+								if (
+									displayResult.startsWith(
+										'SharePoint delegated access is unavailable in local development mode'
+									) ||
+									displayResult.startsWith('Local environment lacks OAuth2 proxy')
+								) {
+									// This is a SharePoint error message that needs translation
+									displayResult = $i18n.t(crewResponse.result);
+								}
+
+								// These translation keys need to be preserved by i18n parser
+								// They are used dynamically above
+								$i18n.t(
+									'SharePoint delegated access is unavailable in local development mode. Delegated access requires OAuth2 proxy services that are configured only in production deployments. For full SharePoint testing with user permissions, please utilize the staging or production environments where Azure AD authentication is properly established. For local development, set SHP_USE_DELEGATED_ACCESS=false in your .env file to use application access instead, which will authenticate using client credentials and provide access to SharePoint resources.'
+								);
+								$i18n.t('Local environment lacks OAuth2 proxy for SharePoint delegated access');
+
+								// Update message content with CrewAI response (translated if needed)
+								responseMessage.content = displayResult;
 								responseMessage.done = true;
 								responseMessage.crewAI = true; // Mark as CrewAI response
 
@@ -1466,19 +1489,36 @@
 							}
 						} catch (error) {
 							console.error('CrewAI Error:', error);
-							toast.error(`CrewAI Error: ${(error as Error).message || error}`);
+							const errorMessage = (error as Error).message || String(error);
 
-							// Fall back to regular chat completion - reset message state
-							responseMessage.content = '';
-							responseMessage.done = false;
-							delete responseMessage.crewAI;
-							delete responseMessage.crewMetadata;
+							// Show error toast
+							toast.error(`CrewAI Error: ${errorMessage}`);
+
+							// Display error message in chat instead of falling back
+							responseMessage.content = `⚠️ **CrewAI MCP Error**\n\n${errorMessage}\n\n*The selected tool(s) could not complete this request. This may be due to:*\n- Request timeout (processing took too long)\n- Network connectivity issues\n- SharePoint permissions or authentication problems\n\nPlease try again, or contact support if the issue persists.`;
+							responseMessage.done = true;
+							responseMessage.error = true;
 							history.messages[responseMessageId] = responseMessage;
+
+							// Save the error state
 							await tick();
+							if ($chatId && !$temporaryChatEnabled) {
+								const messages = createMessagesList(responseMessageId);
+								chat = await updateChatById(localStorage.token, $chatId, {
+									models: selectedModels,
+									messages: messages,
+									history: history,
+									params: params,
+									files: chatFiles
+								});
+							}
+
+							// Don't fall back to regular completion - return early to show error
+							return;
 						}
 					}
 
-					// Only proceed with regular completion if CrewAI wasn't used or failed
+					// Only proceed with regular completion if CrewAI wasn't used
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();

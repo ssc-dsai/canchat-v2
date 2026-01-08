@@ -4,7 +4,10 @@ API endpoints for CrewAI integration with MCP servers
 """
 
 import logging
+import os
 import sys
+import json
+import aiohttp
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -22,49 +25,64 @@ sys.path.append(str(backend_dir))
 # Initialize HTTPBearer for token extraction
 bearer_security = HTTPBearer(auto_error=False)
 
+# OAuth token extraction headers - K8s vs local development
+GRAPH_ACCESS_TOKEN_HEADER = os.getenv(
+    "GRAPH_ACCESS_TOKEN_HEADER", "x-forwarded-access-token"  # K8s OAuth2 proxy header
+)
 
-def extract_user_token(
-    request: Request,
-    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
-) -> Optional[str]:
-    """Extract the user's OAuth token from the request for OBO flow"""
-    import os
 
-    # Check if we're in localhost development environment
-    is_localhost = (
-        os.getenv("ENVIRONMENT", "").lower()
-        in ["", "local", "localhost", "development"]
-        or "localhost" in os.getenv("WEBUI_BASE_URL", "")
-        or "localhost" in os.getenv("CORS_ALLOW_ORIGIN", "")
-        or os.getenv("ENABLE_SIGNUP", "").lower()
-        == "true"  # Local dev has signup enabled
+def extract_graph_access_token(request: Request) -> Optional[str]:
+    """
+    Extract the Graph API access token from OAuth2 proxy headers.
+    This token will be used by ALL MCP servers for delegated SharePoint access.
+
+    Checks multiple possible header names to support different OAuth2 proxy configurations:
+    - x-forwarded-access-token (default/main UAT proxy)
+    - authorization (fallback for PCO proxy or standard OAuth)
+    - x-auth-request-access-token (alternative OAuth2 proxy config)
+    """
+    # Test token for local development (uncomment to test with real token)
+    # TEST_ACCESS_TOKEN = "use-your-real-access-token-here-for-testing"
+
+    # For testing: uncomment the line below to simulate having a real access token
+    # return TEST_ACCESS_TOKEN
+
+    # List of possible header names to check (in priority order)
+    possible_headers = [
+        GRAPH_ACCESS_TOKEN_HEADER,  # Primary: x-forwarded-access-token
+        "authorization",  # Fallback: Standard OAuth header
+        "x-auth-request-access-token",  # Alternative OAuth2 proxy header
+        "x-forwarded-authorization",  # Another common proxy header
+    ]
+
+    for header_name in possible_headers:
+        token = request.headers.get(header_name)
+        if token:
+            # Strip "Bearer " prefix if present
+            if token.startswith("Bearer "):
+                token = token[7:]  # Remove "Bearer " (7 characters)
+
+            if token and token != "user_token_placeholder":
+                logging.info(
+                    f"Found Graph API access token in header '{header_name}' (length: {len(token)})"
+                )
+                return token
+
+    # No token found in any header
+    logging.warning(
+        f"No Graph API access token found in any checked headers: {possible_headers}"
     )
+    available_headers = list(request.headers.keys())
+    logging.warning(f"Available headers: {available_headers}")
+    return None
 
-    # First priority: OAuth access token from Microsoft login (for SharePoint OBO)
-    if "oauth_access_token" in request.cookies:
-        token = request.cookies.get("oauth_access_token")
-        logging.info("Using OAuth access token for SharePoint OBO flow")
-        return token
 
-    # Second priority: OAuth ID token (may work for some scenarios)
-    elif "oauth_id_token" in request.cookies:
-        token = request.cookies.get("oauth_id_token")
-        logging.info("Using OAuth ID token for SharePoint OBO flow")
-        return token
-
-    # No OAuth tokens found
-    else:
-        if is_localhost:
-            logging.info(
-                "No OAuth tokens found in localhost - will use application-only authentication"
-            )
-            return None
-        else:
-            logging.warning(
-                "No OAuth tokens found in production environment - OAuth2 proxy may not be configured"
-            )
-            # Still return None but with warning - let SharePoint client handle the error
-            return None
+async def get_graph_access_token_for_user(request: Request) -> Optional[str]:
+    """
+    Get the Graph API access token directly from OAuth2 proxy headers.
+    This token will be set globally for ALL MCP servers to use.
+    """
+    return extract_graph_access_token(request)
 
 
 try:
@@ -275,6 +293,8 @@ crew_mcp_manager = None
 if CrewMCPManager:
     try:
         crew_mcp_manager = CrewMCPManager()
+        # Initialize MCP adapters once at startup
+        crew_mcp_manager.initialize_mcp_adapters()
     except Exception as e:
         logging.error(f"Failed to initialize CrewMCPManager: {e}")
 
@@ -313,19 +333,36 @@ async def run_crew_query(
         )
 
     try:
-        # Extract user token for SharePoint OBO flow (environment-aware)
-        user_jwt_token = extract_user_token(request_data, auth_token)
+        # Get the Graph API access token directly from OAuth2 proxy headers
+        user_access_token = await get_graph_access_token_for_user(request_data)
 
         log.info(f"Running CrewAI query for user {user.id}: {request.query}")
         log.info(f"Selected tools: {request.selected_tools}")
-        log.info(f"User token available for OBO flow: {bool(user_jwt_token)}")
+        log.info(f"User access token available: {bool(user_access_token)}")
 
-        # Set user token in CrewAI manager for SharePoint OBO authentication
-        # This works in both local (gracefully degraded) and K8s (full OAuth) environments
-        if user_jwt_token and user_jwt_token != "user_token_placeholder":
-            crew_mcp_manager.set_user_token(user_jwt_token)
+        # Check SharePoint authentication mode
+        import os
+
+        use_delegated_access = os.getenv(
+            "SHP_USE_DELEGATED_ACCESS", "true"
+        ).lower() in ("true", "1", "yes")
+
+        if use_delegated_access:
+            # Delegated access (OBO flow) - use user token
+            if user_access_token:
+                crew_mcp_manager.set_user_token(user_access_token)
+                log.info("Using SharePoint delegated access (OBO flow) with user token")
+            else:
+                crew_mcp_manager.set_user_token(None)
+                log.warning(
+                    "SHP_USE_DELEGATED_ACCESS=true but no user token available - SharePoint access may fail"
+                )
         else:
-            log.info("No OAuth token available - using application-only authentication")
+            # Application access (client credentials flow) - no user token needed
+            crew_mcp_manager.set_user_token(None)
+            log.info(
+                "Using SharePoint application access (client credentials flow) - SHP_USE_DELEGATED_ACCESS=false"
+            )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
@@ -342,12 +379,14 @@ async def run_crew_query(
         log.info("Using intelligent crew with manager agent for routing")
 
         # Always use the intelligent crew - it will handle routing internally
-        # Run in executor to prevent blocking the main thread and causing health check failures
+        # Run in dedicated executor to prevent blocking the main thread and causing health check failures
+        # Use max_workers=1 to limit resource usage and prevent thread pool exhaustion
         import asyncio
         import concurrent.futures
 
         loop = asyncio.get_event_loop()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        log.info("Starting crew execution in thread pool executor")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             result = await loop.run_in_executor(
                 executor,
                 crew_mcp_manager.run_intelligent_crew,
@@ -355,7 +394,14 @@ async def run_crew_query(
                 selected_tools,
             )
 
+        log.info(
+            f"Crew execution finished. Result type: {type(result)}, length: {len(result) if result else 0}"
+        )
+
         used_tools = [tool["name"] for tool in tools]  # All tools potentially available
+
+        log.info(f"Crew execution completed. Result length: {len(result)} characters")
+        log.info(f"Crew result preview: {result[:200]}...")
 
         # Generate proper title and tags if chat_id is provided (like standard chat flow)
         if request.chat_id:
@@ -398,16 +444,28 @@ async def run_crew_query(
                 # Completely isolate any background task creation exceptions
                 pass
 
-        return CrewMCPResponse(result=result, tools_used=used_tools, success=True)
+        log.info(
+            f"Returning CrewMCPResponse with success=True, result length={len(result)}"
+        )
+        response = CrewMCPResponse(result=result, tools_used=used_tools, success=True)
+        log.info(f"CrewMCPResponse object created successfully")
+        return response
 
     except Exception as e:
         log.exception(f"Error running CrewAI query: {e}")
-        return CrewMCPResponse(result="", tools_used=[], success=False, error=str(e))
+        error_response = CrewMCPResponse(
+            result="", tools_used=[], success=False, error=str(e)
+        )
+        log.info(f"Returning error response")
+        return error_response
 
 
 @router.post("/multi")
 async def run_multi_server_crew_query(
-    request: CrewMCPQuery, user=Depends(get_verified_user)
+    request_data: Request,
+    request: CrewMCPQuery,
+    user=Depends(get_verified_user),
+    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
 ) -> CrewMCPResponse:
     """Run a CrewAI query using ALL available MCP servers and tools simultaneously"""
     if not crew_mcp_manager:
@@ -419,9 +477,37 @@ async def run_multi_server_crew_query(
         )
 
     try:
+        # Get the Graph API access token directly from OAuth2 proxy headers
+        user_access_token = await get_graph_access_token_for_user(request_data)
+
         log.info(
             f"Running CrewAI multi-server query for user {user.id}: {request.query}"
         )
+        log.info(f"User access token available: {bool(user_access_token)}")
+
+        # Check SharePoint authentication mode
+        import os
+
+        use_delegated_access = os.getenv(
+            "SHP_USE_DELEGATED_ACCESS", "true"
+        ).lower() in ("true", "1", "yes")
+
+        if use_delegated_access:
+            # Delegated access (OBO flow) - use user token
+            if user_access_token:
+                crew_mcp_manager.set_user_token(user_access_token)
+                log.info("Using SharePoint delegated access (OBO flow) with user token")
+            else:
+                crew_mcp_manager.set_user_token(None)
+                log.warning(
+                    "SHP_USE_DELEGATED_ACCESS=true but no user token available - SharePoint access may fail"
+                )
+        else:
+            # Application access (client credentials flow) - no user token needed
+            crew_mcp_manager.set_user_token(None)
+            log.info(
+                "Using SharePoint application access (client credentials flow) - SHP_USE_DELEGATED_ACCESS=false"
+            )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
@@ -432,8 +518,20 @@ async def run_multi_server_crew_query(
             )
 
         # Run the intelligent crew (same as regular query, since manager handles everything)
+        # Use dedicated executor to prevent blocking the main thread and causing health check failures
+        import asyncio
+        import concurrent.futures
+
         selected_tools = request.selected_tools or []
-        result = crew_mcp_manager.run_intelligent_crew(request.query, selected_tools)
+
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            result = await loop.run_in_executor(
+                executor,
+                crew_mcp_manager.run_intelligent_crew,
+                request.query,
+                selected_tools,
+            )
 
         return CrewMCPResponse(
             result=result, tools_used=[tool["name"] for tool in tools], success=True

@@ -20,6 +20,15 @@ from mcp import StdioServerParameters
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# CrewAI verbosity control - disable in production for cleaner logs
+CREW_VERBOSE = os.getenv("CREW_VERBOSE", "false").lower() == "true"
+
+# Module-level MCP server adapters - initialized once and reused
+_time_server_adapter = None
+_news_server_adapter = None
+_mpo_sharepoint_server_adapter = None
+_adapters_initialized = False
+
 
 # Azure OpenAI Configuration
 class AzureConfig(BaseModel):
@@ -83,21 +92,121 @@ class CrewMCPManager:
         elif "USER_JWT_TOKEN" in os.environ:
             del os.environ["USER_JWT_TOKEN"]
 
+    def initialize_mcp_adapters(self):
+        """Initialize all MCP server adapters once at startup"""
+        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _adapters_initialized
+
+        if _adapters_initialized:
+            logger.info("MCP adapters already initialized, skipping...")
+            return
+
+        logger.info("🚀 Initializing MCP server adapters...")
+
+        # Initialize Time Server
+        try:
+            time_server_params = StdioServerParameters(
+                command="python",
+                args=[str(self.time_server_path)],
+                env=dict(os.environ),  # Pass environment variables
+            )
+            adapter = MCPServerAdapter(time_server_params)
+            _time_server_adapter = adapter.__enter__()  # Get the tools from __enter__()
+            logger.info("✅ Time server adapter initialized")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize Time server: {e}")
+            _time_server_adapter = None
+
+        # Initialize News Server
+        try:
+            news_server_params = StdioServerParameters(
+                command="python",
+                args=[str(self.news_server_path)],
+                env=dict(os.environ),  # Pass environment variables
+            )
+            adapter = MCPServerAdapter(news_server_params)
+            _news_server_adapter = adapter.__enter__()  # Get the tools from __enter__()
+            logger.info("✅ News server adapter initialized")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize News server: {e}")
+            _news_server_adapter = None
+
+        # Initialize MPO SharePoint Server - always try to initialize
+        try:
+            mpo_sharepoint_params = StdioServerParameters(
+                command="python",
+                args=[str(self.mpo_sharepoint_server_path)],
+                env=dict(
+                    os.environ
+                ),  # Pass environment variables so .env vars are available
+            )
+            adapter = MCPServerAdapter(mpo_sharepoint_params)
+            _mpo_sharepoint_server_adapter = (
+                adapter.__enter__()
+            )  # Get the tools from __enter__()
+            logger.info("✅ MPO SharePoint server adapter initialized")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize MPO SharePoint server: {e}")
+            logger.error(
+                f"   This is expected in local dev without MPO_SHP_* environment variables"
+            )
+            _mpo_sharepoint_server_adapter = None
+
+        _adapters_initialized = True
+
+        # Report initialization status
+        initialized_count = sum(
+            [
+                _time_server_adapter is not None,
+                _news_server_adapter is not None,
+                _mpo_sharepoint_server_adapter is not None,
+            ]
+        )
+        logger.info(
+            f"🎉 MCP server initialization complete: {initialized_count}/3 adapters initialized"
+        )
+
+    def cleanup_mcp_adapters(self):
+        """Cleanup all MCP server adapters on shutdown"""
+        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _adapters_initialized
+
+        logger.info("🧹 Cleaning up MCP server adapters...")
+
+        for adapter_name, adapter in [
+            ("Time", _time_server_adapter),
+            ("News", _news_server_adapter),
+            ("MPO SharePoint", _mpo_sharepoint_server_adapter),
+        ]:
+            if adapter is not None:
+                try:
+                    adapter.__exit__(None, None, None)
+                    logger.info(f"✅ {adapter_name} server adapter cleaned up")
+                except Exception as e:
+                    logger.error(f"❌ Error cleaning up {adapter_name} adapter: {e}")
+
+        _time_server_adapter = None
+        _news_server_adapter = None
+        _mpo_sharepoint_server_adapter = None
+        _adapters_initialized = False
+
+        logger.info("🎉 All MCP server adapters cleaned up")
+
     def get_azure_llm_config(self) -> LLM:
         """Get Azure OpenAI LLM configuration for CrewAI"""
         # Set environment variables for LiteLLM/CrewAI Azure OpenAI
+        # CrewAI 1.7.2 uses LiteLLM which requires specific Azure env var format
         os.environ["AZURE_API_KEY"] = self.azure_config.api_key
         os.environ["AZURE_API_BASE"] = self.azure_config.endpoint
         os.environ["AZURE_API_VERSION"] = self.azure_config.api_version
 
-        # Also set the alternative environment variable names
-        os.environ["OPENAI_API_KEY"] = self.azure_config.api_key
-        os.environ["OPENAI_API_BASE"] = self.azure_config.endpoint
-
         # Create LLM instance with Azure configuration
-        # Use the environment variables approach which CrewAI handles better
-        # Set low temperature for more consistent formatting preservation
-        return LLM(model=f"azure/{self.azure_config.deployment}", temperature=0.0)
+        # CrewAI 1.7.2 LiteLLM format: azure/<deployment_name>
+        # Must NOT include base_url or api_key - LiteLLM reads from env vars
+        # Add timeout to prevent hanging in K8s environments
+        # O3-mini doesn't support temperature or max_completion_tokens parameters
+        return LLM(
+            model=f"azure/{self.azure_config.deployment}",
+            timeout=30,  # 30 second timeout per LLM API call
+        )
 
     def run_time_crew(self, query: str = "What's the current time?") -> str:
         """
@@ -109,56 +218,57 @@ class CrewMCPManager:
         Returns:
             The crew's response
         """
+        global _time_server_adapter
+
         if not self.time_server_path.exists():
             raise FileNotFoundError(f"Time server not found at {self.time_server_path}")
 
+        if _time_server_adapter is None:
+            raise RuntimeError(
+                "Time server adapter not initialized. Call initialize_mcp_adapters() first."
+            )
+
         logger.info(f"Starting CrewAI MCP integration for query: {query}")
 
-        # Configure stdio server parameters for FastMCP time server
-        server_params = StdioServerParameters(
-            command="python3",
-            args=[str(self.time_server_path)],
-            env=dict(os.environ),  # Pass current environment
-        )
-
         try:
-            # Use MCPServerAdapter with context manager for automatic cleanup
-            with MCPServerAdapter(server_params) as mcp_tools:
-                logger.info(f"Available MCP tools: {[tool.name for tool in mcp_tools]}")
+            # Use the pre-initialized time server adapter (already contains tools from __enter__())
+            mcp_tools = _time_server_adapter
+            logger.info(f"Available MCP tools: {[tool.name for tool in mcp_tools]}")
 
-                # Create Azure OpenAI LLM
-                llm = self.get_azure_llm_config()
+            # Create Azure OpenAI LLM
+            llm = self.get_azure_llm_config()
 
-                # Create time specialist agent with MCP tools
-                time_agent = Agent(
-                    role="Time Specialist",
-                    goal="Provide accurate time information using available time tools",
-                    backstory="I am an AI specialist focused on time-related queries. I have access to time tools via MCP and can provide current time in various formats and timezones.",
-                    tools=mcp_tools,  # Pass MCP tools to agent
-                    llm=llm,
-                    verbose=True,
-                )
+            # Create time specialist agent with MCP tools
+            time_agent = Agent(
+                role="Time Specialist",
+                goal="Provide accurate time information using available time tools",
+                backstory="I am an AI specialist focused on time-related queries. I have access to time tools via MCP and can provide current time in various formats and timezones.",
+                tools=mcp_tools,  # Pass MCP tools to agent
+                llm=llm,
+                verbose=CREW_VERBOSE,
+                max_iter=3,  # Limit iterations to prevent excessive thinking
+            )
 
-                # Create task for time query
-                time_task = Task(
-                    description=f"Process this time-related query: {query}. Use the available time tools to get accurate information.",
-                    expected_output="A clear and accurate response to the time query with proper formatting.",
-                    agent=time_agent,
-                )
+            # Create task for time query
+            time_task = Task(
+                description=f"Process this time-related query: {query}. Use the available time tools to get accurate information.",
+                expected_output="A clear and accurate response to the time query with proper formatting.",
+                agent=time_agent,
+            )
 
-                # Create and execute crew
-                time_crew = Crew(
-                    agents=[time_agent],
-                    tasks=[time_task],
-                    process=Process.sequential,
-                    verbose=True,
-                )
+            # Create and execute crew
+            time_crew = Crew(
+                agents=[time_agent],
+                tasks=[time_task],
+                process=Process.sequential,
+                verbose=CREW_VERBOSE,
+            )
 
-                # Execute the crew
-                logger.info("Executing CrewAI crew...")
-                result = time_crew.kickoff()
-                logger.info("CrewAI crew execution completed successfully")
-                return str(result)
+            # Execute the crew
+            logger.info("Executing CrewAI crew...")
+            result = time_crew.kickoff()
+            logger.info("CrewAI crew execution completed successfully")
+            return str(result)
 
         except Exception as e:
             logger.error(f"Error in CrewAI MCP integration: {e}")
@@ -174,59 +284,58 @@ class CrewMCPManager:
         Returns:
             The crew's response
         """
+        global _news_server_adapter
+
         if not self.news_server_path.exists():
             raise FileNotFoundError(f"News server not found at {self.news_server_path}")
 
+        if _news_server_adapter is None:
+            raise RuntimeError(
+                "News server adapter not initialized. Call initialize_mcp_adapters() first."
+            )
+
         logger.info(f"Starting CrewAI MCP news integration for query: {query}")
 
-        # Configure stdio server parameters for FastMCP news server
-        server_params = StdioServerParameters(
-            command="python3",
-            args=[str(self.news_server_path)],
-            env=dict(
-                os.environ
-            ),  # Pass current environment (includes Azure credentials)
-        )
-
         try:
-            # Use MCPServerAdapter with context manager for automatic cleanup
-            with MCPServerAdapter(server_params) as mcp_tools:
-                logger.info(
-                    f"Available MCP news tools: {[tool.name for tool in mcp_tools]}"
-                )
+            # Use the pre-initialized news server adapter (already contains tools from __enter__())
+            mcp_tools = _news_server_adapter
+            logger.info(
+                f"Available MCP news tools: {[tool.name for tool in mcp_tools]}"
+            )
 
-                # Create Azure OpenAI LLM
-                llm = self.get_azure_llm_config()
+            # Create Azure OpenAI LLM
+            llm = self.get_azure_llm_config()
 
-                # Create news specialist agent with MCP tools
-                news_agent = Agent(
-                    role="News Specialist",
-                    goal="Provide current news information exactly as returned by news tools, preserving original formatting and language",
-                    backstory="I am an AI specialist focused on news and current events. I have access to NewsDesk via MCP tools and can fetch the latest headlines. My role is to pass through the news information exactly as provided by the tools, preserving all formatting, emojis, language (French/English), and structure without translation or summarization.",
-                    tools=mcp_tools,  # Pass MCP tools to agent
-                    llm=llm,
-                    verbose=True,
-                )
+            # Create news specialist agent with MCP tools
+            news_agent = Agent(
+                role="News Specialist",
+                goal="Provide current news information exactly as returned by news tools, preserving original formatting and language",
+                backstory="I am an AI specialist focused on news and current events. I have access to NewsDesk via MCP tools and can fetch the latest headlines. My role is to pass through the news information exactly as provided by the tools, preserving all formatting, emojis, language (French/English), and structure without translation or summarization.",
+                tools=mcp_tools,  # Pass MCP tools to agent
+                llm=llm,
+                verbose=CREW_VERBOSE,
+                max_iter=5,  # Limit iterations to prevent excessive thinking
+            )
 
-                # Create task for news query
-                news_task = Task(
-                    description=f"Process this news-related query: {query}. Use the available news tools to get current headlines and relevant information. If the query asks for specific topics, filter or search for relevant articles.",
-                    expected_output="Return the news information EXACTLY as provided by the news tools, preserving all original formatting, emojis, language, and structure. Do NOT translate, summarize, or reformat the content. Simply pass through the original response from the news tools with minimal additional commentary.",
-                    agent=news_agent,
-                )
+            # Create task for news query
+            news_task = Task(
+                description=f"Process this news-related query: {query}. Use the available news tools to get current headlines and relevant information. If the query asks for specific topics, filter or search for relevant articles.",
+                expected_output="Return the news information EXACTLY as provided by the news tools, preserving all original formatting, emojis, language, and structure. Do NOT translate, summarize, or reformat the content. Simply pass through the original response from the news tools with minimal additional commentary.",
+                agent=news_agent,
+            )
 
-                # Create and execute crew
-                news_crew = Crew(
-                    agents=[news_agent],
-                    tasks=[news_task],
-                    process=Process.sequential,
-                    verbose=True,
-                )
+            # Create and execute crew
+            news_crew = Crew(
+                agents=[news_agent],
+                tasks=[news_task],
+                process=Process.sequential,
+                verbose=CREW_VERBOSE,
+            )
 
-                # Execute the crew
-                logger.info("Executing CrewAI news crew...")
-                result = news_crew.kickoff()
-                return str(result)
+            # Execute the crew
+            logger.info("Executing CrewAI news crew...")
+            result = news_crew.kickoff()
+            return str(result)
 
         except Exception as e:
             logger.error(f"Error in CrewAI MCP news integration: {e}")
@@ -234,7 +343,7 @@ class CrewMCPManager:
 
     def run_sharepoint_crew(self, query: str = "Search SharePoint documents") -> str:
         """
-        Run a CrewAI crew with MCP SharePoint server tools using the generic implementation
+        Run a CrewAI crew with MCP SharePoint server tools (MPO SharePoint only)
 
         Args:
             query: The SharePoint-related query to process
@@ -242,95 +351,137 @@ class CrewMCPManager:
         Returns:
             The crew's response
         """
-        # Use MPO-specific config if it exists, otherwise fall back to generic
-        server_path = (
-            self.mpo_sharepoint_server_path
-            if self.mpo_sharepoint_server_path.exists()
-            else self.sharepoint_server_path
-        )
+        global _mpo_sharepoint_server_adapter
 
-        if not server_path.exists():
-            raise FileNotFoundError(f"SharePoint server not found at {server_path}")
+        if not self.mpo_sharepoint_server_path.exists():
+            raise FileNotFoundError(
+                f"MPO SharePoint server not found at {self.mpo_sharepoint_server_path}"
+            )
+
+        if _mpo_sharepoint_server_adapter is None:
+            raise RuntimeError(
+                "MPO SharePoint server adapter not initialized. Call initialize_mcp_adapters() first."
+            )
 
         logger.info(f"Starting CrewAI MCP SharePoint integration for query: {query}")
-        logger.info(f"Using server: {server_path}")
-
-        # Configure stdio server parameters for generic SharePoint server
-        server_params = StdioServerParameters(
-            command="python3",
-            args=[str(server_path)],
-            env=dict(
-                os.environ
-            ),  # Pass current environment (includes SharePoint credentials)
-        )
+        logger.info(f"Using MPO SharePoint server: {self.mpo_sharepoint_server_path}")
 
         try:
-            # Use MCPServerAdapter with context manager for automatic cleanup
-            with MCPServerAdapter(server_params) as mcp_tools:
-                logger.info(
-                    f"Available MCP SharePoint tools: {[tool.name for tool in mcp_tools]}"
-                )
+            # Use the pre-initialized MPO SharePoint server adapter (already contains tools from __enter__())
+            mcp_tools = _mpo_sharepoint_server_adapter
+            logger.info(
+                f"Available MCP SharePoint tools: {[tool.name for tool in mcp_tools]}"
+            )
 
-                # Create Azure OpenAI LLM
-                llm = self.get_azure_llm_config()
+            # Create Azure OpenAI LLM
+            llm = self.get_azure_llm_config()
 
-                # Create SharePoint specialist agent with MCP tools
-                sharepoint_agent = Agent(
-                    role="SharePoint Document Specialist",
-                    goal="Search and retrieve information from SharePoint documents based on user queries, providing accurate and relevant document content and metadata using Microsoft Graph API with user-scoped access",
-                    backstory="I am an AI specialist focused on SharePoint document retrieval and search using Microsoft Graph API with On-Behalf-Of flow. I have user-scoped access to SharePoint via MCP tools and can search documents, retrieve content, explore folder structures, and provide detailed information about SharePoint resources. I excel at understanding user information needs and finding the most relevant documents across any organizational structure while maintaining proper user permissions.",
-                    tools=mcp_tools,  # Pass MCP tools to agent
-                    llm=llm,
-                    verbose=True,
-                )
+            # Create SharePoint specialist agent with MCP tools
+            sharepoint_agent = Agent(
+                role="SharePoint Document Specialist",
+                goal="Find and retrieve relevant information from SharePoint by analyzing all documents comprehensively using parallel processing for optimal speed and accuracy",
+                backstory="I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the analyze_all_documents_for_content tool which traverses every folder, downloads all documents, and analyzes their content concurrently using up to 8 parallel threads. This approach bypasses unreliable search APIs and ensures I find all relevant documents quickly - typically in 20-60 seconds even for large collections. I provide focused, intelligent answers based on the most relevant documents I discover.",
+                tools=mcp_tools,  # Pass MCP tools to agent
+                llm=llm,
+                verbose=CREW_VERBOSE,
+                max_iter=5,  # Limit iterations to prevent excessive thinking in high-latency environments
+            )
 
-                # Create task for SharePoint query
-                sharepoint_task = Task(
-                    description=f"""Process this SharePoint-related query: {query}
-                    
-Available tools include:
-- search_sharepoint_documents: Search for documents based on keywords
-- list_sharepoint_folder_contents: Explore folder structures and get counts  
-- get_sharepoint_document_content: Retrieve specific document content
-- get_sharepoint_folder_tree: Get hierarchical folder structure
-- find_folders_by_pattern: Find folders matching specific patterns
-- get_sharepoint_configuration: Check current SharePoint settings
+            # Create task for SharePoint query
+            sharepoint_task = Task(
+                description=f"""Process this SharePoint-related query: {query}
+                
+Available tools:
+- analyze_all_documents_for_content: PRIMARY TOOL - Analyzes all documents using parallel processing
+- get_all_documents_comprehensive: Get all documents by traversing every folder (used internally by analyze tool)
+- get_sharepoint_document_content: Retrieve individual document content (used internally)
+- check_sharepoint_permissions: Test connection and permissions (for debugging only)
+                
+PRIMARY STRATEGY:
+Use analyze_all_documents_for_content with the user's search terms. This tool:
+- Traverses every SharePoint folder to find all documents
+- Analyzes each document's content using parallel processing (8 concurrent threads)
+- Uses smart caching to avoid re-downloading documents
+- Terminates early when enough high-quality results are found
+- Typical performance: 20-60 seconds for large collections
+- Returns documents sorted by relevance with content matches
 
-Use the most appropriate tools for the query. For counting projects or understanding structure, use folder exploration tools. For finding specific documents, use search tools.
+CRITICAL AUTHENTICATION RULE:
+If ANY tool returns an error with "authentication_failed": true or "DELEGATED ACCESS MODE" in the message:
+- STOP IMMEDIATELY - Do NOT proceed with the task
+- Do NOT attempt to retry with made-up tokens
+- Do NOT make up or hallucinate answers
+- REPORT the authentication failure to the user clearly
+- Inform the user that valid authentication credentials are required to access SharePoint
+- Do NOT use any information from your training data to answer the question
 
-IMPORTANT: If the user is asking a specific question (like "What is the projected length?", "How many jobs?", "What is the cost?"), analyze the retrieved document content and extract the specific answer. Do not just regurgitate the entire document - provide a direct, intelligent answer to their question.""",
-                    expected_output="""Provide a direct, intelligent answer to the user's specific question based on the SharePoint search results. 
+RESPONSE STRATEGY (only if authentication succeeds):
+1. Call analyze_all_documents_for_content with the user's search terms
+2. Extract the KEY ANSWER from the most relevant document(s)
+3. Provide a CONCISE, DIRECT response to the user's question
+4. Include document name and source for credibility
+5. Focus on the specific information requested
+6. DON'T dump entire document contents in your response
+                """,
+                expected_output="""Provide a CONCISE, INTELLIGENT answer to the user's specific question based on SharePoint search results.
 
-If the user asked a specific question:
-- Extract the exact answer from the document content (e.g., "1,000 km", "$50 billion", "51,000 jobs")
-- Provide the answer clearly and concisely
-- Include the source document name and relevant context
-- If the answer involves numbers, dates, or specific facts, quote them exactly
+CRITICAL: If authentication fails, respond ONLY with:
+"Unable to access SharePoint documents due to authentication failure. Valid user credentials are required to access SharePoint with delegated permissions. Please ensure you are properly authenticated, or contact your administrator to configure application access mode by setting SHP_USE_DELEGATED_ACCESS=false."
 
-If the user asked for general information:
-- Provide a comprehensive summary with document titles, key points, and relevant excerpts
-- Include links and folder locations for easy access
+Do NOT make up answers. Do NOT use information from your training data. Do NOT proceed if authentication fails.
 
-Format your response to directly address what the user actually asked for.""",
-                    agent=sharepoint_agent,
-                )
+RESPONSE RULES (only if authentication succeeds):
+- Extract the key answer from the most relevant document
+- Provide a direct response to what the user asked for
+- Include document name and source for credibility
+- Keep your answer focused and concise
+- DON'T copy-paste entire document contents
+- Focus on the specific information requested
 
-                # Create and execute crew
-                sharepoint_crew = Crew(
-                    agents=[sharepoint_agent],
-                    tasks=[sharepoint_task],
-                    process=Process.sequential,
-                    verbose=True,
-                )
+EXAMPLE GOOD RESPONSE (when authentication succeeds):
+"Based on the document 'MPO - Transformative strategies.pdf' from the Major Projects Office, Canada's first high-speed railway is projected to span approximately 1,000 km from Toronto to Québec City, reaching speeds of up to 300 km/hour."
 
-                # Execute the crew
-                logger.info("Executing CrewAI SharePoint crew...")
-                result = sharepoint_crew.kickoff()
-                return str(result)
+AVOID: Dumping entire document contents, being overly verbose, or making up information when authentication fails.""",
+                agent=sharepoint_agent,
+            )
+
+            # Create and execute crew
+            sharepoint_crew = Crew(
+                agents=[sharepoint_agent],
+                tasks=[sharepoint_task],
+                process=Process.sequential,
+                verbose=CREW_VERBOSE,
+            )
+
+            # Execute the crew
+            logger.info("Executing CrewAI SharePoint crew...")
+            result = sharepoint_crew.kickoff()
+            return str(result)
 
         except Exception as e:
-            logger.error(f"Error in CrewAI MCP SharePoint integration: {e}")
-            raise
+            error_msg = str(e)
+            logger.error(f"Error in CrewAI MCP SharePoint integration: {error_msg}")
+
+            # Provide specific error messages based on the type of failure
+            if (
+                "Authentication" in error_msg
+                or "access token" in error_msg
+                or "401" in error_msg
+            ):
+                return (
+                    "SharePoint access failed due to authentication issues. This may be because:\n\n"
+                    + "1. You're in a local development environment where OAuth2 proxy is not configured\n"
+                    + "2. Your authentication token has expired\n"
+                    + "3. You don't have the necessary SharePoint permissions\n\n"
+                    + "For local development, SharePoint integration requires deployment to environments with proper OAuth2 configuration (dev/staging/production)."
+                )
+            elif "No documents found" in error_msg or "no results" in error_msg:
+                return "I searched the available SharePoint documents but could not find information related to your query. The documents may not contain this information, or it might be located in a different SharePoint site or folder that I don't have access to."
+            else:
+                return f"I encountered an issue while searching SharePoint documents: {error_msg}. Please try rephrasing your query or contact support if the problem persists."
+
+            # Don't re-raise in production to avoid exposing internal errors
+            # raise
 
     def run_multi_server_crew(self, query: str) -> str:
         """
@@ -394,10 +545,19 @@ Format your response to directly address what the user actually asked for.""",
                     sharepoint_result = self.run_sharepoint_crew(query)
                     results.append(f"SharePoint Information:\n{sharepoint_result}")
                 except Exception as e:
-                    logger.error(f"SharePoint crew failed: {e}")
-                    results.append(
-                        "SharePoint Information: Could not retrieve SharePoint information."
-                    )
+                    error_msg = str(e)
+                    logger.error(f"SharePoint crew failed: {error_msg}")
+
+                    # Provide helpful error message for authentication issues
+                    if "Authentication" in error_msg or "access token" in error_msg:
+                        results.append(
+                            "SharePoint Information: SharePoint access requires proper authentication. "
+                            "This feature is available in deployed environments with OAuth2 configuration."
+                        )
+                    else:
+                        results.append(
+                            "SharePoint Information: Could not retrieve SharePoint information."
+                        )
 
             if not results:
                 return "No specialized crews available to handle this query."
@@ -454,6 +614,24 @@ Format your response to directly address what the user actually asked for.""",
 
             logger.info(f"Available specialists: {available_specialists}")
 
+            # FAST PATH: If user explicitly selected tools for a single specialist, skip router overhead
+            if len(available_specialists) == 1:
+                specialist = available_specialists[0]
+                logger.info(
+                    f"🚀 FAST PATH: Single specialist detected ({specialist}), skipping router crew overhead"
+                )
+
+                if specialist == "TIME":
+                    return self.run_time_crew(query)
+                elif specialist == "NEWS":
+                    return self.run_news_crew(query)
+                elif specialist == "SHAREPOINT":
+                    return self.run_sharepoint_crew(query)
+
+            logger.info(
+                "Using intelligent router (multiple specialists or auto-detect mode)"
+            )
+
             # Create router agent that makes intelligent routing decisions
             router_agent = Agent(
                 role="Intelligent Query Router",
@@ -474,9 +652,10 @@ Format your response to directly address what the user actually asked for.""",
                 3. Whether one specialist is sufficient or multiple are needed
                 
                 Focus on the user's actual intent and information needs, not just keywords.""",
-                verbose=True,
+                verbose=CREW_VERBOSE,
                 allow_delegation=False,
                 llm=llm,
+                max_iter=3,  # Limit iterations - routing should be fast and decisive
             )
 
             # Create routing decision task
@@ -522,7 +701,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                 agents=[router_agent],
                 tasks=[routing_task],
                 process=Process.sequential,
-                verbose=True,
+                verbose=CREW_VERBOSE,
             )
 
             logger.info("Executing routing decision...")
@@ -594,10 +773,24 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                     sharepoint_response = self.run_sharepoint_crew(sharepoint_query)
                     responses.append(sharepoint_response)
                 except Exception as e:
-                    logger.error(f"Error from SHAREPOINT specialist: {e}")
-                    responses.append(
-                        "Unable to retrieve SharePoint information at this moment."
-                    )
+                    error_msg = str(e)
+                    logger.error(f"Error from SHAREPOINT specialist: {error_msg}")
+
+                    # Provide helpful error message for authentication issues
+                    if (
+                        "Authentication" in error_msg
+                        or "access token" in error_msg
+                        or "OAuth" in error_msg
+                    ):
+                        responses.append(
+                            "SharePoint access is currently unavailable due to authentication requirements. "
+                            "This feature requires OAuth2 proxy integration which is configured in deployed environments (dev/staging/production). "
+                            "For local development, SharePoint functionality is limited."
+                        )
+                    else:
+                        responses.append(
+                            "Unable to retrieve SharePoint information at this moment."
+                        )
 
             # If no routing was determined or no responses, use simple fallback
             if not responses:
@@ -695,14 +888,16 @@ Be decisive and specific. Only route to specialists that are actually needed."""
         """Get all available MCP servers dynamically"""
         servers = {}
 
-        # Define known servers (can be extended in the future)
+        # Define known servers (using MPO SharePoint, not generic SharePoint)
         known_servers = {
             "time_server": self.time_server_path,
             "news_server": self.news_server_path,
+            "mpo_sharepoint_server": self.mpo_sharepoint_server_path,
         }
 
         # Add any other fastmcp_*.py servers found in the backend directory
-        for server_file in self.backend_dir.glob("fastmcp_*.py"):
+        servers_dir = self.backend_dir / "mcp_backend" / "servers"
+        for server_file in servers_dir.glob("fastmcp_*.py"):
             server_name = server_file.stem  # Remove .py extension
             if server_name not in known_servers:
                 servers[server_name] = server_file
@@ -715,20 +910,23 @@ Be decisive and specific. Only route to specialists that are actually needed."""
         return {name: path for name, path in servers.items() if path.exists()}
 
     def get_available_tools(self) -> list:
-        """Get list of available MCP tools from all discovered servers"""
+        """Get list of available MCP tools from all initialized adapters"""
+        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter
+
         all_tools = []
-        available_servers = self.get_available_servers()
 
-        for server_name, server_path in available_servers.items():
-            server_params = StdioServerParameters(
-                command="python3",
-                args=[str(server_path)],
-                env=dict(os.environ),
-            )
+        # Only expose the 3 official tools: time, news, and MPO SharePoint
+        # The adapters already contain the tools from __enter__()
+        adapters = {
+            "time_server": _time_server_adapter,
+            "news_server": _news_server_adapter,
+            "mpo_sharepoint_server": _mpo_sharepoint_server_adapter,
+        }
 
-            try:
-                with MCPServerAdapter(server_params) as server_tools:
-                    for tool in server_tools:
+        for server_name, tools in adapters.items():
+            if tools is not None:
+                try:
+                    for tool in tools:
                         all_tools.append(
                             {
                                 "name": tool.name,
@@ -736,11 +934,9 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                                 "server": server_name,
                             }
                         )
-                    logger.info(
-                        f"Found {len(list(server_tools))} tools from {server_name}"
-                    )
-            except Exception as e:
-                logger.error(f"Error getting tools from {server_name}: {e}")
+                    logger.info(f"Found {len(list(tools))} tools from {server_name}")
+                except Exception as e:
+                    logger.error(f"Error getting tools from {server_name}: {e}")
 
         return all_tools
 
@@ -749,6 +945,9 @@ Be decisive and specific. Only route to specialists that are actually needed."""
 def main():
     """Main function for testing the CrewAI MCP integration"""
     manager = CrewMCPManager()
+
+    # Initialize MCP adapters once
+    manager.initialize_mcp_adapters()
 
     print("🚀 Starting CrewAI MCP Integration Test")
     print("=" * 50)

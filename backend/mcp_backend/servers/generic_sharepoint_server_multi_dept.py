@@ -11,6 +11,8 @@ by providing a department prefix (e.g., MPO, FIN, IT) to access department-speci
 Global environment variables (shared across all departments):
 - SHP_USE_DELEGATED_ACCESS: Enable user-scoped access (true/false, default: true)
 - SHP_OBO_SCOPE: Scopes for On-Behalf-Of token exchange (default: standard Graph scopes)
+- SHP_GLOBAL_SEARCH_LIMIT: Maximum total results across all folders before terminating search (default: 30)
+- SHP_FOLDER_SEARCH_LIMIT: Maximum number of discovered folders to search (default: 5)
 
 Department-specific environment variables (prefix with DEPT_):
 - {DEPT}_SHP_ID_APP: Azure App Registration Client ID
@@ -37,6 +39,9 @@ import xml.etree.ElementTree as ET
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
+from functools import lru_cache
 
 # Add local modules to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -53,6 +58,15 @@ try:
 except ImportError as e:
     logging.error(f"Failed to import required modules: {e}")
     raise
+
+
+# Authentication error message for delegated access mode
+DELEGATED_ACCESS_AUTH_ERROR = (
+    "DELEGATED ACCESS MODE: User authentication token is required but not provided. "
+    "SharePoint access with user permissions requires a valid OAuth2 access token. "
+    "This request cannot proceed without proper authentication. "
+    "Either provide a valid user token or set SHP_USE_DELEGATED_ACCESS=false to use application access."
+)
 
 
 def clean_env_var(value: str) -> str:
@@ -73,10 +87,14 @@ class DepartmentSharePointConfig:
         self.department_prefix = department_prefix.upper()
 
         # Global settings (shared across all departments)
-        self.use_delegated_access = (
-            clean_env_var(os.getenv("SHP_USE_DELEGATED_ACCESS", "true")).lower()
-            == "true"
-        )
+        # Delegated access setting - can be overridden via environment variable
+        self.use_delegated_access = clean_env_var(
+            os.getenv("SHP_USE_DELEGATED_ACCESS", "true")
+        ).lower() in (
+            "true",
+            "1",
+            "yes",
+        )  # Read from environment, default true
         self.obo_scope = clean_env_var(
             os.getenv(
                 "SHP_OBO_SCOPE",
@@ -84,16 +102,15 @@ class DepartmentSharePointConfig:
             )
         )
 
+        # Performance settings - configurable via environment variables
+        self.global_search_limit = int(
+            clean_env_var(os.getenv("SHP_GLOBAL_SEARCH_LIMIT", "20"))  # Reduced from 30
+        )
+        self.folder_search_limit = int(
+            clean_env_var(os.getenv("SHP_FOLDER_SEARCH_LIMIT", "3"))  # Reduced from 5
+        )
+
         # Department-specific settings
-        self.client_id = clean_env_var(
-            os.getenv(f"{self.department_prefix}_SHP_ID_APP", "")
-        )
-        self.client_secret = clean_env_var(
-            os.getenv(f"{self.department_prefix}_SHP_ID_APP_SECRET", "")
-        )
-        self.tenant_id = clean_env_var(
-            os.getenv(f"{self.department_prefix}_SHP_TENANT_ID", "")
-        )
         self.site_url = clean_env_var(
             os.getenv(f"{self.department_prefix}_SHP_SITE_URL", "")
         )
@@ -126,18 +143,10 @@ class DepartmentSharePointConfig:
 
     def validate_config(self):
         """Validate that required configuration is present"""
-        required_vars = [
-            (f"{self.department_prefix}_SHP_ID_APP", self.client_id),
-            (f"{self.department_prefix}_SHP_ID_APP_SECRET", self.client_secret),
-            (f"{self.department_prefix}_SHP_TENANT_ID", self.tenant_id),
-            (f"{self.department_prefix}_SHP_SITE_URL", self.site_url),
-        ]
-
-        missing_vars = [var_name for var_name, value in required_vars if not value]
-
-        if missing_vars:
+        # Only site URL is required for delegated access mode
+        if not self.site_url:
             raise ValueError(
-                f"Missing required environment variables for {self.department_prefix}: {missing_vars}"
+                f"Missing required environment variable: {self.department_prefix}_SHP_SITE_URL"
             )
 
 
@@ -155,11 +164,11 @@ def initialize_department_server(department_prefix: str):
         # Load department-specific configuration
         config = DepartmentSharePointConfig(department_prefix)
 
-        # Initialize OAuth client with department-specific settings
+        # Initialize OAuth client with department-specific credentials
         oauth_client = SharePointOAuthClient(
-            client_id=config.client_id,
-            client_secret=config.client_secret,
-            tenant_id=config.tenant_id,
+            client_id=os.getenv(f"{department_prefix}_SHP_ID_APP"),
+            client_secret=os.getenv(f"{department_prefix}_SHP_ID_APP_SECRET"),
+            tenant_id=os.getenv(f"{department_prefix}_SHP_TENANT_ID"),
             site_url=config.site_url,
             use_delegated_access=config.use_delegated_access,
             obo_scope=config.obo_scope,
@@ -176,7 +185,10 @@ def initialize_department_server(department_prefix: str):
         logger.error(
             f"Failed to initialize SharePoint server for {department_prefix}: {e}"
         )
-        raise
+        # Exit with error code so the MCP server doesn't start with broken config
+        import sys
+
+        sys.exit(1)
 
 
 def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str]:
@@ -191,409 +203,6 @@ def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str
         return user_token
 
     return None
-
-
-@generic_sharepoint_server.tool()
-async def search_sharepoint_documents(
-    query: str = "documents",
-    folder_path: Optional[str] = None,
-    search_subfolders: bool = True,
-    user_token: Optional[str] = None,
-) -> Dict[str, Any]:
-    """
-    Search for documents in SharePoint based on a query using Microsoft Graph API with OBO.
-
-    This tool searches for documents in SharePoint folders with user-scoped access.
-    It can search in a specific folder or across multiple configured default folders.
-
-    Args:
-        query: Search terms to find relevant documents (e.g., "strategy", "project")
-        folder_path: Specific SharePoint folder path to search in (optional)
-        search_subfolders: Whether to search in subfolders as well (default: True)
-        user_token: Optional user access token for delegated access
-
-    Returns:
-        JSON response with search results and document list
-    """
-    if not config or not oauth_client:
-        return {
-            "status": "error",
-            "error": "Server not initialized with department configuration",
-            "message": "Please initialize server with a valid department prefix",
-        }
-
-    try:
-        # Get user token from environment variable (set by crew MCP manager) if not provided
-        if not user_token:
-            user_token = os.getenv("USER_JWT_TOKEN")
-
-        # For local development, don't try OBO if no valid token available
-        if user_token == "user_token_placeholder" or not user_token:
-            logger.info(
-                "No OAuth token available - using application-only authentication for local development"
-            )
-            user_token = None  # This will trigger application-only flow
-        else:
-            logger.info(
-                f"Using OAuth token for SharePoint OBO flow: {bool(user_token)}"
-            )
-            # Log token type for debugging
-            if user_token and len(user_token) > 20:
-                logger.debug(f"Token type check - starts with: {user_token[:20]}...")
-
-        logger.info(f"Searching {config.org_name} SharePoint for: {query}")
-
-        # Get appropriate access token using OBO flow
-        access_token = await oauth_client.get_access_token(user_token)
-        if not access_token:
-            return {
-                "status": "error",
-                "query": query,
-                "error": "Failed to get access token",
-                "message": "Unable to authenticate with SharePoint using provided credentials",
-                "organization": config.org_name,
-            }
-
-        # Get site and drive information
-        success, site_data = await oauth_client.get_site_info(access_token)
-        if not success:
-            return {
-                "status": "error",
-                "query": query,
-                "error": site_data,
-                "message": "Failed to access SharePoint site",
-                "organization": config.org_name,
-            }
-
-        site_id = site_data.get("id")
-
-        # Get drives (document libraries)
-        success, drives_data = await oauth_client.get_site_drives(access_token, site_id)
-        if not success:
-            return {
-                "status": "error",
-                "query": query,
-                "error": drives_data,
-                "message": "Failed to access document libraries",
-                "organization": config.org_name,
-            }
-
-        drives = drives_data.get("value", [])
-        if not drives:
-            return {
-                "status": "error",
-                "query": query,
-                "error": "No document libraries found",
-                "message": "No accessible document libraries found",
-                "organization": config.org_name,
-            }
-
-        # Use first drive for now
-        drive_id = drives[0].get("id")
-
-        # Determine which folders to search
-        search_folders = []
-        if folder_path:
-            search_folders = [folder_path]
-        elif config.default_search_folders:
-            search_folders = config.default_search_folders
-        else:
-            # Default to root if no specific configuration
-            search_folders = [config.doc_library] if config.doc_library else [""]
-
-        all_matching_documents = []
-        search_summary = []
-
-        # Search in each folder
-        for folder in search_folders:
-            try:
-                logger.info(f"Searching in folder: {folder}")
-
-                # Get documents from the specified folder
-                success, items_data = await oauth_client.get_drive_items(
-                    access_token, site_id, drive_id, folder
-                )
-
-                if not success:
-                    search_summary.append(
-                        {
-                            "folder": folder,
-                            "total_documents": 0,
-                            "matching_documents": 0,
-                            "status": "error",
-                            "error": items_data,
-                            "message": f"Failed to access folder: {folder}",
-                        }
-                    )
-                    continue
-
-                items = items_data.get("value", [])
-
-                # Filter items based on query
-                matching_docs = []
-                file_items = [item for item in items if item.get("file")]  # Only files
-
-                for item in file_items:
-                    name = item.get("name", "")
-                    # Flexible matching - check for individual words in the query
-                    query_words = query.lower().split()
-                    name_lower = name.lower()
-
-                    # Match if any significant word from query appears in filename
-                    match_found = False
-                    for word in query_words:
-                        if (
-                            len(word) > 2 and word in name_lower
-                        ):  # Skip very short words
-                            match_found = True
-                            break
-
-                    # Also check for exact phrase match
-                    if query.lower() in name_lower:
-                        match_found = True
-
-                    if match_found:
-                        matching_docs.append(
-                            {
-                                "name": name,
-                                "id": item.get("id"),
-                                "size": item.get("size"),
-                                "lastModified": item.get("lastModifiedDateTime"),
-                                "webUrl": item.get("webUrl"),
-                                "folder_path": folder,
-                                "organization": config.org_name,
-                            }
-                        )
-
-                all_matching_documents.extend(matching_docs)
-                search_summary.append(
-                    {
-                        "folder": folder,
-                        "total_documents": len(file_items),
-                        "matching_documents": len(matching_docs),
-                        "status": "success",
-                    }
-                )
-
-            except Exception as e:
-                logger.warning(f"Error searching folder {folder}: {e}")
-                search_summary.append(
-                    {
-                        "folder": folder,
-                        "total_documents": 0,
-                        "matching_documents": 0,
-                        "status": "error",
-                        "error": str(e),
-                        "message": f"Error accessing folder: {folder}",
-                    }
-                )
-
-        return {
-            "status": "success",
-            "query": query,
-            "matching_documents": all_matching_documents,
-            "total_matches": len(all_matching_documents),
-            "search_summary": search_summary,
-            "folders_searched": search_folders,
-            "organization": config.org_name,
-            "message": f"Found {len(all_matching_documents)} matching documents in {config.org_name}",
-        }
-
-    except Exception as e:
-        logger.error(f"Error in search_sharepoint_documents: {e}")
-        return {
-            "status": "error",
-            "query": query,
-            "error": str(e),
-            "message": f"Error searching {config.org_name} SharePoint documents",
-            "organization": config.org_name,
-        }
-
-
-@generic_sharepoint_server.tool()
-async def list_sharepoint_folder_contents(
-    folder_path: Optional[str] = None,
-    include_subfolders: bool = True,
-    user_token: Optional[str] = None,
-) -> Dict[str, Any]:
-    """
-    List the contents of a SharePoint folder to explore structure using Microsoft Graph API.
-
-    This tool helps explore SharePoint folder structures for any organization
-    to understand document organization and get counts with user-scoped access.
-
-    Args:
-        folder_path: SharePoint folder path to explore (uses department default if not provided)
-        include_subfolders: Whether to include subfolder information
-        user_token: Optional user access token for delegated access
-
-    Returns:
-        JSON response with folder contents, subfolder counts, and file listings
-    """
-    if not config or not oauth_client:
-        return {
-            "status": "error",
-            "error": "Server not initialized with department configuration",
-            "message": "Please initialize server with a valid department prefix",
-        }
-
-    try:
-        # Get user token from environment variable if not provided
-        if not user_token:
-            user_token = os.getenv("USER_JWT_TOKEN")
-
-        # For local development, don't try OBO if no valid token available
-        if user_token == "user_token_placeholder" or not user_token:
-            logger.info(
-                "No OAuth token available - using application-only authentication for local development"
-            )
-            user_token = None
-        else:
-            logger.info(
-                f"Using OAuth token for SharePoint OBO flow: {bool(user_token)}"
-            )
-
-        # Use default folder if none specified
-        if folder_path is None:
-            folder_path = config.doc_library
-
-        logger.info(
-            f"Listing {config.org_name} SharePoint folder contents: {folder_path}"
-        )
-
-        # Get appropriate access token using OBO flow
-        access_token = await oauth_client.get_access_token(user_token)
-        if not access_token:
-            return {
-                "status": "error",
-                "folder": folder_path,
-                "error": "Failed to obtain access token",
-                "message": "Authentication failed. Check your configuration and user permissions.",
-                "organization": config.org_name,
-            }
-
-        # Get site and drive information
-        success, site_info = await oauth_client.get_site_info(access_token)
-        if not success:
-            return {
-                "status": "error",
-                "folder": folder_path,
-                "error": site_info,
-                "message": "Failed to access SharePoint site",
-                "organization": config.org_name,
-            }
-
-        site_id = site_info.get("id")
-        success, drives_data = await oauth_client.get_site_drives(access_token, site_id)
-        if not success:
-            return {
-                "status": "error",
-                "folder": folder_path,
-                "error": drives_data,
-                "message": "Failed to access document libraries",
-                "organization": config.org_name,
-            }
-
-        drives = drives_data.get("value", [])
-        if not drives:
-            return {
-                "status": "error",
-                "folder": folder_path,
-                "error": "No document libraries found",
-                "message": "No accessible document libraries found",
-                "organization": config.org_name,
-            }
-
-        drive_id = drives[0].get("id")
-
-        # Get folder contents
-        success, items_data = await oauth_client.get_drive_items(
-            access_token, site_id, drive_id, folder_path
-        )
-        if not success:
-            return {
-                "status": "error",
-                "folder": folder_path,
-                "error": items_data,
-                "message": "Failed to access folder contents",
-                "organization": config.org_name,
-            }
-
-        items = items_data.get("value", [])
-
-        # Organize contents
-        folders = []
-        files = []
-
-        for item in items:
-            if item.get("folder"):
-                folder_info = {
-                    "name": item.get("name"),
-                    "id": item.get("id"),
-                    "lastModified": item.get("lastModifiedDateTime"),
-                    "webUrl": item.get("webUrl"),
-                    "childCount": item.get("folder", {}).get("childCount", 0),
-                    "type": "folder",
-                    "organization": config.org_name,
-                }
-                folders.append(folder_info)
-            else:
-                file_info = {
-                    "name": item.get("name"),
-                    "id": item.get("id"),
-                    "size": item.get("size"),
-                    "lastModified": item.get("lastModifiedDateTime"),
-                    "webUrl": item.get("webUrl"),
-                    "fileType": (
-                        item.get("name", "").split(".")[-1].lower()
-                        if "." in item.get("name", "")
-                        else "unknown"
-                    ),
-                    "type": "file",
-                    "organization": config.org_name,
-                }
-                files.append(file_info)
-
-        # Calculate summary statistics for projects/organizational items
-        org_folders = [
-            f
-            for f in folders
-            if any(
-                keyword in f["name"].lower()
-                for keyword in [
-                    "project",
-                    "prospect",
-                    "initiative",
-                    "program",
-                    "strategy",
-                ]
-            )
-        ]
-
-        return {
-            "status": "success",
-            "folder": folder_path,
-            "total_items": len(items),
-            "folder_count": len(folders),
-            "file_count": len(files),
-            "folders": folders,
-            "files": files,
-            "organizational_folders": org_folders,
-            "potential_project_count": sum(f.get("childCount", 0) for f in org_folders),
-            "organization": config.org_name,
-            "authentication": "Microsoft Graph API with On-Behalf-Of flow",
-            "message": f"Found {len(folders)} folders and {len(files)} files in {config.org_name} {folder_path or 'root'}. Organizational folders: {len(org_folders)}",
-        }
-
-    except Exception as e:
-        logger.error(f"Error listing folder contents: {e}")
-        return {
-            "status": "error",
-            "folder": folder_path,
-            "error": str(e),
-            "message": f"Failed to list {config.org_name} folder contents",
-            "organization": config.org_name,
-        }
 
 
 @generic_sharepoint_server.tool()
@@ -625,28 +234,36 @@ async def get_sharepoint_document_content(
 
         # For local development, don't try OBO if no valid token available
         if user_token == "user_token_placeholder" or not user_token:
-            logger.info(
-                "No OAuth token available - using application-only authentication for local development"
-            )
             user_token = None
+
+        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
+        if config.use_delegated_access:
+            if not user_token or not user_token.strip():
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "folder": folder_name,
+                    "file": file_name,
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
+        # No verbose logging during parallel processing
+
+        # Silent document content retrieval
+        # Get appropriate access token based on configuration
+        if config.use_delegated_access:
+            access_token = await oauth_client.get_access_token(user_token)
         else:
-            logger.info(
-                f"Using OAuth token for SharePoint OBO flow: {bool(user_token)}"
-            )
-
-        logger.info(
-            f"Getting content for: {file_name} in {config.org_name} folder: {folder_name}"
-        )
-
-        # Get appropriate access token using OBO flow
-        access_token = await oauth_client.get_access_token(user_token)
+            access_token = await oauth_client.get_application_token()
         if not access_token:
             return {
                 "status": "error",
                 "folder": folder_name,
                 "file": file_name,
                 "error": "Failed to obtain access token",
-                "message": "Authentication failed. Check your configuration and user permissions.",
+                "message": f"Authentication failed for {config.org_name} SharePoint. Please ensure you have the necessary permissions to access this file.",
                 "organization": config.org_name,
             }
 
@@ -737,9 +354,19 @@ async def get_sharepoint_document_content(
 
         # Parse the document content using embedded parser
         try:
-            parsed_content = await parse_document_content_embedded(
-                file_content, file_name
-            )
+            # Suppress any parsing logs
+            import logging
+
+            mpo_logger = logging.getLogger("MPO-SharePoint")
+            original_level = mpo_logger.level
+            mpo_logger.setLevel(logging.ERROR)  # Suppress extraction logs
+
+            try:
+                parsed_content = await parse_document_content_embedded(
+                    file_content, file_name
+                )
+            finally:
+                mpo_logger.setLevel(original_level)  # Restore log level
 
             return {
                 "status": "success",
@@ -778,123 +405,494 @@ async def get_sharepoint_document_content(
 
 
 @generic_sharepoint_server.tool()
-async def search_and_analyze_documents(
-    search_terms: str,
-    folder_path: Optional[str] = None,
+async def get_all_documents_comprehensive(
     user_token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Search for documents and automatically analyze their content for relevant information.
-
-    This tool combines document search with content analysis to find information
-    even when search terms don't appear in document titles.
-
-    Args:
-        search_terms: Terms to search for (will search filenames AND analyze document content)
-        folder_path: Specific folder to search in (optional)
-        user_token: User access token for delegated access
-
-    Returns:
-        JSON response with documents and their analyzed content
+    Get ALL documents from SharePoint by traversing every single folder.
+    This bypasses the broken search API and actually finds everything.
     """
     if not config or not oauth_client:
         return {
             "status": "error",
-            "error": "Server not initialized with department configuration",
-            "message": "Please initialize server with a valid department prefix",
+            "error": "Server not initialized",
+            "message": "Server not initialized with department configuration",
         }
 
     try:
-        # First, do a broad search for potentially relevant documents
-        broad_search = await search_sharepoint_documents(
-            "strategy OR transformative OR railway OR rail",
-            folder_path,
-            True,
-            user_token,
-        )
+        # Silent comprehensive folder traversal
+        # Get authentication token - check environment variable if not provided
+        effective_token = user_token or os.getenv("USER_JWT_TOKEN")
 
-        if broad_search.get("status") != "success" or not broad_search.get(
-            "matching_documents"
-        ):
+        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
+        if config.use_delegated_access:
+            if (
+                not effective_token
+                or effective_token == "user_token_placeholder"
+                or not effective_token.strip()
+            ):
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
+
+        if config.use_delegated_access:
+            access_token = await oauth_client.get_access_token(effective_token)
+        else:
+            access_token = await oauth_client.get_application_token()
+
+        if not access_token:
+            return {"status": "error", "message": "Failed to get access token"}
+
+        # Get site and drives
+        success, site_info = await oauth_client.get_site_info(access_token)
+        if not success:
             return {
-                "status": "no_documents",
-                "message": f"No potentially relevant documents found to analyze in {config.org_name}",
-                "search_terms": search_terms,
-                "organization": config.org_name,
+                "status": "error",
+                "message": f"Failed to get site info: {site_info}",
             }
 
-        # Analyze each document's content for the search terms
-        analyzed_documents = []
+        site_id = site_info.get("id")
+        success, drives_data = await oauth_client.get_site_drives(access_token, site_id)
+        if not success:
+            return {
+                "status": "error",
+                "message": f"Failed to get drives: {drives_data}",
+            }
 
-        for doc in broad_search["matching_documents"][
-            :5
-        ]:  # Limit to first 5 for performance
-            try:
-                # Get document content
-                content_result = await get_sharepoint_document_content(
-                    doc["folder_path"], doc["name"], user_token
-                )
+        drives = drives_data.get("value", [])
+        if not drives:
+            return {"status": "error", "message": "No drives found"}
 
-                if content_result.get("status") == "success":
-                    content = content_result.get("content", "")
+        drive_id = drives[0].get("id")
 
-                    # Check if search terms appear in content
-                    search_words = search_terms.lower().split()
-                    content_lower = content.lower()
-
-                    matches = []
-                    for word in search_words:
-                        if word in content_lower:
-                            # Find context around the word
-                            import re
-
-                            pattern = rf".{{0,100}}{re.escape(word)}.{{0,100}}"
-                            match = re.search(pattern, content, re.IGNORECASE)
-                            if match:
-                                matches.append(match.group())
-
-                    if matches:
-                        analyzed_documents.append(
-                            {
-                                "document": doc,
-                                "content_preview": (
-                                    content[:500] + "..."
-                                    if len(content) > 500
-                                    else content
-                                ),
-                                "matches": matches,
-                                "relevance_score": len(matches),
-                                "organization": config.org_name,
-                            }
-                        )
-
-            except Exception as doc_error:
-                logger.warning(f"Error analyzing document {doc['name']}: {doc_error}")
-                continue
-
-        # Sort by relevance
-        analyzed_documents.sort(key=lambda x: x["relevance_score"], reverse=True)
+        # Recursively get ALL documents from ALL folders silently
+        all_documents = []
+        folders_processed = {"count": 0}  # Track folder count
+        await _traverse_all_folders_recursive(
+            oauth_client,
+            access_token,
+            site_id,
+            drive_id,
+            "",
+            all_documents,
+            folders_processed,
+            max_depth=10,
+        )
 
         return {
             "status": "success",
-            "search_terms": search_terms,
-            "documents_analyzed": len(broad_search["matching_documents"]),
-            "relevant_documents": analyzed_documents,
-            "total_relevant": len(analyzed_documents),
+            "total_documents": len(all_documents),
+            "folders_processed": folders_processed["count"],
+            "documents": all_documents,
             "organization": config.org_name,
-            "authentication": "Microsoft Graph API with On-Behalf-Of flow",
-            "message": f"Analyzed {len(analyzed_documents)} relevant documents in {config.org_name} containing search terms",
+            "message": f"Found {len(all_documents)} documents from {folders_processed['count']} folders by comprehensive traversal",
         }
 
     except Exception as e:
-        logger.error(f"Error in search_and_analyze_documents: {e}")
+        logger.error(f"Error in comprehensive document retrieval: {e}")
         return {
             "status": "error",
-            "search_terms": search_terms,
-            "error": str(e),
-            "message": f"Error analyzing {config.org_name} documents",
+            "message": f"Failed to get all documents: {str(e)}",
             "organization": config.org_name,
         }
+
+
+async def _traverse_all_folders_recursive(
+    oauth_client,
+    access_token: str,
+    site_id: str,
+    drive_id: str,
+    folder_path: str,
+    all_documents: list,
+    folders_processed: dict,
+    max_depth: int = 10,
+    current_depth: int = 0,
+):
+    """Recursively traverse ALL folders and collect ALL documents"""
+    if current_depth >= max_depth:
+        return
+
+    try:
+        folders_processed["count"] += 1  # Increment folder count
+
+        # Get all items in current folder
+        success, items_data = await oauth_client.get_drive_items(
+            access_token, site_id, drive_id, folder_path
+        )
+
+        if not success:
+            logger.warning(f"Failed to access folder: {folder_path}")
+            return
+
+        items = items_data.get("value", [])
+
+        for item in items:
+            if item.get("file"):  # It's a file
+                doc_info = {
+                    "name": item.get("name", "Unknown"),
+                    "id": item.get("id", ""),
+                    "webUrl": item.get("webUrl", ""),
+                    "lastModified": item.get("lastModifiedDateTime", ""),
+                    "size": item.get("size", 0),
+                    "folder_path": folder_path,
+                    "organization": config.org_name,
+                }
+                all_documents.append(doc_info)
+
+            elif item.get("folder"):  # It's a folder, recurse into it
+                subfolder_name = item.get("name", "")
+                if subfolder_name:
+                    subfolder_path = (
+                        f"{folder_path}/{subfolder_name}"
+                        if folder_path
+                        else subfolder_name
+                    )
+                    await _traverse_all_folders_recursive(
+                        oauth_client,
+                        access_token,
+                        site_id,
+                        drive_id,
+                        subfolder_path,
+                        all_documents,
+                        folders_processed,
+                        max_depth,
+                        current_depth + 1,
+                    )
+
+    except Exception as e:
+        logger.warning(f"Error traversing folder {folder_path}: {e}")
+
+
+@generic_sharepoint_server.tool()
+async def analyze_all_documents_for_content(
+    search_terms: str,
+    user_token: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Get ALL documents and analyze each one for the search terms using highly optimized parallel processing.
+    This uses concurrent processing with minimal logging for maximum speed.
+    """
+    if not config or not oauth_client:
+        return {
+            "status": "error",
+            "error": "Server not initialized",
+            "message": "Server not initialized with department configuration",
+        }
+
+    try:
+        import time
+
+        start_time = time.time()
+
+        # Get user token from parameter or environment variable
+        effective_token = user_token or os.getenv("USER_JWT_TOKEN")
+
+        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
+        if config.use_delegated_access:
+            if (
+                not effective_token
+                or effective_token == "user_token_placeholder"
+                or not effective_token.strip()
+            ):
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
+
+        # Get all documents using comprehensive traversal (no verbose logging)
+        all_docs_result = await get_all_documents_comprehensive(effective_token)
+
+        if all_docs_result.get("status") != "success":
+            return all_docs_result
+
+        all_documents = all_docs_result.get("documents", [])
+        total_docs = len(all_documents)
+        folders_processed = all_docs_result.get("folders_processed", 0)
+
+        # Use highly parallel processing for much faster analysis with crash prevention
+        try:
+            relevant_documents = await _analyze_documents_parallel_ultra_fast(
+                all_documents, search_terms, effective_token
+            )
+
+            # Ensure we have a valid list
+            if not isinstance(relevant_documents, list):
+                relevant_documents = []
+
+        except Exception as analysis_error:
+            logger.error(f"Document analysis crashed: {str(analysis_error)}")
+            return {
+                "status": "error",
+                "message": f"Document analysis failed: {str(analysis_error)}",
+                "organization": config.org_name,
+                "crash_prevention": "Applied",
+            }
+
+        # Calculate performance metrics
+        end_time = time.time()
+        processing_time = end_time - start_time
+
+        # Sort by relevance score (highest first)
+        relevant_documents.sort(key=lambda x: x["relevance_score"], reverse=True)
+
+        # Simple response size limiting (remove double truncation that causes slowdown)
+        limited_results = relevant_documents[:8]  # Just take top 8 results
+
+        # Light content limiting
+        for doc in limited_results:
+            if "content_preview" in doc:
+                doc["content_preview"] = (
+                    doc["content_preview"][:200] + "..."
+                    if len(doc["content_preview"]) > 200
+                    else doc["content_preview"]
+                )
+            if "matches" in doc:
+                doc["matches"] = doc["matches"][:3]
+
+        # FORCE performance logging - short message to prevent truncation
+        perf_message = f"🚀 {folders_processed}F/{total_docs}D in {round(processing_time, 1)}s → {len(relevant_documents)} results"
+        logger.info(perf_message)
+        print(perf_message)
+
+        # Also log to stderr for guaranteed visibility
+        import sys
+
+        print(perf_message, file=sys.stderr)
+
+        # Build response with aggressive size control
+        response = {
+            "status": "success",
+            "search_terms": search_terms,
+            "documents_analyzed": total_docs,
+            "relevant_documents": limited_results,
+            "total_relevant": len(relevant_documents),
+            "organization": config.org_name,
+            "processing_time_seconds": round(processing_time, 1),
+            "message": f"🚀 ANALYSIS COMPLETE: {folders_processed} folders, {total_docs} docs in {round(processing_time, 1)}s → {len(relevant_documents)} results (top {len(limited_results)})",
+        }
+
+        # Simple, fast response - no more double truncation
+
+        # FINAL PERFORMANCE SUMMARY - appears after all processing
+        final_summary = f"\n🚀 FINAL: {folders_processed} folders, {total_docs} documents → {round(processing_time, 1)}s total → {len(relevant_documents)} results"
+        print(final_summary)
+        logger.info(final_summary.strip())
+
+        return response
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Analysis failed: {str(e)}",
+            "organization": config.org_name,
+        }
+
+
+async def _analyze_documents_parallel_ultra_fast(
+    documents: List[Dict], search_terms: str, user_token: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Ultra-fast parallel document analysis with minimal logging and optimized performance."""
+    relevant_documents = []
+    max_workers = min(
+        20, max(8, len(documents) // 3)
+    )  # AGGRESSIVE: Up to 20 workers for maximum speed
+
+    # Global content cache with locks
+    content_cache = {}
+    cache_hits = 0
+
+    async def _process_document_fast(doc_info: Dict) -> Optional[Dict]:
+        """Fast document processing with optimized content retrieval."""
+        nonlocal cache_hits
+
+        try:
+            doc_name = doc_info.get("name", "Unknown")
+            folder_path = doc_info.get("folder_path", "")
+
+            # SPEED BOOST: Skip obviously irrelevant files by extension only
+            filename_lower = doc_name.lower()
+            search_words_lower = [w.lower() for w in search_terms.split() if len(w) > 2]
+
+            # Skip only non-document files (keep all actual documents for content analysis)
+            if not any(
+                ext in filename_lower
+                for ext in [".pdf", ".docx", ".doc", ".xlsx", ".pptx", ".txt"]
+            ):
+                return None  # Skip only non-document files
+
+            # Quick filename relevance check
+            search_lower = search_terms.lower()
+            filename_score = 20 if search_lower in doc_name.lower() else 0
+
+            # Check cache first
+            cache_key = f"{folder_path}::{doc_name}"
+            if cache_key in content_cache:
+                content = content_cache[cache_key]
+                cache_hits += 1
+            else:
+                # Get document content - SILENT (no OAuth logging)
+                import logging
+
+                oauth_logger = logging.getLogger("sharepoint_oauth")
+                mpo_logger = logging.getLogger("MPO-SharePoint")
+                original_level_oauth = oauth_logger.level
+                original_level_mpo = mpo_logger.level
+                oauth_logger.setLevel(logging.ERROR)  # Suppress OAuth logs
+                mpo_logger.setLevel(logging.ERROR)  # Suppress MPO logs
+
+                try:
+                    content_result = await get_sharepoint_document_content(
+                        folder_path, doc_name, user_token
+                    )
+                    content = (
+                        content_result.get("content", "")
+                        if content_result.get("status") == "success"
+                        else ""
+                    )
+                    content_cache[cache_key] = content
+                finally:
+                    # Restore original log levels
+                    oauth_logger.setLevel(original_level_oauth)
+                    mpo_logger.setLevel(original_level_mpo)
+
+            if not content and filename_score == 0:
+                return None
+
+            # Fast content analysis
+            content_lower = content.lower()
+            search_words = [
+                w.strip() for w in search_lower.split() if len(w.strip()) > 2
+            ]
+
+            # Score document relevance
+            relevance_score = filename_score
+            matches = []
+
+            # Exact phrase match (highest priority)
+            if search_lower in content_lower:
+                relevance_score += 30
+                # Get snippet around exact match
+                idx = content_lower.find(search_lower)
+                snippet = content[
+                    max(0, idx - 40) : idx + len(search_terms) + 40
+                ].strip()
+                matches.append(snippet)
+
+            # Individual word scoring
+            for word in search_words:
+                count = min(content_lower.count(word), 6)  # Cap count
+                if count > 0:
+                    relevance_score += count * 1.5
+
+                    # Get one snippet per word (for speed)
+                    if len(matches) < 4:
+                        pos = content_lower.find(word)
+                        if pos != -1:
+                            snippet = content[
+                                max(0, pos - 25) : pos + len(word) + 25
+                            ].strip()
+                            if snippet and snippet not in matches:
+                                matches.append(snippet)
+
+            # Return result if relevant
+            if relevance_score > 0:
+                return {
+                    "document": {
+                        "name": doc_info.get("name", "Unknown"),
+                        "id": doc_info.get("id", ""),
+                        "webUrl": doc_info.get("webUrl", ""),
+                        "folder_path": doc_info.get("folder_path", ""),
+                        "size": doc_info.get("size", 0),
+                    },
+                    "relevance_score": relevance_score,
+                    "content_preview": _get_optimized_content_preview(content),
+                    "matches": matches[:3],  # Reduced from 6 to 3
+                    "organization": config.org_name,
+                }
+
+            return None
+
+        except Exception:
+            return None
+
+    # Process documents with asyncio semaphore for concurrency control
+    semaphore = asyncio.Semaphore(max_workers)
+
+    async def _process_with_semaphore(doc_info):
+        async with semaphore:
+            try:
+                # SPEED: Much shorter timeout for faster processing
+                return await asyncio.wait_for(
+                    _process_document_fast(doc_info),
+                    timeout=15.0,  # Reduced to 15 seconds for speed
+                )
+            except asyncio.TimeoutError:
+                return None  # Handle timeout gracefully
+            except Exception:
+                return None  # Silently handle any processing errors
+
+    # Create all tasks and process them concurrently with robust error handling
+    tasks = [_process_with_semaphore(doc_info) for doc_info in documents]
+
+    # Process all tasks concurrently with progress tracking and error resilience
+    results = []
+    high_quality_count = 0
+
+    try:
+        # Use asyncio.as_completed for concurrent processing
+        completed_count = 0
+        for coro in asyncio.as_completed(tasks):
+            try:
+                result = await coro
+                completed_count += 1
+
+                if result:
+                    relevant_documents.append(result)
+                    if result["relevance_score"] > 15:
+                        high_quality_count += 1
+
+                    # AGGRESSIVE early termination for blazing speed
+                    if high_quality_count >= 8 and len(relevant_documents) >= 12:
+                        # Cancel remaining tasks IMMEDIATELY for speed
+                        for task in tasks:
+                            if not task.done():
+                                try:
+                                    task.cancel()
+                                except Exception:
+                                    pass
+                        break  # Exit immediately
+
+            except Exception:
+                # Continue processing even if individual tasks fail
+                continue
+
+    except Exception:
+        # If the entire processing fails, return what we have so far
+        pass
+
+    return relevant_documents
+
+
+def _get_optimized_content_preview(content: str) -> str:
+    """Ultra-fast content preview - no regex, just simple truncation for speed."""
+    if not content:
+        return ""
+
+    # Much smaller preview to prevent MCP response size issues
+    if len(content) <= 300:
+        return content
+
+    # Just take first 300 characters and add ellipsis
+    return content[:300] + "..."
 
 
 @generic_sharepoint_server.tool()
@@ -922,8 +920,11 @@ async def check_sharepoint_permissions(
             f"Checking {config.org_name} SharePoint permissions and connection status"
         )
 
+        # Get user token from parameter or environment variable
+        effective_token = user_token or os.getenv("USER_JWT_TOKEN")
+
         # Test OAuth connection with OBO flow
-        test_result = await oauth_client.test_connection(user_token)
+        test_result = await oauth_client.test_connection(effective_token)
 
         return {
             "status": "success",
@@ -952,54 +953,6 @@ async def check_sharepoint_permissions(
             "error": str(e),
             "message": f"Failed to check {config.org_name} SharePoint permissions",
             "organization": config.org_name,
-        }
-
-
-@generic_sharepoint_server.tool()
-async def get_sharepoint_configuration() -> Dict[str, Any]:
-    """
-    Get current SharePoint server configuration and department information.
-
-    Returns:
-        JSON response with server configuration details
-    """
-    if not config or not oauth_client:
-        return {
-            "status": "error",
-            "error": "Server not initialized with department configuration",
-            "message": "Please initialize server with a valid department prefix",
-        }
-
-    try:
-        return {
-            "status": "success",
-            "organization": config.org_name,
-            "department_prefix": config.department_prefix,
-            "configuration": {
-                "site_url": oauth_client.site_url,
-                "doc_library": config.doc_library,
-                "default_search_folders": config.default_search_folders,
-                "delegated_access": config.use_delegated_access,
-                "obo_scope": config.obo_scope,
-            },
-            "authentication_method": "Microsoft Graph API with On-Behalf-Of flow",
-            "available_tools": [
-                "search_sharepoint_documents",
-                "list_sharepoint_folder_contents",
-                "get_sharepoint_document_content",
-                "search_and_analyze_documents",
-                "check_sharepoint_permissions",
-                "get_sharepoint_configuration",
-            ],
-            "server_type": "Multi-Department Generic SharePoint Server",
-            "message": f"SharePoint MCP server configured for {config.org_name}",
-        }
-    except Exception as e:
-        logger.error(f"Error getting configuration: {e}")
-        return {
-            "status": "error",
-            "error": str(e),
-            "message": "Failed to get server configuration",
         }
 
 
@@ -1051,8 +1004,7 @@ async def parse_document_content_embedded(content: bytes, file_name: str) -> str
     try:
         file_ext = file_name.lower().split(".")[-1] if "." in file_name else ""
 
-        logger.info(f"Parsing document: {file_name} (type: {file_ext})")
-
+        # Parse silently - no logging during parallel processing
         if file_ext == "pdf":
             return await parse_pdf_content_embedded(content, file_name)
         elif file_ext in ["docx", "doc"]:
@@ -1103,18 +1055,10 @@ async def parse_pdf_content_embedded(content: bytes, file_name: str) -> str:
 
             if text_content:
                 extracted_text = "\n\n".join(text_content)
-                logger.info(
-                    f"Successfully extracted {len(extracted_text)} characters from {file_name} using pypdf"
-                )
                 return extracted_text
 
-        except (ImportError, Exception) as pypdf_error:
-            if isinstance(pypdf_error, ImportError):
-                logger.info(f"pypdf not available for {file_name}, trying pdfplumber")
-            else:
-                logger.warning(
-                    f"pypdf failed for {file_name}: {pypdf_error}, trying pdfplumber"
-                )
+        except (ImportError, Exception):
+            pass  # Silent fallback
 
         # Fallback to pdfplumber
         try:
@@ -1130,27 +1074,17 @@ async def parse_pdf_content_embedded(content: bytes, file_name: str) -> str:
                         if text and text.strip():
                             text_content.append(f"--- Page {page_num + 1} ---")
                             text_content.append(text.strip())
-                    except Exception as page_error:
-                        logger.warning(
-                            f"Error extracting page {page_num + 1} from {file_name}: {page_error}"
-                        )
-                        continue
-
-            if text_content:
-                extracted_text = "\n\n".join(text_content)
-                logger.info(
-                    f"Successfully extracted {len(extracted_text)} characters from {file_name} using pdfplumber"
-                )
+                    except Exception:
+                        continue  # Silent skip on page errors "\n\n".join(text_content)
                 return extracted_text
 
-        except Exception as pdfplumber_error:
-            logger.error(f"pdfplumber also failed for {file_name}: {pdfplumber_error}")
+        except Exception:
+            pass  # Silent failure
 
         return f"Unable to extract text from PDF {file_name}. Both pypdf and pdfplumber failed."
 
-    except Exception as e:
-        logger.error(f"Error in PDF parsing for {file_name}: {e}")
-        return f"Error parsing PDF {file_name}: {str(e)}"
+    except Exception:
+        return f"Error parsing PDF {file_name}"
 
 
 async def parse_word_content_embedded(content: bytes, file_name: str) -> str:
@@ -1191,18 +1125,13 @@ async def parse_word_content_embedded(content: bytes, file_name: str) -> str:
                         text_content.append(elem.text)
 
                 extracted_text = "".join(text_content)
-                logger.info(
-                    f"Successfully extracted {len(extracted_text)} characters from Word document {file_name}"
-                )
                 return extracted_text
 
-        except Exception as docx_error:
-            logger.error(f"Error parsing DOCX {file_name}: {docx_error}")
-            return f"Error parsing Word document {file_name}: {str(docx_error)}"
+        except Exception:
+            return f"Error parsing Word document {file_name}"
 
-    except Exception as e:
-        logger.error(f"Error in Word document parsing for {file_name}: {e}")
-        return f"Error parsing Word document {file_name}: {str(e)}"
+    except Exception:
+        return f"Error parsing Word document {file_name}"
 
 
 async def parse_text_content_embedded(content: bytes, file_name: str) -> str:
@@ -1223,21 +1152,16 @@ async def parse_text_content_embedded(content: bytes, file_name: str) -> str:
         for encoding in encodings:
             try:
                 decoded_text = content.decode(encoding)
-                logger.info(
-                    f"Successfully decoded text file {file_name} using {encoding} encoding"
-                )
-                return decoded_text
+                return decoded_text.strip()
             except UnicodeDecodeError:
                 continue
 
-        # If all encodings fail, use utf-8 with error handling
+        # Silent fallback to utf-8 with error handling
         decoded_text = content.decode("utf-8", errors="ignore")
-        logger.warning(f"Used utf-8 with error handling for {file_name}")
         return decoded_text
 
-    except Exception as e:
-        logger.error(f"Error parsing text file {file_name}: {e}")
-        return f"Error parsing text file {file_name}: {str(e)}"
+    except Exception:
+        return f"Error parsing text file {file_name}"
 
 
 async def parse_generic_content_embedded(content: bytes, file_name: str) -> str:
@@ -1263,9 +1187,6 @@ async def parse_generic_content_embedded(content: bytes, file_name: str) -> str:
             )
 
             if len(cleaned_text.strip()) > 10:  # If we got reasonable text
-                logger.info(
-                    f"Successfully extracted text from generic file {file_name}"
-                )
                 return cleaned_text
         except Exception as decode_error:
             logger.warning(f"Could not decode {file_name} as text: {decode_error}")
