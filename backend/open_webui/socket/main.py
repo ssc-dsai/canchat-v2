@@ -191,6 +191,7 @@ async def crew_mcp_query(sid, data):
     try:
         # Authenticate user from session
         if sid not in SESSION_POOL:
+            log.error(f"crew-mcp-query: Session {sid} not found in SESSION_POOL")
             await sio.emit(
                 "crew-mcp-error",
                 {"error": "Unauthorized - session not found", "code": 401},
@@ -199,6 +200,8 @@ async def crew_mcp_query(sid, data):
             return
 
         user_session = SESSION_POOL[sid]
+        log.info(f"crew-mcp-query: Retrieved session for sid={sid}")
+        log.info(f"crew-mcp-query: Session keys: {list(user_session.keys())}")
 
         # Extract request data
         query = data.get("query", "")
@@ -213,20 +216,19 @@ async def crew_mcp_query(sid, data):
             return
 
         log.info(
-            f"CrewMCP WebSocket query from user {user_session.get('id')}: {query[:100]}"
+            f"CrewMCP WebSocket query from user {user_session. get('id')}: {query[: 100]}"
         )
 
         # Emit processing status
         await sio.emit(
             "crew-mcp-status",
-            {"status": "processing", "message": "CrewAI is analyzing your request..."},
+            {"status": "processing", "message": "CrewAI is analyzing your request... "},
             room=sid,
         )
 
         # Import crew_mcp_manager
         try:
-            from mcp_backend.integration.crew_mcp_integration import CrewMCPManager
-            from mcp_backend.routers.crew_mcp import extract_graph_access_token
+            from mcp_backend.routers.crew_mcp import crew_mcp_manager
             import os
             import asyncio
             import concurrent.futures
@@ -239,19 +241,61 @@ async def crew_mcp_query(sid, data):
             )
             return
 
-        # Initialize CrewMCPManager
-        crew_mcp_manager = CrewMCPManager()
+        # Check if manager is initialized
+        if not crew_mcp_manager:
+            await sio.emit(
+                "crew-mcp-error",
+                {"error": "CrewMCP manager not initialized", "code": 503},
+                room=sid,
+            )
+            return
 
-        # Handle user token for SharePoint access (if needed)
-        use_delegated_access = (
-            os.getenv("SHP_USE_DELEGATED_ACCESS", "false").lower() == "true"
+        # Get the Graph access token from session (stored during websocket connect)
+        user_access_token = user_session.get("graph_access_token")
+
+        # **ENHANCED LOGGING**
+        log.info(f"crew-mcp-query:  Checking for graph_access_token in session")
+        log.info(
+            f"crew-mcp-query: 'graph_access_token' in user_session = {('graph_access_token' in user_session)}"
         )
+        log.info(f"crew-mcp-query:  user_access_token type = {type(user_access_token)}")
+        log.info(f"crew-mcp-query: user_access_token bool = {bool(user_access_token)}")
+
+        if user_access_token:
+            log.info(
+                f"crew-mcp-query: Token found!  Length={len(user_access_token)}, First 50 chars={user_access_token[:50]}"
+            )
+        else:
+            log.warning(
+                f"crew-mcp-query: NO TOKEN FOUND in session.  Session has keys: {list(user_session. keys())}"
+            )
+            log.warning(
+                f"crew-mcp-query: user_access_token value = {repr(user_access_token)}"
+            )
+
+        use_delegated_access = os.getenv(
+            "SHP_USE_DELEGATED_ACCESS", "false"
+        ).lower() in ("true", "1", "yes")
+
+        log.info(f"crew-mcp-query:  SHP_USE_DELEGATED_ACCESS={use_delegated_access}")
+
         if use_delegated_access:
-            # For WebSocket, we'd need to pass the token in the data or extract from environ
-            # For now, we'll set it to None and let it use app credentials
+            # Delegated access (OBO flow) - use user token
+            if user_access_token:
+                crew_mcp_manager.set_user_token(user_access_token)
+                log.info(
+                    "crew-mcp-query: Set user token on crew_mcp_manager (delegated access)"
+                )
+            else:
+                crew_mcp_manager.set_user_token(None)
+                log.warning(
+                    "crew-mcp-query: SHP_USE_DELEGATED_ACCESS=true but no user token available - SharePoint access may fail"
+                )
+        else:
+            # Application access (client credentials flow) - no user token needed
             crew_mcp_manager.set_user_token(None)
             log.info(
-                "WebSocket CrewMCP: Using application access (no user token available in WebSocket)"
+                "crew-mcp-query: Using SharePoint application access (client credentials flow) - SHP_USE_DELEGATED_ACCESS=false"
             )
 
         # Get available tools
@@ -260,7 +304,7 @@ async def crew_mcp_query(sid, data):
             await sio.emit(
                 "crew-mcp-error",
                 {
-                    "error": "No MCP tools available. Check MCP server configuration.",
+                    "error": "No MCP tools available.  Check MCP server configuration.",
                     "code": 503,
                 },
                 room=sid,
