@@ -82,10 +82,10 @@ async function generateUserAuthFiles(page: Page, authPage: AuthPage, basePage: a
 		await authPage.login(user.email, user.password);
 		await saveAuthState(page, `${user.username}.json`);
 		if (user.username !== 'pending') {
-            await basePage.signOut();
-        }else {
-            await authPage.signOutPendingUser(); 
-        }
+			await basePage.signOut();
+		} else {
+			await authPage.signOutPendingUser();
+		}
 	}
 }
 

@@ -42,7 +42,7 @@ export class AuthPage extends BasePage {
 			name: this.t["Okay, Let's Go!"] || "Okay, Let's Go!"
 		});
 		this.signOutButtonPendingUser = this.page.getByRole('button', {
-			name: this.t["Sign Out"] || "Sign Out"
+			name: this.t['Sign Out'] || 'Sign Out'
 		});
 	}
 

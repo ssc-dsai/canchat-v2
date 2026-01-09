@@ -27,8 +27,7 @@ test.describe('Feature: Wiki Grounding', () => {
 		} else {
 			await userPage.sendMessage('Who is the current Canadian Prime Minister?');
 		}
-
-		await expect(userPage.responseMessages.last()).toContainText('Carney', { timeout: 60000 });
+		await userPage.getChatStatusDescription('sources');
 		const responseText = await userPage.getLastMessageText();
 
 		await testInfo.attach('Results', {

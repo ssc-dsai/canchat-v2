@@ -8,16 +8,16 @@ export class ChatPage extends BasePage {
 	readonly regenerateButton: Locator;
 	readonly responseMessages: Locator;
 	readonly responseSelector = '#response-content-container';
+	chatStatusDescription!: Locator;
 
 	constructor(page: Page, lang: Language = 'en-GB') {
 		super(page, lang);
 
 		this.messageInput = page.locator('#chat-input');
-
 		this.regenerateButton = page.locator('div:nth-child(8) > .visible');
-
 		this.responseMessages = page.locator('#response-content-container');
 		this.responseSelector = '#response-content-container';
+		this.chatStatusDescription = page.locator('.status-description');
 
 		this.updateLanguage(lang);
 	}
@@ -78,6 +78,14 @@ export class ChatPage extends BasePage {
 		);
 
 		await this.waitToSettle(1500);
+	}
+
+	/**
+	 * Retrieves the chat status description displayed above the answer
+	 * Example is wiki grounding "Enhanced with 5 ressources"
+	 */
+	async getChatStatusDescription(status: string) {
+		await expect(this.chatStatusDescription).toContainText(status, { timeout: 60000 });
 	}
 
 	/**
