@@ -8,6 +8,7 @@ export class AuthPage extends BasePage {
 	createAccountButton!: Locator;
 	nameInput!: Locator;
 	onboardingButton!: Locator;
+	signOutButtonPendingUser!: Locator;
 	readonly isFirstRunButton: Locator;
 
 	constructor(page: Page, lang: Language = 'en-GB') {
@@ -39,6 +40,9 @@ export class AuthPage extends BasePage {
 		});
 		this.onboardingButton = this.page.getByRole('button', {
 			name: this.t["Okay, Let's Go!"] || "Okay, Let's Go!"
+		});
+		this.signOutButtonPendingUser = this.page.getByRole('button', {
+			name: this.t["Sign Out"] || "Sign Out"
 		});
 	}
 
@@ -77,5 +81,13 @@ export class AuthPage extends BasePage {
 		// Handle "Ok, Let's Go!" onboarding popup
 		await this.onboardingButton.waitFor({ state: 'visible', timeout: 5000 });
 		await this.onboardingButton.click();
+	}
+
+	/**
+	 * Signs the user out and verifies redirection to the auth page.
+	 */
+	async signOutPendingUser() {
+		await this.signOutButtonPendingUser.click();
+		await expect(this.page).toHaveURL(/\/auth/);
 	}
 }

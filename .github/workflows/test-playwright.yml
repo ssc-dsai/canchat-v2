@@ -151,8 +151,3 @@ jobs:
           echo "${{ steps.playwright_summary.outputs.summary }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"  >> $GITHUB_STEP_SUMMARY
- 
-      # - name: Remove Docker Container
-      #   if: ${{ always() }}
-      #   run: |
-      #     docker rm -f canchat
