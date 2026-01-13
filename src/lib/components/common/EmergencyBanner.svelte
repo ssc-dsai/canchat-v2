@@ -50,7 +50,7 @@
 	}
 
 	:global(.emergency-message-content a) {
-		color: white;
+		color: #60a5fa !important;
 		text-decoration: underline;
 		font-weight: 600;
 	}
