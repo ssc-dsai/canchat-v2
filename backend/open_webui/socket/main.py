@@ -366,31 +366,27 @@ async def connect(sid, environ, auth):
         if user:
             session_data = user.model_dump()
 
-            # ============ EXTRACT GRAPH ACCESS TOKEN DIRECTLY FROM ENVIRON ============
+            # Extract Graph API access token from OAuth2 proxy header
             graph_access_token = environ.get("HTTP_X_FORWARDED_ACCESS_TOKEN")
 
             if graph_access_token:
                 session_data["graph_access_token"] = graph_access_token
                 log.info(
-                    f"✅ Stored Graph access token for user {user. id} (length: {len(graph_access_token)})"
+                    f"Stored Graph access token for user {user.id} (length: {len(graph_access_token)})"
                 )
             else:
-                log.warning(
-                    f"❌ HTTP_X_FORWARDED_ACCESS_TOKEN not found in environ for user {user. id}"
-                )
+                log.debug(f"No Graph access token found for user {user.id}")
 
             # Store in SESSION_POOL
             SESSION_POOL[sid] = session_data
 
-            # ============ VERIFY TOKEN WAS STORED (important for Redis) ============
+            # Verify token storage (important for Redis-backed SESSION_POOL)
             stored_session = SESSION_POOL.get(sid)
             if stored_session and "graph_access_token" in stored_session:
-                log.info(
-                    f"✅ Verified: graph_access_token successfully stored in SESSION_POOL[{sid}]"
-                )
+                log.debug(f"Verified graph_access_token stored in SESSION_POOL[{sid}]")
             elif graph_access_token:
                 log.error(
-                    f"❌ ERROR: graph_access_token NOT in SESSION_POOL after storage! This is a Redis/storage issue."
+                    f"Failed to store graph_access_token in SESSION_POOL[{sid}] - possible Redis issue"
                 )
 
             if user.id in USER_POOL:
@@ -416,23 +412,21 @@ async def user_join(sid, data):
     if not user:
         return
 
-    # CRITICAL FIX: Build complete session object BEFORE writing to Redis
+    # Build complete session object before writing to Redis
     # This ensures atomic update and prevents race conditions
     existing_session = SESSION_POOL.get(sid, {})
     graph_access_token = existing_session.get("graph_access_token")
 
-    # Build the new session with user data AND preserved token
+    # Build the new session with user data and preserved token
     new_session = user.model_dump()
     if graph_access_token:
         new_session["graph_access_token"] = graph_access_token
-        log.info(
-            f"✅ Preserving Graph access token for user {user.id} during user-join (length: {len(graph_access_token)})"
+        log.debug(
+            f"Preserving Graph access token for user {user.id} during user-join (length: {len(graph_access_token)})"
         )
 
     # Single atomic update to Redis
     SESSION_POOL[sid] = new_session
-
-    # Rest of the function remains the same
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:

@@ -79,7 +79,7 @@ def extract_graph_access_token(request: Request) -> Optional[str]:
 
 async def get_graph_access_token_for_user(request: Request) -> Optional[str]:
     """
-    Get the Graph API access token directly from OAuth2 proxy headers.
+    Get the Graph API access token from OAuth2 proxy headers.
     This token will be set globally for ALL MCP servers to use.
     """
     return extract_graph_access_token(request)
