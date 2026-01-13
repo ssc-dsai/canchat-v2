@@ -1972,38 +1972,44 @@
 			<Pane defaultSize={50} class="h-full flex w-full relative">
 				<div class="absolute top-12 left-0 right-0 w-full z-30">
 					<div class=" flex flex-col gap-1 w-full">
-						{#if $config?.emergency_message?.enabled && $config?.emergency_message?.content}
-							<div
-								class="bg-red-500/20 border-b border-red-500/30 text-white px-4 py-2.5 shadow-sm"
-								role="alert"
-							>
-								<div class="flex items-start gap-3">
-									<div class="flex-shrink-0 mt-0.5">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="2"
-											stroke="currentColor"
-											class="w-5 h-5 text-red-400"
+						{#if $config?.emergency_message?.enabled && ($config?.emergency_message?.content || $config?.emergency_message?.content_fr)}
+							{@const messageContent =
+								$i18n.language === 'fr-CA' && $config.emergency_message.content_fr
+									? $config.emergency_message.content_fr
+									: $config.emergency_message.content}
+							{#if messageContent}
+								<div
+									class="bg-red-600/20 dark:bg-red-500/20 border border-red-600/30 dark:border-red-500/30 px-4 py-2.5 rounded-lg shadow-sm"
+									role="alert"
+								>
+									<div class="flex items-start gap-3">
+										<div class="flex-shrink-0 mt-0.5">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="2"
+												stroke="currentColor"
+												class="w-5 h-5 text-red-600 dark:text-red-400"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+												/>
+											</svg>
+										</div>
+										<div
+											class="flex-1 text-sm text-red-900 dark:text-red-100 emergency-message-content"
+											style="white-space: pre-wrap;"
 										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-											/>
-										</svg>
-									</div>
-									<div
-										class="flex-1 text-sm emergency-message-content"
-										style="white-space: pre-wrap;"
-									>
-										{@html marked.parse(
-											DOMPurify.sanitize($config.emergency_message.content.replace(/\n/g, '  \n'))
-										)}
+											{@html marked.parse(
+												DOMPurify.sanitize(messageContent.replace(/\n/g, '  \n'))
+											)}
+										</div>
 									</div>
 								</div>
-							</div>
+							{/if}
 						{/if}
 						{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
 							{#each $banners.filter((b) => (b.lang ? b.lang === $i18n.language : true) && (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true)) as banner}
@@ -2033,7 +2039,7 @@
 						<div
 							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 							class:pt-36={$config?.emergency_message?.enabled &&
-								$config?.emergency_message?.content}
+								($config?.emergency_message?.content || $config?.emergency_message?.content_fr)}
 							id="messages-container"
 							bind:this={messagesContainerElement}
 							on:scroll={(e) => {

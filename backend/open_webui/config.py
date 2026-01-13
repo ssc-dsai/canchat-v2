@@ -1306,6 +1306,12 @@ EMERGENCY_SYSTEM_MESSAGE_CONTENT = PersistentConfig(
     os.environ.get("EMERGENCY_SYSTEM_MESSAGE_CONTENT", ""),
 )
 
+EMERGENCY_SYSTEM_MESSAGE_CONTENT_FR = PersistentConfig(
+    "EMERGENCY_SYSTEM_MESSAGE_CONTENT_FR",
+    "ui.emergency_message.content_fr",
+    os.environ.get("EMERGENCY_SYSTEM_MESSAGE_CONTENT_FR", ""),
+)
+
 
 SHOW_ADMIN_DETAILS = PersistentConfig(
     "SHOW_ADMIN_DETAILS",

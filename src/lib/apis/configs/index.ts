@@ -206,6 +206,7 @@ export const setBanners = async (token: string, banners: Banner[]) => {
 export interface EmergencyMessageConfig {
 	enabled: boolean;
 	content: string;
+	content_fr: string;
 }
 
 export const getEmergencyMessageConfig = async (token: string): Promise<EmergencyMessageConfig> => {

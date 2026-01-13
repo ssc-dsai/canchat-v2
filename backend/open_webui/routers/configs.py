@@ -186,6 +186,7 @@ async def get_banners(
 class EmergencyMessageConfigForm(BaseModel):
     enabled: bool
     content: str
+    content_fr: str
 
 
 @router.get("/emergency-message", response_model=EmergencyMessageConfigForm)
@@ -193,6 +194,7 @@ async def get_emergency_message_config(request: Request, user=Depends(get_admin_
     return {
         "enabled": request.app.state.config.EMERGENCY_SYSTEM_MESSAGE_ENABLED,
         "content": request.app.state.config.EMERGENCY_SYSTEM_MESSAGE_CONTENT,
+        "content_fr": request.app.state.config.EMERGENCY_SYSTEM_MESSAGE_CONTENT_FR,
     }
 
 
@@ -204,8 +206,10 @@ async def update_emergency_message_config(
 ):
     request.app.state.config.EMERGENCY_SYSTEM_MESSAGE_ENABLED = form_data.enabled
     request.app.state.config.EMERGENCY_SYSTEM_MESSAGE_CONTENT = form_data.content
+    request.app.state.config.EMERGENCY_SYSTEM_MESSAGE_CONTENT_FR = form_data.content_fr
 
     return {
         "enabled": request.app.state.config.EMERGENCY_SYSTEM_MESSAGE_ENABLED,
         "content": request.app.state.config.EMERGENCY_SYSTEM_MESSAGE_CONTENT,
+        "content_fr": request.app.state.config.EMERGENCY_SYSTEM_MESSAGE_CONTENT_FR,
     }

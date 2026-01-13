@@ -46,7 +46,8 @@
 
 	let emergencyMessageConfig = {
 		enabled: false,
-		content: ''
+		content: '',
+		content_fr: ''
 	};
 
 	const updateInterfaceHandler = async () => {
@@ -416,21 +417,44 @@
 				</div>
 
 				{#if emergencyMessageConfig.enabled}
-					<div class="mt-3">
-						<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Emergency Message Content')}</div>
+					<div class="mt-3 space-y-3">
+						<div>
+							<div class=" mb-2.5 text-xs font-medium">
+								{$i18n.t('Emergency Message Content')} (EN)
+							</div>
 
-						<Tooltip
-							content={$i18n.t(
-								'Enter the emergency message content. Markdown is supported for links and formatting.'
-							)}
-							placement="top-start"
-						>
-							<Textarea
-								bind:value={emergencyMessageConfig.content}
-								placeholder={$i18n.t('Enter emergency message (markdown supported)')}
-								rows="4"
-							/>
-						</Tooltip>
+							<Tooltip
+								content={$i18n.t(
+									'Enter the emergency message content in English. Markdown is supported for links and formatting.'
+								)}
+								placement="top-start"
+							>
+								<Textarea
+									bind:value={emergencyMessageConfig.content}
+									placeholder={$i18n.t('Enter emergency message in English (markdown supported)')}
+									rows="4"
+								/>
+							</Tooltip>
+						</div>
+
+						<div>
+							<div class=" mb-2.5 text-xs font-medium">
+								{$i18n.t('Emergency Message Content')} (FR)
+							</div>
+
+							<Tooltip
+								content={$i18n.t(
+									'Enter the emergency message content in French. Markdown is supported for links and formatting.'
+								)}
+								placement="top-start"
+							>
+								<Textarea
+									bind:value={emergencyMessageConfig.content_fr}
+									placeholder={$i18n.t('Enter emergency message in French (markdown supported)')}
+									rows="4"
+								/>
+							</Tooltip>
+						</div>
 					</div>
 				{/if}
 			</div>
