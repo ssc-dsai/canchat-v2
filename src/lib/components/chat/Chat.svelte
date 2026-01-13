@@ -2029,6 +2029,8 @@
 					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history.currentId).length > 0}
 						<div
 							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+							class:pt-36={$config?.emergency_message?.enabled &&
+								$config?.emergency_message?.content}
 							id="messages-container"
 							bind:this={messagesContainerElement}
 							on:scroll={(e) => {
