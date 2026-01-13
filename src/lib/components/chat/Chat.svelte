@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
+	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
 	import mermaid from 'mermaid';
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -1968,9 +1970,39 @@
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
 			<Pane defaultSize={50} class="h-full flex w-full relative">
-				{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
-					<div class="absolute top-12 left-0 right-0 w-full z-30">
-						<div class=" flex flex-col gap-1 w-full">
+				<div class="absolute top-12 left-0 right-0 w-full z-30">
+					<div class=" flex flex-col gap-1 w-full">
+						{#if $config?.emergency_message?.enabled && $config?.emergency_message?.content}
+							<div class="bg-red-600 text-white px-4 py-2.5 rounded-lg shadow-lg" role="alert">
+								<div class="flex items-start gap-3">
+									<div class="flex-shrink-0 mt-0.5">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="2"
+											stroke="currentColor"
+											class="w-5 h-5"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+											/>
+										</svg>
+									</div>
+									<div
+										class="flex-1 text-sm emergency-message-content"
+										style="white-space: pre-wrap;"
+									>
+										{@html marked.parse(
+											DOMPurify.sanitize($config.emergency_message.content.replace(/\n/g, '  \n'))
+										)}
+									</div>
+								</div>
+							</div>
+						{/if}
+						{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
 							{#each $banners.filter((b) => (b.lang ? b.lang === $i18n.language : true) && (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true)) as banner}
 								<Banner
 									{banner}
@@ -1989,9 +2021,9 @@
 									}}
 								/>
 							{/each}
-						</div>
+						{/if}
 					</div>
-				{/if}
+				</div>
 
 				<div class="flex flex-col flex-auto z-10 w-full">
 					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history.currentId).length > 0}

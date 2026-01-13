@@ -202,6 +202,70 @@ export const setBanners = async (token: string, banners: Banner[]) => {
 	return res;
 };
 
+// Emergency Message Configuration
+export interface EmergencyMessageConfig {
+	enabled: boolean;
+	content: string;
+}
+
+export const getEmergencyMessageConfig = async (token: string): Promise<EmergencyMessageConfig> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/emergency-message`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateEmergencyMessageConfig = async (
+	token: string,
+	config: EmergencyMessageConfig
+): Promise<EmergencyMessageConfig> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/emergency-message`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 // Chat Lifetime Configuration
 export interface ChatLifetimeConfig {
 	enabled: boolean;

@@ -3,7 +3,11 @@
 	import { toast } from 'svelte-sonner';
 
 	import { getBackendConfig, getTaskConfig, updateTaskConfig } from '$lib/apis';
-	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
+	import {
+		setDefaultPromptSuggestions,
+		getEmergencyMessageConfig,
+		updateEmergencyMessageConfig
+	} from '$lib/apis/configs';
 	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { getLanguages } from '$lib/i18n';
@@ -40,11 +44,17 @@
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let bannerTypes: string[] = ['Info', 'Warning', 'Error', 'Success'];
 
+	let emergencyMessageConfig = {
+		enabled: false,
+		content: ''
+	};
+
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
 		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
 		await updateBanners();
+		await updateEmergencyMessage();
 
 		await config.set(await getBackendConfig());
 	};
@@ -54,11 +64,16 @@
 
 		promptSuggestions = $config?.default_prompt_suggestions;
 		banners = await getBanners(localStorage.token);
+		emergencyMessageConfig = await getEmergencyMessageConfig(localStorage.token);
 		languages = await getLanguages();
 	});
 
 	const updateBanners = async () => {
 		_banners.set(await setBanners(localStorage.token, banners));
+	};
+
+	const updateEmergencyMessage = async () => {
+		await updateEmergencyMessageConfig(localStorage.token, emergencyMessageConfig);
 	};
 </script>
 
@@ -376,6 +391,51 @@
 					{/each}
 				</div>
 			</div>
+
+			<hr class=" border-gray-50 dark:border-gray-850 my-3" />
+
+			<div class=" space-y-3">
+				<div class="flex w-full justify-between mb-2">
+					<div class=" self-center text-sm font-semibold">
+						{$i18n.t('Emergency System Message')}
+					</div>
+				</div>
+
+				<div class="my-3 flex w-full items-center justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Enable Emergency Message')}
+					</div>
+
+					<Tooltip
+						content={$i18n.t(
+							'Display a persistent emergency message banner at the top of every page'
+						)}
+					>
+						<Switch bind:state={emergencyMessageConfig.enabled} />
+					</Tooltip>
+				</div>
+
+				{#if emergencyMessageConfig.enabled}
+					<div class="mt-3">
+						<div class=" mb-2.5 text-xs font-medium">{$i18n.t('Emergency Message Content')}</div>
+
+						<Tooltip
+							content={$i18n.t(
+								'Enter the emergency message content. Markdown is supported for links and formatting.'
+							)}
+							placement="top-start"
+						>
+							<Textarea
+								bind:value={emergencyMessageConfig.content}
+								placeholder={$i18n.t('Enter emergency message (markdown supported)')}
+								rows="4"
+							/>
+						</Tooltip>
+					</div>
+				{/if}
+			</div>
+
+			<hr class=" border-gray-50 dark:border-gray-850 my-3" />
 
 			{#if $user.role === 'admin'}
 				<div class=" space-y-3">

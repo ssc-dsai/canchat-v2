@@ -1290,6 +1290,23 @@ except Exception as e:
 WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
 
 
+####################################
+# EMERGENCY SYSTEM MESSAGE
+####################################
+
+EMERGENCY_SYSTEM_MESSAGE_ENABLED = PersistentConfig(
+    "EMERGENCY_SYSTEM_MESSAGE_ENABLED",
+    "ui.emergency_message.enabled",
+    os.environ.get("EMERGENCY_SYSTEM_MESSAGE_ENABLED", "false").lower() == "true",
+)
+
+EMERGENCY_SYSTEM_MESSAGE_CONTENT = PersistentConfig(
+    "EMERGENCY_SYSTEM_MESSAGE_CONTENT",
+    "ui.emergency_message.content",
+    os.environ.get("EMERGENCY_SYSTEM_MESSAGE_CONTENT", ""),
+)
+
+
 SHOW_ADMIN_DETAILS = PersistentConfig(
     "SHOW_ADMIN_DETAILS",
     "auth.admin.show",

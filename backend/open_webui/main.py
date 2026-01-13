@@ -196,6 +196,8 @@ from open_webui.config import (
     WEBUI_AUTH,
     WEBUI_NAME,
     WEBUI_BANNERS,
+    EMERGENCY_SYSTEM_MESSAGE_ENABLED,
+    EMERGENCY_SYSTEM_MESSAGE_CONTENT,
     WEBHOOK_URL,
     ADMIN_EMAIL,
     SHOW_ADMIN_DETAILS,
@@ -579,6 +581,10 @@ app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
 app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
+
+# Emergency System Message
+app.state.config.EMERGENCY_SYSTEM_MESSAGE_ENABLED = EMERGENCY_SYSTEM_MESSAGE_ENABLED
+app.state.config.EMERGENCY_SYSTEM_MESSAGE_CONTENT = EMERGENCY_SYSTEM_MESSAGE_CONTENT
 
 
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
@@ -1347,6 +1353,10 @@ async def get_app_config(request: Request):
                     "max_count": app.state.config.FILE_MAX_COUNT,
                 },
                 "permissions": {**app.state.config.USER_PERMISSIONS},
+                "emergency_message": {
+                    "enabled": app.state.config.EMERGENCY_SYSTEM_MESSAGE_ENABLED,
+                    "content": app.state.config.EMERGENCY_SYSTEM_MESSAGE_CONTENT,
+                },
             }
             if user is not None
             else {}
