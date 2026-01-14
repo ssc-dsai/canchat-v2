@@ -185,10 +185,6 @@ class ProcessUrlForm(CollectionNameForm):
     url: str
 
 
-class SearchForm(CollectionNameForm):
-    query: str
-
-
 @router.get("/")
 async def get_status(request: Request):
     return {
@@ -531,25 +527,9 @@ async def update_rag_config(
 
         request.app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
 
-        # Store old value to detect changes
-        old_bypass_value = (
-            request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
-        )
-        new_bypass_value = form_data.web.search.bypass_embedding_and_retrieval
-
         request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
-            new_bypass_value
+            form_data.web.search.bypass_embedding_and_retrieval
         )
-
-        # Log toggle state changes for transparency
-        if old_bypass_value != new_bypass_value:
-            if new_bypass_value:
-                log.info("🔄 Web search embedding disabled - will return raw results")
-            else:
-                log.info(
-                    "🔄 Web search embedding enabled - will create vector collections"
-                )
-
         request.app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
         request.app.state.config.SEARXNG_QUERY_URL = (
             form_data.web.search.searxng_query_url
@@ -1342,14 +1322,17 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
         raise Exception("No search engine API key found in environment variables")
 
 
+class SearchForm(BaseModel):
+    query: str
+
+
 @router.post("/process/web/search")
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
-        # Always perform fresh web search (no caching) but allow embedding based on toggle
-        log.info(
-            f"Performing fresh web search for query '{form_data.query}' with engine '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
+        log.debug(
+            f"[process_web_search] query: '{form_data.query}', engine: '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
         )
         web_results = search_web(
             request, request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
@@ -1362,20 +1345,9 @@ async def process_web_search(
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
         )
 
-    log.debug(f"web_results: {web_results}")
+    log.debug(f"[process_web_search] web_results: {web_results}")
 
     try:
-        # Generate a unique collection name for this search (timestamp-based, not hash-based)
-        collection_name = form_data.collection_name
-        if collection_name == "" or collection_name is None:
-            import time
-            import uuid
-
-            # Use timestamp + random UUID to ensure uniqueness without hash-based caching
-            timestamp = int(time.time())
-            unique_id = str(uuid.uuid4())[:8]
-            collection_name = f"websearch_{timestamp}_{unique_id}"
-
         urls = [result.link for result in web_results]
         loader = get_web_loader(
             urls,
@@ -1397,7 +1369,6 @@ async def process_web_search(
                 }
             )
 
-        # Restore conditional behavior: embed based on toggle setting
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             # Return raw results without embedding
             return {
@@ -1413,22 +1384,29 @@ async def process_web_search(
                 "filenames": urls,
                 "loaded_count": len(docs),
             }
-        else:
-            # Embed results into vector database for RAG usage
-            await save_docs_to_vector_db(
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
 
-            return {
-                "status": True,
-                "collection_name": collection_name,
-                "filenames": urls,
-                "loaded_count": len(docs),
-            }
+        # Use timestamp + random UUID to ensure uniqueness without hash-based caching
+        timestamp = int(time.time())
+        unique_id = str(uuid.uuid4())[:8]
+        collection_name = (
+            f"{VECTOR_COLLECTION_PREFIXES.WEB_SEARCH}{timestamp}-{unique_id}"
+        )
+
+        await save_docs_to_vector_db(
+            request,
+            docs,
+            collection_name,
+            overwrite=True,
+            user=user,
+        )
+
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "filenames": urls,
+            "loaded_count": len(docs),
+        }
+
     except Exception as e:
         log.exception(e)
         raise HTTPException(
