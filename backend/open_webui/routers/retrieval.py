@@ -2086,9 +2086,6 @@ async def cleanup_expired_web_searches(
             if not (
                 collection_name.startswith("web_")
                 or collection_name.startswith(VECTOR_COLLECTION_PREFIXES.WEB_SEARCH)
-                or collection_name.startswith(
-                    "websearch_"
-                )  # New timestamp-based naming
             ):
                 continue
 
@@ -2260,12 +2257,8 @@ async def cleanup_expired_web_searches_safe(
             collection_name = (
                 collection if isinstance(collection, str) else collection.name
             )
-            if (
-                collection_name.startswith("web_")
-                or collection_name.startswith(VECTOR_COLLECTION_PREFIXES.WEB_SEARCH)
-                or collection_name.startswith(
-                    "websearch_"
-                )  # New timestamp-based naming
+            if collection_name.startswith("web_") or collection_name.startswith(
+                VECTOR_COLLECTION_PREFIXES.WEB_SEARCH
             ):
                 web_collections.append(collection_name)
 
