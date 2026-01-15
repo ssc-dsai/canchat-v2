@@ -185,10 +185,8 @@ def initialize_department_server(department_prefix: str):
         logger.error(
             f"Failed to initialize SharePoint server for {department_prefix}: {e}"
         )
-        # Exit with error code so the MCP server doesn't start with broken config
-        import sys
-
-        sys.exit(1)
+        # Return False to allow other MCP servers to continue
+        return False
 
 
 def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str]:
@@ -235,6 +233,20 @@ async def get_sharepoint_document_content(
         # For local development, don't try OBO if no valid token available
         if user_token == "user_token_placeholder" or not user_token:
             user_token = None
+
+        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
+        if config.use_delegated_access:
+            if not user_token or not user_token.strip():
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "folder": folder_name,
+                    "file": file_name,
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
         # No verbose logging during parallel processing
 
         # Silent document content retrieval
@@ -410,6 +422,22 @@ async def get_all_documents_comprehensive(
         # Get authentication token - check environment variable if not provided
         effective_token = user_token or os.getenv("USER_JWT_TOKEN")
 
+        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
+        if config.use_delegated_access:
+            if (
+                not effective_token
+                or effective_token == "user_token_placeholder"
+                or not effective_token.strip()
+            ):
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
+
         if config.use_delegated_access:
             access_token = await oauth_client.get_access_token(effective_token)
         else:
@@ -440,19 +468,38 @@ async def get_all_documents_comprehensive(
 
         drive_id = drives[0].get("id")
 
-        # Recursively get ALL documents from ALL folders silently
+        # Recursively get documents - limit to default_search_folders if configured
         all_documents = []
         folders_processed = {"count": 0}  # Track folder count
-        await _traverse_all_folders_recursive(
-            oauth_client,
-            access_token,
-            site_id,
-            drive_id,
-            "",
-            all_documents,
-            folders_processed,
-            max_depth=10,
-        )
+
+        # If default_search_folders is configured, only search those specific folders
+        if config.default_search_folders:
+            logger.info(f"Searching specific folders: {config.default_search_folders}")
+            for folder_path in config.default_search_folders:
+                await _traverse_all_folders_recursive(
+                    oauth_client,
+                    access_token,
+                    site_id,
+                    drive_id,
+                    folder_path,
+                    all_documents,
+                    folders_processed,
+                    max_depth=10,
+                )
+            search_scope = f"folders: {', '.join(config.default_search_folders)}"
+        else:
+            # No specific folders configured - search everything from root
+            await _traverse_all_folders_recursive(
+                oauth_client,
+                access_token,
+                site_id,
+                drive_id,
+                "",
+                all_documents,
+                folders_processed,
+                max_depth=10,
+            )
+            search_scope = "all folders (no default_search_folders configured)"
 
         return {
             "status": "success",
@@ -460,7 +507,8 @@ async def get_all_documents_comprehensive(
             "folders_processed": folders_processed["count"],
             "documents": all_documents,
             "organization": config.org_name,
-            "message": f"Found {len(all_documents)} documents from {folders_processed['count']} folders by comprehensive traversal",
+            "search_scope": search_scope,
+            "message": f"Found {len(all_documents)} documents from {folders_processed['count']} folders in {search_scope}",
         }
 
     except Exception as e:
@@ -562,6 +610,22 @@ async def analyze_all_documents_for_content(
         # Get user token from parameter or environment variable
         effective_token = user_token or os.getenv("USER_JWT_TOKEN")
 
+        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
+        if config.use_delegated_access:
+            if (
+                not effective_token
+                or effective_token == "user_token_placeholder"
+                or not effective_token.strip()
+            ):
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
+
         # Get all documents using comprehensive traversal (no verbose logging)
         all_docs_result = await get_all_documents_comprehensive(effective_token)
 
@@ -599,18 +663,19 @@ async def analyze_all_documents_for_content(
         relevant_documents.sort(key=lambda x: x["relevance_score"], reverse=True)
 
         # Simple response size limiting (remove double truncation that causes slowdown)
-        limited_results = relevant_documents[:8]  # Just take top 8 results
+        limited_results = relevant_documents[:25]
 
-        # Light content limiting
+        # Light content limiting - increased preview size to capture early pages of documents
         for doc in limited_results:
             if "content_preview" in doc:
                 doc["content_preview"] = (
-                    doc["content_preview"][:200] + "..."
-                    if len(doc["content_preview"]) > 200
+                    doc["content_preview"][:2000]
+                    + "..."  # Increased to 2000 chars for multi-page content
+                    if len(doc["content_preview"]) > 2000
                     else doc["content_preview"]
                 )
             if "matches" in doc:
-                doc["matches"] = doc["matches"][:3]
+                doc["matches"] = doc["matches"][:7]  # Increased to 7 matches
 
         # FORCE performance logging - short message to prevent truncation
         perf_message = f"🚀 {folders_processed}F/{total_docs}D in {round(processing_time, 1)}s → {len(relevant_documents)} results"
