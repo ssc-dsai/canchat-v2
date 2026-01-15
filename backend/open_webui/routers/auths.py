@@ -849,6 +849,8 @@ async def get_api_key(user=Depends(get_current_user)):
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
 
-@router.get("/session/check", )
+@router.get(
+    "/session/check",
+)
 async def check_session(user=Depends(get_current_user)):
     return {"status": True}
