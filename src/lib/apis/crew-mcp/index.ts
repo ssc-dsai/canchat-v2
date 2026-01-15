@@ -74,7 +74,7 @@ export const queryCrewMCP = async (
 	})
 		.then(async (res) => {
 			clearTimeout(timeoutId);
-			return res.data
+			return res.data;
 		})
 		.catch((err) => {
 			clearTimeout(timeoutId);
