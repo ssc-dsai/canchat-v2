@@ -2,7 +2,7 @@ import { WEBUI_API_BASE_PATH } from '$lib/constants';
 import { get } from 'svelte/store';
 import { socket } from '$lib/stores';
 import type { Socket } from 'socket.io-client';
-import canchatAPI from '$lib/canchatAPI';
+import canchatAPI from '$lib/apis/canchatAPI';
 
 export const getCrewMCPStatus = async (token: string = '') => {
 	let error = null;

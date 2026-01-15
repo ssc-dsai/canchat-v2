@@ -1,4 +1,4 @@
-import canchatAPI from '$lib/canchatAPI';
+import canchatAPI from '$lib/apis/canchatAPI';
 import { OPENAI_API_BASE_PATH, WEBUI_API_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
 
 export const getOpenAIConfig = async (token: string = '') => {
