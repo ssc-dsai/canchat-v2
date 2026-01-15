@@ -14,7 +14,6 @@
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import { uploadFile } from '$lib/apis/files';
-	import canchatAPI from '$lib/canchatAPI';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
