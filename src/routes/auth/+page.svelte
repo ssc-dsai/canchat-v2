@@ -114,7 +114,7 @@
 	let onboarding = false;
 
 	onMount(async () => {
-		if ($user !== undefined) {
+		if ($user !== undefined && localStorage.token) {
 			await goto('/');
 		}
 		await checkOauthCallback();
