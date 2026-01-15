@@ -1,4 +1,4 @@
-import canchatAPI from '$lib/canchatAPI';
+import canchatAPI from '$lib/apis/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 import { getUserPosition } from '$lib/utils';
 

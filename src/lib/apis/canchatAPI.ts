@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { WEBUI_BASE_URL } from './constants';
+import { WEBUI_BASE_URL } from '$lib/constants';
+
 import { goto } from '$app/navigation';
 
 const canchatAPI = axios.create({
@@ -31,9 +32,7 @@ canchatAPI.interceptors.response.use(
 	},
 	(error) => {
 		if (error.response && error.response.status === 401) {
-			console.error('Unauthorized: Redirecting to auth page.');
 			localStorage.removeItem('token'); // Clear invalid token
-
 			goto('/auth');
 			return new Promise(() => {}); // Prevent further execution in the component
 		}

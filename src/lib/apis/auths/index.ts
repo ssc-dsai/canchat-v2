@@ -1,4 +1,4 @@
-import canchatAPI from '$lib/canchatAPI';
+import canchatAPI from '$lib/apis/canchatAPI';
 import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const getAdminDetails = async (token: string) => {
@@ -575,5 +575,27 @@ export const deleteAPIKey = async (token: string) => {
 	if (error) {
 		throw error;
 	}
+	return res;
+};
+
+export const getSessionCheck = async () => {
+	let error = null;
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/auths/session/check`, {
+		method: 'GET',
+		withCredentials: true
+	})
+		.then(async (res) => {
+			return res.data;
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
 	return res;
 };

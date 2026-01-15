@@ -1,4 +1,4 @@
-import canchatAPI from '$lib/canchatAPI';
+import canchatAPI from '$lib/apis/canchatAPI';
 import { WEBUI_API_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
 
 export const getModels = async (token: string = '', base: boolean = false) => {
