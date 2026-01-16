@@ -23,6 +23,7 @@
 	import ShortcutsModal from '../chat/ShortcutsModal.svelte';
 	import IssueModal from '../common/IssueModal.svelte';
 	import SuggestionModal from '../common/SuggestionModal.svelte';
+	import { init } from 'i18next';
 
 	const i18n = getContext('i18n');
 
@@ -44,7 +45,7 @@
 
 	const handleNewChat = () => {
 		suggestionCycle.update((n) => n + 1);
-		goto('/');
+		initNewChat();
 	};
 </script>
 
