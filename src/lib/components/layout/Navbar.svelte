@@ -1,48 +1,53 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
 
 	import {
-		WEBUI_NAME,
-		chatId,
-		mobile,
-		settings,
-		showArchivedChats,
+		user,
 		showControls,
 		showSidebar,
-		temporaryChatEnabled,
-		user
+		suggestionCycle,
+		config,
+		showArchivedChats
 	} from '$lib/stores';
+	import { goto } from '$app/navigation';
 
-	import { slide } from 'svelte/transition';
-	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import Menu from './Navbar/Menu.svelte';
-	import { page } from '$app/stores';
+	import HelpMenu from './Help/HelpMenu.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
-	import Map from '../icons/Map.svelte';
-	import { stringify } from 'postcss';
 	import PencilSquare from '../icons/PencilSquare.svelte';
-	import Plus from '../icons/Plus.svelte';
+	import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
+	import GlobalLanguageSelector from '../common/GlobalLanguageSelector.svelte';
+	import ShortcutsModal from '../chat/ShortcutsModal.svelte';
+	import IssueModal from '../common/IssueModal.svelte';
+	import SuggestionModal from '../common/SuggestionModal.svelte';
+	import { init } from 'i18next';
 
 	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
-	export let title: string = $WEBUI_NAME;
-	export let shareEnabled: boolean = false;
+	export let showSetDefault: boolean = true;
 
 	export let chat;
 	export let selectedModels;
 	export let showModelSelector = true;
 
-	let showShareChatModal = false;
-	let showDownloadChatModal = false;
-</script>
+	// Help functionality
+	let showShortcuts = false;
+	let showIssue = false;
+	let showSuggestion = false;
 
-<ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
+	$: SurveyUrl = $i18n.language === 'fr-CA' ? $config?.survey_url_fr : $config?.survey_url;
+	$: DocsUrl = $i18n.language === 'fr-CA' ? $config?.docs_url_fr : $config?.docs_url;
+	$: TrainingUrl = $i18n.language === 'fr-CA' ? $config?.training_url_fr : $config?.training_url;
+
+	const handleNewChat = () => {
+		suggestionCycle.update((n) => n + 1);
+		initNewChat();
+	};
+</script>
 
 <div class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center">
 	<div
@@ -76,95 +81,88 @@
 			"
 			>
 				{#if showModelSelector}
-					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+					<ModelSelector bind:selectedModels {showSetDefault} />
 				{/if}
 			</div>
 
-			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
-				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
-				{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
-					<Menu
-						{chat}
-						{shareEnabled}
-						shareHandler={() => {
-							showShareChatModal = !showShareChatModal;
-						}}
-						downloadHandler={() => {
-							showDownloadChatModal = !showDownloadChatModal;
-						}}
-					>
-						<button
-							class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							id="chat-context-menu-button"
-						>
-							<div class=" m-auto self-center">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="size-5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-									/>
-								</svg>
-							</div>
-						</button>
-					</Menu>
-				{:else if $mobile}
-					<Tooltip content={$i18n.t('Controls')}>
-						<button
-							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={async () => {
-								await showControls.set(!$showControls);
-							}}
-							aria-label="Controls"
-						>
-							<div class=" m-auto self-center">
-								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
-							</div>
-						</button>
-					</Tooltip>
-				{/if}
-
-				{#if !$mobile}
-					<Tooltip content={$i18n.t('Controls')}>
-						<button
-							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={async () => {
-								await showControls.set(!$showControls);
-							}}
-							aria-label="Controls"
-						>
-							<div class=" m-auto self-center">
-								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
-							</div>
-						</button>
-					</Tooltip>
-				{/if}
-
+			{#if !$showSidebar}
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
-						class=" flex {$showSidebar
-							? 'md:hidden'
-							: ''} m-auto self-center cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							initNewChat();
-						}}
-						aria-label={$i18n.t('New Chat')}
+						class="flex cursor-pointer p-2 rounded-xl text-gray-900 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-850 transition"
+						on:click={handleNewChat}
+						aria-label="New Chat"
 					>
-						<PencilSquare className=" size-5" strokeWidth="2" />
+						<div class="m-auto self-center">
+							<PencilSquare className="size-5" strokeWidth="2" />
+						</div>
 					</button>
 				</Tooltip>
+			{/if}
 
-				{#if $user !== undefined}
+			{#if $user && ($user.role === 'admin' || $user?.permissions?.chat?.controls)}
+				<Tooltip content={$i18n.t('Controls')}>
+					<button
+						class="flex cursor-pointer px-2 py-2 rounded-xl text-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						on:click={async () => {
+							await showControls.set(!$showControls);
+						}}
+						aria-label="Controls"
+					>
+						<div class="m-auto self-center">
+							<AdjustmentsHorizontal className="size-5" strokeWidth="0.5" />
+						</div>
+					</button>
+				</Tooltip>
+			{/if}
+
+			<div>
+				<button
+					id="show-shortcuts-button"
+					class="hidden"
+					on:click={() => {
+						showShortcuts = !showShortcuts;
+					}}
+				/>
+				<HelpMenu
+					showDocsHandler={() => {
+						window.open(DocsUrl, '_blank');
+					}}
+					showTrainingHandler={() => {
+						window.open(TrainingUrl, '_blank');
+					}}
+					showShortcutsHandler={() => {
+						showShortcuts = !showShortcuts;
+					}}
+					showSurveyHandler={() => {
+						window.open(SurveyUrl, '_blank');
+					}}
+					showIssueHandler={() => {
+						showIssue = true;
+					}}
+					showSuggestionHandler={() => {
+						showSuggestion = true;
+					}}
+				>
+					<Tooltip content={$i18n.t('Help')} placement="bottom">
+						<div
+							class="flex cursor-pointer p-2 rounded-xl text-gray-900 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-850 transition"
+						>
+							<div class="m-auto self-center">
+								<QuestionMarkCircle className="size-5" strokeWidth="2" />
+							</div>
+						</div>
+					</Tooltip>
+				</HelpMenu>
+			</div>
+
+			<GlobalLanguageSelector />
+
+			{#if $user !== undefined}
+				<div
+					class="select-none flex rounded-xl p-2 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+				>
 					<UserMenu
-						className="max-w-[200px]"
 						role={$user.role}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
@@ -172,20 +170,18 @@
 							}
 						}}
 					>
-						<button
-							class="self-center select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							aria-label={$i18n.t('User Menu')}
-						>
-							<img
-								src={$user?.profile_image_url}
-								class="size-6 object-cover rounded-full"
-								alt="User profile"
-								draggable="false"
-							/>
-						</button>
+						<img
+							src={$user.profile_image_url}
+							class="size-6 object-cover rounded-full"
+							alt="User profile"
+							draggable="false"
+						/>
 					</UserMenu>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</div>
 	</div>
 </div>
+<ShortcutsModal bind:show={showShortcuts} />
+<IssueModal bind:show={showIssue} />
+<SuggestionModal bind:show={showSuggestion} />

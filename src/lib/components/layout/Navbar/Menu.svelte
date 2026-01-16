@@ -29,8 +29,6 @@
 
 	const i18n = getContext('i18n');
 
-	export let shareEnabled: boolean = false;
-	export let shareHandler: Function;
 	export let downloadHandler: Function;
 
 	// export let tagHandler: Function;
@@ -147,31 +145,6 @@
 				>
 					<AdjustmentsHorizontal className=" size-4" strokeWidth="0.5" />
 					<div class="flex items-center">{$i18n.t('Controls')}</div>
-				</DropdownMenu.Item>
-			{/if}
-
-			{#if !$temporaryChatEnabled}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-					id="chat-share-button"
-					on:click={async () => {
-						await returnFocusButtonID.set(buttonID);
-						shareHandler();
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 24 24"
-						fill="currentColor"
-						class="size-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</DropdownMenu.Item>
 			{/if}
 
