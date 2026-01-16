@@ -29,7 +29,6 @@ class TestUsers(AbstractPostgresTest):
             role="user",
         )
 
-
     def setup_method(self):
         super().setup_method()
         self.users.insert_new_user(
@@ -54,12 +53,12 @@ class TestUsers(AbstractPostgresTest):
         assert response.status_code == 200
         assert len(response.json()) == 2
         data = response.json()
-        
+
         user1 = next((u for u in data if u["id"] == "1"), None)
         assert user1 is not None
         assert user1["name"] == "user 1"
         assert user1["email"] == "user1@openwebui.com"
-        
+
         user2 = next((u for u in data if u["id"] == "2"), None)
         assert user2 is not None
         assert user2["name"] == "user 2"
@@ -81,10 +80,10 @@ class TestUsers(AbstractPostgresTest):
         assert len(response.json()) == 2
         users = response.json()
         assert len(users) == 2
-        
+
         user1 = next((u for u in users if u["id"] == "1"), None)
         assert user1["name"] == "user 1"
-        
+
         user2 = next((u for u in users if u["id"] == "2"), None)
         assert user2["name"] == "user 2"
         assert user2["role"] == "admin"
@@ -160,10 +159,10 @@ class TestUsers(AbstractPostgresTest):
         assert response.status_code == 200
         assert len(response.json()) == 2
         data = response.json()
-        
+
         user1 = next((u for u in data if u["id"] == "1"), None)
         assert user1["name"] == "user 1"
-        
+
         user2 = next((u for u in data if u["id"] == "2"), None)
         assert user2["name"] == "user 2 updated"
         assert user2["role"] == "admin"

@@ -16,9 +16,9 @@ class TestAuths(AbstractPostgresTest):
     def setup_method(self):
         super().setup_method()
         import open_webui.main
+
         open_webui.main.app.state.config.ENABLE_SIGNUP = True
         open_webui.main.app.state.config.ENABLE_LOGIN_FORM = True
-
 
         # Insert user 1 for tests relying on mock_webui_user default
         self.users.insert_new_user(

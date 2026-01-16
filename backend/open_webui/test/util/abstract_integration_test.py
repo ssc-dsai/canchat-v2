@@ -81,7 +81,9 @@ class AbstractPostgresTest(AbstractIntegrationTest):
 
             # Cleanup existing container if it exists
             try:
-                cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(force=True)
+                cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(
+                    force=True
+                )
             except Exception:
                 pass
 
@@ -100,6 +102,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
 
             # Add open_webui.env.DATABASE_URL
             import open_webui.env
+
             open_webui.env.DATABASE_URL = database_url
 
             retries = 10
@@ -114,25 +117,28 @@ class AbstractPostgresTest(AbstractIntegrationTest):
                     log.warning(e)
                     time.sleep(3)
                     retries -= 1
-            
+
             if db:
                 db.close()
-                
+
                 # Add open_webui.internal.db module
                 from open_webui.internal import db as db_module
                 from sqlalchemy.orm import scoped_session, sessionmaker
-                
+
                 # Re-create engine with new URL
                 new_engine = create_engine(database_url, pool_pre_ping=True)
                 db_module.engine = new_engine
                 db_module.SessionLocal = sessionmaker(
-                    autocommit=False, autoflush=False, bind=new_engine, expire_on_commit=False
+                    autocommit=False,
+                    autoflush=False,
+                    bind=new_engine,
+                    expire_on_commit=False,
                 )
                 db_module.Session = scoped_session(db_module.SessionLocal)
-                
+
                 # Run migrations on the new DB
                 try:
-                     db_module.handle_peewee_migration(database_url)
+                    db_module.handle_peewee_migration(database_url)
                 except Exception as e:
                     log.warning(f"Peewee migration failed: {e}")
 
