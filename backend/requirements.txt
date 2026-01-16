@@ -47,6 +47,7 @@ fake-useragent==1.5.1
 qdrant-client~=1.12.0
 
 # txtai-wikipedia Wiki Grounding dependencies
+faiss-cpu==1.12.0
 pyarrow>=15.0.0
 datasets>=3.0.0
 transformers>=4.45.0,<4.50.0  # crewai 1.7.2 requires tokenizers<0.21, transformers>=4.50 needs tokenizers>=0.21
@@ -105,9 +106,11 @@ google-auth-oauthlib
 docker~=7.1.0
 pytest~=8.3.2
 pytest-docker~=3.1.1
+moto
 
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0
+gcp-storage-emulator
 
 ## LDAP
 ldap3==2.9.1
@@ -122,6 +125,7 @@ pytz==2025.2
 ## CrewAI MCP Integration
 crewai[azure-ai-inference]==1.7.2  # Latest version - supports max_iter parameter, azure-ai-inference extra required for Azure OpenAI
 crewai-tools[mcp]>=0.76.0
+litellm==1.74.9  # Required by CrewAI for Azure OpenAI integration
 protobuf>=5.26.1,<6.0.0
 grpcio>=1.49.1,<=1.67.1
 
