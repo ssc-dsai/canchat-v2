@@ -17,7 +17,6 @@
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
 
-	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from '$lib/components/layout/Navbar/Menu.svelte';
@@ -31,14 +30,12 @@
 
 	export let initNewChat: Function;
 	export let title: string = $WEBUI_NAME;
-	export let shareEnabled: boolean = false;
+	export let showSetDefault: boolean = true;
 
 	export let chat;
 	export let selectedModels;
 	export let showModelSelector = true;
 
-	let showShareChatModal = false;
-	let showDownloadChatModal = false;
 	const changeFocus = async (elementId) => {
 		setTimeout(() => {
 			document.getElementById(elementId)?.focus();
@@ -50,8 +47,6 @@
 		initNewChat();
 	};
 </script>
-
-<ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
 	<div
@@ -87,46 +82,13 @@
 			"
 			>
 				{#if showModelSelector}
-					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+					<ModelSelector bind:selectedModels showSetDefault={showSetDefault} />
 				{/if}
 			</div>
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
-				{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
-					<Tooltip content={$i18n.t('Chat Context Menu')}>
-						<Menu
-							{chat}
-							{shareEnabled}
-							buttonID={'chat-context-menu-button' + chat.id}
-							buttonClass="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							ariaLabel={$i18n.t('Chat Context Menu')}
-							shareHandler={() => {
-								showShareChatModal = !showShareChatModal;
-							}}
-							downloadHandler={() => {
-								showDownloadChatModal = !showDownloadChatModal;
-							}}
-						>
-							<div class=" m-auto self-center">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="size-5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-									/>
-								</svg>
-							</div>
-						</Menu>
-					</Tooltip>
-				{:else if $mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
+				{#if $mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class="m-auto self-center flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"

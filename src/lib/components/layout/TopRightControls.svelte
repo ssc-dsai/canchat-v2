@@ -22,7 +22,6 @@
 	import IssueModal from '../common/IssueModal.svelte';
 	import SuggestionModal from '../common/SuggestionModal.svelte';
 
-	export let shareEnabled = false;
 	export let chat = null;
 
 	const i18n = getContext('i18n');
