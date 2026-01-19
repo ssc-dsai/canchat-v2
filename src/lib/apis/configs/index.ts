@@ -183,7 +183,7 @@ export const getChatLifetimeConfig = async (token: string): Promise<ChatLifetime
 		method: 'GET'
 	})
 		.then(async (res) => {
-			res.data;
+			return res.data as ChatLifetimeConfig;
 		})
 		.catch((err) => {
 			console.log(err);
