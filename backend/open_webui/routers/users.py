@@ -132,6 +132,7 @@ class MCPPermissions(BaseModel):
     time_server: bool = False
     news_server: bool = False
     mpo_sharepoint_server: bool = False
+    pmo_sharepoint_server: bool = False
 
 
 class WorkspacePermissions(BaseModel):
