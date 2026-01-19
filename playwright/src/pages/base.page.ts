@@ -97,7 +97,7 @@ export class BasePage {
 	 */
 	async goto(path: string = '/') {
 		await this.page.goto(path);
-		await this.splashLogo.waitFor({ state: 'detached', timeout: 20000 }).catch(() => { });
+		await this.splashLogo.waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});
 		await expect(this.page.locator('body')).toBeVisible();
 	}
 
