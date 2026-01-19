@@ -529,10 +529,10 @@ class FastMCPManager:
                     log.info(f"{department} SharePoint server started successfully")
                 else:
                     log.error(f"{department} SharePoint server failed to start")
-            else:
-                log.warning(
-                    f"Generic SharePoint server not found at {generic_sharepoint_server_path}"
-                )
+        else:
+            log.warning(
+                f"Generic SharePoint server not found at {generic_sharepoint_server_path}"
+            )
 
     async def initialize_external_servers(self):
         """Initialize external MCP servers from database"""
