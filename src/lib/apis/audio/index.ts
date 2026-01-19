@@ -62,10 +62,6 @@ export const transcribeAudio = async (token: string, file: File) => {
 	let error = null;
 	const res = await canchatAPI(`${AUDIO_API_BASE_PATH}/transcriptions`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		},
 		data: data
 	})
 		.then(async (res) => {
@@ -94,10 +90,6 @@ export const synthesizeOpenAISpeech = async (
 
 	const res = await canchatAPI(`${AUDIO_API_BASE_PATH}/speech`, {
 		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
 		data: {
 			input: text,
 			voice: speaker,
