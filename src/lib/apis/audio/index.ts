@@ -62,7 +62,10 @@ export const transcribeAudio = async (token: string, file: File) => {
 	let error = null;
 	const res = await canchatAPI(`${AUDIO_API_BASE_PATH}/transcriptions`, {
 		method: 'POST',
-		data: data
+		data: data,
+		headers: {
+			'Content-Type': 'multipart/form-data'
+		}
 	})
 		.then(async (res) => {
 			return res.data;
