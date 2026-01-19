@@ -36,5 +36,24 @@ export default defineConfig({
 	},
 	worker: {
 		format: 'es'
-	}
+	},
+	// uncomment to test llama guard locally through docker backend
+	// server: {
+	// 	proxy: {
+	// 		'/api': {
+	// 			target: 'http://localhost:3000',
+	// 			changeOrigin: true,
+	// 			cookieDomainRewrite: 'localhost'
+	// 		},
+	// 		'/ollama': {
+	// 			target: 'http://localhost:3000',
+	// 			changeOrigin: true
+	// 		},
+	// 		'/ws': {
+	// 			target: 'http://localhost:3000',
+	// 			changeOrigin: true,
+	// 			ws: true
+	// 		}
+	// 	}
+	// }
 });

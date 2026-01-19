@@ -67,7 +67,7 @@ ENV RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
 
 # Install system dependencies for model downloads
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc python3-dev curl && \
+    apt-get install -y --no-install-recommends gcc python3-dev curl libsndfile1 && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # Create model directories
@@ -181,9 +181,9 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 # Make sure the user has access to the app, backend data cache, and root directory
 RUN chown -R $UID:$GID /app $HOME && \
     if [ ! -z "$BUILDKIT_VERSION" ]; then \
-        chmod -R g=u $HOME /app/backend/data/cache; \
+    chmod -R g=u $HOME /app/backend/data/cache; \
     else \
-        chmod -R g+rwX $HOME /app/backend/data/cache; \
+    chmod -R g+rwX $HOME /app/backend/data/cache; \
     fi
 
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
@@ -237,9 +237,9 @@ RUN apt-get autoremove -y && \
 COPY --from=models --chown=$UID:$GID --chmod=g=u /models/ /app/backend/data/cache/
 # Set proper permissions and clean up in single layer
 RUN if [ ! -z "$BUILDKIT_VERSION" ]; then \
-        chmod -R g=u /app/backend/data/cache; \
+    chmod -R g=u /app/backend/data/cache; \
     else \
-        chmod -R g+rwX /app/backend/data/cache; \
+    chmod -R g+rwX /app/backend/data/cache; \
     fi && \
     # Remove any .git directories from model downloads to reduce size
     find /app/backend/data/cache -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true && \
@@ -262,9 +262,9 @@ COPY --chown=$UID:$GID --chmod=g=u ./backend .
 
 # Set g=u permissions on all copied application files
 RUN if [ ! -z "$BUILDKIT_VERSION" ]; then \
-        chmod -R g=u /app/build /app/backend; \
+    chmod -R g=u /app/build /app/backend; \
     else \
-        chmod -R g+rwX /app/build /app/backend; \
+    chmod -R g+rwX /app/build /app/backend; \
     fi
 
 EXPOSE 8080

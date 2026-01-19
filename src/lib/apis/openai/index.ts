@@ -315,11 +315,35 @@ export const generateOpenAIChatCompletion = async (
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
+		credentials: 'include',
 		body: JSON.stringify(body)
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			const contentType = res.headers.get('content-type');
+			
+			if (!res.ok) {
+				const text = await res.text();
+				try {
+					throw JSON.parse(text);
+				} catch (e) {
+					throw { detail: `HTTP ${res.status}: ${text.substring(0, 200)}` };
+				}
+			}
+			
+			// For streaming responses (SSE), return the response object directly
+			// The caller (Chat.svelte) handles parsing SSE format
+			if (contentType?.includes('text/event-stream') || body?.stream === true) {
+				return res;
+			}
+			
+			// For non-streaming responses, parse and return JSON
+			const text = await res.text();
+			
+			try {
+				return JSON.parse(text);
+			} catch (e) {
+				throw { detail: `Invalid JSON response: ${text.substring(0, 100)}` };
+			}
 		})
 		.catch((err) => {
 			error = `${err?.detail ?? 'Network Problem'}`;

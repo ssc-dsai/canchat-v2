@@ -16,6 +16,7 @@ from open_webui.instrumentation import meter
 
 
 from fastapi import (
+    BackgroundTasks,
     Depends,
     FastAPI,
     HTTPException,
@@ -1159,7 +1160,11 @@ async def chat_completion(
     request: Request,
     form_data: dict,
     user=Depends(get_verified_user),
+    background_tasks: BackgroundTasks = None,
 ):
+    if background_tasks is None:
+        background_tasks = BackgroundTasks()
+        
     if not request.app.state.MODELS:
         await get_all_models(request)
 
@@ -1199,6 +1204,25 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
+        
+        # Llama Guard evaluation - check user request only (non-blocking)
+        try:
+            from mcp_backend.integration.llama_guard import evaluate_chat_for_violations
+            
+            # Schedule evaluation as background task (guaranteed to complete after response)
+            background_tasks.add_task(
+                evaluate_chat_for_violations,
+                messages=form_data.get("messages", []),
+                chat_id=metadata.get("chat_id"),
+                user_id=user.id if user else None,
+                user_email=user.email if user else None,
+                model_id=form_data.get("model"),
+            )
+        except ImportError:
+            pass  # Llama Guard not available
+        except Exception:
+            pass  # Llama Guard evaluation failed silently
+        
         return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )

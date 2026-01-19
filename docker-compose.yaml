@@ -7,6 +7,10 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    ports:
+      - "${OLLAMA_WEBAPI_PORT-11434}:11434"
+    environment:
+      - OLLAMA_ORIGINS=*
 
   open-webui:
     build:
@@ -18,13 +22,27 @@ services:
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
+      - ./backend/mcp_backend:/app/backend/mcp_backend
+      - ./backend/open_webui:/app/backend/open_webui
     depends_on:
       - ollama
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
+      # Ollama Configuration
       - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+      # OpenAI Configuration
+      - 'OPENAI_API_BASE_URLS=https://api.openai.com/v1'
+      - 'OPENAI_API_KEYS=${OPENAI_API_KEY}'
+      # Application Configuration
+      - 'PYTHONPATH=/app:/app/backend'
+      # Llama Guard Configuration
+      - 'LLAMA_GUARD_ENABLED=true'
+      - 'LLAMA_GUARD_OLLAMA_URL=http://ollama:11434'
+      - 'LLAMA_GUARD_MODEL_NAME=llama-guard3:8b'
+      - 'LLAMA_GUARD_TIMEOUT=30'
+      - 'LLAMA_GUARD_SAMPLE_RATE=1.0'
+      
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
