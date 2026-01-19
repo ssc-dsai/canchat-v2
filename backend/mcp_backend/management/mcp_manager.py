@@ -492,13 +492,17 @@ class FastMCPManager:
             backend_dir / "mcp_backend" / "servers" / "generic_sharepoint_server.py"
         )
 
-        log.info(f"Looking for Generic SharePoint server at: {generic_sharepoint_server_path}")
-        log.info(f"Generic SharePoint server exists: {generic_sharepoint_server_path.exists()}")
+        log.info(
+            f"Looking for Generic SharePoint server at: {generic_sharepoint_server_path}"
+        )
+        log.info(
+            f"Generic SharePoint server exists: {generic_sharepoint_server_path.exists()}"
+        )
 
         if generic_sharepoint_server_path.exists():
 
             pattern = re.compile(pattern="[A-Z]+_SHP_")
-            departments:set[str] = set()
+            departments: set[str] = set()
 
             # Extract all servers that should be instantiated based on environment variables.
             for key, _ in os.environ.items():
@@ -506,7 +510,9 @@ class FastMCPManager:
                     # Add deparment acronym to set
                     departments.add(key.split("_")[0])
 
-            log.info(f"Found Sharepoint MCP configs for the following departments: {departments}")
+            log.info(
+                f"Found Sharepoint MCP configs for the following departments: {departments}"
+            )
 
             # Add servers to config and start them.
             for department in departments:
@@ -524,7 +530,9 @@ class FastMCPManager:
                 # Start the SharePoint server
                 log.info(f"About to start {department} SharePoint server...")
                 start_result = await self.start_server(server_name)
-                log.info(f"{department} SharePoint server start_server returned: {start_result}")
+                log.info(
+                    f"{department} SharePoint server start_server returned: {start_result}"
+                )
                 if start_result:
                     log.info(f"{department} SharePoint server started successfully")
                 else:

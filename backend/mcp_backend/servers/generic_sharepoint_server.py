@@ -35,7 +35,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Import the multi-department generic server components
 from generic_sharepoint_server_multi_dept import initialize_department_server, mcp
 
-def setup_server(dept:str):
+
+def setup_server(dept: str):
     f"""Initialize the {dept} SharePoint server configuration"""
     try:
         logging.info(f"Setting up the {dept} SharePoint MCP Server")
@@ -63,7 +64,9 @@ def setup_server(dept:str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 1:
-        logging.error("No argument passed for setting up department MCP Sharepoint server.")
+        logging.error(
+            "No argument passed for setting up department MCP Sharepoint server."
+        )
         sys.exit(1)
     else:
         DEPT = sys.argv[1]
