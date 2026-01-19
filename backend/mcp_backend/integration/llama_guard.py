@@ -92,42 +92,6 @@ def get_config() -> LlamaGuardConfig:
 # HELPERS
 # ============================================================================
 
-def extract_last_user_and_assistant(messages: List[Dict[str, Any]]) -> tuple[str, str]:
-    """
-    Extract the last user message and last assistant response from a message list.
-    
-    Args:
-        messages: List of message dicts with 'role' and 'content' keys
-        
-    Returns:
-        Tuple of (user_message, assistant_response)
-    """
-    last_user = ""
-    last_assistant = ""
-    
-    for msg in reversed(messages):
-        role = msg.get("role", "").lower()
-        content = msg.get("content", "")
-        
-        # Handle content that might be a list (multimodal)
-        if isinstance(content, list):
-            text_parts = [
-                p.get("text", "") for p in content 
-                if isinstance(p, dict) and p.get("type") == "text"
-            ]
-            content = " ".join(text_parts)
-        
-        if role == "assistant" and not last_assistant:
-            last_assistant = content
-        elif role == "user" and not last_user:
-            last_user = content
-        
-        if last_user and last_assistant:
-            break
-    
-    return last_user, last_assistant
-
-
 def should_evaluate(config: LlamaGuardConfig) -> bool:
     """Determine if this request should be evaluated based on sample rate."""
     if not config.enabled:
@@ -295,7 +259,6 @@ async def evaluate_with_llama_guard(
                 "error": str(e),
             },
         }
-
 
 async def evaluate_chat_for_violations(
     messages: List[Dict[str, Any]],
