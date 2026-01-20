@@ -906,8 +906,8 @@
 												/>
 											</svg>
 										</button>
-										</Tooltip>
-									</div>
+									</Tooltip>
+								</div>
 							{/if}
 
 							{#if message.done}
