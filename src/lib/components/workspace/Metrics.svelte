@@ -24,6 +24,7 @@
 	import { Chart, registerables } from 'chart.js';
 	import { user } from '$lib/stores';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
+	import { autoFormatNumber } from '$lib/utils';
 
 	// Replace date-fns with native date formatting
 	function formatDate(date) {
@@ -831,7 +832,7 @@
 </script>
 
 {#if componentLoaded && $user}
-	<div class="flex flex-col h-screen">
+	<div class="flex flex-col h-screen" id="metrics-dashboard" use:autoFormatNumber>
 		<div class="p-4 lg:p-6 flex-shrink-0">
 			<div class="mb-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
 				<h2 class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">
