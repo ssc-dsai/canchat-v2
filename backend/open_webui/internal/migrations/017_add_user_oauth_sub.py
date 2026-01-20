@@ -25,6 +25,7 @@ from contextlib import suppress
 import peewee as pw
 from peewee_migrate import Migrator
 
+
 with suppress(ImportError):
     pass
 

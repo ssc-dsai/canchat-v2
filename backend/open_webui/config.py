@@ -25,6 +25,7 @@ from open_webui.env import (
 from open_webui.internal.db import get_db
 from open_webui.models.base import Base
 
+
 ####################################
 # Config helpers
 ####################################

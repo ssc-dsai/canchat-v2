@@ -31,7 +31,6 @@ Example for Finance Department (DEPT_UPPER = FIN):
   - FIN_SHP_DOC_LIBRARY='Finance'
   - FIN_SHP_DEFAULT_SEARCH_FOLDERS='Finance/Reports,Finance/Policies,Finance/Budgets'
 """
-
 import asyncio
 import logging
 import sys

@@ -9,6 +9,7 @@ from open_webui.utils.access_control import has_access
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON, or_, cast
 
+
 ####################
 # Prompts DB Schema
 ####################

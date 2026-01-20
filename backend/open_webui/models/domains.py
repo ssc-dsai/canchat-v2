@@ -11,6 +11,7 @@ from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict, validator
 from sqlalchemy import BigInteger, Column, String, Text, JSON, func
 
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
