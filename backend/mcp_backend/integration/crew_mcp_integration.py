@@ -27,6 +27,7 @@ CREW_VERBOSE = os.getenv("CREW_VERBOSE", "false").lower() == "true"
 _time_server_adapter = None
 _news_server_adapter = None
 _mpo_sharepoint_server_adapter = None
+_pmo_sharepoint_server_adapter = None
 _adapters_initialized = False
 
 
@@ -70,6 +71,10 @@ class CrewMCPManager:
             self.backend_dir / "mcp_backend" / "servers" / "mpo_sharepoint_server.py"
         )
 
+        self.pmo_sharepoint_server_path = (
+            self.backend_dir / "mcp_backend" / "servers" / "pmo_sharepoint_server.py"
+        )
+
         # Legacy generic SharePoint server (fallback)
         self.sharepoint_server_path = (
             self.backend_dir
@@ -96,7 +101,7 @@ class CrewMCPManager:
 
     def initialize_mcp_adapters(self):
         """Initialize all MCP server adapters once at startup"""
-        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _adapters_initialized
+        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _pmo_sharepoint_server_adapter, _adapters_initialized
 
         if _adapters_initialized:
             logger.info("MCP adapters already initialized, skipping...")
@@ -153,6 +158,27 @@ class CrewMCPManager:
             )
             _mpo_sharepoint_server_adapter = None
 
+        # Initialize PMO SharePoint Server - always try to initialize
+        try:
+            pmo_sharepoint_params = StdioServerParameters(
+                command="python",
+                args=[str(self.pmo_sharepoint_server_path)],
+                env=dict(
+                    os.environ
+                ),  # Pass environment variables so .env vars are available
+            )
+            adapter = MCPServerAdapter(pmo_sharepoint_params)
+            _pmo_sharepoint_server_adapter = (
+                adapter.__enter__()
+            )  # Get the tools from __enter__()
+            logger.info("✅ PMO SharePoint server adapter initialized")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize PMO SharePoint server: {e}")
+            logger.error(
+                f"   This is expected in local dev without PMO_SHP_* environment variables"
+            )
+            _pmo_sharepoint_server_adapter = None
+
         _adapters_initialized = True
 
         # Report initialization status
@@ -161,15 +187,16 @@ class CrewMCPManager:
                 _time_server_adapter is not None,
                 _news_server_adapter is not None,
                 _mpo_sharepoint_server_adapter is not None,
+                _pmo_sharepoint_server_adapter is not None,
             ]
         )
         logger.info(
-            f"🎉 MCP server initialization complete: {initialized_count}/3 adapters initialized"
+            f"🎉 MCP server initialization complete: {initialized_count}/4 adapters initialized"
         )
 
     def cleanup_mcp_adapters(self):
         """Cleanup all MCP server adapters on shutdown"""
-        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _adapters_initialized
+        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _pmo_sharepoint_server_adapter, _adapters_initialized
 
         logger.info("🧹 Cleaning up MCP server adapters...")
 
@@ -177,6 +204,7 @@ class CrewMCPManager:
             ("Time", _time_server_adapter),
             ("News", _news_server_adapter),
             ("MPO SharePoint", _mpo_sharepoint_server_adapter),
+            ("PMO SharePoint", _pmo_sharepoint_server_adapter),
         ]:
             if adapter is not None:
                 try:
@@ -188,6 +216,7 @@ class CrewMCPManager:
         _time_server_adapter = None
         _news_server_adapter = None
         _mpo_sharepoint_server_adapter = None
+        _pmo_sharepoint_server_adapter = None
         _adapters_initialized = False
 
         logger.info("🎉 All MCP server adapters cleaned up")
@@ -615,6 +644,7 @@ class CrewMCPManager:
 
             # Determine available specialists based on selected tools
             available_specialists = []
+            print("SELECTED TOOLS", selected_tools)
             if selected_tools:
                 if any("time" in tool.lower() for tool in selected_tools):
                     available_specialists.append("TIME")
@@ -915,6 +945,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
             "time_server": self.time_server_path,
             "news_server": self.news_server_path,
             "mpo_sharepoint_server": self.mpo_sharepoint_server_path,
+            "pmo_sharepoint_server": self.pmo_sharepoint_server_path,
         }
 
         # Add any other fastmcp_*.py servers found in the backend directory
@@ -933,7 +964,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
 
     def get_available_tools(self) -> list:
         """Get list of available MCP tools from all initialized adapters"""
-        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter
+        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _pmo_sharepoint_server_adapter
 
         all_tools = []
 
@@ -943,6 +974,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
             "time_server": _time_server_adapter,
             "news_server": _news_server_adapter,
             "mpo_sharepoint_server": _mpo_sharepoint_server_adapter,
+            "pmo_sharepoint_server": _pmo_sharepoint_server_adapter,
         }
 
         for server_name, tools in adapters.items():
