@@ -37,7 +37,7 @@ export const formatNumber = (num: number | string | null | undefined, locale = '
  * Svelte action for automatic number formatting.
  * Recursively walks the DOM and formats text numbers >= 1000.
  * Usage: <div use:autoFormatNumber />
- * 
+ *
  * Note: Temporarily disconnects observer while modifying text to prevent infinite loops.
  */
 export const autoFormatNumber = (node: HTMLElement, options: { locale?: string } = {}) => {
@@ -51,8 +51,8 @@ export const autoFormatNumber = (node: HTMLElement, options: { locale?: string }
 			// Match 4+ consecutive digits (and optional decimal)
 			// This regex implicitly skips already-formatted numbers like "1,000"
 			const formatted = original.replace(/\b\d{4,}(?:\.\d+)?\b/g, (match) => {
-                return formatNumber(match, locale);
-            });
+				return formatNumber(match, locale);
+			});
 
 			if (formatted !== original) {
 				// Temporarily disconnect observer to prevent infinite loop
