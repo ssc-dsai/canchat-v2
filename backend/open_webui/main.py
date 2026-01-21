@@ -39,6 +39,7 @@ from starlette.responses import Response
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
+    UpdateWebSocketSessionMiddleWare,
 )
 from open_webui.routers import (
     audio,
@@ -1030,6 +1031,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(UpdateWebSocketSessionMiddleWare)
 
 # Logging middleware is last to ensure it is first
 # on the request and last on the response.

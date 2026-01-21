@@ -4,9 +4,13 @@ import logging
 import sys
 import time
 
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.utils.auth import get_current_user
 
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
@@ -371,11 +375,11 @@ async def connect(sid, environ, auth):
             if graph_access_token:
                 session_data["graph_access_token"] = graph_access_token
                 log.info(
-                    f"✅ Stored Graph access token for user {user. id} (length: {len(graph_access_token)})"
+                    f"✅ Stored Graph access token for user {user.id} (length: {len(graph_access_token)})"
                 )
             else:
                 log.warning(
-                    f"❌ HTTP_X_FORWARDED_ACCESS_TOKEN not found in environ for user {user. id}"
+                    f"❌ HTTP_X_FORWARDED_ACCESS_TOKEN not found in environ for user {user.id}"
                 )
 
             # Store in SESSION_POOL
@@ -652,3 +656,29 @@ async def emit_group_membership_update(
     log.info(
         f"Emitted group membership update:  {action} {len(users_affected) if users_affected else 0} users to/from group '{group_name}'"
     )
+
+
+class UpdateWebSocketSessionMiddleWare(BaseHTTPMiddleware):
+    """
+    Middleware to update the context with the appropriate
+    """
+
+    async def dispatch(self, request: Request, call_next):
+
+        # Update the Graph Access Token in all websocket sessions.
+        id: str
+        access_token: str | None = request.headers.get("HTTP_X_FORWARDED_ACCESS_TOKEN")
+        if access_token:
+            try:
+                id = get_current_user(request=request, auth_token=None).id
+            except Exception:
+                pass
+
+            if id and USER_POOL:
+                sids_of_user = USER_POOL[id]
+
+                for sid in sids_of_user:
+                    if SESSION_POOL.__contains__(sid):
+                        SESSION_POOL[sid]["graph_access_token"] = access_token
+
+        return await call_next(request)
