@@ -403,10 +403,6 @@ async def connect(sid, environ, auth):
 
             await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
             await sio.emit("usage", {"models": get_models_in_use()})
-    # else:
-    #     await sio.emit("connect-error", "No auth in connect")
-    #     await sio.emit("disconnect", )
-    #     await sio.disconnect(sid=sid)
 
 
 @sio.on("user-join")
