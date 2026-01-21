@@ -210,7 +210,7 @@
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
 				} else {
-					toast.success('File uploaded successfully');
+					toast.success($i18n.t('File uploaded successfully'));
 				}
 
 				fileItem.status = 'uploaded';
