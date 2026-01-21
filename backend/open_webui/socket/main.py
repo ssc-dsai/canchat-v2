@@ -661,6 +661,7 @@ async def emit_group_membership_update(
         f"Emitted group membership update:  {action} {len(users_affected) if users_affected else 0} users to/from group '{group_name}'"
     )
 
+
 class UpdateWebSocketSessionMiddleWare(BaseHTTPMiddleware):
     """
     Middleware to update the context with the appropriate
