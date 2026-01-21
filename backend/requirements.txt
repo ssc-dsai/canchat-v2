@@ -12,9 +12,9 @@ passlib[bcrypt]==1.7.4
 
 requests==2.32.3
 aiohttp==3.11.8
-async-timeout
-aiocache
-aiofiles
+async-timeout==5.0.1
+aiocache==0.12.3
+aiofiles==25.1.0
 
 # PDF processing libraries for SharePoint document parsing
 pdfplumber==0.11.4
@@ -27,18 +27,18 @@ psycopg2-binary==2.9.9
 PyMySQL==1.1.1
 bcrypt==4.2.0
 
-pymongo
-redis
+pymongo==4.16.0
+redis==7.1.0
 boto3==1.35.53
 
 argon2-cffi==23.1.0
 APScheduler==3.11.0
 
 # AI libraries
-openai
-anthropic
+openai~=1.83.0 # CrewAI depends on openai~=1.83.0
+anthropic==0.76.0
 google-generativeai==0.8.1
-tiktoken
+tiktoken==0.12.0
 
 langchain==0.3.26
 langchain-community==0.3.26
@@ -75,8 +75,8 @@ openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.1
 validators==0.34.0
-psutil
-sentencepiece
+psutil==7.2.1
+sentencepiece==0.2.1
 soundfile==0.12.1
 
 opencv-python-headless==4.10.0.84
@@ -93,20 +93,20 @@ langfuse==2.44.0
 youtube-transcript-api>=1.2.2
 pytube==15.0.0
 
-extract_msg
-pydub
+extract_msg==0.55.0
+pydub==0.25.1
 duckduckgo-search~=7.2.1
 
 ## Google Drive
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
+google-api-python-client==2.188.0
+google-auth-httplib2==0.3.0
+google-auth-oauthlib==1.2.4
 
 ## Tests
 docker~=7.1.0
 pytest~=8.3.2
 pytest-docker~=3.1.1
-moto
+moto==5.1.20
 
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0
