@@ -89,7 +89,6 @@ export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 		const context = await browser.newContext({
 			storageState: authFiles.admin,
 			locale: locale,
-			// Inherit permissions from playwright.config.ts (undefined for Firefox, set for Chrome)
 			permissions: testInfo.project.use.permissions
 		});
 		await setupCoverage(context);
@@ -110,7 +109,6 @@ export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 		const context = await browser.newContext({
 			storageState: authFiles.user,
 			locale: locale,
-			// Inherit permissions (removes the hardcoded list that broke Firefox)
 			permissions: testInfo.project.use.permissions
 		});
 		await setupCoverage(context);
