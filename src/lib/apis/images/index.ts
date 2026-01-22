@@ -1,14 +1,19 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { IMAGES_API_BASE_PATH } from '$lib/constants';
+import { IMAGES_API_BASE_URL } from '$lib/constants';
 
 export const getConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${IMAGES_API_BASE_PATH}/config`, {
-		method: 'GET'
+	const res = await fetch(`${IMAGES_API_BASE_URL}/config`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -30,15 +35,20 @@ export const getConfig = async (token: string = '') => {
 export const updateConfig = async (token: string = '', config: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${IMAGES_API_BASE_PATH}/config/update`, {
+	const res = await fetch(`${IMAGES_API_BASE_URL}/config/update`, {
 		method: 'POST',
-
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
 			...config
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -60,11 +70,17 @@ export const updateConfig = async (token: string = '', config: object) => {
 export const verifyConfigUrl = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${IMAGES_API_BASE_PATH}/config/url/verify`, {
-		method: 'GET'
+	const res = await fetch(`${IMAGES_API_BASE_URL}/config/url/verify`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -86,11 +102,17 @@ export const verifyConfigUrl = async (token: string = '') => {
 export const getImageGenerationConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${IMAGES_API_BASE_PATH}/image/config`, {
-		method: 'GET'
+	const res = await fetch(`${IMAGES_API_BASE_URL}/image/config`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -112,13 +134,18 @@ export const getImageGenerationConfig = async (token: string = '') => {
 export const updateImageGenerationConfig = async (token: string = '', config: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${IMAGES_API_BASE_PATH}/image/config/update`, {
+	const res = await fetch(`${IMAGES_API_BASE_URL}/image/config/update`, {
 		method: 'POST',
-
-		data: { ...config }
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({ ...config })
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -140,11 +167,17 @@ export const updateImageGenerationConfig = async (token: string = '', config: ob
 export const getImageGenerationModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${IMAGES_API_BASE_PATH}/models`, {
-		method: 'GET'
+	const res = await fetch(`${IMAGES_API_BASE_URL}/models`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -166,15 +199,20 @@ export const getImageGenerationModels = async (token: string = '') => {
 export const imageGenerations = async (token: string = '', prompt: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${IMAGES_API_BASE_PATH}/generations`, {
+	const res = await fetch(`${IMAGES_API_BASE_URL}/generations`, {
 		method: 'POST',
-
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
 			prompt: prompt
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);

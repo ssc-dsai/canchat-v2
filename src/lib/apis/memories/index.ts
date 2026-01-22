@@ -1,14 +1,19 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { WEBUI_API_BASE_PATH } from '$lib/constants';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getMemories = async (token: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -26,14 +31,20 @@ export const getMemories = async (token: string) => {
 export const addNewMemory = async (token: string, content: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/add`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/add`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			content: content
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -51,14 +62,20 @@ export const addNewMemory = async (token: string, content: string) => {
 export const updateMemoryById = async (token: string, id: string, content: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/${id}/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/${id}/update`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			content: content
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -76,14 +93,20 @@ export const updateMemoryById = async (token: string, id: string, content: strin
 export const queryMemory = async (token: string, content: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/query`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/query`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			content: content
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -101,11 +124,17 @@ export const queryMemory = async (token: string, content: string) => {
 export const deleteMemoryById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/${id}`, {
-		method: 'DELETE'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/${id}`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -127,11 +156,17 @@ export const deleteMemoryById = async (token: string, id: string) => {
 export const deleteMemoriesByUserId = async (token: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/memories/delete/user`, {
-		method: 'DELETE'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/delete/user`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
