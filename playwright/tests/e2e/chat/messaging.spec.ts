@@ -129,7 +129,9 @@ test.describe('Messaging Features', () => {
 	// ===========================================
 	// TC005: Delete user question
 	// ===========================================
-	test.skip('TC005: User can use the question options (Delete) in the chat page', async ({ userPage }) => {
+	test.skip('TC005: User can use the question options (Delete) in the chat page', async ({
+		userPage
+	}) => {
 		const question = 'In what year was Quebec city founded?';
 		await userPage.sendMessage(question);
 

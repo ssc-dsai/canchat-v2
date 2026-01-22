@@ -8,13 +8,6 @@
 			"password": "admin"
 		},
 		{
-			"username": "pending",
-			"role": "pending",
-			"name": "pending",
-			"email": "pending@canchat.ca",
-			"password": "pending"
-		},
-		{
 			"username": "user",
 			"role": "user",
 			"name": "user",
