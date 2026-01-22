@@ -27,6 +27,7 @@ CREW_VERBOSE = os.getenv("CREW_VERBOSE", "false").lower() == "true"
 _time_server_adapter = None
 _news_server_adapter = None
 _mpo_sharepoint_server_adapter = None
+_pmo_sharepoint_server_adapter = None
 _adapters_initialized = False
 
 
@@ -69,6 +70,10 @@ class CrewMCPManager:
         self.mpo_sharepoint_server_path = (
             self.backend_dir / "mcp_backend" / "servers" / "mpo_sharepoint_server.py"
         )
+        # SharePoint server paths - use new multi-department implementation
+        self.pmo_sharepoint_server_path = (
+            self.backend_dir / "mcp_backend" / "servers" / "pmo_sharepoint_server.py"
+        )
 
         # Legacy generic SharePoint server (fallback)
         self.sharepoint_server_path = (
@@ -96,7 +101,7 @@ class CrewMCPManager:
 
     def initialize_mcp_adapters(self):
         """Initialize all MCP server adapters once at startup"""
-        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _adapters_initialized
+        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _pmo_sharepoint_server_adapter, _adapters_initialized
 
         if _adapters_initialized:
             logger.info("MCP adapters already initialized, skipping...")
@@ -153,6 +158,27 @@ class CrewMCPManager:
             )
             _mpo_sharepoint_server_adapter = None
 
+        # Initialize PMO SharePoint Server - always try to initialize
+        try:
+            pmo_sharepoint_params = StdioServerParameters(
+                command="python",
+                args=[str(self.pmo_sharepoint_server_path)],
+                env=dict(
+                    os.environ
+                ),  # Pass environment variables so .env vars are available
+            )
+            adapter = MCPServerAdapter(pmo_sharepoint_params)
+            _pmo_sharepoint_server_adapter = (
+                adapter.__enter__()
+            )  # Get the tools from __enter__()
+            logger.info("✅ PMO SharePoint server adapter initialized")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize PMO SharePoint server: {e}")
+            logger.error(
+                f"   This is expected in local dev without PMO_SHP_* environment variables"
+            )
+            _pmo_sharepoint_server_adapter = None
+
         _adapters_initialized = True
 
         # Report initialization status
@@ -161,15 +187,16 @@ class CrewMCPManager:
                 _time_server_adapter is not None,
                 _news_server_adapter is not None,
                 _mpo_sharepoint_server_adapter is not None,
+                _pmo_sharepoint_server_adapter is not None,
             ]
         )
         logger.info(
-            f"🎉 MCP server initialization complete: {initialized_count}/3 adapters initialized"
+            f"🎉 MCP server initialization complete: {initialized_count}/4 adapters initialized"
         )
 
     def cleanup_mcp_adapters(self):
         """Cleanup all MCP server adapters on shutdown"""
-        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _adapters_initialized
+        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _pmo_sharepoint_server_adapter, _adapters_initialized
 
         logger.info("🧹 Cleaning up MCP server adapters...")
 
@@ -177,6 +204,7 @@ class CrewMCPManager:
             ("Time", _time_server_adapter),
             ("News", _news_server_adapter),
             ("MPO SharePoint", _mpo_sharepoint_server_adapter),
+            ("PMO SharePoint", _pmo_sharepoint_server_adapter),
         ]:
             if adapter is not None:
                 try:
@@ -188,6 +216,7 @@ class CrewMCPManager:
         _time_server_adapter = None
         _news_server_adapter = None
         _mpo_sharepoint_server_adapter = None
+        _pmo_sharepoint_server_adapter = None
         _adapters_initialized = False
 
         logger.info("🎉 All MCP server adapters cleaned up")
@@ -343,7 +372,9 @@ class CrewMCPManager:
             logger.error(f"Error in CrewAI MCP news integration: {e}")
             raise
 
-    def run_sharepoint_crew(self, query: str = "Search SharePoint documents") -> str:
+    def run_mpo_sharepoint_crew(
+        self, query: str = "Search SharePoint documents"
+    ) -> str:
         """
         Run a CrewAI crew with MCP SharePoint server tools (MPO SharePoint only)
 
@@ -392,7 +423,7 @@ class CrewMCPManager:
             sharepoint_agent = Agent(
                 role="SharePoint Document Specialist",
                 goal="Find and retrieve relevant information from SharePoint by analyzing all documents comprehensively using parallel processing for optimal speed and accuracy",
-                backstory="""I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the analyze_all_documents_for_content tool which automatically handles authentication and searches all documents in parallel. 
+                backstory="""I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the mpo_analyze_all_documents_for_content tool which automatically handles authentication and searches all documents in parallel. 
 
     CRITICAL AUTHENTICATION RULE: 
     If ANY tool returns an error with "authentication_failed":  true or "DELEGATED ACCESS MODE" in the message: 
@@ -420,13 +451,13 @@ class CrewMCPManager:
                 description=f"""Process this SharePoint-related query: {query}
 
     Available tools:
-    - analyze_all_documents_for_content:  PRIMARY TOOL - Analyzes all documents using parallel processing
-    - get_all_documents_comprehensive:  Get all documents by traversing every folder (used internally by analyze tool)
-    - get_sharepoint_document_content: Retrieve individual document content (used internally)
-    - check_sharepoint_permissions: Test connection and permissions (for debugging only)
+    - mpo_analyze_all_documents_for_content:  PRIMARY TOOL - Analyzes all documents using parallel processing
+    - mpo_get_all_documents_comprehensive:  Get all documents by traversing every folder (used internally by analyze tool)
+    - mpo_get_sharepoint_document_content: Retrieve individual document content (used internally)
+    - mpo_check_sharepoint_permissions: Test connection and permissions (for debugging only)
 
     PRIMARY STRATEGY:
-    Use analyze_all_documents_for_content with the user's search terms.  This tool: 
+    Use mpo_analyze_all_documents_for_content with the user's search terms.  This tool: 
     - Traverses every SharePoint folder to find all documents
     - Analyzes each document's content using parallel processing (8 concurrent threads)
     - Uses smart caching to avoid re-downloading documents
@@ -435,7 +466,170 @@ class CrewMCPManager:
     - Returns documents sorted by relevance with content matches
 
     RESPONSE STRATEGY:
-    1. Call analyze_all_documents_for_content with the user's search terms
+    1. Call mpo_analyze_all_documents_for_content with the user's search terms
+    2. Extract the KEY ANSWER from the most relevant document(s)
+    3. Provide a CONCISE, DIRECT response to the user's question
+    4. Include document name and source for credibility
+    5. Focus on the specific information requested
+    6. DON'T dump entire document contents in your response
+                """,
+                expected_output="""A DIRECT, CONCISE answer to the user's question without showing any reasoning process.
+
+    FORMAT REQUIREMENTS:
+    - Start immediately with the answer (NO "Thought:", "Action:", or process explanations)
+    - Extract the key information from the most relevant document
+    - Include document name and source for credibility
+    - Keep response focused on what was asked
+    - Maximum 2-3 sentences unless more detail is specifically requested
+
+    EXAMPLE RESPONSE:
+    "Canada's new high-speed railway is proposed to span approximately 1,000 km, according to the document '2025-12-05-Alto-Letter to MPO.pdf' from the Major Projects Office."
+
+    AVOID:  
+    - Showing reasoning ("Thought:", "I will use tool X")
+    - Dumping entire document contents
+    - Being overly verbose
+    - Including process descriptions""",
+                agent=sharepoint_agent,
+            )
+
+            # Create and execute crew
+            sharepoint_crew = Crew(
+                agents=[sharepoint_agent],
+                tasks=[sharepoint_task],
+                process=Process.sequential,
+                verbose=CREW_VERBOSE,
+            )
+
+            # Execute the crew
+            logger.info("Executing CrewAI SharePoint crew...")
+            result = sharepoint_crew.kickoff()
+
+            # Cleanup adapter
+            try:
+                adapter.__exit__(None, None, None)
+                logger.info("✅ Cleaned up SharePoint adapter")
+            except Exception as e:
+                logger.warning(f"Failed to cleanup adapter: {e}")
+
+            return str(result)
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Error in CrewAI MCP SharePoint integration: {error_msg}")
+
+            # Provide specific error messages based on the type of failure
+            if (
+                "Authentication" in error_msg
+                or "access token" in error_msg
+                or "401" in error_msg
+            ):
+                return (
+                    "SharePoint access failed due to authentication issues. This may be because:\n\n"
+                    + "1. You're in a local development environment where OAuth2 proxy is not configured\n"
+                    + "2. Your authentication token has expired\n"
+                    + "3. You don't have the necessary SharePoint permissions\n\n"
+                    + "For local development, SharePoint integration requires deployment to environments with proper OAuth2 configuration (dev/staging/production)."
+                )
+            elif "No documents found" in error_msg or "no results" in error_msg:
+                return "I searched the available SharePoint documents but could not find information related to your query. The documents may not contain this information, or it might be located in a different location."
+            else:
+                return f"I encountered an issue while searching SharePoint documents: {error_msg}. Please try rephrasing your query or contact support if the problem persists."
+
+    def run_pmo_sharepoint_crew(
+        self, query: str = "Search SharePoint documents"
+    ) -> str:
+        """
+        Run a CrewAI crew with MCP SharePoint server tools (PMO SharePoint only)
+
+        Args:
+            query:  The SharePoint-related query to process
+
+        Returns:
+            The crew's response
+        """
+        if not self.pmo_sharepoint_server_path.exists():
+            raise FileNotFoundError(
+                f"PMO SharePoint server not found at {self.pmo_sharepoint_server_path}"
+            )
+
+        logger.info(f"Starting CrewAI MCP SharePoint integration for query: {query}")
+        logger.info(f"Using PMO SharePoint server:  {self.pmo_sharepoint_server_path}")
+        # **CRITICAL FIX: Initialize adapter with current environment containing USER_JWT_TOKEN**
+        logger.info(
+            "🔄 Initializing fresh SharePoint adapter with user token from environment"
+        )
+
+        try:
+            # Create adapter with current environment (includes USER_JWT_TOKEN set by set_user_token())
+            pmo_sharepoint_params = StdioServerParameters(
+                command="python",
+                args=[str(self.pmo_sharepoint_server_path)],
+                env=dict(os.environ),  # Fresh environment snapshot with USER_JWT_TOKEN
+            )
+
+            # Use context manager for automatic cleanup
+            adapter = MCPServerAdapter(pmo_sharepoint_params)
+            mcp_tools = adapter.__enter__()  # Get the tools from adapter
+
+            logger.info(
+                f"✅ SharePoint adapter initialized with {len(list(mcp_tools))} tools"
+            )
+            logger.info(
+                f"Available MCP SharePoint tools: {[tool.name for tool in mcp_tools]}"
+            )
+
+            # Create Azure OpenAI LLM
+            llm = self.get_azure_llm_config()
+
+            # Create SharePoint specialist agent with MCP tools
+            sharepoint_agent = Agent(
+                role="SharePoint Document Specialist",
+                goal="Find and retrieve relevant information from SharePoint by analyzing all documents comprehensively using parallel processing for optimal speed and accuracy",
+                backstory="""I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the pmo_analyze_all_documents_for_content tool which automatically handles authentication and searches all documents in parallel. 
+
+    CRITICAL AUTHENTICATION RULE: 
+    If ANY tool returns an error with "authentication_failed":  true or "DELEGATED ACCESS MODE" in the message: 
+    - STOP IMMEDIATELY - Do NOT proceed with the task
+    - Do NOT attempt to retry with made-up tokens
+    - Do NOT make up or hallucinate answers
+    - REPORT the authentication failure to the user clearly
+    - Inform the user that valid authentication credentials are required to access SharePoint
+    - Do NOT use any information from your training data to answer the question
+    
+    RESPONSE FORMAT:
+    - Provide ONLY the final answer to the user
+    - Do NOT show your reasoning process ("Thought:", "Action:", etc.)
+    - Be direct and concise
+    - Include document sources for credibility""",
+                tools=mcp_tools,
+                llm=llm,
+                verbose=CREW_VERBOSE,
+                max_iter=5,
+                allow_delegation=False,
+            )
+
+            # Create task for SharePoint query
+            sharepoint_task = Task(
+                description=f"""Process this SharePoint-related query: {query}
+
+    Available tools:
+    - pmo_analyze_all_documents_for_content:  PRIMARY TOOL - Analyzes all documents using parallel processing
+    - pmo_get_all_documents_comprehensive:  Get all documents by traversing every folder (used internally by analyze tool)
+    - pmo_get_sharepoint_document_content: Retrieve individual document content (used internally)
+    - pmo_check_sharepoint_permissions: Test connection and permissions (for debugging only)
+
+    PRIMARY STRATEGY:
+    Use pmo_analyze_all_documents_for_content with the user's search terms.  This tool: 
+    - Traverses every SharePoint folder to find all documents
+    - Analyzes each document's content using parallel processing (8 concurrent threads)
+    - Uses smart caching to avoid re-downloading documents
+    - Terminates early when enough high-quality results are found
+    - Typical performance: 20-60 seconds for large collections
+    - Returns documents sorted by relevance with content matches
+
+    RESPONSE STRATEGY:
+    1. Call pmo_analyze_all_documents_for_content with the user's search terms
     2. Extract the KEY ANSWER from the most relevant document(s)
     3. Provide a CONCISE, DIRECT response to the user's question
     4. Include document name and source for credibility
@@ -624,15 +818,18 @@ class CrewMCPManager:
                 ):
                     available_specialists.append("NEWS")
                 if any(
-                    "sharepoint" in tool.lower()
-                    or "document" in tool.lower()
-                    or "search" in tool.lower()
+                    "mcp_mpo_sharepoint_server" in tool.lower()
                     for tool in selected_tools
                 ):
-                    available_specialists.append("SHAREPOINT")
+                    available_specialists.append("MPO_SHAREPOINT")
+                if any(
+                    "mcp_pmo_sharepoint_server" in tool.lower()
+                    for tool in selected_tools
+                ):
+                    available_specialists.append("PMO_SHAREPOINT")
             else:
                 # If no tools selected, all specialists are available
-                available_specialists = ["TIME", "NEWS", "SHAREPOINT"]
+                available_specialists = ["TIME", "NEWS"]
 
             logger.info(f"Available specialists: {available_specialists}")
 
@@ -647,8 +844,10 @@ class CrewMCPManager:
                     return self.run_time_crew(query)
                 elif specialist == "NEWS":
                     return self.run_news_crew(query)
-                elif specialist == "SHAREPOINT":
-                    return self.run_sharepoint_crew(query)
+                elif specialist == "MPO_SHAREPOINT":
+                    return self.run_mpo_sharepoint_crew(query)
+                elif specialist == "PMO_SHAREPOINT":
+                    return self.run_pmo_sharepoint_crew(query)
 
             logger.info(
                 "Using intelligent router (multiple specialists or auto-detect mode)"
@@ -915,6 +1114,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
             "time_server": self.time_server_path,
             "news_server": self.news_server_path,
             "mpo_sharepoint_server": self.mpo_sharepoint_server_path,
+            "pmo_sharepoint_server": self.pmo_sharepoint_server_path,
         }
 
         # Add any other fastmcp_*.py servers found in the backend directory
@@ -933,7 +1133,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
 
     def get_available_tools(self) -> list:
         """Get list of available MCP tools from all initialized adapters"""
-        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter
+        global _time_server_adapter, _news_server_adapter, _mpo_sharepoint_server_adapter, _pmo_sharepoint_server_adapter
 
         all_tools = []
 
@@ -943,6 +1143,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
             "time_server": _time_server_adapter,
             "news_server": _news_server_adapter,
             "mpo_sharepoint_server": _mpo_sharepoint_server_adapter,
+            "pmo_sharepoint_server": _pmo_sharepoint_server_adapter,
         }
 
         for server_name, tools in adapters.items():

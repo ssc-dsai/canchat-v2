@@ -204,8 +204,7 @@ def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str
     return None
 
 
-@generic_sharepoint_server.tool()
-async def get_sharepoint_document_content(
+async def _get_sharepoint_document_content_impl(
     folder_name: str, file_name: str, user_token: Optional[str] = None
 ) -> Dict[str, Any]:
     """
@@ -403,8 +402,7 @@ async def get_sharepoint_document_content(
         }
 
 
-@generic_sharepoint_server.tool()
-async def get_all_documents_comprehensive(
+async def _get_all_documents_comprehensive_impl(
     user_token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -587,8 +585,7 @@ async def _traverse_all_folders_recursive(
         logger.warning(f"Error traversing folder {folder_path}: {e}")
 
 
-@generic_sharepoint_server.tool()
-async def analyze_all_documents_for_content(
+async def _analyze_all_documents_for_content_impl(
     search_terms: str,
     user_token: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -915,8 +912,7 @@ def _get_optimized_content_preview(content: str) -> str:
     return content[:300] + "..."
 
 
-@generic_sharepoint_server.tool()
-async def check_sharepoint_permissions(
+async def _check_sharepoint_permissions_impl(
     user_token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -974,37 +970,6 @@ async def check_sharepoint_permissions(
             "message": f"Failed to check {config.org_name} SharePoint permissions",
             "organization": config.org_name,
         }
-
-
-async def main(department_prefix: str = "MPO"):
-    """Main function to run the SharePoint MCP server for a specific department"""
-    try:
-        # Initialize server for the specified department
-        success = initialize_department_server(department_prefix)
-        if not success:
-            logger.error(
-                f"Failed to initialize server for department: {department_prefix}"
-            )
-            return
-
-        logger.info(f"Starting {config.org_name} SharePoint MCP Server")
-        await mcp.run(transport="stdio")
-
-    except Exception as e:
-        logger.error(f"Error starting {department_prefix} SharePoint server: {e}")
-        raise
-
-
-if __name__ == "__main__":
-    import sys
-
-    # Allow department prefix to be passed as command line argument
-    department_prefix = sys.argv[1] if len(sys.argv) > 1 else "MPO"
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
 
 
 # ===== EMBEDDED DOCUMENT PARSING FUNCTIONS =====
@@ -1269,23 +1234,62 @@ async def parse_generic_content_embedded(content: bytes, file_name: str) -> str:
         return f"Error parsing file {file_name}: {str(e)}"
 
 
-if __name__ == "__main__":
-    import sys
+def register_department_tools(department_prefix: str):
+    dept_lower = department_prefix.lower()
 
-    # Allow department prefix to be passed as command line argument
-    department_prefix = sys.argv[1] if len(sys.argv) > 1 else "MPO"
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    # ------------------ Document Content ------------------
+    @generic_sharepoint_server.tool(
+        name=f"{dept_lower}_get_sharepoint_document_content",
+        description=f"Retrieve a document from {department_prefix} SharePoint",
     )
+    async def get_document(
+        folder_name: str,
+        file_name: str,
+        user_token: Optional[str] = None,
+    ):
+        return await _get_sharepoint_document_content_impl(
+            folder_name, file_name, user_token
+        )
 
-    # Initialize server for the specified department
-    success = initialize_department_server(department_prefix)
-    if not success:
-        logger.error(f"Failed to initialize server for department: {department_prefix}")
-        sys.exit(1)
+    # ------------------ All Documents ------------------
+    @generic_sharepoint_server.tool(
+        name=f"{dept_lower}_get_all_documents_comprehensive",
+        description=f"Retrieve all documents from {department_prefix} SharePoint",
+    )
+    async def get_all_documents(
+        user_token: Optional[str] = None,
+    ):
+        return await _get_all_documents_comprehensive_impl(user_token)
 
-    logger.info(f"Starting {config.org_name} SharePoint MCP Server")
-    # Run the server directly like other FastMCP servers
-    mcp.run()
+    # ------------------ Analyze Documents ------------------
+    @generic_sharepoint_server.tool(
+        name=f"{dept_lower}_analyze_all_documents_for_content",
+        description=f"Analyze all documents in {department_prefix} SharePoint",
+    )
+    async def analyze_documents(
+        search_terms: str,
+        user_token: Optional[str] = None,
+    ):
+        return await _analyze_all_documents_for_content_impl(search_terms, user_token)
+
+    # ------------------ Permissions ------------------
+    @generic_sharepoint_server.tool(
+        name=f"{dept_lower}_check_sharepoint_permissions",
+        description=f"Check SharePoint permissions for {department_prefix}",
+    )
+    async def check_permissions(
+        user_token: Optional[str] = None,
+    ):
+        return await _check_sharepoint_permissions_impl(user_token)
+
+
+def run_department_server(department_prefix: str):
+    department_prefix = department_prefix.upper()
+
+    if not initialize_department_server(department_prefix):
+        raise RuntimeError(f"Failed to initialize {department_prefix}")
+
+    register_department_tools(department_prefix)
+
+    logger.info(f"🚀 Starting {department_prefix} SharePoint MCP Server")
+    mcp.run(transport="stdio")

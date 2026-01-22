@@ -261,6 +261,7 @@ class FastMCPManager:
                     "time_server",
                     "news_server",
                     "mpo_sharepoint_server",
+                    "pmo_sharepoint_server",
                 ],  # Mark built-in servers
             }
             servers.append(server_info)
@@ -335,6 +336,7 @@ class FastMCPManager:
                                     "time_server",
                                     "news_server",
                                     "mpo_sharepoint_server",
+                                    "pmo_sharepoint_server",
                                 ]
                                 tool_dict = {
                                     "name": tool.name,
@@ -512,6 +514,36 @@ class FastMCPManager:
                 f"MPO SharePoint server not found at {mpo_sharepoint_server_path}"
             )
 
+        # Add configuration for PMO SharePoint server (stdio)
+        pmo_sharepoint_server_path = (
+            backend_dir / "mcp_backend" / "servers" / "pmo_sharepoint_server.py"
+        )
+
+        log.info(f"Looking for PMO SharePoint server at: {pmo_sharepoint_server_path}")
+        log.info(f"PMO SharePoint server exists: {pmo_sharepoint_server_path.exists()}")
+
+        if pmo_sharepoint_server_path.exists():
+            self.add_server_config(
+                name="pmo_sharepoint_server",
+                command=["python", str(pmo_sharepoint_server_path)],
+                working_dir=str(backend_dir),
+                env=dict(os.environ),  # Pass current environment variables
+                transport="stdio",
+            )
+
+            # Start the PMO SharePoint server
+            log.info(f"About to start PMO SharePoint server...")
+            start_result = await self.start_server("pmo_sharepoint_server")
+            log.info(f"PMO SharePoint server start_server returned: {start_result}")
+            if start_result:
+                log.info("PMO SharePoint server started successfully")
+            else:
+                log.error("PMO SharePoint server failed to start")
+        else:
+            log.warning(
+                f"PMO SharePoint server not found at {pmo_sharepoint_server_path}"
+            )
+
         # Legacy SharePoint server (keep for backward compatibility)
         sharepoint_server_path = (
             backend_dir / "mcp_backend" / "servers" / "fastmcp_sharepoint_server.py"
@@ -615,6 +647,7 @@ class FastMCPManager:
                                 "time_server",
                                 "news_server",
                                 "mpo_sharepoint_server",
+                                "pmo_sharepoint_server",
                             ]
                             tool_dict = {
                                 "name": tool.name,
@@ -645,6 +678,7 @@ class FastMCPManager:
                                 "time_server",
                                 "news_server",
                                 "mpo_sharepoint_server",
+                                "pmo_sharepoint_server",
                             ]
                             tool_dict = {
                                 "name": tool.name,
