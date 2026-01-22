@@ -179,10 +179,13 @@
 
 		{#if $config.audio.tts.engine === ''}
 			<div>
-				<h3 id="set-voice" class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</h3>
+				<h3 id="set-voice" class="mb-2.5 text-sm font-medium">
+					{$i18n.t('Set Voice')}
+				</h3>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
+						 	aria-labelledby="set-voice"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={voice}
 						>
@@ -203,7 +206,9 @@
 					</div>
 
 					<div class="mt-1">
-						<Switch bind:state={nonLocalVoices} />
+						<Switch bind:state={nonLocalVoices} 
+							aria-label={$i18n.t('Allow non-local voices')}
+						/>
 					</div>
 				</div>
 			</div>

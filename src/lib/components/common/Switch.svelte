@@ -14,6 +14,7 @@
 	bind:checked={state}
 	{disabled}
 	aria-label={ariaLabel}
+	{...$$restProps}
 	class="flex h-5 min-h-5 w-9 shrink-0 cursor-pointer items-center rounded-full px-[3px] mx-[1px] transition  {state
 		? ' bg-emerald-600'
 		: 'bg-gray-200 dark:bg-gray-700'} outline outline-1 outline-gray-100 dark:outline-gray-500 {disabled
