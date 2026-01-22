@@ -160,10 +160,7 @@
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div
-					id="playback-speed-label"
-					class="self-center text-xs font-medium"
-				>
+				<div id="playback-speed-label" class="self-center text-xs font-medium">
 					{$i18n.t('Speech Playback Speed')}
 				</div>
 
@@ -213,9 +210,7 @@
 					</div>
 
 					<div class="mt-1">
-						<Switch bind:state={nonLocalVoices} 
-							aria-label={$i18n.t('Allow non-local voices')}
-						/>
+						<Switch bind:state={nonLocalVoices} aria-label={$i18n.t('Allow non-local voices')} />
 					</div>
 				</div>
 			</div>
