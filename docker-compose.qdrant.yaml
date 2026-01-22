@@ -52,6 +52,13 @@ services:
       - 9090:9090
     restart: unless-stopped
 
+  redis:
+    image: redis:8.4.0
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --loglevel warning --protected-mode no
+
 volumes:
   ollama: {}
   postgres_data: {}
