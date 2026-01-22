@@ -1,5 +1,4 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { WEBUI_API_BASE_PATH } from '$lib/constants';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 type IssueItem = {
 	email: string;
@@ -21,14 +20,22 @@ export const createIssue = async (token: string, issue: IssueItem) => {
 		});
 	}
 
-	return await canchatAPI(`${WEBUI_API_BASE_PATH}/jira/bug`, {
+	return await fetch(`${WEBUI_API_BASE_URL}/jira/bug`, {
 		method: 'POST',
-		data: formData
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: formData
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) {
+				const error = await res.json();
+				throw new Error(error.detail || 'Failed to create issue');
+			}
+			return res.json();
 		})
 		.catch((err) => {
-			throw new Error(err.message || 'Failed to create issue');
+			throw new Error(err.message || 'An unexpected error occurred');
 		});
 };

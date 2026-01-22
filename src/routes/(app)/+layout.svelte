@@ -18,7 +18,6 @@
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
-	import { getSessionCheck } from '$lib/apis/auths';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 
@@ -166,12 +165,6 @@
 					}, 0);
 				}
 			});
-
-			// Check session on page load
-			getSessionCheck();
-
-			// Check session on tab focus
-			window.addEventListener('focus', getSessionCheck);
 
 			if ($user.role === 'admin' && ($settings?.showChangelog ?? true)) {
 				showChangelog.set($settings?.version !== $config.version);
