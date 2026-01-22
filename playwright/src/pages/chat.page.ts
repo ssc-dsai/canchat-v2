@@ -4,6 +4,7 @@ import { type Page, type Locator, expect } from '@playwright/test';
 export class ChatPage extends BasePage {
 	readonly messageInput: Locator;
 	sendButton!: Locator;
+	callButton!: Locator;
 	stopGenerationButton!: Locator;
 	readonly regenerateButton: Locator;
 	readonly responseMessages: Locator;
@@ -33,6 +34,9 @@ export class ChatPage extends BasePage {
 
 		this.sendButton = this.page.getByRole('button', {
 			name: this.t['Send message'] || 'Send message'
+		});
+		this.callButton = this.page.getByRole('button', {
+			name: 'Call'
 		});
 		this.stopGenerationButton = this.page.locator('button.bg-white.hover\\:bg-gray-100');
 	}
@@ -67,6 +71,8 @@ export class ChatPage extends BasePage {
 	async waitForGeneration(idleMessage: string = '') {
 		const selector = this.responseSelector;
 		await this.page.waitForSelector(selector, { state: 'visible' });
+		const stopBtn = this.stopGenerationButton;
+		await stopBtn.waitFor({ state: 'hidden', timeout: 180000 });
 
 		await this.page.waitForFunction(
 			({ selector, idleMessage }) => {
@@ -147,17 +153,36 @@ export class ChatPage extends BasePage {
 
 		const fileChooser = await fileChooserPromise;
 		await fileChooser.setFiles(filePath);
+	}
 
-		await this.page
-			.locator('li')
-			.filter({ hasText: this.getTranslation('File uploaded successfully') })
-			.waitFor({ state: 'visible', timeout: 180000 });
-		await this.page
-			.locator('li', { hasText: this.getTranslation('File uploaded successfully') })
-			.waitFor({
-				state: 'detached',
-				timeout: 30000
-			});
+	/**
+	 * Gets toast notification text (even if hidden or already dismissed)
+	 * @param expectedText The translation key or text to search for in the toast
+	 * @param timeout Maximum time to wait for toast (default: 30s)
+	 * @returns The full text content of the toast
+	 */
+	async getToastText(expectedText: string, timeout: number = 30000): Promise<string> {
+		const translatedText = this.getTranslation(expectedText);
+		const toast = this.page.locator('li').filter({ hasText: translatedText }).first();
+		await toast.waitFor({ state: 'attached', timeout });
+		return (await toast.textContent()) || '';
+	}
+
+	/**
+	 * Checks if a toast notification appeared (even if already dismissed)
+	 * @param expectedText The translation key or text to search for in the toast
+	 * @param timeout Maximum time to wait for toast (default: 30s)
+	 * @returns true if toast appeared, false otherwise
+	 */
+	async checkToastAppeared(expectedText: string, timeout: number = 30000): Promise<boolean> {
+		try {
+			const translatedText = this.getTranslation(expectedText);
+			const toast = this.page.locator('li').filter({ hasText: translatedText }).first();
+			await toast.waitFor({ state: 'attached', timeout });
+			return true;
+		} catch {
+			return false;
+		}
 	}
 
 	/**
@@ -539,6 +564,7 @@ export class ChatPage extends BasePage {
 	async continueResponse(): Promise<void> {
 		const label = this.getTranslation('Continue Response');
 		await this.clickAnswerButton(label);
+		await this.page.waitForTimeout(3000);
 		await this.waitForGeneration();
 	}
 
@@ -580,7 +606,6 @@ export class ChatPage extends BasePage {
 	 * Attaches an image to the report (inside the Issue modal)
 	 */
 	async attachImageToReport(filePath: string): Promise<void> {
-		// Target the modal's file input specifically using its ID
 		const fileInput = this.page.locator('#files');
 		await fileInput.setInputFiles(filePath);
 		await this.waitToSettle(500);
