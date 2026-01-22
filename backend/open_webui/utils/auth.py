@@ -53,10 +53,8 @@ def decode_token(token: str) -> Optional[dict]:
     try:
         decoded = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
         return decoded
-    except Exception as e:
-        # Allow the Exception to propagate so that
-        # proper actions can be taken.
-        raise e
+    except Exception:
+        return None
 
 
 def extract_token_from_auth_header(auth_header: str):
@@ -89,7 +87,7 @@ def get_current_user(
         token = request.cookies.get("token")
 
     if token is None:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        raise HTTPException(status_code=403, detail="Not authenticated")
 
     # auth by api key
     if token.startswith("sk-"):

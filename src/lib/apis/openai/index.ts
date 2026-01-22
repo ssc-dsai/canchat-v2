@@ -1,14 +1,19 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { OPENAI_API_BASE_PATH, WEBUI_API_BASE_PATH, WEBUI_BASE_URL } from '$lib/constants';
+import { OPENAI_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${OPENAI_API_BASE_PATH}/config`, {
-		method: 'GET'
+	const res = await fetch(`${OPENAI_API_BASE_URL}/config`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -37,12 +42,20 @@ type OpenAIConfig = {
 export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfig) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OPENAI_API_BASE_PATH}/config/update`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/config/update`, {
 		method: 'POST',
-		data: config
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			...config
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -64,11 +77,17 @@ export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfi
 export const getOpenAIUrls = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${OPENAI_API_BASE_PATH}/urls`, {
-		method: 'GET'
+	const res = await fetch(`${OPENAI_API_BASE_URL}/urls`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data.OPENAI_API_BASE_URLS;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -84,20 +103,26 @@ export const getOpenAIUrls = async (token: string = '') => {
 		throw error;
 	}
 
-	return res;
+	return res.OPENAI_API_BASE_URLS;
 };
 
 export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OPENAI_API_BASE_PATH}/urls/update`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/urls/update`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
 			urls: urls
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data.OPENAI_API_BASE_URLS;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -113,17 +138,23 @@ export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 		throw error;
 	}
 
-	return res;
+	return res.OPENAI_API_BASE_URLS;
 };
 
 export const getOpenAIKeys = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${OPENAI_API_BASE_PATH}/keys`, {
-		method: 'GET'
+	const res = await fetch(`${OPENAI_API_BASE_URL}/keys`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data.OPENAI_API_KEYS;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -139,20 +170,26 @@ export const getOpenAIKeys = async (token: string = '') => {
 		throw error;
 	}
 
-	return res;
+	return res.OPENAI_API_KEYS;
 };
 
 export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OPENAI_API_BASE_PATH}/keys/update`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/keys/update`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
 			keys: keys
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data.OPENAI_API_KEYS;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -168,20 +205,26 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 		throw error;
 	}
 
-	return res;
+	return res.OPENAI_API_KEYS;
 };
 
 export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${OPENAI_API_BASE_PATH}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}`,
+	const res = await fetch(
+		`${OPENAI_API_BASE_URL}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}`,
 		{
-			method: 'GET'
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
 		}
 	)
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
@@ -202,15 +245,21 @@ export const verifyOpenAIConnection = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OPENAI_API_BASE_PATH}/verify`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/verify`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
 			url,
 			key
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
@@ -292,7 +341,7 @@ export const synthesizeOpenAISpeech = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_PATH}/audio/speech`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/audio/speech`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,

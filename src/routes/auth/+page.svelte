@@ -8,7 +8,7 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
@@ -114,7 +114,7 @@
 	let onboarding = false;
 
 	onMount(async () => {
-		if ($user !== undefined && localStorage.token) {
+		if ($user !== undefined) {
 			await goto('/');
 		}
 		await checkOauthCallback();

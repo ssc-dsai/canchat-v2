@@ -1,17 +1,17 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { WEBUI_API_BASE_PATH } from '$lib/constants';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getGravatarUrl = async (email: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/gravatar`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/gravatar?email=${email}`, {
 		method: 'GET',
-		params: {
-			email: email
+		headers: {
+			'Content-Type': 'application/json'
 		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -25,14 +25,18 @@ export const getGravatarUrl = async (email: string) => {
 export const formatPythonCode = async (code: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/code/format`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/code/format`, {
 		method: 'POST',
-		data: {
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
 			code: code
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -54,15 +58,19 @@ export const formatPythonCode = async (code: string) => {
 export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 	let error = null;
 
-	const blob = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/pdf`, {
+	const blob = await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
 		method: 'POST',
-		data: {
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
 			title: title,
 			messages: messages
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.blob();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -76,14 +84,18 @@ export const downloadChatAsPDF = async (title: string, messages: object[]) => {
 export const getHTMLFromMarkdown = async (md: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/markdown`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/markdown`, {
 		method: 'POST',
-		data: {
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
 			md: md
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -97,18 +109,60 @@ export const getHTMLFromMarkdown = async (md: string) => {
 export const downloadDatabase = async (token: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/utils/db/download`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/db/download`, {
 		method: 'GET',
-		responseType: 'blob'
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (response) => {
-			return response.data;
+			if (!response.ok) {
+				throw await response.json();
+			}
+			return response.blob();
 		})
 		.then((blob) => {
 			const url = window.URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
 			a.download = 'webui.db';
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+};
+
+export const downloadLiteLLMConfig = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/litellm/config`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (response) => {
+			if (!response.ok) {
+				throw await response.json();
+			}
+			return response.blob();
+		})
+		.then((blob) => {
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'config.yaml';
 			document.body.appendChild(a);
 			a.click();
 			window.URL.revokeObjectURL(url);

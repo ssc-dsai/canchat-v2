@@ -1,14 +1,22 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { WEBUI_API_BASE_PATH } from '$lib/constants';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -26,11 +34,20 @@ export const getModels = async (token: string = '') => {
 export const getBaseModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/base`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/base`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -48,12 +65,18 @@ export const getBaseModels = async (token: string = '') => {
 export const createNewModel = async (token: string, model: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/create`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/create`, {
 		method: 'POST',
-		data: model
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(model)
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -71,14 +94,23 @@ export const createNewModel = async (token: string, model: object) => {
 export const getModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/model`, {
+	const searchParams = new URLSearchParams();
+	searchParams.append('id', id);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model?${searchParams.toString()}`, {
 		method: 'GET',
-		params: {
-			id: id
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -97,14 +129,23 @@ export const getModelById = async (token: string, id: string) => {
 export const toggleModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/model/toggle`, {
+	const searchParams = new URLSearchParams();
+	searchParams.append('id', id);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/toggle?${searchParams.toString()}`, {
 		method: 'POST',
-		params: {
-			id: id
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -126,15 +167,21 @@ export const updateModelById = async (token: string, id: string, model: object) 
 	const searchParams = new URLSearchParams();
 	searchParams.append('id', id);
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/model/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/update?${searchParams.toString()}`, {
 		method: 'POST',
-		data: model,
-		params: {
-			id: id
-		}
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(model)
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -152,14 +199,24 @@ export const updateModelById = async (token: string, id: string, model: object) 
 
 export const deleteModelById = async (token: string, id: string) => {
 	let error = null;
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/model/delete`, {
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('id', id);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/delete?${searchParams.toString()}`, {
 		method: 'DELETE',
-		params: {
-			id: id
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -178,11 +235,20 @@ export const deleteModelById = async (token: string, id: string) => {
 export const deleteAllModels = async (token: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/models/delete/all`, {
-		method: 'DELETE'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/delete/all`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err;

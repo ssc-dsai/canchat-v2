@@ -1,17 +1,22 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { WEBUI_API_BASE_PATH } from '$lib/constants';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const createNewTool = async (token: string, tool: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/create`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/create`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			...tool
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -29,11 +34,17 @@ export const createNewTool = async (token: string, tool: object) => {
 export const getTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -54,11 +65,17 @@ export const getTools = async (token: string = '') => {
 export const getToolList = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/list`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/list`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -79,11 +96,17 @@ export const getToolList = async (token: string = '') => {
 export const exportTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/export`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/export`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -104,11 +127,17 @@ export const exportTools = async (token: string = '') => {
 export const getToolById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/id/${id}`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -130,14 +159,20 @@ export const getToolById = async (token: string, id: string) => {
 export const updateToolById = async (token: string, id: string, tool: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/id/${id}/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/update`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			...tool
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -159,11 +194,17 @@ export const updateToolById = async (token: string, id: string, tool: object) =>
 export const deleteToolById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/id/${id}/delete`, {
-		method: 'DELETE'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/delete`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -185,11 +226,17 @@ export const deleteToolById = async (token: string, id: string) => {
 export const getToolValvesById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -211,11 +258,17 @@ export const getToolValvesById = async (token: string, id: string) => {
 export const getToolValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves/spec`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/spec`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -237,14 +290,20 @@ export const getToolValvesSpecById = async (token: string, id: string) => {
 export const updateToolValvesById = async (token: string, id: string, valves: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/update`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			...valves
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -266,11 +325,17 @@ export const updateToolValvesById = async (token: string, id: string, valves: ob
 export const getUserValvesById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves/user`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -292,11 +357,17 @@ export const getUserValvesById = async (token: string, id: string) => {
 export const getUserValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves/user/spec`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user/spec`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -318,14 +389,20 @@ export const getUserValvesSpecById = async (token: string, id: string) => {
 export const updateUserValvesById = async (token: string, id: string, valves: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/tools/id/${id}/valves/user/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user/update`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			...valves
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
