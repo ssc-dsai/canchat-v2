@@ -19,6 +19,43 @@ log = logging.getLogger(__name__)
 # Ensure MCP manager logs are visible
 log.setLevel(logging.INFO)
 
+# Define allowed executables for MCP servers
+ALLOWED_EXECUTABLES = frozenset(
+    [
+        "python",
+        "python3",
+        "node",
+        "npx",
+        "uv",
+    ]
+)
+
+
+def validate_command(command: List[str]) -> bool:
+    """Validate that a command uses only allowed executables.
+
+    Args:
+        command: The command list (e.g., ["python", "script.py"])
+
+    Returns:
+        True if command is safe, raises ValueError otherwise
+    """
+    if not command:
+        raise ValueError("Command cannot be empty")
+
+    executable = command[0]
+
+    # Extract just the executable name
+    executable_name = os.path.basename(executable)
+
+    if executable_name not in ALLOWED_EXECUTABLES:
+        raise ValueError(
+            f"Executable '{executable_name}' is not allowed. "
+            f"Allowed executables: {', '.join(sorted(ALLOWED_EXECUTABLES))}"
+        )
+
+    return True
+
 
 class FastMCPManager:
     """Manages FastMCP server instances and client connections"""
@@ -80,6 +117,9 @@ class FastMCPManager:
         config = self.server_configs[name]
 
         try:
+            # Validate command before execution
+            validate_command(config["command"])
+
             # Check if this is an HTTP server (has --http in command)
             is_http_server = "--http" in config["command"]
 
