@@ -76,10 +76,12 @@ async def get_session_from_token(token: str) -> UserSession | None:
     try:
         from open_webui.session.session_service import SESSION_SERVICE
 
+        # Note: With the reversion of the axios stuff, errors are trapped above
+        # once more.
         payload = decode_token(token)
 
         # Extract user's id from
-        if user_id := payload.get("id", None):
+        if payload and (user_id := payload.get("id", None)):
             user_session = await SESSION_SERVICE.get_session(user_id) or UserSession(
                 user_id=user_id
             )
