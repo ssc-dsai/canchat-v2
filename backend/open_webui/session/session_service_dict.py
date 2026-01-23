@@ -4,7 +4,7 @@ from typing import Annotated
 from pydantic import Field
 
 from open_webui.session.models import UserSession
-from open_webui.session.session_service import SessionService
+from open_webui.session.session_service_abc import SessionService
 
 
 class TimedUserSession(UserSession):
@@ -28,11 +28,10 @@ class DictSessionService(SessionService):
     __session_store: dict[str, TimedUserSession]
     __last_cleaned: int = int(time.time())
     __clean_interval: int = 60  # 1 min
-    __session_lifetime: int = 60 * 30  # 30 min
 
-    def __init__(self) -> None:
+    def __init__(self, session_lifetime: int = 60 * 30) -> None:
         self.__session_store = dict()
-        super().__init__()
+        super().__init__(session_lifetime=session_lifetime)
 
     async def __clean_expired_sessions(self):
         """
@@ -49,7 +48,7 @@ class DictSessionService(SessionService):
             self.__last_cleaned = current_time
 
             for user_id, session in self.__session_store.items():
-                if current_time - session.updated_at > self.__session_lifetime:
+                if current_time - session.updated_at > self._session_lifetime:
                     await self.remove_session(user_id=user_id)
 
     async def get_session(self, user_id: str) -> UserSession | None:

@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 class UserAuth(BaseModel):
     """
-    Docstring for UserAuth
+    Contains the token and its extracted expiry time in epoch.
     """
 
     token: str
@@ -13,7 +13,7 @@ class UserAuth(BaseModel):
 
 class UserSession(BaseModel):
     """
-    Docstring for UserSession
+    A user session object use to coordinate user information across calls and replicas.
     """
 
     user_id: Annotated[

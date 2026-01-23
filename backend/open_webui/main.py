@@ -295,6 +295,8 @@ from open_webui.env import (
 )
 
 from open_webui.custom_logging import LoggingMiddleware, reconfigure_access_log
+from open_webui.session.session_service import setup_session_service
+from open_webui.session.middleware import UserSessionMiddleware
 
 from open_webui.utils.models import (
     get_all_models,
@@ -346,7 +348,8 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(rf"""
+print(
+    rf"""
   ___                    __        __   _     _   _ ___
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
 | | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
@@ -358,13 +361,17 @@ print(rf"""
 v{VERSION} - building the best open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
-""")
+"""
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
+
+    # Setup the session service.
+    await setup_session_service()
 
     # Initialize metrics service
     try:
@@ -904,6 +911,7 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
 
 # Add the middleware to the app
+app.add_middleware(UserSessionMiddleware)
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
