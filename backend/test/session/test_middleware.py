@@ -7,7 +7,6 @@ from open_webui.session.middleware import get_session_from_token
 import open_webui.utils.auth as auth
 from open_webui.session.models import UserSession
 
-
 dev_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ0MzcxZWJhLTJlZDgtNGFmMi05NDU0LTc4ZTQ5NjU0NTVmOCIsImV4cCI6MTc2OTE3NjY3NX0.9Gfq9dWJS8I90YBelhf7DyM7A7ZPNNct8F8Kakc2HnA"
 
 SESSION_SECRET_1 = "this-is-a-secret-asdasd"
