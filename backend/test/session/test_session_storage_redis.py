@@ -1,3 +1,4 @@
+import os
 import pytest
 import redis.asyncio as redis
 
@@ -5,13 +6,12 @@ from pytest_mock import MockerFixture
 from open_webui.session.models import UserSession
 from open_webui.session.session_service_redis import RedisSessionService
 
-REDIS_URL = "redis://localhost:6379/0"
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 REDIS_CLIENT: redis.Redis
 
 
 @pytest.fixture(scope="session")
 async def redis_client_fixture():
-    print("In fixture")
     try:
         REDIS_CLIENT = await redis.from_url(REDIS_URL)
         await REDIS_CLIENT.ping()
@@ -28,12 +28,6 @@ async def test_redis_session_service(
     caplog: pytest.LogCaptureFixture,
     redis_client_fixture: redis.Redis,
 ):
-
-    # try:
-    #     r_client = await redis.from_url(REDIS_URL)
-    #     await r_client.ping()
-    # except redis.ConnectionError:
-    #     pytest.skip("No connection to Redis.")
     client = await redis_client_fixture
     session_storage = RedisSessionService(client=client)
 
