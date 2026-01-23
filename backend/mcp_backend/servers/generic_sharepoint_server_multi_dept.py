@@ -625,7 +625,7 @@ async def _analyze_all_documents_for_content_impl(
                 }
 
         # Get all documents using comprehensive traversal (no verbose logging)
-        all_docs_result = await get_all_documents_comprehensive(effective_token)
+        all_docs_result = await _get_all_documents_comprehensive_impl(effective_token)
 
         if all_docs_result.get("status") != "success":
             return all_docs_result
