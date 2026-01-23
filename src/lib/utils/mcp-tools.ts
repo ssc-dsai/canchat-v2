@@ -16,10 +16,14 @@ const getMCPToolDescription = (toolName: string, i18n: any): string => {
 	const toolDescriptions: Record<string, string> = {
 		get_current_time: 'Get current date and time in any timezone',
 		get_top_headlines: 'Get latest news headlines from around the world',
-		analyze_all_documents_for_content: 'Search and retrieve MPO SharePoint documents',
-		get_sharepoint_document_content: 'Search and retrieve MPO SharePoint documents',
-		get_all_documents_comprehensive: 'Search and retrieve MPO SharePoint documents',
-		check_sharepoint_permissions: 'Search and retrieve MPO SharePoint documents'
+		mpo_analyze_all_documents_for_content: 'Search and retrieve MPO SharePoint documents',
+		mpo_get_sharepoint_document_content: 'Search and retrieve MPO SharePoint documents',
+		mpo_get_all_documents_comprehensive: 'Search and retrieve MPO SharePoint documents',
+		mpo_check_sharepoint_permissions: 'Search and retrieve MPO SharePoint documents',
+		pmo_analyze_all_documents_for_content: 'Search and retrieve PMO SharePoint documents',
+		pmo_get_sharepoint_document_content: 'Search and retrieve PMO SharePoint documents',
+		pmo_get_all_documents_comprehensive: 'Search and retrieve PMO SharePoint documents',
+		pmo_check_sharepoint_permissions: 'Search and retrieve PMO SharePoint documents'
 	};
 
 	const englishDescription = toolDescriptions[actualToolName];
@@ -42,10 +46,14 @@ export const getMCPToolName = (toolName: string, i18n: any): string => {
 	const toolNames: Record<string, string> = {
 		get_current_time: 'MCP: Current Time',
 		get_top_headlines: 'MCP: News Headlines',
-		analyze_all_documents_for_content: 'MCP: MPO SharePoint',
-		get_sharepoint_document_content: 'MCP: MPO SharePoint',
-		get_all_documents_comprehensive: 'MCP: MPO SharePoint',
-		check_sharepoint_permissions: 'MCP: MPO SharePoint'
+		mpo_analyze_all_documents_for_content: 'MCP: MPO SharePoint',
+		mpo_get_sharepoint_document_content: 'MCP: MPO SharePoint',
+		mpo_get_all_documents_comprehensive: 'MCP: MPO SharePoint',
+		mpo_check_sharepoint_permissions: 'MCP: MPO SharePoint',
+		pmo_analyze_all_documents_for_content: 'MCP: PMO SharePoint',
+		pmo_get_sharepoint_document_content: 'MCP: PMO SharePoint',
+		pmo_get_all_documents_comprehensive: 'MCP: PMO SharePoint',
+		pmo_check_sharepoint_permissions: 'MCP: PMO SharePoint'
 	};
 
 	const englishName = toolNames[actualToolName];

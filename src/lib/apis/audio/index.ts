@@ -1,14 +1,18 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { AUDIO_API_BASE_PATH } from '$lib/constants';
+import { AUDIO_API_BASE_URL } from '$lib/constants';
 
 export const getAudioConfig = async (token: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${AUDIO_API_BASE_PATH}/config`, {
-		method: 'GET'
+	const res = await fetch(`${AUDIO_API_BASE_URL}/config`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -33,14 +37,19 @@ type OpenAIConfigForm = {
 export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
 	let error = null;
 
-	const res = await canchatAPI(`${AUDIO_API_BASE_PATH}/config/update`, {
+	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
 		method: 'POST',
-		data: {
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			...payload
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -60,15 +69,17 @@ export const transcribeAudio = async (token: string, file: File) => {
 	data.append('file', file);
 
 	let error = null;
-	const res = await canchatAPI(`${AUDIO_API_BASE_PATH}/transcriptions`, {
+	const res = await fetch(`${AUDIO_API_BASE_URL}/transcriptions`, {
 		method: 'POST',
-		data: data,
 		headers: {
-			'Content-Type': 'multipart/form-data'
-		}
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: data
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -91,16 +102,21 @@ export const synthesizeOpenAISpeech = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(`${AUDIO_API_BASE_PATH}/speech`, {
+	const res = await fetch(`${AUDIO_API_BASE_URL}/speech`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
 			input: text,
 			voice: speaker,
 			...(model && { model })
-		}
+		})
 	})
 		.then(async (res) => {
-			res.data;
+			if (!res.ok) throw await res.json();
+			return res;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -123,11 +139,16 @@ interface AvailableModelsResponse {
 export const getModels = async (token: string = ''): Promise<AvailableModelsResponse> => {
 	let error = null;
 
-	const res = await canchatAPI(`${AUDIO_API_BASE_PATH}/models`, {
-		method: 'GET'
+	const res = await fetch(`${AUDIO_API_BASE_URL}/models`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -146,11 +167,16 @@ export const getModels = async (token: string = ''): Promise<AvailableModelsResp
 export const getVoices = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${AUDIO_API_BASE_PATH}/voices`, {
-		method: 'GET'
+	const res = await fetch(`${AUDIO_API_BASE_URL}/voices`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;

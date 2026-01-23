@@ -1,20 +1,21 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { WEBUI_API_BASE_PATH } from '$lib/constants';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const uploadFile = async (token: string, file: File) => {
+	const data = new FormData();
+	data.append('file', file);
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/files/`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
 		method: 'POST',
-		data: {
-			file: file
-		},
 		headers: {
-			'Content-Type': 'multipart/form-data'
-		}
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: data
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -32,11 +33,16 @@ export const uploadFile = async (token: string, file: File) => {
 export const uploadDir = async (token: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/files/upload/dir`, {
-		method: 'POST'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/upload/dir`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -53,11 +59,17 @@ export const uploadDir = async (token: string) => {
 export const getFiles = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/files/`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -78,11 +90,20 @@ export const getFiles = async (token: string = '') => {
 export const getFileById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/files/${id}`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -100,14 +121,23 @@ export const getFileById = async (token: string, id: string) => {
 export const updateFileDataContentById = async (token: string, id: string, content: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/files/${id}/data/content/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/data/content/update`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			content: content
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -125,12 +155,16 @@ export const updateFileDataContentById = async (token: string, id: string, conte
 export const getFileContentById = async (id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/files/${id}/content`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/content`, {
 		method: 'GET',
-		withCredentials: true
+		headers: {
+			Accept: 'application/json'
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
-			res.data;
+			if (!res.ok) throw await res.json();
+			return await res.blob();
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -149,11 +183,20 @@ export const getFileContentById = async (id: string) => {
 export const deleteFileById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/files/${id}`, {
-		method: 'DELETE'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -171,11 +214,20 @@ export const deleteFileById = async (token: string, id: string) => {
 export const deleteAllFiles = async (token: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/files/all`, {
-		method: 'DELETE'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/all`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
 		})
 		.catch((err) => {
 			error = err.detail;
