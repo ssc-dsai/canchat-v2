@@ -33,7 +33,7 @@ def extract_jwt_expiry(token: str) -> int:
 
 
 def update_graph_access_token(
-    token: str, session: UserSession
+    new_token: str, session: UserSession
 ) -> Tuple[bool, UserSession]:
     """
     Performs an update to the UserSession based on the provided JWT.
@@ -47,17 +47,17 @@ def update_graph_access_token(
     """
     updated = False
 
-    if token:
-        access_token_expiry = extract_jwt_expiry(token)
+    if new_token:
+        new_access_token_expiry = extract_jwt_expiry(new_token)
 
         if (
             # No stored token
             not session.graph_access_token
             # New token has later expiry
-            or session.graph_access_token.expiry > access_token_expiry
+            or session.graph_access_token.expiry < new_access_token_expiry
         ):
             session.graph_access_token = UserAuth(
-                token=token, expiry=access_token_expiry
+                token=new_token, expiry=new_access_token_expiry
             )
             updated = True
 
