@@ -49,7 +49,9 @@ class RedisSessionServiceImpl(RedisSessionService):
                     self._get_session_id(session.user_id),
                     session.model_dump_json(),
                 )
-                pipe.expire(self._get_session_id(session.user_id), self._session_lifetime)
+                pipe.expire(
+                    self._get_session_id(session.user_id), self._session_lifetime
+                )
                 await pipe.execute(raise_on_error=True)
             return True
         except redis.RedisError as e:
@@ -98,7 +100,9 @@ class RedisJSONSessionService(RedisSessionService):
                     Path.root_path(),
                     session.model_dump_json(),
                 )
-                pipe.expire(self._get_session_id(session.user_id), self._session_lifetime)
+                pipe.expire(
+                    self._get_session_id(session.user_id), self._session_lifetime
+                )
                 await pipe.execute(raise_on_error=True)
             return True
         except redis.RedisError as e:
