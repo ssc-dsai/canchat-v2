@@ -767,7 +767,7 @@ async def _analyze_documents_parallel_ultra_fast(
                 mpo_logger.setLevel(logging.ERROR)  # Suppress MPO logs
 
                 try:
-                    content_result = await get_sharepoint_document_content(
+                    content_result = await _get_sharepoint_document_content_impl(
                         folder_path, doc_name, user_token
                     )
                     content = (
