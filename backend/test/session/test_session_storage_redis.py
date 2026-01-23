@@ -14,7 +14,7 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 REDIS_CLIENT: redis.Redis
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 async def redis_client_fixture():
     try:
         REDIS_CLIENT = await redis.from_url(REDIS_URL)
