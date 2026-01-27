@@ -52,12 +52,9 @@ def get_config_value(request: Request, key: str, default=None):
         return getattr(config, key, default)
 
 
-ALLOWED_CONFIG_KEYS = frozenset({"ENABLE_MCP_API", "MCP_BASE_URLS", "MCP_API_CONFIGS"})
-
-
 def set_config_value(request: Request, key: str, value):
     """Helper function to set config values that handles both dict and object formats"""
-    if key not in ALLOWED_CONFIG_KEYS:
+    if key not in MCPConfigForm.model_fields.keys:
         raise ValueError(f"Config key '{key}' is not allowed")
 
     config = request.app.state.config
