@@ -243,7 +243,9 @@
 
 			<div class="pt-3">
 				<div class="flex flex-col w-full">
-					<label for="timezone-select" class=" mb-1 text-xs font-medium">{$i18n.t('Timezone')}</label>
+					<label for="timezone-select" class=" mb-1 text-xs font-medium"
+						>{$i18n.t('Timezone')}</label
+					>
 					<div id="timezone-help" class="text-xs text-gray-500 mb-2">
 						{$i18n.t('Select your timezone for accurate date and time information in chats')}
 					</div>
