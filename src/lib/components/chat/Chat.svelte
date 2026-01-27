@@ -1493,9 +1493,7 @@
 							const localizedErrorMessage = $i18n.t(errorMessage);
 
 							// Show error toast
-							toast.error(
-								$i18n.t('CrewAI Error: {{error}}', { error: localizedErrorMessage })
-							);
+							toast.error($i18n.t('CrewAI Error: {{error}}', { error: localizedErrorMessage }));
 
 							// Display error message in chat instead of falling back
 							responseMessage.content = `⚠️ **${$i18n.t('CrewAI MCP Error')}**\n\n${localizedErrorMessage}\n\n*${$i18n.t('The selected tool(s) could not complete this request. This may be due to:')}*\n- ${$i18n.t('Request timeout (processing took too long)')}\n- ${$i18n.t('Network connectivity issues')}\n- ${$i18n.t('SharePoint permissions or authentication problems')}\n\n${$i18n.t('Please try again, or contact support if the issue persists.')}`;

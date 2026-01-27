@@ -17,8 +17,6 @@
 	</div>
 
 	<div class=" self-center text-sm">
-		{typeof content === 'string'
-			? localizeErrorContent(content)
-			: JSON.stringify(content)}
+		{typeof content === 'string' ? localizeErrorContent(content) : JSON.stringify(content)}
 	</div>
 </div>
