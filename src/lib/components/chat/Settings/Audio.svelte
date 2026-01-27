@@ -160,10 +160,13 @@
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Playback Speed')}</div>
+				<div id="playback-speed-label" class="self-center text-xs font-medium">
+					{$i18n.t('Speech Playback Speed')}
+				</div>
 
 				<div class="flex items-center relative">
 					<select
+						aria-labelledby="playback-speed-label"
 						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={playbackRate}
 					>
@@ -180,9 +183,13 @@
 		{#if $config.audio.tts.engine === ''}
 			<div>
 				<h3 id="set-voice" class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</h3>
+				<label for="voice-select" class="sr-only">
+					{$i18n.t('Set Voice')}
+				</label>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
+							id="voice-select"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={voice}
 						>
@@ -203,7 +210,7 @@
 					</div>
 
 					<div class="mt-1">
-						<Switch bind:state={nonLocalVoices} />
+						<Switch bind:state={nonLocalVoices} aria-label={$i18n.t('Allow non-local voices')} />
 					</div>
 				</div>
 			</div>
