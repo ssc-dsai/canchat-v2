@@ -227,10 +227,11 @@
 
 			<div class="pt-0.5">
 				<div class="flex flex-col w-full">
-					<h3 class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</h3>
+					<label for="account-name" class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</label>
 
 					<div class="flex-1">
 						<input
+							id="account-name"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="text"
 							bind:value={name}
@@ -242,13 +243,17 @@
 
 			<div class="pt-3">
 				<div class="flex flex-col w-full">
-					<h3 class=" mb-1 text-xs font-medium">{$i18n.t('Timezone')}</h3>
-					<div class="text-xs text-gray-500 mb-2">
+					<label for="timezone-select" class=" mb-1 text-xs font-medium"
+						>{$i18n.t('Timezone')}</label
+					>
+					<div id="timezone-help" class="text-xs text-gray-500 mb-2">
 						{$i18n.t('Select your timezone for accurate date and time information in chats')}
 					</div>
 
 					<div class="flex-1">
 						<select
+							id="timezone-select"
+							aria-describedby="timezone-help"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none border border-gray-200 dark:border-gray-700"
 							bind:value={selectedTimezone}
 						>
