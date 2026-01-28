@@ -443,7 +443,6 @@ class SharePointOAuthClient:
                         "query": {"queryString": query},
                         "from": 0,
                         "size": min(limit, 500),  # Max 500 per request
-                        "region": "CAN",  # hardcoded for Canada
                         "fields": [
                             "id",
                             "name",
@@ -457,6 +456,10 @@ class SharePointOAuthClient:
                     }
                 ]
             }
+
+            # Region parameter only supported with application permissions, not delegated
+            if not self.use_delegated_access:
+                search_request["requests"][0]["region"] = "CAN"
 
             # If site_id is provided, add it to limit scope
             if site_id:
