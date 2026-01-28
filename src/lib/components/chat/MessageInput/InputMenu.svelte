@@ -141,93 +141,101 @@
 			transition={flyAndScale}
 		>
 			{#if Object.keys(tools).length > 0}
-				<div class="  max-h-28 overflow-y-auto scrollbar-hidden">
-					{#each Object.keys(tools) as toolId}
-						<button
-							role="menuitem"
-							aria-label={tools[toolId].isMcp
-								? getMCPToolName(
-										tools[toolId].meta?.manifest?.original_name || tools[toolId].name,
-										$i18n
-									)
-								: tools[toolId].name}
-							class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-							on:click={() => {
-								tools[toolId].enabled = !tools[toolId].enabled;
-							}}
-						>
-							<div class="flex-1">
-								<Tooltip
-									content={getToolTooltipContent(tools[toolId], $i18n)}
-									placement="right"
-									className="flex flex-1 gap-2 items-center"
-									tippyOptions={{
-										placement: 'right',
-										offset: [0, 0],
-										flip: false,
-										getReferenceClientRect: () => {
-											const menu = document.querySelector(
-												'[data-melt-dropdown-menu][data-state="open"]'
-											);
-											if (menu) {
-												const menuRect = menu.getBoundingClientRect();
-												const buttonRect = event?.target
-													?.closest('button')
-													?.getBoundingClientRect();
-												if (buttonRect) {
-													return {
-														width: 0,
-														height: buttonRect.height,
-														top: buttonRect.top,
-														bottom: buttonRect.bottom,
-														left: menuRect.right,
-														right: menuRect.right
-													};
+				<div class="relative">
+					<div
+						class="max-h-28 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500 pr-1"
+					>
+						{#each Object.keys(tools) as toolId}
+							<button
+								role="menuitem"
+								aria-label={tools[toolId].isMcp
+									? getMCPToolName(
+											tools[toolId].meta?.manifest?.original_name || tools[toolId].name,
+											$i18n
+										)
+									: tools[toolId].name}
+								class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+								on:click={() => {
+									tools[toolId].enabled = !tools[toolId].enabled;
+								}}
+							>
+								<div class="flex-1">
+									<Tooltip
+										content={getToolTooltipContent(tools[toolId], $i18n)}
+										placement="right"
+										className="flex flex-1 gap-2 items-center"
+										tippyOptions={{
+											placement: 'right',
+											offset: [0, 0],
+											flip: false,
+											getReferenceClientRect: () => {
+												const menu = document.querySelector(
+													'[data-melt-dropdown-menu][data-state="open"]'
+												);
+												if (menu) {
+													const menuRect = menu.getBoundingClientRect();
+													const buttonRect = event?.target
+														?.closest('button')
+														?.getBoundingClientRect();
+													if (buttonRect) {
+														return {
+															width: 0,
+															height: buttonRect.height,
+															top: buttonRect.top,
+															bottom: buttonRect.bottom,
+															left: menuRect.right,
+															right: menuRect.right
+														};
+													}
 												}
+												return { width: 0, height: 0, top: 0, bottom: 0, left: 0, right: 0 };
 											}
-											return null;
-										}
-									}}
-								>
-									<div class="flex-shrink-0">
-										{#if tools[toolId].isMcp}
-											<Cog6Solid />
-										{:else}
-											<WrenchSolid />
-										{/if}
-									</div>
-
-									<div class="flex flex-col items-start min-w-0 flex-1">
-										<div class="text-sm font-medium leading-tight">
+										}}
+									>
+										<div class="flex-shrink-0">
 											{#if tools[toolId].isMcp}
-												{getMCPToolName(tools[toolId].originalName, $i18n)}
+												<Cog6Solid />
 											{:else}
-												{tools[toolId].name}
+												<WrenchSolid />
 											{/if}
 										</div>
-									</div>
-								</Tooltip>
-							</div>
 
-							<div class=" flex-shrink-0">
-								<Switch
-									state={tools[toolId].enabled}
-									ariaLabel={tools[toolId].isMcp
-										? `${$i18n.t('Toggle')} ${getMCPToolName(tools[toolId].meta?.manifest?.original_name || tools[toolId].name, $i18n)}`
-										: `${$i18n.t('Toggle')} ${tools[toolId].name}`}
-									on:change={async (e) => {
-										const state = e.detail;
-										await tick();
-										if (state) {
-											selectedToolIds = [...selectedToolIds, toolId];
-										} else {
-											selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
-										}
-									}}
-								/>
-							</div>
-						</button>
-					{/each}
+										<div class="flex flex-col items-start min-w-0 flex-1">
+											<div class="text-sm font-medium leading-tight">
+												{#if tools[toolId].isMcp}
+													{getMCPToolName(tools[toolId].originalName, $i18n)}
+												{:else}
+													{tools[toolId].name}
+												{/if}
+											</div>
+										</div>
+									</Tooltip>
+								</div>
+
+								<div class=" flex-shrink-0">
+									<Switch
+										state={tools[toolId].enabled}
+										ariaLabel={tools[toolId].isMcp
+											? `${$i18n.t('Toggle')} ${getMCPToolName(tools[toolId].meta?.manifest?.original_name || tools[toolId].name, $i18n)}`
+											: `${$i18n.t('Toggle')} ${tools[toolId].name}`}
+										on:change={async (e) => {
+											const state = e.detail;
+											await tick();
+											if (state) {
+												selectedToolIds = [...selectedToolIds, toolId];
+											} else {
+												selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+											}
+										}}
+									/>
+								</div>
+							</button>
+						{/each}
+					</div>
+					<!-- Scroll indicator gradient -->
+					<div
+						class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-gray-850 to-transparent pointer-events-none opacity-80"
+					></div>
 				</div>
 
 				<hr class="border-black/5 dark:border-white/5 my-1" />
@@ -315,7 +323,7 @@
 									right: menuRect.right
 								};
 							}
-							return null;
+							return { width: 0, height: 0, top: 0, bottom: 0, left: 0, right: 0 };
 						}
 					}}
 				>
