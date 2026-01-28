@@ -744,8 +744,6 @@ async def _search_documents_fast_impl(
         # Performance logging
         perf_message = f"⚡ FAST SEARCH: '{query}' → {len(documents)} results in {round(processing_time, 2)}s"
         logger.info(perf_message)
-        print(perf_message)
-
         return {
             "status": "success",
             "query": query,
@@ -859,7 +857,6 @@ async def _get_document_by_id_impl(
         # Performance logging
         perf_message = f"📄 Retrieved '{file_name}' by ID in {round(processing_time, 2)}s ({len(content_text)} chars)"
         logger.info(perf_message)
-        print(perf_message)
 
         return {
             "status": "success",

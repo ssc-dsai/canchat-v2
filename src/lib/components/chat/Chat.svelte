@@ -1485,17 +1485,18 @@
 								// Don't call chatCompletedHandler for CrewAI responses to avoid 400 error
 								return; // Return early for successful CrewAI response
 							} else {
-								throw new Error('CrewAI returned no result');
+								throw new Error($i18n.t('CrewAI returned no result'));
 							}
 						} catch (error) {
 							console.error('CrewAI Error:', error);
 							const errorMessage = (error as Error).message || String(error);
+							const localizedErrorMessage = $i18n.t(errorMessage);
 
 							// Show error toast
-							toast.error(`CrewAI Error: ${errorMessage}`);
+							toast.error($i18n.t('CrewAI Error: {{error}}', { error: localizedErrorMessage }));
 
 							// Display error message in chat instead of falling back
-							responseMessage.content = `⚠️ **CrewAI MCP Error**\n\n${errorMessage}\n\n*The selected tool(s) could not complete this request. This may be due to:*\n- Request timeout (processing took too long)\n- Network connectivity issues\n- SharePoint permissions or authentication problems\n\nPlease try again, or contact support if the issue persists.`;
+							responseMessage.content = `⚠️ **${$i18n.t('CrewAI MCP Error')}**\n\n${localizedErrorMessage}\n\n*${$i18n.t('The selected tool(s) could not complete this request. This may be due to:')}*\n- ${$i18n.t('Request timeout (processing took too long)')}\n- ${$i18n.t('Network connectivity issues')}\n- ${$i18n.t('SharePoint permissions or authentication problems')}\n\n${$i18n.t('Please try again, or contact support if the issue persists.')}`;
 							responseMessage.done = true;
 							responseMessage.error = true;
 							history.messages[responseMessageId] = responseMessage;

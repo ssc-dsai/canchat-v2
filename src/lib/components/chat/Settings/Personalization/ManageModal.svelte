@@ -72,7 +72,9 @@
 										<th scope="col" class="px-3 py-2 hidden md:flex">
 											{$i18n.t('Last Modified')}
 										</th>
-										<th scope="col" class="px-3 py-2 text-right" />
+										<th scope="col" class="px-3 py-2 text-right">
+											<span class="sr-only">Actions</span>
+										</th>
 									</tr>
 								</thead>
 								<tbody>
