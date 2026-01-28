@@ -474,9 +474,7 @@ class SharePointOAuthClient:
                         # Extract hits from search response
                         hits = []
                         if "value" in data and len(data["value"]) > 0:
-                            hits_container = data["value"][0].get(
-                                "hitsContainers", []
-                            )
+                            hits_container = data["value"][0].get("hitsContainers", [])
                             if hits_container:
                                 hits = hits_container[0].get("hits", [])
 
