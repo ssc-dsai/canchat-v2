@@ -857,7 +857,6 @@ async def _get_document_by_id_impl(
         # Performance logging
         perf_message = f"📄 Retrieved '{file_name}' by ID in {round(processing_time, 2)}s ({len(content_text)} chars)"
         logger.info(perf_message)
-        print(perf_message)
 
         return {
             "status": "success",
