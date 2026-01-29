@@ -572,9 +572,10 @@
 	/>
 {/if}
 
-<nav
+<div
 	bind:this={navElement}
 	id="sidebar"
+	role="navigation"
 	aria-label={$i18n.t('Main navigation')}
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
 		? 'md:relative w-[260px] max-w-[260px]'
@@ -1060,7 +1061,7 @@
 			</div>
 		</div>
 	</div>
-</nav>
+</div>
 
 <ConfirmDialog
 	bind:show={showDeleteConfirm}
