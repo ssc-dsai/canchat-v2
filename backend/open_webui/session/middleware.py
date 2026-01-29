@@ -66,7 +66,7 @@ def update_graph_access_token(
 
 async def get_session_from_token(token: str) -> UserSession | None:
     """
-    Gets the a session object based off of the user id in the token.
+    Gets the session object based off of the user id in the token.
 
     :param token: The JWT.
     :type token: str
