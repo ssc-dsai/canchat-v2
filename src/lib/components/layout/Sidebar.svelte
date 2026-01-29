@@ -572,7 +572,7 @@
 	/>
 {/if}
 
-<div
+<nav
 	bind:this={navElement}
 	id="sidebar"
 	aria-label={$i18n.t('Main navigation')}
@@ -1060,7 +1060,7 @@
 			</div>
 		</div>
 	</div>
-</div>
+</nav>
 
 <ConfirmDialog
 	bind:show={showDeleteConfirm}
