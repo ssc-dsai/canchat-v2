@@ -575,6 +575,7 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
+	aria-label={$i18n.t('Main navigation')}
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
 		? 'md:relative w-[260px] max-w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} {$isApp
