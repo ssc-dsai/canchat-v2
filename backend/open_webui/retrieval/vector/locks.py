@@ -11,7 +11,7 @@ Performance Characteristics:
 
 Usage:
     lock_manager = get_collection_lock_manager()
-    
+
     async with lock_manager.acquire_lock("collection-name") as lock:
         # Critical section - only one instance can execute this at a time
         pass
