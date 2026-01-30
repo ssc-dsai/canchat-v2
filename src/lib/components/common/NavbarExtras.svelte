@@ -27,7 +27,7 @@
 	const openUrl = (url: string) => window.open(url, '_blank');
 </script>
 
-<div class="flex items-center gap-1">
+<div class="flex items-center gap-1 mr-1">
 	<!-- Help Menu -->
 	<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 		<HelpMenu
