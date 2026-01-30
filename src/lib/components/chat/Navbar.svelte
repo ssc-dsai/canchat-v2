@@ -79,7 +79,7 @@
 
 		<!-- Center Section: PROTECTED B Tooltip -->
 		{#if $config?.features?.pbmm_env === true}
-			<div class="flex justify-center items-center flex-1">
+			<div class="hidden sm:flex justify-center items-center flex-1">
 				<div
 					class="text-xs leading-tight font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest"
 				>
