@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Ensure `backend` is on sys.path so `open_webui` package imports resolve
 # when running this test from the repository root.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from qdrant_client.http.exceptions import UnexpectedResponse
 
