@@ -32,11 +32,6 @@
 			document.getElementById(elementId)?.focus();
 		}, 110);
 	};
-
-	const handleNewChat = () => {
-		suggestionCycle.update((n) => n + 1);
-		initNewChat();
-	};
 </script>
 
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
@@ -97,7 +92,7 @@
 						<button
 							id="new-chat-button"
 							class="flex m-auto self-center cursor-pointer p-2 rounded-xl text-gray-900 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-850 transition"
-							on:click={handleNewChat}
+							on:click={initNewChat()}
 							aria-label={$i18n.t('New Chat')}
 						>
 							<PencilSquare className="size-5" strokeWidth="2" />

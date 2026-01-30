@@ -35,7 +35,8 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
-		tools
+		tools,
+		suggestionCycle
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -724,7 +725,7 @@
 		} else {
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
-
+		suggestionCycle.update((n) => n + 1);
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
