@@ -157,7 +157,7 @@
 						{/if}
 					</div>
 				</div>
-				
+
 				<NavbarExtras />
 			</div>
 		</nav>

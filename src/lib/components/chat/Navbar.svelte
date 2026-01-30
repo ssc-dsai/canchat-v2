@@ -7,7 +7,7 @@
 		user,
 		config,
 		suggestionCycle,
-		ariaMessage,
+		ariaMessage
 	} from '$lib/stores';
 
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
@@ -40,13 +40,19 @@
 </script>
 
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
-	<div class="bg-gradient-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1] blur"></div>
+	<div
+		class="bg-gradient-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1] blur"
+	></div>
 
 	<div class="flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent items-center">
 		<!-- Left Section: Sidebar Toggle and Model Selector -->
 		<div class="flex items-center gap-1">
 			<!-- Sidebar Toggle -->
-			<div class="{$showSidebar ? 'md:hidden' : ''} self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
+			<div
+				class="{$showSidebar
+					? 'md:hidden'
+					: ''} self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+			>
 				<Tooltip content={$i18n.t('Show Sidebar')}>
 					<button
 						id="sidebar-toggle-button"
@@ -74,7 +80,9 @@
 		<!-- Center Section: PROTECTED B Tooltip -->
 		{#if $config?.features?.pbmm_env === true}
 			<div class="flex justify-center items-center flex-1">
-				<div class="text-xs leading-tight font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest">
+				<div
+					class="text-xs leading-tight font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest"
+				>
 					{$i18n.t('PROTECTED B')}
 				</div>
 			</div>
