@@ -89,7 +89,7 @@
 		{/if}
 
 		<!-- Right Section: New Chat, Controls, and Navbar Extras -->
-		<div class="flex items-center gap-1">
+		<div class="flex items-center gap-1 ml-auto">
 			<!-- New Chat Button -->
 			{#if !$showSidebar}
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
