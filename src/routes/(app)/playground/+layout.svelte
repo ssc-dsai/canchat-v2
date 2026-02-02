@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, showSidebar, functions } from '$lib/stores';
+	import { getI18n } from '$lib/utils/context';
+
+	import { onMount } from 'svelte';
+	import { WEBUI_NAME, showSidebar } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	onMount(async () => {});
 </script>

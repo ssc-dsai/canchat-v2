@@ -1,4 +1,4 @@
-import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { get } from 'svelte/store';
 import { socket } from '$lib/stores';
 import type { Socket } from 'socket.io-client';

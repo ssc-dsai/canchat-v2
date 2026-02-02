@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getI18n } from '$lib/utils/context';
+
 	import GlobalLanguageSelector from '../common/GlobalLanguageSelector.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import {
@@ -25,7 +26,7 @@
 	export let shareEnabled = false;
 	export let chat = null;
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	// Check if we're on a main route (/ or /c/)
 	$: isControlsEnabled = $page.url.pathname === '/' || $page.url.pathname.includes('/c/');

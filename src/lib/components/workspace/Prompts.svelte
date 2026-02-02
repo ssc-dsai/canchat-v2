@@ -1,16 +1,17 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 	import { WEBUI_NAME, prompts as _prompts, user } from '$lib/stores';
 
 	import {
 		createNewPrompt,
 		deletePromptByCommand,
-		getPrompts,
 		getPromptList,
 		getPromptsCount,
 		getPromptsLegacy
@@ -26,9 +27,9 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
-	import { capitalizeFirstLetter, sanitizeResponseContent } from '$lib/utils';
+	import { capitalizeFirstLetter } from '$lib/utils';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 	let promptsImportInputElement: HTMLInputElement;
 	let promptsV1ImportInputElement: HTMLInputElement;
 	let loaded = false;

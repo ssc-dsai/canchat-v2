@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { marked } from 'marked';
 	import TurndownService from 'turndown';
 	const turndownService = new TurndownService({
@@ -7,12 +9,11 @@
 	});
 	turndownService.escape = (string) => string;
 
-	import { onMount, onDestroy, getContext } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 	const eventDispatch = createEventDispatcher();
 
-	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
-	import { Decoration, DecorationSet } from 'prosemirror-view';
+	import { TextSelection } from 'prosemirror-state';
 
 	import { Editor } from '@tiptap/core';
 
@@ -27,7 +28,7 @@
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	// create a lowlight instance with all languages loaded
 	const lowlight = createLowlight(all);

@@ -1,5 +1,4 @@
 import { test, expect } from '../../../src/fixtures/base-fixture';
-import { Language } from '../../../src/pages/base.page';
 
 test.describe('Feature: Wiki Grounding', () => {
 	test('Service Availability', async ({ adminPage, userPage, locale }, testInfo) => {

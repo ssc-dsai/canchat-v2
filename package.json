@@ -49,6 +49,7 @@
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-svelte": "^2.43.0",
+		"eslint-plugin-unused-imports": "^4.3.0",
 		"i18next-parser": "^9.0.1",
 		"nyc": "^17.1.0",
 		"postcss": "^8.4.31",

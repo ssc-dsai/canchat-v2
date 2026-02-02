@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { ariaMessage } from '$lib/stores';
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	export let admin = false;
 
