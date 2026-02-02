@@ -7,6 +7,7 @@ import time
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.models.auths import Auths
 
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
@@ -352,7 +353,18 @@ async def connect(sid, environ, auth):
     log.info(
         f"WebSocket environ keys:  {sorted([k for k in environ.keys() if k.startswith('HTTP_')])}"
     )
+
+    # Extract Graph access token from environ early and store temporarily
+    graph_access_token = environ.get("HTTP_X_FORWARDED_ACCESS_TOKEN")
+    if graph_access_token:
+        # Store token in a temporary pool keyed by sid for later retrieval during user-join
+        SESSION_POOL[f"_temp_token_{sid}"] = graph_access_token
+        log.info(
+            f"✅ Temporarily stored Graph access token for sid {sid} (length: {len(graph_access_token)})"
+        )
+
     user = None
+
     if auth and "token" in auth:
         data = decode_token(auth["token"])
 
@@ -362,43 +374,52 @@ async def connect(sid, environ, auth):
                 f"WebSocket connect:  Authenticated user {user.id if user else 'None'}"
             )
 
-        if user:
-            session_data = user.model_dump()
+    # Fallback: Try trusted header auth if auth dict didn't work
+    if not user:
+        forwarded_email = environ.get("HTTP_X_FORWARDED_EMAIL")
+        if forwarded_email:
+            try:
+                user = Auths.authenticate_user_by_trusted_header(forwarded_email)
+                if user:
+                    log.info(
+                        f"WebSocket connect: Authenticated user via trusted header {user.id}"
+                    )
+            except Exception as e:
+                log.warning(f"Trusted header authentication failed: {e}")
 
-            # ============ EXTRACT GRAPH ACCESS TOKEN DIRECTLY FROM ENVIRON ============
-            graph_access_token = environ.get("HTTP_X_FORWARDED_ACCESS_TOKEN")
+    if user:
+        session_data = user.model_dump()
 
-            if graph_access_token:
-                session_data["graph_access_token"] = graph_access_token
-                log.info(
-                    f"✅ Stored Graph access token for user {user. id} (length: {len(graph_access_token)})"
-                )
-            else:
-                log.warning(
-                    f"❌ HTTP_X_FORWARDED_ACCESS_TOKEN not found in environ for user {user. id}"
-                )
+        # Attach token to authenticated user session
+        if graph_access_token:
+            session_data["graph_access_token"] = graph_access_token
+            log.info(
+                f"✅ Stored Graph access token for user {user.id} (length: {len(graph_access_token)})"
+            )
+            # Clean up temporary storage
+            if f"_temp_token_{sid}" in SESSION_POOL:
+                del SESSION_POOL[f"_temp_token_{sid}"]
 
-            # Store in SESSION_POOL
-            SESSION_POOL[sid] = session_data
+        SESSION_POOL[sid] = session_data
 
-            # ============ VERIFY TOKEN WAS STORED (important for Redis) ============
-            stored_session = SESSION_POOL.get(sid)
-            if stored_session and "graph_access_token" in stored_session:
-                log.info(
-                    f"✅ Verified: graph_access_token successfully stored in SESSION_POOL[{sid}]"
-                )
-            elif graph_access_token:
-                log.error(
-                    f"❌ ERROR: graph_access_token NOT in SESSION_POOL after storage! This is a Redis/storage issue."
-                )
+        # Verify token was stored
+        stored_session = SESSION_POOL.get(sid)
+        if stored_session and "graph_access_token" in stored_session:
+            log.info(
+                f"✅ Verified: graph_access_token successfully stored in SESSION_POOL[{sid}]"
+            )
+        elif graph_access_token:
+            log.error(
+                f"❌ ERROR: graph_access_token NOT in SESSION_POOL after storage! This is a Redis/storage issue."
+            )
 
-            if user.id in USER_POOL:
-                USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-            else:
-                USER_POOL[user.id] = [sid]
+        if user.id in USER_POOL:
+            USER_POOL[user.id] = USER_POOL[user.id] + [sid]
+        else:
+            USER_POOL[user.id] = [sid]
 
-            await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
-            await sio.emit("usage", {"models": get_models_in_use()})
+        await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
+        await sio.emit("usage", {"models": get_models_in_use()})
 
 
 @sio.on("user-join")
@@ -415,23 +436,31 @@ async def user_join(sid, data):
     if not user:
         return
 
-    # CRITICAL FIX: Build complete session object BEFORE writing to Redis
-    # This ensures atomic update and prevents race conditions
+    # Build complete session object
     existing_session = SESSION_POOL.get(sid, {})
     graph_access_token = existing_session.get("graph_access_token")
 
-    # Build the new session with user data AND preserved token
+    # Check if token was stored temporarily during connect
+    temp_token_key = f"_temp_token_{sid}"
+    if not graph_access_token and temp_token_key in SESSION_POOL:
+        graph_access_token = SESSION_POOL[temp_token_key]
+        log.info(
+            f"✅ Retrieved temporarily stored Graph access token for user {user.id} during user-join (length: {len(graph_access_token)})"
+        )
+        # Clean up temporary storage
+        del SESSION_POOL[temp_token_key]
+
+    # Build the new session with user data
     new_session = user.model_dump()
     if graph_access_token:
         new_session["graph_access_token"] = graph_access_token
         log.info(
-            f"✅ Preserving Graph access token for user {user.id} during user-join (length: {len(graph_access_token)})"
+            f"✅ Attached Graph access token for user {user.id} during user-join (length: {len(graph_access_token)})"
         )
 
     # Single atomic update to Redis
     SESSION_POOL[sid] = new_session
 
-    # Rest of the function remains the same
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
