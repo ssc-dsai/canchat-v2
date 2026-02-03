@@ -50,8 +50,8 @@
 	let placeholderText = placeholder ? placeholder : $i18n.t('Type here...');
 	$: placeholderText = placeholder ? placeholder : $i18n.t('Type here...');
 
-	let element;
-	let editor;
+	let element: HTMLElement;
+	let editor: Editor;
 	let focusFlag = false;
 
 	const options = {
@@ -167,7 +167,9 @@
 		editor = new Editor({
 			element: element,
 			extensions: [
-				StarterKit,
+				StarterKit.configure({
+					codeBlock: false
+				}),
 				CodeBlockLowlight.configure({
 					lowlight
 				}),
@@ -224,7 +226,7 @@
 				requestAnimationFrame(() => {
 					const el = editor?.view?.dom;
 					if (el?.getAttribute('tabindex') === '-1') {
-						el.setAttribute('tabindex', 0);
+						el.setAttribute('tabindex', '0');
 					}
 				});
 			},
