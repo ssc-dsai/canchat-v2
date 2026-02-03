@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { getContext, onMount, tick } from 'svelte';
+	import { tick } from 'svelte';
 
 	import { config, user, tools as _tools, mobile, settings } from '$lib/stores';
-	import { createPicker } from '$lib/utils/google-drive-picker';
 	import { getTools } from '$lib/apis/tools';
 	import { getToolTooltipContent, getMCPToolName } from '$lib/utils/mcp-tools';
 
@@ -19,7 +20,7 @@
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	// Static references for i18next-parser - DO NOT REMOVE
 	// These ensure the parser finds the dynamic translation keys

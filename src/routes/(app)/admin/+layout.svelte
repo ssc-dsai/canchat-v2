@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { getI18n } from '$lib/utils/context';
+
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	import { WEBUI_NAME, config, showSidebar, user } from '$lib/stores';
@@ -7,7 +9,7 @@
 	import { page } from '$app/stores';
 	import NavbarExtras from '$lib/components/common/NavbarExtras.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	let loaded = false;
 

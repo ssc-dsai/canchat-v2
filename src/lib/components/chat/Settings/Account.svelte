@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import { ariaMessage, user } from '$lib/stores';
 	import { updateUserProfile } from '$lib/apis/auths';
@@ -9,7 +11,7 @@
 	import { getGravatarUrl } from '$lib/apis/utils';
 	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	export let saveHandler: Function;
 
