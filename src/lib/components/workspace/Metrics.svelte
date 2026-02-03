@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { getContext, onMount, onDestroy } from 'svelte';
+	import { getI18n } from '$lib/utils/context';
+
+	import { onMount, onDestroy } from 'svelte';
 	import {
 		getDomains,
 		getModels,
@@ -57,7 +59,7 @@
 	// Register all Chart.js components
 	Chart.register(...registerables);
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 	let unsubscribe: () => void;
 	let componentLoaded = false;
 

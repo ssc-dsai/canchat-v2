@@ -1,13 +1,14 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
 	import {
 		getMCPConfig,
 		updateMCPConfig,
-		getMCPURLs,
 		updateMCPURLs,
 		getMCPTools,
 		getBuiltinServers,
@@ -22,7 +23,7 @@
 	} from '$lib/apis/mcp';
 	import { getTools } from '$lib/apis/tools';
 
-	import { user, tools } from '$lib/stores';
+	import { tools } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -30,7 +31,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 
-	const i18n: any = getContext('i18n');
+	const i18n: any = getI18n();
 
 	// MCP Settings
 	let MCP_BASE_URLS: string[] = [''];

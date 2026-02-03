@@ -75,15 +75,7 @@ class CrewMCPManager:
             self.backend_dir / "mcp_backend" / "servers" / "pmo_sharepoint_server.py"
         )
 
-        # Legacy generic SharePoint server (fallback)
-        self.sharepoint_server_path = (
-            self.backend_dir
-            / "mcp_backend"
-            / "servers"
-            / "generic_sharepoint_server_multi_dept.py"
-        )
-
-        # User token for OBO flow
+        # User token for OBO flow (delegate access)
         self.user_jwt_token = None
 
     def set_user_token(self, token: str):
@@ -422,23 +414,21 @@ class CrewMCPManager:
             # Create SharePoint specialist agent with MCP tools
             sharepoint_agent = Agent(
                 role="SharePoint Document Specialist",
-                goal="Find and retrieve relevant information from SharePoint by analyzing all documents comprehensively using parallel processing for optimal speed and accuracy",
-                backstory="""I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the mpo_analyze_all_documents_for_content tool which automatically handles authentication and searches all documents in parallel. 
+                goal="Find and retrieve relevant information from SharePoint using FAST search (sub-2 second response)",
+                backstory="""I am a SharePoint document specialist who uses the Microsoft Graph Search API for lightning-fast document searches. I use the mpo_search_documents_fast tool which provides sub-2 second search results.
 
-    CRITICAL AUTHENTICATION RULE: 
-    If ANY tool returns an error with "authentication_failed":  true or "DELEGATED ACCESS MODE" in the message: 
-    - STOP IMMEDIATELY - Do NOT proceed with the task
-    - Do NOT attempt to retry with made-up tokens
-    - Do NOT make up or hallucinate answers
-    - REPORT the authentication failure to the user clearly
-    - Inform the user that valid authentication credentials are required to access SharePoint
-    - Do NOT use any information from your training data to answer the question
+    🚨 CRITICAL RULES:
+    1. ALWAYS use mpo_search_documents_fast FIRST - this is MANDATORY
+    2. If search snippet doesn't have the complete answer, use mpo_get_document_by_id to get full content
+    3. NEVER skip the search step
+    4. NEVER answer from training data - ONLY from SharePoint search results
+    5. If no documents found, say so - don't make up answers
     
     RESPONSE FORMAT:
-    - Provide ONLY the final answer to the user
+    - Provide ONLY the final answer extracted from SharePoint
     - Do NOT show your reasoning process ("Thought:", "Action:", etc.)
-    - Be direct and concise
-    - Include document sources for credibility""",
+    - Include document name and source
+    - Be direct and concise""",
                 tools=mcp_tools,
                 llm=llm,
                 verbose=CREW_VERBOSE,
@@ -446,38 +436,42 @@ class CrewMCPManager:
                 allow_delegation=False,
             )
 
-            # Create task for SharePoint query
+            # Create FAST SharePoint search task using Microsoft Graph Search API
             sharepoint_task = Task(
-                description=f"""Process this SharePoint-related query: {query}
+                description=f"""Use FAST Microsoft Graph Search API to find information about: {query}
 
-    Available tools:
-    - mpo_analyze_all_documents_for_content:  PRIMARY TOOL - Analyzes all documents using parallel processing
-    - mpo_get_all_documents_comprehensive:  Get all documents by traversing every folder (used internally by analyze tool)
-    - mpo_get_sharepoint_document_content: Retrieve individual document content (used internally)
-    - mpo_check_sharepoint_permissions: Test connection and permissions (for debugging only)
+    STEP 1 - SEARCH (MANDATORY):
+    Call mpo_search_documents_fast with the query AS-IS: "{query}"
+    - Set limit parameter to 10 for better coverage
+    - Do NOT modify the query
+    - Do NOT add quotes or KQL syntax
+    - Do NOT do multiple searches
+    - This is a ONE-TIME search operation
 
-    PRIMARY STRATEGY:
-    Use mpo_analyze_all_documents_for_content with the user's search terms.  This tool: 
-    - Traverses every SharePoint folder to find all documents
-    - Analyzes each document's content using parallel processing (8 concurrent threads)
-    - Uses smart caching to avoid re-downloading documents
-    - Terminates early when enough high-quality results are found
-    - Typical performance: 20-60 seconds for large collections
-    - Returns documents sorted by relevance with content matches
+    STEP 2 - EVALUATE RESULTS:
+    Check the "total_results" field from the search response:
+    - If total_results > 0: You HAVE documents → GO TO STEP 3
+    - If total_results = 0: No documents found → Respond "No information found in SharePoint"
+    
+    STEP 3 - EXTRACT ANSWER (if total_results > 0):
+    Review the documents array from the first search:
+    - Read the "summary" field of each document
+    - If summary contains the answer: Extract it and respond with document name
+    - If summary doesn't have full answer: Use mpo_get_document_by_id to get full content
+    - Extract the answer from the full document content
 
-    RESPONSE STRATEGY:
-    1. Call mpo_analyze_all_documents_for_content with the user's search terms
-    2. Extract the KEY ANSWER from the most relevant document(s)
-    3. Provide a CONCISE, DIRECT response to the user's question
-    4. Include document name and source for credibility
-    5. Focus on the specific information requested
-    6. DON'T dump entire document contents in your response
+    🚨 ABSOLUTE RULES:
+    - Use ONLY the FIRST search results - do NOT search again
+    - If first search returned total_results > 0, you MUST use those documents
+    - Do NOT refine the query and search again
+    - Do NOT ignore the first search results
+    - Include document name and source in your final answer
                 """,
                 expected_output="""A DIRECT, CONCISE answer to the user's question without showing any reasoning process.
 
     FORMAT REQUIREMENTS:
     - Start immediately with the answer (NO "Thought:", "Action:", or process explanations)
-    - Extract the key information from the most relevant document
+    - Extract the key information from the search results
     - Include document name and source for credibility
     - Keep response focused on what was asked
     - Maximum 2-3 sentences unless more detail is specifically requested
@@ -699,94 +693,6 @@ class CrewMCPManager:
             else:
                 return f"I encountered an issue while searching SharePoint documents: {error_msg}. Please try rephrasing your query or contact support if the problem persists."
 
-    def run_multi_server_crew(self, query: str) -> str:
-        """
-        Run crews from multiple servers sequentially and combine results.
-        This avoids the async event loop issues by using the working individual crew methods.
-
-        Args:
-            query: The query to process
-
-        Returns:
-            Combined response from multiple crews
-        """
-        logger.info(f"Starting multi-server CrewAI integration for query: {query}")
-
-        available_servers = self.get_available_servers()
-        if not available_servers:
-            raise FileNotFoundError("No MCP servers found")
-
-        results = []
-
-        # Check what servers are available and run the appropriate crews
-        has_time_server = any(
-            "time" in name.lower() for name in available_servers.keys()
-        )
-        has_news_server = any(
-            "news" in name.lower() for name in available_servers.keys()
-        )
-        has_sharepoint_server = any(
-            "sharepoint" in name.lower() for name in available_servers.keys()
-        )
-
-        try:
-            # Run time crew if available
-            if has_time_server:
-                logger.info("Running time crew for multi-server query")
-                try:
-                    time_result = self.run_time_crew(query)
-                    results.append(f"Time Information:\n{time_result}")
-                except Exception as e:
-                    logger.error(f"Time crew failed: {e}")
-                    results.append(
-                        "Time Information: Could not retrieve time information."
-                    )
-
-            # Run news crew if available
-            if has_news_server:
-                logger.info("Running news crew for multi-server query")
-                try:
-                    news_result = self.run_news_crew(query)
-                    results.append(f"News Information:\n{news_result}")
-                except Exception as e:
-                    logger.error(f"News crew failed: {e}")
-                    results.append(
-                        "News Information: Could not retrieve news information."
-                    )
-
-            # Run SharePoint crew if available
-            if has_sharepoint_server:
-                logger.info("Running SharePoint crew for multi-server query")
-                try:
-                    sharepoint_result = self.run_sharepoint_crew(query)
-                    results.append(f"SharePoint Information:\n{sharepoint_result}")
-                except Exception as e:
-                    error_msg = str(e)
-                    logger.error(f"SharePoint crew failed: {error_msg}")
-
-                    # Provide helpful error message for authentication issues
-                    if "Authentication" in error_msg or "access token" in error_msg:
-                        results.append(
-                            "SharePoint Information: SharePoint access requires proper authentication. "
-                            "This feature is available in deployed environments with OAuth2 configuration."
-                        )
-                    else:
-                        results.append(
-                            "SharePoint Information: Could not retrieve SharePoint information."
-                        )
-
-            if not results:
-                return "No specialized crews available to handle this query."
-
-            # Combine results
-            combined_result = "\n\n".join(results)
-            logger.info(f"Multi-server crew completed with {len(results)} results")
-            return combined_result
-
-        except Exception as e:
-            logger.error(f"Error in CrewAI multi-server integration: {e}")
-            raise
-
     def run_intelligent_crew(self, query: str, selected_tools: list = None) -> str:
         """
         Intelligent router crew that analyzes the query and makes smart routing decisions
@@ -849,201 +755,20 @@ class CrewMCPManager:
                 elif specialist == "PMO_SHAREPOINT":
                     return self.run_pmo_sharepoint_crew(query)
 
-            logger.info(
-                "Using intelligent router (multiple specialists or auto-detect mode)"
-            )
+            # Multiple specialists - simple routing logic
+            logger.info("Multiple specialists available - using simple routing")
 
-            # Create router agent that makes intelligent routing decisions
-            router_agent = Agent(
-                role="Intelligent Query Router",
-                goal="Analyze user queries and make smart routing decisions to appropriate specialists",
-                backstory=f"""You are an intelligent query router. Your job is to understand what the user 
-                is actually asking for and make routing decisions accordingly. 
-
-                Available specialists:
-                - TIME: Handles current time, dates, timezones, scheduling, time-related calculations
-                - NEWS: Handles current news, headlines, articles, breaking news, news search
-                - SHAREPOINT: Handles SharePoint document search, retrieval, and content access
-                
-                Available specialists for this query: {", ".join(available_specialists)}
-                
-                Your job is to analyze the user's intent and decide:
-                1. Which specialist(s) can best answer their question
-                2. What specific information each specialist should provide
-                3. Whether one specialist is sufficient or multiple are needed
-                
-                Focus on the user's actual intent and information needs, not just keywords.""",
-                verbose=CREW_VERBOSE,
-                allow_delegation=False,
-                llm=llm,
-                max_iter=3,  # Limit iterations - routing should be fast and decisive
-            )
-
-            # Create routing decision task
-            routing_task = Task(
-                description=f"""Analyze this user query and make a routing decision: "{query}"
-
-Available specialists: {", ".join(available_specialists)}
-
-Based on what the user is actually asking for, decide:
-
-1. ROUTING DECISION: Which specialist(s) should handle this query?
-   - Choose TIME if the user needs: current time, date, timezone info, time calculations, scheduling
-   - Choose NEWS if the user needs: current news, headlines, breaking news, articles, news search  
-   - Choose SHAREPOINT if the user needs: SharePoint documents, file search, document retrieval, content access
-   - Choose multiple specialists if the user needs information from multiple domains
-   - Choose the most relevant one if the query could go either way
-
-2. QUERY ADAPTATION: What specific question should each chosen specialist answer?
-   - For TIME specialist: Adapt the query to focus on time-related aspects
-   - For NEWS specialist: Adapt the query to focus on news-related aspects
-   - For SHAREPOINT specialist: Adapt the query to focus on document/content search aspects
-   - Make sure each specialist gets a clear, focused query
-
-3. COORDINATION: How should the results be presented?
-   - Single specialist: Direct response
-   - Multiple specialists: Combined response with clear organization
-
-Think carefully about the user's actual intent and information needs.""",
-                expected_output="""Provide your routing decision in this exact format:
-
-ROUTING_DECISION: [TIME|NEWS|SHAREPOINT|TIME+NEWS|TIME+SHAREPOINT|NEWS+SHAREPOINT|TIME+NEWS+SHAREPOINT]
-TIME_QUERY: [specific query for time specialist or NONE]
-NEWS_QUERY: [specific query for news specialist or NONE]
-SHAREPOINT_QUERY: [specific query for sharepoint specialist or NONE]
-PRESENTATION: [brief note on how to present results]
-
-Be decisive and specific. Only route to specialists that are actually needed.""",
-                agent=router_agent,
-            )
-
-            # Execute routing decision
-            routing_crew = Crew(
-                agents=[router_agent],
-                tasks=[routing_task],
-                process=Process.sequential,
-                verbose=CREW_VERBOSE,
-            )
-
-            logger.info("Executing routing decision...")
-            routing_result = routing_crew.kickoff()
-            logger.info(f"Routing decision result: {routing_result}")
-
-            # Parse the routing decision
-            routing_str = str(routing_result)
-
-            # Extract structured routing information
-            routing_decision = None
-            time_query = None
-            news_query = None
-            sharepoint_query = None
-
-            for line in routing_str.split("\n"):
-                line = line.strip()
-                if line.startswith("ROUTING_DECISION:"):
-                    routing_decision = line.split(":", 1)[1].strip()
-                elif line.startswith("TIME_QUERY:"):
-                    time_query_raw = line.split(":", 1)[1].strip()
-                    time_query = time_query_raw if time_query_raw != "NONE" else None
-                elif line.startswith("NEWS_QUERY:"):
-                    news_query_raw = line.split(":", 1)[1].strip()
-                    news_query = news_query_raw if news_query_raw != "NONE" else None
-                elif line.startswith("SHAREPOINT_QUERY:"):
-                    sharepoint_query_raw = line.split(":", 1)[1].strip()
-                    sharepoint_query = (
-                        sharepoint_query_raw if sharepoint_query_raw != "NONE" else None
-                    )
-
-            logger.info(
-                f"Parsed routing - decision: {routing_decision}, time_query: {time_query}, news_query: {news_query}, sharepoint_query: {sharepoint_query}"
-            )
-
-            # Execute the routing decision
-            responses = []
-
-            # Route to time specialist if needed and available
-            if time_query and "TIME" in available_specialists:
-                logger.info(f"Routing to TIME specialist with query: {time_query}")
-                try:
-                    time_response = self.run_time_crew(time_query)
-                    responses.append(time_response)
-                except Exception as e:
-                    logger.error(f"Error from TIME specialist: {e}")
-                    responses.append(
-                        "Unable to retrieve time information at this moment."
-                    )
-
-            # Route to news specialist if needed and available
-            if news_query and "NEWS" in available_specialists:
-                logger.info(f"Routing to NEWS specialist with query: {news_query}")
-                try:
-                    news_response = self.run_news_crew(news_query)
-                    responses.append(news_response)
-                except Exception as e:
-                    logger.error(f"Error from NEWS specialist: {e}")
-                    responses.append(
-                        "Unable to retrieve news information at this moment."
-                    )
-
-            # Route to sharepoint specialist if needed and available
-            if sharepoint_query and "SHAREPOINT" in available_specialists:
-                logger.info(
-                    f"Routing to SHAREPOINT specialist with query: {sharepoint_query}"
-                )
-                try:
-                    sharepoint_response = self.run_sharepoint_crew(sharepoint_query)
-                    responses.append(sharepoint_response)
-                except Exception as e:
-                    error_msg = str(e)
-                    logger.error(f"Error from SHAREPOINT specialist: {error_msg}")
-
-                    # Provide helpful error message for authentication issues
-                    if (
-                        "Authentication" in error_msg
-                        or "access token" in error_msg
-                        or "OAuth" in error_msg
-                    ):
-                        responses.append(
-                            "SharePoint access is currently unavailable due to authentication requirements. "
-                            "This feature requires OAuth2 proxy integration which is configured in deployed environments (dev/staging/production). "
-                            "For local development, SharePoint functionality is limited."
-                        )
-                    else:
-                        responses.append(
-                            "Unable to retrieve SharePoint information at this moment."
-                        )
-
-            # If no routing was determined or no responses, use simple fallback
-            if not responses:
-                logger.info(
-                    "No responses from routing decision, using simple fallback..."
-                )
-                # Default to first available specialist
-                if "TIME" in available_specialists:
-                    logger.info("Fallback: defaulting to TIME specialist")
-                    time_response = self.run_time_crew(query)
-                    responses.append(time_response)
-                elif "NEWS" in available_specialists:
-                    logger.info("Fallback: defaulting to NEWS specialist")
-                    news_response = self.run_news_crew(query)
-                    responses.append(news_response)
-                elif "SHAREPOINT" in available_specialists:
-                    logger.info("Fallback: defaulting to SHAREPOINT specialist")
-                    sharepoint_response = self.run_sharepoint_crew(query)
-                    responses.append(sharepoint_response)
-
-            # Return the response(s)
-            if len(responses) == 1:
-                logger.info("Returning single specialist response")
-                return responses[0]
-            elif len(responses) > 1:
-                logger.info("Combining multiple specialist responses")
-                # Multiple responses - combine them intelligently with proper structure
-                # Create a unified response that maintains Open WebUI compatibility
-                combined_response = self._combine_specialist_responses(responses, query)
-                return combined_response
+            # For multi-specialist queries, just default to first available
+            # In practice, the FAST PATH handles 99% of real queries
+            if "TIME" in available_specialists:
+                return self.run_time_crew(query)
+            elif "NEWS" in available_specialists:
+                return self.run_news_crew(query)
+            elif "MPO_SHAREPOINT" in available_specialists:
+                return self.run_mpo_sharepoint_crew(query)
+            elif "PMO_SHAREPOINT" in available_specialists:
+                return self.run_pmo_sharepoint_crew(query)
             else:
-                logger.warning("No responses generated")
                 return "I apologize, but I was unable to process your request at this time."
 
         except Exception as e:
@@ -1204,20 +929,6 @@ def main():
             print("Query: 'Get the latest news headlines'")
             result = manager.run_news_crew("Get the latest news headlines")
             print("Result:", result[:200] + "..." if len(result) > 200 else result)
-
-        # Test multi-server capability
-        if len(available_servers) > 1:
-            print("\n🌐 Testing Multi-Server Integration:")
-            print("Query: 'Provide current time and latest news summary'")
-            result = manager.run_multi_server_crew(
-                "Provide current time and latest news summary"
-            )
-            print(
-                "Multi-Server Result:",
-                result[:300] + "..." if len(result) > 300 else result,
-            )
-        else:
-            print("\n⚠️  Only one server available. Multi-server test skipped.")
 
         print("\n✅ All tests completed successfully!")
 

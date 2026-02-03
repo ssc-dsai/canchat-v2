@@ -19,6 +19,77 @@ log = logging.getLogger(__name__)
 # Ensure MCP manager logs are visible
 log.setLevel(logging.INFO)
 
+# Define allowed executables for MCP servers
+ALLOWED_EXECUTABLES = frozenset(
+    [
+        "python",
+        "python3",
+        "node",
+        "npx",
+        "uv",
+    ]
+)
+
+
+def validate_command(command: List[str]) -> bool:
+    """Validate that a command uses only allowed executables and check potential command injection.
+
+
+    Args:
+        command: The command list (e.g., ["python", "script.py"])
+
+    Returns:
+        True if command is safe, raises ValueError otherwise
+    """
+    if not (command and isinstance(command[0], str) and command[0].strip()):
+        raise ValueError("Command must include a valid executable")
+
+    executable = command[0]
+
+    # Extract just the executable name
+    executable_name = os.path.basename(executable)
+
+    if executable_name not in ALLOWED_EXECUTABLES:
+        raise ValueError(
+            f"Executable '{executable_name}' is not allowed."
+            f"Allowed executables: {', '.join(sorted(ALLOWED_EXECUTABLES))}"
+        )
+
+    # Security check for interpreters to prevent inline code execution
+    if executable_name in ["python", "python3", "node"]:
+        if len(command) < 2:
+            raise ValueError(
+                f"Command must include script/arguments for {executable_name}"
+            )
+
+        # Check if the first argument looks like a flag
+        first_arg = command[1].strip()
+        if first_arg.startswith("-"):
+            raise ValueError(
+                f"Interpreter flags (like {command[1]}) are not allowed."
+                "Provide a script file as the first argument."
+            )
+
+    # Allow safe npx flags but block execution flags
+    if executable_name == "npx":
+        if len(command) < 2:
+            raise ValueError("Command must include package/arguments for npx")
+
+        # Scan arguments until we hit the command
+        for i in range(1, len(command)):
+            arg = command[i].strip()
+
+            if not arg.startswith("-"):
+                break
+
+            # Check for dangerous execution flags in npx options
+            if arg in ["-c", "--call", "--shell-auto-fallback"]:
+                raise ValueError(
+                    f"Execution flags (like {arg}) are not allowed for npx."
+                )
+
+    return True
+
 
 class FastMCPManager:
     """Manages FastMCP server instances and client connections"""
@@ -80,6 +151,9 @@ class FastMCPManager:
         config = self.server_configs[name]
 
         try:
+            # Validate command before execution
+            validate_command(config["command"])
+
             # Check if this is an HTTP server (has --http in command)
             is_http_server = "--http" in config["command"]
 
@@ -116,7 +190,10 @@ class FastMCPManager:
             else:
                 # For stdio servers, use PythonStdioTransport
                 # Extract the script path from the command
-                if len(config["command"]) >= 2 and config["command"][0] == "python":
+                executable = config["command"][0]
+                executable_name = os.path.basename(executable)
+
+                if executable_name.startswith("python"):
                     script_path = config["command"][1]
                     args = config["command"][2:] if len(config["command"]) > 2 else []
 
@@ -131,11 +208,14 @@ class FastMCPManager:
                     # Store the transport instead of the client for reuse
                     self.clients[name] = transport
 
-                    log.info(f"Started stdio MCP server: {name}")
+                    log.info(
+                        f"Started stdio MCP server: {name} (using {executable_name})"
+                    )
                     return True
                 else:
                     log.error(
-                        f"Invalid command format for stdio server {name}: {config['command']}"
+                        f"Unsupported executable for stdio server {name}: {executable_name}. "
+                        "Only Python scripts are supported through stdio transport."
                     )
                     return False
 
