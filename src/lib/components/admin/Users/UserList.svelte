@@ -358,35 +358,14 @@
 			{#each paginatedUsers as user, userIdx}
 				<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 					<td class="px-3 py-1 min-w-[7rem] w-28">
-						<button
-							class=" translate-y-0.5"
-							on:click={() => {
-								switch (user.role) {
-									case 'user':
-										updateRoleHandler(user.id, 'analyst');
-										break;
-									case 'analyst':
-										updateRoleHandler(user.id, 'global_analyst');
-										break;
-									case 'global_analyst':
-										updateRoleHandler(user.id, 'admin');
-										break;
-									case 'pending':
-										updateRoleHandler(user.id, 'user');
-										break;
-									default:
-										updateRoleHandler(user.id, 'pending');
-										break;
-								}
-							}}
-						>
+						<div class=" translate-y-0.5">
 							<Badge
 								type={badgeType(user.role)}
 								content={user.role === 'global_analyst'
 									? $i18n.t('global analyst')
 									: $i18n.t(user.role)}
 							/>
-						</button>
+						</div>
 					</td>
 					<td class="px-3 py-1 font-medium text-gray-900 dark:text-white w-max">
 						<div class="flex flex-row w-max">
@@ -489,10 +468,6 @@
 			{/each}
 		</tbody>
 	</table>
-</div>
-
-<div class=" text-gray-500 text-xs mt-1.5 text-right">
-	ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 </div>
 
 <Pagination bind:page count={filteredUsers.length} />

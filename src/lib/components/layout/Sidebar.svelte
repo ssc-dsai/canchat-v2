@@ -21,7 +21,8 @@
 		socket,
 		config,
 		isApp,
-		ariaMessage
+		ariaMessage,
+		suggestionCycle
 	} from '$lib/stores';
 	import { onMount, tick, onDestroy } from 'svelte';
 
@@ -624,6 +625,7 @@
 					clearSelection();
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
+					suggestionCycle.update((n) => n + 1);
 					setTimeout(() => {
 						newChatButton?.click();
 						if ($mobile) {

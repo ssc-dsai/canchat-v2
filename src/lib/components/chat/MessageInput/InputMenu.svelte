@@ -32,6 +32,20 @@
 		// News tool translations
 		$i18n.t('MCP: News Headlines');
 		$i18n.t('Get latest news headlines from around the world');
+
+		// MPO SharePoint tool translations
+		$i18n.t('MCP: MPO SharePoint');
+		$i18n.t('MCP: MPO SharePoint (By ID)');
+		$i18n.t('Fast search MPO SharePoint documents (sub-1 second)');
+		$i18n.t('Retrieve MPO SharePoint document by ID from search results');
+		$i18n.t('Search and retrieve MPO SharePoint documents');
+
+		// PMO SharePoint tool translations
+		$i18n.t('MCP: PMO SharePoint');
+		$i18n.t('MCP: PMO SharePoint (By ID)');
+		$i18n.t('Fast search PMO SharePoint documents (sub-1 second)');
+		$i18n.t('Retrieve PMO SharePoint document by ID from search results');
+		$i18n.t('Search and retrieve PMO SharePoint documents');
 	};
 
 	export let screenCaptureHandler: Function;
@@ -51,6 +65,8 @@
 	$: tooltipContent = (() => {
 		if (webSearchEnabled) {
 			return $i18n.t('Wiki Grounding disabled - Web Search is active');
+		} else if (hasMcpToolsEnabled) {
+			return $i18n.t('Wiki Grounding disabled - MCP tools are active');
 		} else if (wikiGroundingEnabled) {
 			return $i18n.t('Wikipedia Grounding: Context-aware information enhancement enabled');
 		} else {
@@ -80,6 +96,11 @@
 	$: showWikiGrounding = $config?.features?.enable_wiki_grounding || false;
 	$settings?.wikipediaGrounding ?? true;
 
+	// Check if any MCP tools are enabled
+	$: hasMcpToolsEnabled = Object.keys(tools).some(
+		(toolId) => tools[toolId].isMcp && tools[toolId].enabled
+	);
+
 	$: if (show) {
 		init();
 	}
@@ -95,7 +116,8 @@
 				originalDescription: tool.meta.description, // Keep original
 				enabled: selectedToolIds.includes(tool.id),
 				isMcp: tool.meta?.manifest?.is_mcp_tool || false,
-				originalName: tool.meta?.manifest?.original_name || tool.name // Get the actual tool function name
+				originalName: tool.meta?.manifest?.original_name || tool.name, // Get the actual tool function name
+				meta: tool.meta // Keep full meta object for tooltip
 			};
 			return a;
 		}, {});
@@ -155,9 +177,23 @@
 											$i18n
 										)
 									: tools[toolId].name}
-								class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+								class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {tools[
+									toolId
+								].isMcp &&
+								(webSearchEnabled || wikiGroundingEnabled)
+									? 'opacity-50 cursor-not-allowed'
+									: ''}"
 								on:click={() => {
+									if (tools[toolId].isMcp && (webSearchEnabled || wikiGroundingEnabled)) {
+										return; // Don't allow toggling MCP tools when web search or wiki grounding is active
+									}
 									tools[toolId].enabled = !tools[toolId].enabled;
+									// If enabling an MCP tool, disable web search and wiki grounding
+									if (tools[toolId].isMcp && tools[toolId].enabled) {
+										webSearchEnabled = false;
+										wikiGroundingEnabled = false;
+										wikiGroundingMode = 'off';
+									}
 								}}
 							>
 								<div class="flex-1">
@@ -219,11 +255,21 @@
 										ariaLabel={tools[toolId].isMcp
 											? `${$i18n.t('Toggle')} ${getMCPToolName(tools[toolId].meta?.manifest?.original_name || tools[toolId].name, $i18n)}`
 											: `${$i18n.t('Toggle')} ${tools[toolId].name}`}
+										disabled={tools[toolId].isMcp && (webSearchEnabled || wikiGroundingEnabled)}
 										on:change={async (e) => {
+											if (tools[toolId].isMcp && (webSearchEnabled || wikiGroundingEnabled)) {
+												return; // Don't allow toggling MCP tools
+											}
 											const state = e.detail;
 											await tick();
 											if (state) {
 												selectedToolIds = [...selectedToolIds, toolId];
+												// If enabling an MCP tool, disable web search and wiki grounding
+												if (tools[toolId].isMcp) {
+													webSearchEnabled = false;
+													wikiGroundingEnabled = false;
+													wikiGroundingMode = 'off';
+												}
 											} else {
 												selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
 											}
@@ -268,16 +314,23 @@
 				>
 					<button
 						role="menuitem"
-						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {wikiGroundingEnabled
+						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {wikiGroundingEnabled ||
+						hasMcpToolsEnabled
 							? 'opacity-50 cursor-not-allowed'
 							: ''}"
-						disabled={wikiGroundingEnabled}
+						disabled={wikiGroundingEnabled || hasMcpToolsEnabled}
 						on:click={() => {
-							if (!wikiGroundingEnabled) {
+							if (!wikiGroundingEnabled && !hasMcpToolsEnabled) {
 								webSearchEnabled = !webSearchEnabled;
 								if (webSearchEnabled) {
 									wikiGroundingEnabled = false;
+									// Disable all MCP tools
 									wikiGroundingMode = 'off';
+									Object.keys(tools).forEach((toolId) => {
+										if (tools[toolId].isMcp) {
+											tools[toolId].enabled = false;
+										}
+									});
 								}
 							}
 						}}
@@ -292,7 +345,7 @@
 						<Switch
 							state={webSearchEnabled}
 							ariaLabel={$i18n.t('Toggle Web Search')}
-							disabled={wikiGroundingEnabled}
+							disabled={wikiGroundingEnabled || hasMcpToolsEnabled}
 						/>
 					</button>
 				</Tooltip>
@@ -332,12 +385,13 @@
 						role="menuitem"
 						aria-label={$i18n.t('Wiki Grounding')}
 						bind:this={wikiGroundingButton}
-						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {webSearchEnabled
+						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {webSearchEnabled ||
+						hasMcpToolsEnabled
 							? 'opacity-50 cursor-not-allowed'
 							: ''}"
-						disabled={webSearchEnabled}
+						disabled={webSearchEnabled || hasMcpToolsEnabled}
 						on:click={() => {
-							if (!webSearchEnabled) {
+							if (!webSearchEnabled && !hasMcpToolsEnabled) {
 								// Simple toggle: off -> on -> off
 								if (wikiGroundingEnabled) {
 									wikiGroundingMode = 'off';
@@ -347,6 +401,12 @@
 									wikiGroundingEnabled = true;
 									webSearchEnabled = false;
 								}
+								// Disable all MCP tools
+								Object.keys(tools).forEach((toolId) => {
+									if (tools[toolId].isMcp) {
+										tools[toolId].enabled = false;
+									}
+								});
 							}
 						}}
 					>
@@ -361,7 +421,7 @@
 							<Switch
 								state={wikiGroundingEnabled}
 								ariaLabel={$i18n.t('Toggle Wiki Grounding')}
-								disabled={webSearchEnabled}
+								disabled={webSearchEnabled || hasMcpToolsEnabled}
 							/>
 						</div>
 					</button>

@@ -4,9 +4,10 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { WEBUI_NAME, showSidebar, user } from '$lib/stores';
+	import { WEBUI_NAME, config, showSidebar, user } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
+	import NavbarExtras from '$lib/components/common/NavbarExtras.svelte';
 
 	const i18n = getI18n();
 
@@ -82,6 +83,8 @@
 						>
 					</div>
 				</div>
+
+				<NavbarExtras />
 			</div>
 		</nav>
 

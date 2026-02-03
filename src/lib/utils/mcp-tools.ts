@@ -88,11 +88,27 @@ export const getToolDisplayName = (tool: any, i18n: any): string => {
 
 // Helper function to get tooltip content for tools
 export const getToolTooltipContent = (tool: any, i18n: any): string => {
-	if (tool.isMcp) {
+	// Check both isMcp property and meta.manifest.is_mcp_tool
+	const isMcpTool = tool?.isMcp || tool?.meta?.manifest?.is_mcp_tool || false;
+
+	if (isMcpTool) {
 		// Use originalName (the actual function name) for translation lookup
 		const toolNameForTranslation = tool.meta?.manifest?.original_name || tool.name;
 		const localizedDescription = getMCPToolDescription(toolNameForTranslation, i18n);
 		return localizedDescription;
 	}
-	return tool.originalDescription || '';
+
+	// For non-MCP tools, check if description is JSON
+	const description = tool.originalDescription || tool.meta?.description || '';
+	if (description && description.trim().startsWith('{')) {
+		try {
+			const parsed = JSON.parse(description);
+			// Return the description field from parsed JSON if it exists
+			return parsed.description || '';
+		} catch (e) {
+			// If parsing fails, return as-is
+			return description;
+		}
+	}
+	return description;
 };
