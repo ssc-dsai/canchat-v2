@@ -13,7 +13,7 @@
 
 	import { type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import {
 		chatId,
@@ -63,6 +63,7 @@
 	import { chatCompleted, chatAction, generateMoACompletion, stopTask } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { queryCrewMCPWebSocket } from '$lib/apis/crew-mcp';
+	import { uploadFile } from '$lib/apis/files';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
