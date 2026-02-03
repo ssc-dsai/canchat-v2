@@ -22,7 +22,7 @@
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
-	import { getToolDisplayName } from '$lib/utils/mcp-tools';
+	import { getToolDisplayName, getToolTooltipContent } from '$lib/utils/mcp-tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -406,7 +406,7 @@
 												return $tools ? $tools.find((t) => t.id === id) : { id: id, name: id };
 											}) as tool, toolIdx (toolIdx)}
 												<Tooltip
-													content={tool?.meta?.description ?? ''}
+													content={getToolTooltipContent(tool, $i18n)}
 													className=" {toolIdx !== 0 ? 'pl-0.5' : ''} flex-shrink-0"
 													placement="top"
 												>
