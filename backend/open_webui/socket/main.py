@@ -7,7 +7,6 @@ import time
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
-from open_webui.models.auths import Auths
 
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
@@ -373,19 +372,6 @@ async def connect(sid, environ, auth):
             log.info(
                 f"WebSocket connect:  Authenticated user {user.id if user else 'None'}"
             )
-
-    # Fallback: Try trusted header auth if auth dict didn't work
-    if not user:
-        forwarded_email = environ.get("HTTP_X_FORWARDED_EMAIL")
-        if forwarded_email:
-            try:
-                user = Auths.authenticate_user_by_trusted_header(forwarded_email)
-                if user:
-                    log.info(
-                        f"WebSocket connect: Authenticated user via trusted header {user.id}"
-                    )
-            except Exception as e:
-                log.warning(f"Trusted header authentication failed: {e}")
 
     if user:
         session_data = user.model_dump()
