@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from open_webui.utils.auth import get_verified_user
 from open_webui.models.chats import Chats
 from open_webui.socket.main import get_event_emitter
+from open_webui.utils.task import truncate_title_by_chars
 
 # Add the backend directory to the path to import crew_mcp_integration
 backend_dir = Path(__file__).parent.parent.parent
@@ -150,13 +151,36 @@ Assistant: {filtered_result[:500]}...
 
 Respond with just the title, no quotes or formatting."""
 
+    # Get models to check for Gemini 2.5 Flash
+    models = request_data.app.state.MODELS
+
+    # Check if model is Gemini 2.5 Flash to disable thinking
+    is_gemini_2_5_flash = (
+        task_model_id in models
+        and models[task_model_id].get("owned_by") != "ollama"
+        and "gemini" in task_model_id.lower()
+        and "2.5" in task_model_id
+        and "flash" in task_model_id.lower()
+    )
+
     title_payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": title_prompt}],
         "stream": False,
-        "max_tokens": 50,
+        **(
+            {"max_tokens": 50}
+            if task_model_id in models and models[task_model_id].get("owned_by") == "ollama"
+            else {
+                "max_completion_tokens": 50
+            }
+        ),
         "metadata": {"task": "title_generation", "chat_id": request.chat_id},
     }
+
+    # Disable thinking for Gemini 2.5 Flash to reduce latency
+    # Use reasoning_effort="none" (OpenAI compatibility parameter)
+    if is_gemini_2_5_flash:
+        title_payload["reasoning_effort"] = "none"
 
     title_res = await generate_chat_completion(
         request_data, form_data=title_payload, user=user
@@ -165,6 +189,11 @@ Respond with just the title, no quotes or formatting."""
     if title_res and len(title_res.get("choices", [])) == 1:
         title = title_res["choices"][0]["message"]["content"].strip()
         if title:
+            # Truncate to 50 characters, preserving whole word
+            MAX_TITLE_CHARS = 50
+            if len(title) > MAX_TITLE_CHARS:
+                title = truncate_title_by_chars(title, MAX_TITLE_CHARS)
+
             Chats.update_chat_title_by_id(request.chat_id, title)
             return title
 
