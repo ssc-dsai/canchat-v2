@@ -14,6 +14,8 @@ from open_webui.utils.task import (
     tags_generation_template,
     emoji_generation_template,
     moa_response_generation_template,
+    extract_title_from_response,
+    truncate_title_by_chars,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
@@ -151,7 +153,7 @@ async def generate_title(
     )
 
     log.debug(
-        f"generating chat title using model {task_model_id} for user {user.email} "
+        f"generating chat title using model {task_model_id} for user {user.email}"
     )
 
     if request.app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE != "":
@@ -168,10 +170,23 @@ async def generate_title(
         },
     )
 
+    prompt = f"{content}\n\n" 'Return ONLY the title as plain text: "<emoji> <title>"'
+
+    # Check if model is Gemini 2.5 Flash to disable thinking
+    # According to Google's official docs: https://ai.google.dev/gemini-api/docs/openai#thinking
+    # Gemini 2.5 Flash supports reasoning_effort="none" to disable thinking
+    is_gemini_2_5_flash = (
+        models[task_model_id]["owned_by"] != "ollama"
+        and "gemini" in task_model_id.lower()
+        and "2.5" in task_model_id
+        and "flash" in task_model_id.lower()
+    )
+
     payload = {
         "model": task_model_id,
-        "messages": [{"role": "user", "content": content}],
+        "messages": [{"role": "user", "content": prompt}],
         "stream": False,
+        "temperature": 0.3,
         **(
             {"max_tokens": 50}
             if models[task_model_id]["owned_by"] == "ollama"
@@ -186,14 +201,36 @@ async def generate_title(
         },
     }
 
+    # Disable thinking for Gemini 2.5 Flash to reduce latency
+    # Use reasoning_effort="none" (OpenAI compatibility parameter)
+    if is_gemini_2_5_flash:
+        payload["reasoning_effort"] = "none"
+
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user)
     except Exception:
-        log.error("Exception occurred", exc_info=True)
+        log.error("Title generation failed", exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": "An internal error has occurred."},
         )
+
+    # Extract and clean title from response
+    title = extract_title_from_response(response)
+
+    if not title:
+        # If extraction failed, return original response
+        log.debug("Title extraction failed, returning raw response")
+        return response
+
+    # Truncate to 50 characters, preserving whole words
+    MAX_TITLE_CHARS = 50
+    if len(title) > MAX_TITLE_CHARS:
+        title = truncate_title_by_chars(title, MAX_TITLE_CHARS)
+
+    # Return cleaned/truncated title
+    response["choices"][0]["message"]["content"] = title
+    return response
 
 
 @router.post("/tags/completions")

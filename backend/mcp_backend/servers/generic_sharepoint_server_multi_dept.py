@@ -28,7 +28,6 @@ Example usage:
 - For Finance: create server with department_prefix="FIN"
 - For IT: create server with department_prefix="IT"
 """
-
 import os
 import sys
 import asyncio
@@ -59,15 +58,6 @@ try:
 except ImportError as e:
     logging.error(f"Failed to import required modules: {e}")
     raise
-
-
-# Authentication error message for delegated access mode
-DELEGATED_ACCESS_AUTH_ERROR = (
-    "DELEGATED ACCESS MODE: User authentication token is required but not provided. "
-    "SharePoint access with user permissions requires a valid OAuth2 access token. "
-    "This request cannot proceed without proper authentication. "
-    "Either provide a valid user token or set SHP_USE_DELEGATED_ACCESS=false to use application access."
-)
 
 
 def clean_env_var(value: str) -> str:
@@ -186,8 +176,10 @@ def initialize_department_server(department_prefix: str):
         logger.error(
             f"Failed to initialize SharePoint server for {department_prefix}: {e}"
         )
-        # Return False to allow other MCP servers to continue
-        return False
+        # Exit with error code so the MCP server doesn't start with broken config
+        import sys
+
+        sys.exit(1)
 
 
 def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str]:
@@ -204,7 +196,8 @@ def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str
     return None
 
 
-async def _get_sharepoint_document_content_impl(
+@generic_sharepoint_server.tool()
+async def get_sharepoint_document_content(
     folder_name: str, file_name: str, user_token: Optional[str] = None
 ) -> Dict[str, Any]:
     """
@@ -233,20 +226,6 @@ async def _get_sharepoint_document_content_impl(
         # For local development, don't try OBO if no valid token available
         if user_token == "user_token_placeholder" or not user_token:
             user_token = None
-
-        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
-        if config.use_delegated_access:
-            if not user_token or not user_token.strip():
-                return {
-                    "status": "error",
-                    "error": "Authentication required",
-                    "folder": folder_name,
-                    "file": file_name,
-                    "message": DELEGATED_ACCESS_AUTH_ERROR,
-                    "organization": config.org_name,
-                    "delegated_access_enabled": True,
-                    "authentication_failed": True,
-                }
         # No verbose logging during parallel processing
 
         # Silent document content retrieval
@@ -402,7 +381,8 @@ async def _get_sharepoint_document_content_impl(
         }
 
 
-async def _get_all_documents_comprehensive_impl(
+@generic_sharepoint_server.tool()
+async def get_all_documents_comprehensive(
     user_token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -420,22 +400,6 @@ async def _get_all_documents_comprehensive_impl(
         # Silent comprehensive folder traversal
         # Get authentication token - check environment variable if not provided
         effective_token = user_token or os.getenv("USER_JWT_TOKEN")
-
-        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
-        if config.use_delegated_access:
-            if (
-                not effective_token
-                or effective_token == "user_token_placeholder"
-                or not effective_token.strip()
-            ):
-                return {
-                    "status": "error",
-                    "error": "Authentication required",
-                    "message": DELEGATED_ACCESS_AUTH_ERROR,
-                    "organization": config.org_name,
-                    "delegated_access_enabled": True,
-                    "authentication_failed": True,
-                }
 
         if config.use_delegated_access:
             access_token = await oauth_client.get_access_token(effective_token)
@@ -467,38 +431,19 @@ async def _get_all_documents_comprehensive_impl(
 
         drive_id = drives[0].get("id")
 
-        # Recursively get documents - limit to default_search_folders if configured
+        # Recursively get ALL documents from ALL folders silently
         all_documents = []
         folders_processed = {"count": 0}  # Track folder count
-
-        # If default_search_folders is configured, only search those specific folders
-        if config.default_search_folders:
-            logger.info(f"Searching specific folders: {config.default_search_folders}")
-            for folder_path in config.default_search_folders:
-                await _traverse_all_folders_recursive(
-                    oauth_client,
-                    access_token,
-                    site_id,
-                    drive_id,
-                    folder_path,
-                    all_documents,
-                    folders_processed,
-                    max_depth=10,
-                )
-            search_scope = f"folders: {', '.join(config.default_search_folders)}"
-        else:
-            # No specific folders configured - search everything from root
-            await _traverse_all_folders_recursive(
-                oauth_client,
-                access_token,
-                site_id,
-                drive_id,
-                "",
-                all_documents,
-                folders_processed,
-                max_depth=10,
-            )
-            search_scope = "all folders (no default_search_folders configured)"
+        await _traverse_all_folders_recursive(
+            oauth_client,
+            access_token,
+            site_id,
+            drive_id,
+            "",
+            all_documents,
+            folders_processed,
+            max_depth=10,
+        )
 
         return {
             "status": "success",
@@ -506,8 +451,7 @@ async def _get_all_documents_comprehensive_impl(
             "folders_processed": folders_processed["count"],
             "documents": all_documents,
             "organization": config.org_name,
-            "search_scope": search_scope,
-            "message": f"Found {len(all_documents)} documents from {folders_processed['count']} folders in {search_scope}",
+            "message": f"Found {len(all_documents)} documents from {folders_processed['count']} folders by comprehensive traversal",
         }
 
     except Exception as e:
@@ -585,303 +529,8 @@ async def _traverse_all_folders_recursive(
         logger.warning(f"Error traversing folder {folder_path}: {e}")
 
 
-async def _search_documents_fast_impl(
-    query: str,
-    limit: int = 25,
-    user_token: Optional[str] = None,
-) -> Dict[str, Any]:
-    """
-    FAST document search using Microsoft Graph Search API with KQL support.
-    This is the NEW recommended method - sub-1 second vs 20-60 seconds with folder traversal.
-
-    Results are sorted by relevance score (most relevant first).
-
-    Args:
-        query: Search query (supports plain text or KQL syntax)
-        limit: Maximum number of results (default 25, max 500)
-        user_token: Optional user access token for delegated access
-
-    Returns:
-        JSON response with search results
-
-    Example queries:
-        - Plain text: "railway infrastructure projects"
-        - KQL filename filter: "filename:*.pdf AND railway"
-        - KQL date filter: "lastModifiedTime>=2024-01-01 AND infrastructure"
-        - Complex KQL: "(railway OR infrastructure OR transportation) AND filename:*.pdf"
-    """
-    if not config or not oauth_client:
-        return {
-            "status": "error",
-            "error": "Server not initialized",
-            "message": "Server not initialized with department configuration",
-        }
-
-    try:
-        import time
-
-        start_time = time.time()
-
-        # Get authentication token
-        effective_token = user_token or os.getenv("USER_JWT_TOKEN")
-
-        # STRICT AUTHENTICATION CHECK
-        if config.use_delegated_access:
-            if (
-                not effective_token
-                or effective_token == "user_token_placeholder"
-                or not effective_token.strip()
-            ):
-                return {
-                    "status": "error",
-                    "error": "Authentication required",
-                    "message": DELEGATED_ACCESS_AUTH_ERROR,
-                    "organization": config.org_name,
-                    "delegated_access_enabled": True,
-                    "authentication_failed": True,
-                }
-
-        # Get access token
-        if config.use_delegated_access:
-            access_token = await oauth_client.get_access_token(effective_token)
-        else:
-            access_token = await oauth_client.get_application_token()
-
-        if not access_token:
-            return {
-                "status": "error",
-                "message": "Failed to get access token",
-                "organization": config.org_name,
-            }
-
-        # Get site ID for scoped search
-        success, site_info = await oauth_client.get_site_info(access_token)
-        if not success:
-            return {
-                "status": "error",
-                "message": f"Failed to get site info: {site_info}",
-                "organization": config.org_name,
-            }
-
-        site_id = site_info.get("id")
-
-        # Call the new search API
-        success, search_results = await oauth_client.search_documents(
-            access_token=access_token,
-            query=query,
-            site_id=site_id,
-            limit=limit,
-        )
-
-        if not success:
-            # Distinguish between transient API failures and other errors
-            is_transient = search_results.get("transient", False)
-            error_msg = search_results.get("error", "Unknown error")
-
-            if is_transient:
-                # Transient failure - Microsoft's API is temporarily down
-                return {
-                    "status": "error",
-                    "message": f"⚠️ Search temporarily unavailable: {error_msg}",
-                    "organization": config.org_name,
-                    "transient": True,
-                    "retry_suggested": True,
-                }
-            else:
-                # Permanent error (permissions, invalid query, etc.)
-                return {
-                    "status": "error",
-                    "message": f"Search failed: {error_msg}",
-                    "organization": config.org_name,
-                    "transient": False,
-                }
-
-        # Process search hits into a clean format
-        hits = search_results.get("hits", [])
-        documents = []
-
-        for hit in hits:
-            resource = hit.get("resource", {})
-            web_url = resource.get("webUrl", "")
-
-            # Extract document metadata
-            doc_info = {
-                "name": resource.get("name", "Unknown"),
-                "id": resource.get("id", ""),
-                "webUrl": web_url,
-                "lastModified": resource.get("lastModifiedDateTime", ""),
-                "size": resource.get("size", 0),
-                "created": resource.get("createdDateTime", ""),
-                "organization": config.org_name,
-            }
-
-            # Extract folder path if available
-            parent_ref = resource.get("parentReference", {})
-            if "path" in parent_ref:
-                # Path format: /drives/{drive-id}/root:/path/to/folder
-                path_parts = parent_ref.get("path", "").split("/root:")
-                if len(path_parts) > 1:
-                    doc_info["folder_path"] = path_parts[1].strip("/")
-                else:
-                    doc_info["folder_path"] = ""
-            else:
-                doc_info["folder_path"] = ""
-
-            # Add hit rank/relevance if available
-            if "rank" in hit:
-                doc_info["search_rank"] = hit["rank"]
-
-            # Add summary/snippet if available
-            if "summary" in hit:
-                doc_info["summary"] = hit["summary"]
-
-            documents.append(doc_info)
-
-        # Calculate performance
-        end_time = time.time()
-        processing_time = end_time - start_time
-
-        # Performance logging
-        perf_message = f"⚡ FAST SEARCH: '{query}' → {len(documents)} results in {round(processing_time, 2)}s"
-        logger.info(perf_message)
-        return {
-            "status": "success",
-            "query": query,
-            "total_results": len(documents),
-            "documents": documents,
-            "organization": config.org_name,
-            "processing_time_seconds": round(processing_time, 2),
-            "method": "Microsoft Graph Search API (Fast)",
-            "message": f"⚡ Found {len(documents)} documents in {round(processing_time, 2)}s using fast search",
-        }
-
-    except Exception as e:
-        logger.error(f"Error in fast document search: {e}")
-        return {
-            "status": "error",
-            "message": f"Fast search failed: {str(e)}",
-            "organization": config.org_name,
-        }
-
-
-async def _get_document_by_id_impl(
-    web_url: str,
-    item_id: str,
-    user_token: Optional[str] = None,
-) -> Dict[str, Any]:
-    """
-    Retrieve document content using web URL and item ID from search results.
-
-    Use this when mpo_get_sharepoint_document_content fails because the document
-    is in a location outside the main SharePoint site.
-
-    Args:
-        web_url: The webUrl field from search results
-        item_id: The id field from search results
-        user_token: Optional user access token for delegated access
-
-    Returns:
-        JSON response with document content
-    """
-    if not config or not oauth_client:
-        return {
-            "status": "error",
-            "error": "Server not initialized",
-            "message": "Server not initialized with department configuration",
-        }
-
-    try:
-        import time
-
-        start_time = time.time()
-
-        # Get authentication token
-        effective_token = user_token or os.getenv("USER_JWT_TOKEN")
-
-        # STRICT AUTHENTICATION CHECK
-        if config.use_delegated_access:
-            if (
-                not effective_token
-                or effective_token == "user_token_placeholder"
-                or not effective_token.strip()
-            ):
-                return {
-                    "status": "error",
-                    "error": "Authentication required",
-                    "message": DELEGATED_ACCESS_AUTH_ERROR,
-                    "organization": config.org_name,
-                    "delegated_access_enabled": True,
-                    "authentication_failed": True,
-                }
-
-        # Get access token
-        if config.use_delegated_access:
-            access_token = await oauth_client.get_access_token(effective_token)
-        else:
-            access_token = await oauth_client.get_application_token()
-
-        if not access_token:
-            return {
-                "status": "error",
-                "message": "Failed to get access token",
-                "organization": config.org_name,
-            }
-
-        # Retrieve document content using the new method
-        success, content_data = await oauth_client.get_document_content_by_url(
-            access_token=access_token,
-            web_url=web_url,
-            item_id=item_id,
-        )
-
-        if not success:
-            error_info = content_data.get("error", "Unknown error")
-            status_code = content_data.get("status_code", 500)
-            return {
-                "status": "error",
-                "web_url": web_url,
-                "item_id": item_id,
-                "error": error_info,
-                "status_code": status_code,
-                "message": f"Failed to retrieve document: {error_info}",
-                "organization": config.org_name,
-            }
-
-        # Calculate performance
-        end_time = time.time()
-        processing_time = end_time - start_time
-
-        file_name = content_data.get("name", "Unknown")
-        content_text = content_data.get("content", "")
-
-        # Performance logging
-        perf_message = f"📄 Retrieved '{file_name}' by ID in {round(processing_time, 2)}s ({len(content_text)} chars)"
-        logger.info(perf_message)
-
-        return {
-            "status": "success",
-            "file_name": file_name,
-            "content": content_text,
-            "size_bytes": content_data.get("size", 0),
-            "mime_type": content_data.get("mime_type", ""),
-            "web_url": web_url,
-            "organization": config.org_name,
-            "processing_time_seconds": round(processing_time, 2),
-            "message": f"✅ Retrieved document content ({len(content_text)} characters)",
-        }
-
-    except Exception as e:
-        logger.error(f"Error retrieving document by ID: {e}")
-        return {
-            "status": "error",
-            "message": f"Document retrieval failed: {str(e)}",
-            "web_url": web_url,
-            "item_id": item_id,
-            "organization": config.org_name,
-        }
-
-
-async def _analyze_all_documents_for_content_impl(
+@generic_sharepoint_server.tool()
+async def analyze_all_documents_for_content(
     search_terms: str,
     user_token: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -904,24 +553,8 @@ async def _analyze_all_documents_for_content_impl(
         # Get user token from parameter or environment variable
         effective_token = user_token or os.getenv("USER_JWT_TOKEN")
 
-        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
-        if config.use_delegated_access:
-            if (
-                not effective_token
-                or effective_token == "user_token_placeholder"
-                or not effective_token.strip()
-            ):
-                return {
-                    "status": "error",
-                    "error": "Authentication required",
-                    "message": DELEGATED_ACCESS_AUTH_ERROR,
-                    "organization": config.org_name,
-                    "delegated_access_enabled": True,
-                    "authentication_failed": True,
-                }
-
         # Get all documents using comprehensive traversal (no verbose logging)
-        all_docs_result = await _get_all_documents_comprehensive_impl(effective_token)
+        all_docs_result = await get_all_documents_comprehensive(effective_token)
 
         if all_docs_result.get("status") != "success":
             return all_docs_result
@@ -957,19 +590,18 @@ async def _analyze_all_documents_for_content_impl(
         relevant_documents.sort(key=lambda x: x["relevance_score"], reverse=True)
 
         # Simple response size limiting (remove double truncation that causes slowdown)
-        limited_results = relevant_documents[:25]
+        limited_results = relevant_documents[:8]  # Just take top 8 results
 
-        # Light content limiting - increased preview size to capture early pages of documents
+        # Light content limiting
         for doc in limited_results:
             if "content_preview" in doc:
                 doc["content_preview"] = (
-                    doc["content_preview"][:2000]
-                    + "..."  # Increased to 2000 chars for multi-page content
-                    if len(doc["content_preview"]) > 2000
+                    doc["content_preview"][:200] + "..."
+                    if len(doc["content_preview"]) > 200
                     else doc["content_preview"]
                 )
             if "matches" in doc:
-                doc["matches"] = doc["matches"][:7]  # Increased to 7 matches
+                doc["matches"] = doc["matches"][:3]
 
         # FORCE performance logging - short message to prevent truncation
         perf_message = f"🚀 {folders_processed}F/{total_docs}D in {round(processing_time, 1)}s → {len(relevant_documents)} results"
@@ -1046,7 +678,7 @@ async def _analyze_documents_parallel_ultra_fast(
             search_lower = search_terms.lower()
             filename_score = 20 if search_lower in doc_name.lower() else 0
 
-            # Check cache to avoid re-downloading same document within this query
+            # Check cache first
             cache_key = f"{folder_path}::{doc_name}"
             if cache_key in content_cache:
                 content = content_cache[cache_key]
@@ -1063,7 +695,7 @@ async def _analyze_documents_parallel_ultra_fast(
                 mpo_logger.setLevel(logging.ERROR)  # Suppress MPO logs
 
                 try:
-                    content_result = await _get_sharepoint_document_content_impl(
+                    content_result = await get_sharepoint_document_content(
                         folder_path, doc_name, user_token
                     )
                     content = (
@@ -1208,7 +840,8 @@ def _get_optimized_content_preview(content: str) -> str:
     return content[:300] + "..."
 
 
-async def _check_sharepoint_permissions_impl(
+@generic_sharepoint_server.tool()
+async def check_sharepoint_permissions(
     user_token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -1268,6 +901,37 @@ async def _check_sharepoint_permissions_impl(
         }
 
 
+async def main(department_prefix: str = "MPO"):
+    """Main function to run the SharePoint MCP server for a specific department"""
+    try:
+        # Initialize server for the specified department
+        success = initialize_department_server(department_prefix)
+        if not success:
+            logger.error(
+                f"Failed to initialize server for department: {department_prefix}"
+            )
+            return
+
+        logger.info(f"Starting {config.org_name} SharePoint MCP Server")
+        await mcp.run(transport="stdio")
+
+    except Exception as e:
+        logger.error(f"Error starting {department_prefix} SharePoint server: {e}")
+        raise
+
+
+if __name__ == "__main__":
+    import sys
+
+    # Allow department prefix to be passed as command line argument
+    department_prefix = sys.argv[1] if len(sys.argv) > 1 else "MPO"
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
+
 # ===== EMBEDDED DOCUMENT PARSING FUNCTIONS =====
 
 
@@ -1290,8 +954,6 @@ async def parse_document_content_embedded(content: bytes, file_name: str) -> str
             return await parse_pdf_content_embedded(content, file_name)
         elif file_ext in ["docx", "doc"]:
             return await parse_word_content_embedded(content, file_name)
-        elif file_ext in ["pptx", "ppt"]:
-            return await parse_pptx_content_embedded(content, file_name)
         elif file_ext in ["txt", "csv", "text"]:
             return await parse_text_content_embedded(content, file_name)
         else:
@@ -1417,53 +1079,6 @@ async def parse_word_content_embedded(content: bytes, file_name: str) -> str:
         return f"Error parsing Word document {file_name}"
 
 
-async def parse_pptx_content_embedded(content: bytes, file_name: str) -> str:
-    """
-    Parse PowerPoint document content using python-pptx (embedded implementation).
-
-    Args:
-        content: PowerPoint document content bytes
-        file_name: Name of the PowerPoint file
-
-    Returns:
-        Extracted text content from all slides
-    """
-    try:
-        from io import BytesIO
-        from pptx import Presentation
-
-        # Parse PPTX
-        pptx_stream = BytesIO(content)
-        prs = Presentation(pptx_stream)
-
-        text_content = []
-
-        # Extract text from all slides
-        for slide_num, slide in enumerate(prs.slides, start=1):
-            slide_text = []
-            slide_text.append(f"--- Slide {slide_num} ---")
-
-            # Extract text from all shapes in the slide
-            for shape in slide.shapes:
-                if hasattr(shape, "text") and shape.text.strip():
-                    slide_text.append(shape.text.strip())
-
-            if len(slide_text) > 1:  # Has more than just the slide number header
-                text_content.append("\n".join(slide_text))
-
-        if text_content:
-            extracted_text = "\n\n".join(text_content)
-            return extracted_text
-        else:
-            return f"No text content found in PowerPoint file {file_name}"
-
-    except ImportError:
-        return f"python-pptx library not available. Cannot parse {file_name}"
-    except Exception as e:
-        logger.warning(f"Error parsing PowerPoint document {file_name}: {e}")
-        return f"Error parsing PowerPoint document {file_name}: {str(e)}"
-
-
 async def parse_text_content_embedded(content: bytes, file_name: str) -> str:
     """
     Parse plain text content (embedded implementation).
@@ -1530,86 +1145,23 @@ async def parse_generic_content_embedded(content: bytes, file_name: str) -> str:
         return f"Error parsing file {file_name}: {str(e)}"
 
 
-def register_department_tools(department_prefix: str):
-    dept_lower = department_prefix.lower()
+if __name__ == "__main__":
+    import sys
 
-    # ------------------ FAST SEARCH (NEW - RECOMMENDED) ------------------
-    @generic_sharepoint_server.tool(
-        name=f"{dept_lower}_search_documents_fast",
-        description=f"FAST search in {department_prefix} SharePoint using Microsoft Graph Search API with KQL support (sub-1 second). Results sorted by relevance. Supports plain text or KQL queries like 'filename:*.pdf AND railway' or 'lastModifiedTime>=2024-01-01 AND infrastructure'",
+    # Allow department prefix to be passed as command line argument
+    department_prefix = sys.argv[1] if len(sys.argv) > 1 else "MPO"
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    async def search_fast(
-        query: str,
-        limit: int = 25,
-        user_token: Optional[str] = None,
-    ):
-        return await _search_documents_fast_impl(query, limit, user_token)
 
-    # ------------------ Get Document by ID (from search results) ------------------
-    @generic_sharepoint_server.tool(
-        name=f"{dept_lower}_get_document_by_id",
-        description=f"Retrieve document content from {department_prefix} SharePoint using web URL and item ID from search results. Use this when {dept_lower}_get_sharepoint_document_content fails (404 errors) because the document is in a different location. Pass the 'webUrl' and 'id' fields directly from search results.",
-    )
-    async def get_document_by_id(
-        web_url: str,
-        item_id: str,
-        user_token: Optional[str] = None,
-    ):
-        return await _get_document_by_id_impl(web_url, item_id, user_token)
+    # Initialize server for the specified department
+    success = initialize_department_server(department_prefix)
+    if not success:
+        logger.error(f"Failed to initialize server for department: {department_prefix}")
+        sys.exit(1)
 
-    # ------------------ Document Content ------------------
-    @generic_sharepoint_server.tool(
-        name=f"{dept_lower}_get_sharepoint_document_content",
-        description=f"Retrieve a document from {department_prefix} SharePoint",
-    )
-    async def get_document(
-        folder_name: str,
-        file_name: str,
-        user_token: Optional[str] = None,
-    ):
-        return await _get_sharepoint_document_content_impl(
-            folder_name, file_name, user_token
-        )
-
-    # ------------------ All Documents ------------------
-    @generic_sharepoint_server.tool(
-        name=f"{dept_lower}_get_all_documents_comprehensive",
-        description=f"Retrieve all documents from {department_prefix} SharePoint",
-    )
-    async def get_all_documents(
-        user_token: Optional[str] = None,
-    ):
-        return await _get_all_documents_comprehensive_impl(user_token)
-
-    # ------------------ Analyze Documents (SLOW - Use search_fast instead) ------------------
-    @generic_sharepoint_server.tool(
-        name=f"{dept_lower}_analyze_all_documents_for_content",
-        description=f"[LEGACY - SLOW 20-60s] Analyze all documents in {department_prefix} SharePoint by downloading and parsing each one. USE {dept_lower}_search_documents_fast INSTEAD for much better performance (sub-1 second)",
-    )
-    async def analyze_documents(
-        search_terms: str,
-        user_token: Optional[str] = None,
-    ):
-        return await _analyze_all_documents_for_content_impl(search_terms, user_token)
-
-    # ------------------ Permissions ------------------
-    @generic_sharepoint_server.tool(
-        name=f"{dept_lower}_check_sharepoint_permissions",
-        description=f"Check SharePoint permissions for {department_prefix}",
-    )
-    async def check_permissions(
-        user_token: Optional[str] = None,
-    ):
-        return await _check_sharepoint_permissions_impl(user_token)
-
-
-def run_department_server(department_prefix: str):
-    department_prefix = department_prefix.upper()
-
-    if not initialize_department_server(department_prefix):
-        raise RuntimeError(f"Failed to initialize {department_prefix}")
-
-    register_department_tools(department_prefix)
-
-    logger.info(f"🚀 Starting {department_prefix} SharePoint MCP Server")
-    mcp.run(transport="stdio")
+    logger.info(f"Starting {config.org_name} SharePoint MCP Server")
+    # Run the server directly like other FastMCP servers
+    mcp.run()
