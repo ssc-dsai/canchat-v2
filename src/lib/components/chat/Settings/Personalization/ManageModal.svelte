@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -9,10 +11,9 @@
 	import AddMemoryModal from './AddMemoryModal.svelte';
 	import { deleteMemoriesByUserId, deleteMemoryById, getMemories } from '$lib/apis/memories';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { error } from '@sveltejs/kit';
 	import EditMemoryModal from './EditMemoryModal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	export let show = false;
 
@@ -41,6 +42,7 @@
 				on:click={() => {
 					show = false;
 				}}
+				aria-label={$i18n.t('Close')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -71,7 +73,9 @@
 										<th scope="col" class="px-3 py-2 hidden md:flex">
 											{$i18n.t('Last Modified')}
 										</th>
-										<th scope="col" class="px-3 py-2 text-right" />
+										<th scope="col" class="px-3 py-2 text-right">
+											<span class="sr-only">Actions</span>
+										</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -98,6 +102,7 @@
 																selectedMemory = memory;
 																showEditMemoryModal = true;
 															}}
+															aria-label={$i18n.t('Edit Memory')}
 														>
 															<svg
 																xmlns="http://www.w3.org/2000/svg"
@@ -133,6 +138,7 @@
 																	memories = await getMemories(localStorage.token);
 																}
 															}}
+															aria-label={$i18n.t('Delete Memory')}
 														>
 															<svg
 																xmlns="http://www.w3.org/2000/svg"

@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getI18n } from '$lib/utils/context';
+
+	import { onMount } from 'svelte';
 	import { getMCPConfig } from '$lib/apis/mcp';
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -28,7 +30,8 @@
 		mcp: {
 			time_server: false,
 			news_server: false,
-			mpo_sharepoint_server: false
+			mpo_sharepoint_server: false,
+			pmo_sharepoint_server: false
 		}
 	};
 
@@ -317,6 +320,14 @@
 				</div>
 
 				<Switch bind:state={permissions.mcp.mpo_sharepoint_server} />
+			</div>
+
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('MCP: PMO SharePoint')}
+				</div>
+
+				<Switch bind:state={permissions.mcp.pmo_sharepoint_server} />
 			</div>
 		</div>
 	{/if}

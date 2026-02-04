@@ -1,14 +1,16 @@
 <script>
-	import { createEventDispatcher, getContext } from 'svelte';
+	import { getI18n } from '$lib/utils/context';
+
+	import { createEventDispatcher } from 'svelte';
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { addNewMemory, updateMemoryById } from '$lib/apis/memories';
+	import { addNewMemory } from '$lib/apis/memories';
 	import { toast } from 'svelte-sonner';
 
 	const dispatch = createEventDispatcher();
 
 	export let show;
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	let loading = false;
 	let content = '';
@@ -44,6 +46,7 @@
 				on:click={() => {
 					show = false;
 				}}
+				aria-label={$i18n.t('Close')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

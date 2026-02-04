@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { getContext, tick } from 'svelte';
+	import { getI18n } from '$lib/utils/context';
+
+	import { tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { ariaMessage, models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
@@ -17,7 +19,7 @@
 	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	export let show = false;
 

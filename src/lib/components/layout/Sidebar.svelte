@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 
@@ -6,8 +8,6 @@
 	import {
 		user,
 		chats,
-		settings,
-		showSettings,
 		chatId,
 		tags,
 		showSidebar,
@@ -21,11 +21,12 @@
 		socket,
 		config,
 		isApp,
-		ariaMessage
+		ariaMessage,
+		suggestionCycle
 	} from '$lib/stores';
-	import { onMount, getContext, tick, onDestroy } from 'svelte';
+	import { onMount, tick, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	import {
 		getChatList,
@@ -46,11 +47,9 @@
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
-	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 	import SearchInput from './Sidebar/SearchInput.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Folder from '../common/Folder.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
@@ -626,6 +625,7 @@
 					clearSelection();
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
+					suggestionCycle.update((n) => n + 1);
 					setTimeout(() => {
 						newChatButton?.click();
 						if ($mobile) {

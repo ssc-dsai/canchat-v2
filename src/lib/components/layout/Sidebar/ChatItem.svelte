@@ -1,11 +1,13 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { toast } from 'svelte-sonner';
-	import { goto, invalidate, invalidateAll } from '$app/navigation';
-	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { onMount, createEventDispatcher, tick, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 
-	const i18n: Writable<i18nType> = getContext('i18n');
+	const i18n: Writable<i18nType> = getI18n();
 
 	const dispatch = createEventDispatcher();
 
@@ -16,7 +18,6 @@
 		getAllTags,
 		getChatById,
 		getChatList,
-		getChatListByTagName,
 		getPinnedChatList,
 		updateChatById
 	} from '$lib/apis/chats';
@@ -34,9 +35,7 @@
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';

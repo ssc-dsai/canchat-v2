@@ -33,6 +33,7 @@ from starlette.background import BackgroundTask
 from open_webui.models.models import Models
 from open_webui.utils.misc import (
     calculate_sha256,
+    validate_path,
 )
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
@@ -1392,6 +1393,7 @@ async def download_model(
 
     if file_name:
         file_path = f"{UPLOAD_DIR}/{file_name}"
+        validate_path(file_path, UPLOAD_DIR)
 
         return StreamingResponse(
             download_file_stream(url, form_data.url, file_path, file_name),
@@ -1413,6 +1415,7 @@ def upload_model(
     ollama_url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
 
     file_path = f"{UPLOAD_DIR}/{file.filename}"
+    validate_path(file_path, UPLOAD_DIR)
 
     # Save file in chunks
     with open(file_path, "wb+") as f:
