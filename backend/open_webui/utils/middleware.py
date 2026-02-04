@@ -50,6 +50,8 @@ from open_webui.utils.task import (
     get_task_model_id,
     rag_template,
     tools_function_calling_generation_template,
+    extract_title_from_response,
+    truncate_title_by_chars,
 )
 
 from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
@@ -72,6 +74,7 @@ from open_webui.env import (
     ENABLE_REALTIME_CHAT_SAVE,
 )
 from open_webui.constants import TASKS
+
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -1192,7 +1195,7 @@ async def chat_completion_files_handler(
         except Exception as e:
             log.exception(e)
 
-        log.debug(f"[chat_completion_file_handler] rag contexts sources: {sources}")
+        log.debug(f"rag_contexts:sources: {sources}")
 
     return body, {"sources": sources}
 
@@ -1424,22 +1427,18 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                         context_string += f"<source><source_context>{doc_context}</source_context></source>\n"
 
         context_string = context_string.strip()
-        log.debug(f"Generated context string length: {len(context_string)}")
-        log.debug(
+        log.info(f"Generated context string length: {len(context_string)}")
+        log.info(
             f"Context string preview: {context_string[:500]}..."
         )  # Log first 500 chars
 
-        if (
-            log.isEnabledFor(logging.DEBUG)
-            and sources
-            and any(
-                "TOOL:" in source.get("source", {}).get("name", "")
-                for source in sources
-            )
+        # Debug: Log the complete context structure for tools
+        if any(
+            "TOOL:" in source.get("source", {}).get("name", "") for source in sources
         ):
-            log.debug("=== COMPLETE TOOL CONTEXT DEBUG ===")
-            log.debug(f"Full context string: {context_string}")
-            log.debug("=== END COMPLETE TOOL CONTEXT DEBUG ===")
+            log.info("=== COMPLETE TOOL CONTEXT DEBUG ===")
+            log.info(f"Full context string: {context_string}")
+            log.info("=== END COMPLETE TOOL CONTEXT DEBUG ===")
 
         prompt = get_last_user_message(form_data["messages"])
 
@@ -1458,8 +1457,8 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         rag_content = rag_template(
             request.app.state.config.RAG_TEMPLATE, context_string, prompt
         )
-        log.debug(f"RAG template content length: {len(rag_content)}")
-        log.debug(f"RAG template preview: {rag_content[:500]}...")
+        log.info(f"RAG template content length: {len(rag_content)}")
+        log.info(f"RAG template preview: {rag_content[:500]}...")
 
         if model["owned_by"] == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
@@ -1472,14 +1471,12 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 form_data["messages"],
             )
 
-        # if log level is debug, log the messages being sent to the model
-        if log.isEnabledFor(logging.DEBUG):
-            # Log the final messages to see what gets sent to the model
-            log.debug(f"Final messages count: {len(form_data['messages'])}")
-            for idx, msg in enumerate(form_data["messages"]):
-                log.debug(
-                    f"Message {idx} ({msg['role']}): {msg['content'][:300]}..."
-                )  # Log first 300 chars
+        # Log the final messages to see what gets sent to the model
+        log.info(f"Final messages count: {len(form_data['messages'])}")
+        for idx, msg in enumerate(form_data["messages"]):
+            log.info(
+                f"Message {idx} ({msg['role']}): {msg['content'][:300]}..."
+            )  # Log first 300 chars
 
     # If there are citations, add them to the data_items
     sources = [source for source in sources if source.get("source", {}).get("name", "")]
@@ -1527,20 +1524,15 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            if len(res.get("choices", [])) == 1:
-                                title = (
-                                    res.get("choices", [])[0]
-                                    .get("message", {})
-                                    .get(
-                                        "content",
-                                        message.get("content", "New Chat"),
-                                    )
-                                ).strip()
-                            else:
-                                title = None
+                            # Use extract_title_from_response to properly parse and validate
+                            title = extract_title_from_response(res)
 
                             if not title:
+                                # Fallback: use first message or default
                                 title = messages[0].get("content", "New Chat")
+                            else:
+                                # Truncate title to reasonable length (max 50 characters)
+                                title = truncate_title_by_chars(title, max_chars=50)
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
