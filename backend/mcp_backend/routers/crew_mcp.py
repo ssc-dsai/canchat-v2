@@ -169,10 +169,9 @@ Respond with just the title, no quotes or formatting."""
         "stream": False,
         **(
             {"max_tokens": 50}
-            if task_model_id in models and models[task_model_id].get("owned_by") == "ollama"
-            else {
-                "max_completion_tokens": 50
-            }
+            if task_model_id in models
+            and models[task_model_id].get("owned_by") == "ollama"
+            else {"max_completion_tokens": 50}
         ),
         "metadata": {"task": "title_generation", "chat_id": request.chat_id},
     }
