@@ -1529,7 +1529,6 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            # Use extract_title_from_response to properly parse and validate
                             title = extract_title_from_response(res)
 
                             if not title:
