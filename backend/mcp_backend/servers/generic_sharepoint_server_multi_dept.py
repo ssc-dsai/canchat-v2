@@ -585,6 +585,268 @@ async def _traverse_all_folders_recursive(
         logger.warning(f"Error traversing folder {folder_path}: {e}")
 
 
+async def _list_folder_contents_impl(
+    folder_path: str,
+    user_token: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    List all files and folders in a specific SharePoint folder path.
+    Use this when you need to list/count files in a specific folder, not search for content.
+
+    Args:
+        folder_path: Path to the folder (e.g., "Canchat Demo", "Documents/Reports", "" for root)
+        user_token: Optional user access token for delegated access
+
+    Returns:
+        JSON response with list of files and folders
+
+    Example:
+        - List files in "Canchat Demo" folder: folder_path="Canchat Demo"
+        - List root folder: folder_path=""
+    """
+    if not config or not oauth_client:
+        return {
+            "status": "error",
+            "error": "Server not initialized",
+            "message": "Server not initialized with department configuration",
+        }
+
+    try:
+        import time
+
+        start_time = time.time()
+
+        # Get authentication token
+        effective_token = user_token or os.getenv("USER_JWT_TOKEN")
+
+        # STRICT AUTHENTICATION CHECK
+        if config.use_delegated_access:
+            if (
+                not effective_token
+                or effective_token == "user_token_placeholder"
+                or not effective_token.strip()
+            ):
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
+
+        # Get access token
+        if config.use_delegated_access:
+            access_token = await oauth_client.get_access_token(effective_token)
+        else:
+            access_token = await oauth_client.get_application_token()
+
+        if not access_token:
+            return {
+                "status": "error",
+                "message": "Failed to get access token",
+                "organization": config.org_name,
+            }
+
+        # Get site info
+        success, site_info = await oauth_client.get_site_info(access_token)
+        if not success:
+            return {
+                "status": "error",
+                "message": f"Failed to get site info: {site_info}",
+                "organization": config.org_name,
+            }
+
+        site_id = site_info.get("id")
+
+        # Get drives for the site
+        success, drives_data = await oauth_client.get_site_drives(access_token, site_id)
+        if not success:
+            return {
+                "status": "error",
+                "message": f"Failed to get drives: {drives_data}",
+                "organization": config.org_name,
+            }
+
+        drives = drives_data.get("value", [])
+        if not drives:
+            return {
+                "status": "error",
+                "message": "No document libraries found",
+                "organization": config.org_name,
+            }
+
+        drive_id = drives[0].get("id")  # Use the first/default drive
+
+        # Get items in the folder
+        success, items_data = await oauth_client.get_drive_items(
+            access_token=access_token,
+            site_id=site_id,
+            drive_id=drive_id,
+            folder_path=folder_path,
+        )
+
+        if not success:
+            error_msg = items_data.get("error", "Unknown error")
+
+            # If folder not found and we have a folder name, try searching for it GLOBALLY (not limited to this site)
+            if "itemNotFound" in str(error_msg) and folder_path:
+                logger.info(
+                    f"Folder '{folder_path}' not found at direct path in configured site, searching globally..."
+                )
+
+                # Use search API to find the folder ACROSS ALL SHAREPOINT (don't limit by site_id)
+                # This allows finding folders in personal OneDrive or other team sites
+                search_success, search_results = await oauth_client.search_documents(
+                    access_token=access_token,
+                    query=f'"{folder_path}"',  # Simple query for folder name
+                    site_id=None,  # Don't limit to specific site - search everywhere user has access
+                    limit=10,
+                )
+
+                if search_success and search_results.get("hits"):
+                    hits = search_results.get("hits", [])
+                    folder_found = False
+
+                    # Look for exact folder name match
+                    for hit in hits:
+                        resource = hit.get("resource", {})
+                        resource_name = resource.get("name", "")
+
+                        # Check if this is a folder - either has "folder" property OR size is 0
+                        is_folder = "folder" in resource or (
+                            resource.get("size", -1) == 0
+                            and "/" in resource.get("webUrl", "")
+                        )
+
+                        if is_folder and resource_name.lower() == folder_path.lower():
+                            # Found the folder! Now get its items using the ID
+                            folder_id = resource.get("id")
+                            parent_ref = resource.get("parentReference", {})
+                            folder_drive_id = parent_ref.get("driveId")
+                            folder_site_id = parent_ref.get("siteId")
+
+                            if not folder_drive_id:
+                                logger.warning(
+                                    f"Found folder '{folder_path}' but no drive ID available"
+                                )
+                                continue
+
+                            logger.info(
+                                f"Found folder '{folder_path}' via global search (is_folder check passed), retrieving contents..."
+                            )
+
+                            # Get items using the folder's ID directly
+                            endpoint = (
+                                f"drives/{folder_drive_id}/items/{folder_id}/children"
+                            )
+                            success, items_data = await oauth_client.make_graph_request(
+                                endpoint, access_token
+                            )
+
+                            if success:
+                                folder_found = True
+                                logger.info(
+                                    f"Successfully retrieved contents of folder '{folder_path}' from global search"
+                                )
+                                break
+                            else:
+                                logger.warning(
+                                    f"Found folder but failed to retrieve contents: {items_data}"
+                                )
+
+                    if not folder_found:
+                        # Provide helpful error message with what we did find
+                        folder_candidates = []
+                        for hit in hits:
+                            resource = hit.get("resource", {})
+                            is_folder = "folder" in resource or (
+                                resource.get("size", -1) == 0
+                                and "/" in resource.get("webUrl", "")
+                            )
+                            if is_folder:
+                                folder_candidates.append(resource.get("name", ""))
+
+                        return {
+                            "status": "error",
+                            "message": f"Folder '{folder_path}' not found. Searched all accessible SharePoint sites and OneDrive locations. Similar folders found: {', '.join(folder_candidates[:5]) if folder_candidates else 'none'}",
+                            "folder_path": folder_path,
+                            "organization": config.org_name,
+                            "hint": "The folder might be in a different SharePoint site or personal OneDrive. Try using the search tool instead to find documents by content.",
+                        }
+                else:
+                    return {
+                        "status": "error",
+                        "message": f"Folder '{folder_path}' not found in configured SharePoint site '{config.site_url}' or any other accessible location. The folder may not exist or you may not have permission to access it.",
+                        "folder_path": folder_path,
+                        "organization": config.org_name,
+                        "hint": "Try using mpo_search_documents_fast to search for documents by content instead of folder name.",
+                    }
+
+            # If still not successful, return error
+            if not success:
+                return {
+                    "status": "error",
+                    "message": f"Failed to list folder contents: {error_msg}",
+                    "folder_path": folder_path,
+                    "organization": config.org_name,
+                }
+
+        # Process items into a clean format
+        items = items_data.get("value", [])
+        files = []
+        folders = []
+
+        for item in items:
+            item_info = {
+                "name": item.get("name", "Unknown"),
+                "id": item.get("id", ""),
+                "webUrl": item.get("webUrl", ""),
+                "lastModified": item.get("lastModifiedDateTime", ""),
+                "created": item.get("createdDateTime", ""),
+            }
+
+            # Check if it's a folder or file
+            if "folder" in item:
+                item_info["type"] = "folder"
+                item_info["childCount"] = item.get("folder", {}).get("childCount", 0)
+                folders.append(item_info)
+            else:
+                item_info["type"] = "file"
+                item_info["size"] = item.get("size", 0)
+                item_info["mimeType"] = item.get("file", {}).get("mimeType", "")
+                files.append(item_info)
+
+        # Calculate performance
+        end_time = time.time()
+        processing_time = end_time - start_time
+
+        logger.info(
+            f"📁 Listed folder '{folder_path}': {len(files)} files, {len(folders)} folders in {round(processing_time, 2)}s"
+        )
+
+        return {
+            "status": "success",
+            "folder_path": folder_path,
+            "total_files": len(files),
+            "total_folders": len(folders),
+            "files": files,
+            "folders": folders,
+            "organization": config.org_name,
+            "processing_time_seconds": round(processing_time, 2),
+            "message": f"✅ Found {len(files)} files and {len(folders)} folders in '{folder_path}'",
+        }
+
+    except Exception as e:
+        logger.error(f"Error listing folder contents: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to list folder: {str(e)}",
+            "folder_path": folder_path,
+            "organization": config.org_name,
+        }
+
+
 async def _search_documents_fast_impl(
     query: str,
     limit: int = 25,
@@ -674,11 +936,22 @@ async def _search_documents_fast_impl(
         )
 
         if not success:
-            # Distinguish between transient API failures and other errors
+            # Distinguish between transient API failures, permission errors, and other errors
             is_transient = search_results.get("transient", False)
+            is_permission_error = search_results.get("is_permission_error", False)
+            status_code = search_results.get("status_code", 0)
             error_msg = search_results.get("error", "Unknown error")
 
-            if is_transient:
+            if is_permission_error:
+                # Permission/authorization error - user doesn't have access
+                return {
+                    "status": "error",
+                    "message": f"🔒 Access Denied: You do not have permission to access the requested SharePoint documents. This may be because the documents are in a restricted site, folder, or require additional permissions. Please contact your SharePoint administrator if you believe you should have access.",
+                    "organization": config.org_name,
+                    "is_permission_error": True,
+                    "status_code": status_code,
+                }
+            elif is_transient:
                 # Transient failure - Microsoft's API is temporarily down
                 return {
                     "status": "error",
@@ -688,7 +961,7 @@ async def _search_documents_fast_impl(
                     "retry_suggested": True,
                 }
             else:
-                # Permanent error (permissions, invalid query, etc.)
+                # Permanent error (invalid query, etc.)
                 return {
                     "status": "error",
                     "message": f"Search failed: {error_msg}",
@@ -715,6 +988,27 @@ async def _search_documents_fast_impl(
                 "organization": config.org_name,
             }
 
+            # Check if this is a folder (preserve folder metadata)
+            # Folders can be identified by:
+            # 1. Having a "folder" property in the resource
+            # 2. Having size == 0 AND no file extension in webUrl
+            has_folder_property = "folder" in resource
+            size = resource.get("size", 0)
+            has_file_extension = (
+                "." in resource.get("name", "").split("/")[-1]
+                if resource.get("name")
+                else False
+            )
+
+            if has_folder_property or (size == 0 and not has_file_extension):
+                doc_info["is_folder"] = True
+                if has_folder_property:
+                    doc_info["folder_child_count"] = resource.get("folder", {}).get(
+                        "childCount", 0
+                    )
+            else:
+                doc_info["is_folder"] = False
+
             # Extract folder path if available
             parent_ref = resource.get("parentReference", {})
             if "path" in parent_ref:
@@ -726,6 +1020,11 @@ async def _search_documents_fast_impl(
                     doc_info["folder_path"] = ""
             else:
                 doc_info["folder_path"] = ""
+
+            # Store parent reference info for folder operations
+            if parent_ref:
+                doc_info["driveId"] = parent_ref.get("driveId")
+                doc_info["siteId"] = parent_ref.get("siteId")
 
             # Add hit rank/relevance if available
             if "rank" in hit:
@@ -1532,6 +1831,17 @@ async def parse_generic_content_embedded(content: bytes, file_name: str) -> str:
 
 def register_department_tools(department_prefix: str):
     dept_lower = department_prefix.lower()
+
+    # ------------------ LIST FOLDER CONTENTS ------------------
+    @generic_sharepoint_server.tool(
+        name=f"{dept_lower}_list_folder_contents",
+        description=f"List all files and folders in a specific SharePoint folder path for {department_prefix}. Use this when you need to list or count files in a specific folder (not search for content). Provide the folder path like 'Canchat Demo' or 'Documents/Reports' or '' for root.",
+    )
+    async def list_folder(
+        folder_path: str,
+        user_token: Optional[str] = None,
+    ):
+        return await _list_folder_contents_impl(folder_path, user_token)
 
     # ------------------ FAST SEARCH (NEW - RECOMMENDED) ------------------
     @generic_sharepoint_server.tool(

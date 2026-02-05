@@ -37,9 +37,9 @@ class AzureConfig(BaseModel):
 
     api_key: str = os.getenv("CREWAI_AZURE_OPENAI_API_KEY", "")
     endpoint: str = os.getenv("CREWAI_AZURE_OPENAI_ENDPOINT", "")
-    deployment: str = os.getenv("CREWAI_AZURE_OPENAI_DEPLOYMENT_NAME", "o3-mini")
+    deployment: str = os.getenv("CREWAI_AZURE_OPENAI_DEPLOYMENT_NAME", "")
     api_version: str = os.getenv(
-        "CREWAI_AZURE_OPENAI_API_VERSION", "2024-12-01-preview"
+        "CREWAI_AZURE_OPENAI_API_VERSION", ""
     )
 
     def validate_config(self) -> bool:
@@ -414,20 +414,20 @@ class CrewMCPManager:
             # Create SharePoint specialist agent with MCP tools
             sharepoint_agent = Agent(
                 role="SharePoint Document Specialist",
-                goal="Find and retrieve relevant information from SharePoint using FAST search (sub-2 second response)",
-                backstory="""I am a SharePoint document specialist who uses the Microsoft Graph Search API for lightning-fast document searches. I use the mpo_search_documents_fast tool which provides sub-2 second search results.
+                goal="Find and retrieve relevant information from SharePoint using FAST search or list files in specific folders",
+                backstory="""I am a SharePoint document specialist who uses the Microsoft Graph Search API for lightning-fast document searches and folder listings.
 
     🚨 CRITICAL RULES:
-    1. ALWAYS use mpo_search_documents_fast FIRST - this is MANDATORY
-    2. If search snippet doesn't have the complete answer, use mpo_get_document_by_id to get full content
-    3. NEVER skip the search step
-    4. NEVER answer from training data - ONLY from SharePoint search results
+    1. For LISTING/COUNTING files in a specific folder → Use mpo_list_folder_contents
+    2. For SEARCHING content across documents → Use mpo_search_documents_fast
+    3. If search snippet doesn't have the complete answer, use mpo_get_document_by_id to get full content
+    4. NEVER answer from training data - ONLY from SharePoint results
     5. If no documents found, say so - don't make up answers
     
     RESPONSE FORMAT:
     - Provide ONLY the final answer extracted from SharePoint
     - Do NOT show your reasoning process ("Thought:", "Action:", etc.)
-    - Include document name and source
+    - Include document name and source when applicable
     - Be direct and concise""",
                 tools=mcp_tools,
                 llm=llm,
@@ -436,36 +436,51 @@ class CrewMCPManager:
                 allow_delegation=False,
             )
 
-            # Create FAST SharePoint search task using Microsoft Graph Search API
+            # Create SharePoint task with smart routing
             sharepoint_task = Task(
-                description=f"""Use FAST Microsoft Graph Search API to find information about: {query}
+                description=f"""Retrieve information from SharePoint for: {query}
 
-    STEP 1 - SEARCH (MANDATORY):
-    Call mpo_search_documents_fast with the query AS-IS: "{query}"
-    - Set limit parameter to 10 for better coverage
-    - Do NOT modify the query
-    - Do NOT add quotes or KQL syntax
-    - Do NOT do multiple searches
-    - This is a ONE-TIME search operation
-
-    STEP 2 - EVALUATE RESULTS:
-    Check the "total_results" field from the search response:
-    - If total_results > 0: You HAVE documents → GO TO STEP 3
-    - If total_results = 0: No documents found → Respond "No information found in SharePoint"
+    🔍 STEP 1 - DETERMINE REQUEST TYPE:
     
-    STEP 3 - EXTRACT ANSWER (if total_results > 0):
-    Review the documents array from the first search:
-    - Read the "summary" field of each document
-    - If summary contains the answer: Extract it and respond with document name
-    - If summary doesn't have full answer: Use mpo_get_document_by_id to get full content
-    - Extract the answer from the full document content
+    A) If asking to LIST/COUNT files in a SPECIFIC FOLDER (keywords: "list", "show files", "count", "how many files", "in the folder", "in folder"):
+       → Use mpo_list_folder_contents
+       → Extract folder name from query (e.g., "Canchat Demo", "Documents/Reports")
+       → Call: mpo_list_folder_contents(folder_path="<folder_name>")
+       → If successful: Return the list of files found
+       → If folder not found: FALLBACK to mpo_search_documents_fast(query="<folder_name>", limit=10) to find documents
+    
+    B) If asking for CONTENT/INFORMATION ABOUT something (keywords: "tell me about", "what is", "explain", "information about", "details on"):
+       → STEP 1: Use mpo_search_documents_fast
+         • Call: mpo_search_documents_fast(query="{query}", limit=10)
+       
+       → STEP 2: Analyze results:
+         • If ANY FILES found (is_folder=false): GO TO STEP 3
+         • If ONLY folders found (all is_folder=true): GO TO STEP 4
+       
+       → STEP 3: Process FILES:
+         • If file has useful summary: Extract and respond
+         • If need full content: Use mpo_get_document_by_id(web_url=..., item_id=...)
+         • DONE - provide answer to user
+       
+       → STEP 4: MANDATORY REFINED SEARCH (when only folders found):
+         • Try search with hyphenated version: mpo_search_documents_fast(query="Budget-2025", limit=10)
+         • If no files, try: mpo_search_documents_fast(query="Budget 2025 pdf", limit=10)
+         • If files found: Use mpo_get_document_by_id to retrieve content
+         • If still no files after 2 refined searches: Tell user no document files found, only folders exist
+       
+       → NEVER try to retrieve folder content with mpo_get_document_by_id
 
     🚨 ABSOLUTE RULES:
-    - Use ONLY the FIRST search results - do NOT search again
-    - If first search returned total_results > 0, you MUST use those documents
-    - Do NOT refine the query and search again
-    - Do NOT ignore the first search results
-    - Include document name and source in your final answer
+    - For "Tell me about X" queries: Prioritize finding DOCUMENT CONTENT, not folder structure
+    - Search returns folders + files: Use the FILES first, ignore folders unless no files exist
+    - Search returns ONLY folders: Try refined search with specific terms before listing folder contents
+    - Only use mpo_get_document_by_id for actual FILES (is_folder=false)
+    - Do NOT retry the same tool with same input more than once
+    - Include document names and sources in your final answer
+    - If you get an error suggesting to use search, DO IT - don't give up
+    - If you receive a permission/access denied error (🔒), STOP and tell the user they don't have access
+    - Do NOT say "no information found" when it's actually a permissions issue
+    - 404 errors on folders mean you tried to get a folder as a document - use mpo_list_folder_contents instead
                 """,
                 expected_output="""A DIRECT, CONCISE answer to the user's question without showing any reasoning process.
 
@@ -476,14 +491,17 @@ class CrewMCPManager:
     - Keep response focused on what was asked
     - Maximum 2-3 sentences unless more detail is specifically requested
 
-    EXAMPLE RESPONSE:
-    "Canada's new high-speed railway is proposed to span approximately 1,000 km, according to the document '2025-12-05-Alto-Letter to MPO.pdf' from the Major Projects Office."
+    EXAMPLE RESPONSES:
+    - Success: "Canada's new high-speed railway is proposed to span approximately 1,000 km, according to the document '2025-12-05-Alto-Letter to MPO.pdf' from the Major Projects Office."
+    - Permission Error: "You do not have permission to access the requested documents. Please contact your SharePoint administrator for access."
+    - Not Found: "No documents found matching your query in accessible SharePoint locations."
 
     AVOID:  
     - Showing reasoning ("Thought:", "I will use tool X")
     - Dumping entire document contents
     - Being overly verbose
-    - Including process descriptions""",
+    - Including process descriptions
+    - Saying "no information found" when it's a permissions issue""",
                 agent=sharepoint_agent,
             )
 
@@ -579,23 +597,21 @@ class CrewMCPManager:
             # Create SharePoint specialist agent with MCP tools
             sharepoint_agent = Agent(
                 role="SharePoint Document Specialist",
-                goal="Find and retrieve relevant information from SharePoint by analyzing all documents comprehensively using parallel processing for optimal speed and accuracy",
-                backstory="""I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the pmo_analyze_all_documents_for_content tool which automatically handles authentication and searches all documents in parallel. 
+                goal="Find and retrieve relevant information from SharePoint using FAST search or list files in specific folders",
+                backstory="""I am a SharePoint document specialist who uses the Microsoft Graph Search API for lightning-fast document searches and folder listings.
 
-    CRITICAL AUTHENTICATION RULE: 
-    If ANY tool returns an error with "authentication_failed":  true or "DELEGATED ACCESS MODE" in the message: 
-    - STOP IMMEDIATELY - Do NOT proceed with the task
-    - Do NOT attempt to retry with made-up tokens
-    - Do NOT make up or hallucinate answers
-    - REPORT the authentication failure to the user clearly
-    - Inform the user that valid authentication credentials are required to access SharePoint
-    - Do NOT use any information from your training data to answer the question
+    🚨 CRITICAL RULES:
+    1. For LISTING/COUNTING files in a specific folder → Use pmo_list_folder_contents
+    2. For SEARCHING content across documents → Use pmo_search_documents_fast
+    3. If search snippet doesn't have the complete answer, use pmo_get_document_by_id to get full content
+    4. NEVER answer from training data - ONLY from SharePoint results
+    5. If no documents found, say so - don't make up answers
     
     RESPONSE FORMAT:
-    - Provide ONLY the final answer to the user
+    - Provide ONLY the final answer extracted from SharePoint
     - Do NOT show your reasoning process ("Thought:", "Action:", etc.)
-    - Be direct and concise
-    - Include document sources for credibility""",
+    - Include document name and source when applicable
+    - Be direct and concise""",
                 tools=mcp_tools,
                 llm=llm,
                 verbose=CREW_VERBOSE,
@@ -603,50 +619,72 @@ class CrewMCPManager:
                 allow_delegation=False,
             )
 
-            # Create task for SharePoint query
+            # Create SharePoint task with smart routing
             sharepoint_task = Task(
-                description=f"""Process this SharePoint-related query: {query}
+                description=f"""Retrieve information from SharePoint for: {query}
 
-    Available tools:
-    - pmo_analyze_all_documents_for_content:  PRIMARY TOOL - Analyzes all documents using parallel processing
-    - pmo_get_all_documents_comprehensive:  Get all documents by traversing every folder (used internally by analyze tool)
-    - pmo_get_sharepoint_document_content: Retrieve individual document content (used internally)
-    - pmo_check_sharepoint_permissions: Test connection and permissions (for debugging only)
+    🔍 STEP 1 - DETERMINE REQUEST TYPE:
+    
+    A) If asking to LIST/COUNT files in a SPECIFIC FOLDER (keywords: "list", "show files", "count", "how many files", "in the folder", "in folder"):
+       → Use pmo_list_folder_contents
+       → Extract folder name from query (e.g., "Canchat Demo", "Documents/Reports")
+       → Call: pmo_list_folder_contents(folder_path="<folder_name>")
+       → If successful: Return the list of files found
+       → If folder not found: FALLBACK to pmo_search_documents_fast(query="<folder_name>", limit=10) to find documents
+    
+    B) If asking for CONTENT/INFORMATION ABOUT something (keywords: "tell me about", "what is", "explain", "information about", "details on"):
+       → STEP 1: Use pmo_search_documents_fast
+         • Call: pmo_search_documents_fast(query="{query}", limit=10)
+       
+       → STEP 2: Analyze results:
+         • If ANY FILES found (is_folder=false): GO TO STEP 3
+         • If ONLY folders found (all is_folder=true): GO TO STEP 4
+       
+       → STEP 3: Process FILES:
+         • If file has useful summary: Extract and respond
+         • If need full content: Use pmo_get_document_by_id(web_url=..., item_id=...)
+         • DONE - provide answer to user
+       
+       → STEP 4: MANDATORY REFINED SEARCH (when only folders found):
+         • Try search with hyphenated version: pmo_search_documents_fast(query="Budget-2025", limit=10)
+         • If no files, try: pmo_search_documents_fast(query="Budget 2025 pdf", limit=10)
+         • If files found: Use pmo_get_document_by_id to retrieve content
+         • If still no files after 2 refined searches: Tell user no document files found, only folders exist
+       
+       → NEVER try to retrieve folder content with pmo_get_document_by_id
 
-    PRIMARY STRATEGY:
-    Use pmo_analyze_all_documents_for_content with the user's search terms.  This tool: 
-    - Traverses every SharePoint folder to find all documents
-    - Analyzes each document's content using parallel processing (8 concurrent threads)
-    - Uses smart caching to avoid re-downloading documents
-    - Terminates early when enough high-quality results are found
-    - Typical performance: 20-60 seconds for large collections
-    - Returns documents sorted by relevance with content matches
-
-    RESPONSE STRATEGY:
-    1. Call pmo_analyze_all_documents_for_content with the user's search terms
-    2. Extract the KEY ANSWER from the most relevant document(s)
-    3. Provide a CONCISE, DIRECT response to the user's question
-    4. Include document name and source for credibility
-    5. Focus on the specific information requested
-    6. DON'T dump entire document contents in your response
+    🚨 ABSOLUTE RULES:
+    - For "Tell me about X" queries: Prioritize finding DOCUMENT CONTENT, not folder structure
+    - Search returns folders + files: Use the FILES first, ignore folders unless no files exist
+    - Search returns ONLY folders: Try refined search with specific terms before listing folder contents
+    - Only use pmo_get_document_by_id for actual FILES (is_folder=false)
+    - Do NOT retry the same tool with same input more than once
+    - Include document names and sources in your final answer
+    - If you get an error suggesting to use search, DO IT - don't give up
+    - If you receive a permission/access denied error (🔒), STOP and tell the user they don't have access
+    - Do NOT say "no information found" when it's actually a permissions issue
+    - 404 errors on folders mean you tried to get a folder as a document - use pmo_list_folder_contents instead
                 """,
                 expected_output="""A DIRECT, CONCISE answer to the user's question without showing any reasoning process.
 
     FORMAT REQUIREMENTS:
     - Start immediately with the answer (NO "Thought:", "Action:", or process explanations)
-    - Extract the key information from the most relevant document
+    - Extract the key information from the search results
     - Include document name and source for credibility
     - Keep response focused on what was asked
     - Maximum 2-3 sentences unless more detail is specifically requested
 
-    EXAMPLE RESPONSE:
-    "Canada's new high-speed railway is proposed to span approximately 1,000 km, according to the document '2025-12-05-Alto-Letter to MPO.pdf' from the Major Projects Office."
+    EXAMPLE RESPONSES:
+    - Success: "Canada's new high-speed railway is proposed to span approximately 1,000 km, according to the document '2025-12-05-Alto-Letter to MPO.pdf' from the Major Projects Office."
+    - Permission Error: "You do not have permission to access the requested documents. Please contact your SharePoint administrator for access."
+    - Not Found: "No documents found matching your query in accessible SharePoint locations."
 
     AVOID:  
     - Showing reasoning ("Thought:", "I will use tool X")
     - Dumping entire document contents
     - Being overly verbose
-    - Including process descriptions""",
+    - Including process descriptions
+    - Saying "no information found" when it's a permissions issue""",
                 agent=sharepoint_agent,
             )
 
