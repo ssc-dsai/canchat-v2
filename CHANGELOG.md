@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.12.0] — 2026-02-05
+
+### Added
+
+- **🏷️ Protected Label**: Added a Protected B label.
+- **🧪 Test Coverage**: Added additional tests.
+
+### Changed
+
+- **🚫 Role Badge Behavior**: Disabled role changes via role badge clicks.
+- **🔍 SharePoint Search**: Enhanced MCP SharePoint search functionality.
+- **🔢 Metrics Formatting**: Improved formatting of large numbers in the metrics dashboard.
+
+### Fixed
+
+- **🧼 Input Sanitization**: Fixed multiple unsanitized input issues.
+- **🧭 Navigation Bar Layout**: Fixed overlapping items in the navigation bar.
+- **🧩 Code Block Extension**: Fixed duplicate codeBlock extension.
+- **📦 Chat Components**: Fixed missing imports.
+- **🌐 i18n Context**: Fixed i18n store context error.
+- **💬 MCP Tooltip**: Fixed MCP indicator tooltip emitting a JSON tool descriptor.
+- **🌍 Translations**: Fixed missing translations and MCP error translation display.
+- **📤 File Upload Translation**: Fixed translation issue after successful file uploads.
+- **📌 Dependency Pinning**: Fixed missing dependency version pinning.
+- **🖱️ Chat Button Hover**: Fixed missing elements on hover.
+- **📁 Archive Modal**: Fixed crash when exiting the archive chat modal.
+- **🧪 Pytest Configuration**: Fixed pytest framework setup.
+- **🧵 Web Search Threading**: Fixed web search blocking the main thread.
+- **♿ Accessibility Labels**: Fixed multiple accessibility labeling issues.
+- **🔐 MCP WebSocket Token Sync**: Ensured WebSocket sessions always use the latest access token.
+- **💡 Next Message Tooltip**: Added missing tooltip.
+
+### Removed
+
+- **🧹 Web Search Caching**: Removed web search caching.
+
 ## [0.5.7-ccv2-1.11.5] - 2026-01-09
 
 ### Fixed
