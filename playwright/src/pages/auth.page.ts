@@ -26,12 +26,14 @@ export class AuthPage extends BasePage {
 		super.updateLanguage(lang);
 
 		this.emailInput = this.page.getByRole('textbox', {
-			name: this.t['Enter Your Email'] || 'Enter Your Email'
+			name: /Enter Your Email|Entrez votre adresse courriel/i
 		});
 		this.passwordInput = this.page.getByRole('textbox', {
-			name: this.t['Enter Your Password'] || 'Enter Your Password'
+			name: /Enter Your Password|Entrez votre mot de passe/i
 		});
-		this.signInButton = this.page.getByRole('button', { name: this.t['Sign in'] || 'Sign in' });
+		this.signInButton = this.page.getByRole('button', {
+			name: /Sign in|S'identifier/i
+		});
 		this.createAccountButton = this.page.getByRole('button', {
 			name: this.t['Create Admin Account'] || 'Create Admin Account'
 		});
@@ -57,7 +59,11 @@ export class AuthPage extends BasePage {
 		await this.passwordInput.fill(pass);
 		await this.signInButton.click();
 
-		await this.page.waitForURL('/');
+		await Promise.race([
+			this.page.waitForURL(/\/($|\?|c\/)/),
+			this.page.locator('#chat-input').waitFor({ state: 'visible' }),
+			this.signOutButtonPendingUser.waitFor({ state: 'visible' })
+		]);
 		await expect(this.page.locator('body')).toBeVisible();
 
 		// Handle "Ok, Let's Go!" onboarding popup
