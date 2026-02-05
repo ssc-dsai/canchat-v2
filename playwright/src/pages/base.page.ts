@@ -217,10 +217,16 @@ export class BasePage {
 				name: /Close|Cancel|OK|Ok|Okay|Okay, Let's Go!|Fermer|Annuler|D’accord/i
 			});
 			if (await closeButton.isVisible().catch(() => false)) {
-				await closeButton.first().click({ force: true }).catch(() => {});
+				await closeButton
+					.first()
+					.click({ force: true })
+					.catch(() => {});
 			}
 			await modal.waitFor({ state: 'hidden', timeout: 2000 }).catch(async () => {
-				await modal.first().click({ force: true }).catch(() => {});
+				await modal
+					.first()
+					.click({ force: true })
+					.catch(() => {});
 			});
 		}
 	}

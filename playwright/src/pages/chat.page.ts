@@ -195,7 +195,9 @@ export class ChatPage extends BasePage {
 	 */
 	async removeModelSelector(selectorIndex: number): Promise<void> {
 		const removeLabel = this.getTranslation('Remove Model');
-		const removeButton = this.page.getByRole('button', { name: removeLabel }).nth(selectorIndex - 1);
+		const removeButton = this.page
+			.getByRole('button', { name: removeLabel })
+			.nth(selectorIndex - 1);
 		await removeButton.click();
 	}
 

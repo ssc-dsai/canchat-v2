@@ -22,8 +22,8 @@ setup('global setup: seed data & authenticate', async ({ page }) => {
 	const adminPage = new AdminPage(page);
 
 	await fs.promises.mkdir(authDir, { recursive: true });
-	const authFilesMissing = requiredAuthFiles.some((fileName) =>
-		!fs.existsSync(path.join(authDir, fileName))
+	const authFilesMissing = requiredAuthFiles.some(
+		(fileName) => !fs.existsSync(path.join(authDir, fileName))
 	);
 
 	await authPage.goto('/auth');
