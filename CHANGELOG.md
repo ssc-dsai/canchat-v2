@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **♿ Accessibility Labels**: Fixed multiple accessibility labeling issues.
 - **🔐 MCP WebSocket Token Sync**: Ensured WebSocket sessions always use the latest access token.
 - **💡 Next Message Tooltip**: Added missing tooltip.
+- **🔄 New Chat Button Refresh**: New Chat button to clear the chat ID on click, forcing a refresh.
 
 ### Removed
 
