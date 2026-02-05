@@ -236,7 +236,9 @@
 			{/if}
 
 			<Sidebar />
-			<slot />
+			<main id="main-content" class="flex-1">
+				<slot />
+			</main>
 		{/if}
 	</div>
 </div>
