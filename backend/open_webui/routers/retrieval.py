@@ -33,7 +33,10 @@ from open_webui.storage.provider import Storage
 
 
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.dbs.qdrant import _collection_lock_manager
+from open_webui.retrieval.vector.locks import get_collection_lock_manager
+
+# Use public accessor for the global collection lock manager
+collection_lock_manager = get_collection_lock_manager()
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -851,7 +854,7 @@ async def save_docs_to_vector_db(
 
     # Acquire distributed Redis lock for atomic operations
     # Prevents race conditions across multiple instances
-    async with _collection_lock_manager.acquire_lock(
+    async with collection_lock_manager.acquire_lock(
         collection_name, timeout_secs=120
     ) as lock:
         try:
