@@ -14,13 +14,14 @@ export class ChatPage extends BasePage {
 	readonly chatHistoryItems: Locator;
 	readonly searchInput: Locator;
 	readonly clearSearchButton: Locator;
-	readonly selectedCountLabel: Locator;
-	readonly bulkDeleteButton: Locator;
-	readonly newFolderButton: Locator;
-	readonly foldersContainer: Locator;
+	selectedCountLabel!: Locator;
+	bulkDeleteButton!: Locator;
+	newFolderButton!: Locator;
+	foldersContainer!: Locator;
+	folders!: Locator;
 	readonly searchTagItems: Locator;
 	readonly searchOptionItems: Locator;
-	readonly searchResultsLabel: Locator;
+	searchResultsLabel!: Locator;
 
 	constructor(page: Page, lang: Language = 'en-GB') {
 		super(page, lang);
@@ -31,13 +32,14 @@ export class ChatPage extends BasePage {
 		this.responseMessageGenerating = page.locator('.space-y-2');
 		this.responseSelector = '#response-content-container';
 		this.chatStatusDescription = page.locator('.status-description');
-		this.chatHistoryItems = page.locator('a[href^="/c/"]');
+		this.chatHistoryItems = page.locator('#sidebar a[href^="/c/"]');
 		this.searchInput = page.locator('#chat-search input');
 		this.clearSearchButton = page.locator('#clear-search-button');
 		this.selectedCountLabel = page.locator('span:has-text("selected")');
 		this.bulkDeleteButton = page.locator('button[title="Delete Selected"]');
 		this.newFolderButton = page.locator('button[aria-label="New Folder"]');
 		this.foldersContainer = page.locator('div:has-text("Chats")').first();
+		this.folders = page.locator('button[id^="folder-"][id$="-button"]');
 		this.searchTagItems = page.locator('button[id^="search-tag-"]');
 		this.searchOptionItems = page.locator('button[id^="search-option-"]');
 		this.searchResultsLabel = page.locator('[aria-live="polite"].sr-only');
@@ -59,6 +61,11 @@ export class ChatPage extends BasePage {
 			name: 'Call'
 		});
 		this.stopGenerationButton = this.page.locator('button.bg-white.hover\\:bg-gray-100');
+		this.bulkDeleteButton = this.page.locator(`button[title="${this.t['Delete Selected'] || 'Delete Selected'}"]`);
+		this.selectedCountLabel = this.page.locator(`span:has-text("${this.t['selected'] || 'selected'}")`);
+		this.newFolderButton = this.page.locator(`button[aria-label="${this.t['New Folder'] || 'New Folder'}"]`);
+		this.foldersContainer = this.page.locator(`div:has-text("${this.t['Chats'] || 'Chats'}")`).first();
+		this.searchResultsLabel = this.page.locator('[aria-live="polite"].sr-only');
 	}
 
 	/**
@@ -94,6 +101,27 @@ export class ChatPage extends BasePage {
 		if (waitForReply) {
 			await this.waitForGeneration(idleMessage);
 		}
+	}
+
+	/**
+	 * Selects a chat in the history by hovering and clicking the checkbox
+	 * @param index The index of the chat to select (0-indexed)
+	 */
+	async selectChat(index: number) {
+		const item = this.chatHistoryItems.nth(index);
+		await item.hover();
+		await item.locator('.checkbox-area').click();
+	}
+
+	/**
+	 * Selects a chat in the history by its href (URL)
+	 * @param href The href of the chat to select
+	 */
+	async selectChatByHref(href: string) {
+		const item = this.page.locator(`#sidebar a[href="${href}"]`);
+		await item.waitFor({ state: 'visible' });
+		await item.hover();
+		await item.locator('.checkbox-area').click();
 	}
 
 	/**
@@ -148,7 +176,7 @@ export class ChatPage extends BasePage {
 	 * Checks if the "Network Problem" error is visible
 	 */
 	async isNetworkErrorPresent(): Promise<boolean> {
-		return await this.responseMessages.getByText('Network Problem').isVisible();
+		return await this.responseMessages.getByText(this.getTranslation('Network Problem')).isVisible();
 	}
 
 	/**
@@ -390,8 +418,7 @@ export class ChatPage extends BasePage {
 	 * Saves the edited answer as a new copy
 	 */
 	async saveAnswerAsCopy(): Promise<void> {
-		//const label = this.getTranslation('Save as Copy'); //Bug CHAT-1439
-		const label = 'Save as Copy';
+		const label = this.getTranslation('Save as Copy');
 		await this.page.getByRole('button', { name: label }).click();
 		await this.waitToSettle(500);
 	}
@@ -500,7 +527,7 @@ export class ChatPage extends BasePage {
 	async getTokenInfoText(): Promise<string> {
 		const tooltip = this.page
 			.locator('[role="tooltip"], .tooltip, .popover')
-			.filter({ hasText: /token/i });
+			.filter({ hasText: new RegExp(this.getTranslation('token'), 'i') });
 		await tooltip.waitFor({ state: 'visible', timeout: 5000 });
 		return (await tooltip.innerText()).trim();
 	}
@@ -542,20 +569,20 @@ export class ChatPage extends BasePage {
 
 		// Map reason keys to translated text
 		const reasonTextMap: Record<string, string> = {
-			accurate_information: 'Accurate information',
-			followed_instructions_perfectly: 'Followed instructions perfectly',
-			showcased_creativity: 'Showcased creativity',
-			positive_attitude: 'Positive attitude',
-			attention_to_detail: 'Attention to detail',
-			thorough_explanation: 'Thorough explanation',
-			dont_like_the_style: "Don't like the style",
-			too_verbose: 'Too verbose',
-			not_helpful: 'Not helpful',
-			not_factually_correct: 'Not factually correct',
-			didnt_fully_follow_instructions: "Didn't fully follow instructions",
-			refused_when_it_shouldnt_have: "Refused when it shouldn't have",
-			being_lazy: 'Being lazy',
-			other: 'Other'
+			accurate_information: this.getTranslation('Accurate information'),
+			followed_instructions_perfectly: this.getTranslation('Followed instructions perfectly'),
+			showcased_creativity: this.getTranslation('Showcased creativity'),
+			positive_attitude: this.getTranslation('Positive attitude'),
+			attention_to_detail: this.getTranslation('Attention to detail'),
+			thorough_explanation: this.getTranslation('Thorough explanation'),
+			dont_like_the_style: this.getTranslation("Don't like the style"),
+			too_verbose: this.getTranslation('Too verbose'),
+			not_helpful: this.getTranslation('Not helpful'),
+			not_factually_correct: this.getTranslation('Not factually correct'),
+			didnt_fully_follow_instructions: this.getTranslation("Didn't fully follow instructions"),
+			refused_when_it_shouldnt_have: this.getTranslation("Refused when it shouldn't have"),
+			being_lazy: this.getTranslation('Being lazy'),
+			other: this.getTranslation('Other')
 		};
 
 		const reasonText = this.getTranslation(reasonTextMap[reasonKey] || reasonKey);

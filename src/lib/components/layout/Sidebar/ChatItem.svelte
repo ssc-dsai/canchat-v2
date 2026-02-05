@@ -340,6 +340,27 @@
 						<!-- Show checkbox when in selection mode or on hover -->
 						<div
 							class="checkbox-area mr-2 flex items-center cursor-pointer p-1 -m-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+							on:click|stopPropagation|preventDefault={() => {
+								if (selected) {
+									dispatch('unselect');
+								} else {
+									dispatch('select');
+								}
+							}}
+							on:keydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.stopPropagation();
+									e.preventDefault();
+									if (selected) {
+										dispatch('unselect');
+									} else {
+										dispatch('select');
+									}
+								}
+							}}
+							role="button"
+							tabindex="0"
+							aria-label={selected ? 'Unselect' : 'Select'}
 						>
 							{#if selected}
 								<!-- Selected checkbox -->

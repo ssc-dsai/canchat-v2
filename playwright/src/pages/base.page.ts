@@ -21,22 +21,23 @@ export class BasePage {
 	t: typeof en;
 
 	// --- Locators: Header ---
-	readonly userProfileButton: Locator;
+	userProfileButton!: Locator;
 	menuSettings!: Locator;
 	menuAdminPanel!: Locator;
 	menuSignOut!: Locator;
 	setDefaultModel!: Locator;
-	readonly headerLanguageButtonEN: Locator;
-	readonly headerLanguageButtonFR: Locator;
+	headerLanguageButtonEN!: Locator;
+	headerLanguageButtonFR!: Locator;
 
 	// --- Locators: Sidebar ---
-	readonly sidebarOpenButton: Locator;
+	sidebarOpenButton!: Locator;
 	readonly sidebarCloseButton: Locator;
 	readonly sidebarNewChatButton: Locator;
 	readonly headerNewChatButton: Locator;
 
 	// --- Locators: System ---
 	readonly splashLogo: Locator;
+	confirmDialogButton!: Locator;
 
 	// --- Locators: Toast ---
 	readonly toast: Locator;
@@ -46,20 +47,14 @@ export class BasePage {
 		this.lang = lang;
 		this.t = lang === 'fr-CA' ? fr : en;
 
-		this.userProfileButton = page.getByRole('button', { name: 'User profile' });
-
-		this.sidebarOpenButton = page.getByLabel('Show Sidebar');
-		this.sidebarCloseButton = page.getByRole('button', { name: this.t['Hide Sidebar'] || 'Hide Sidebar' });
+		this.sidebarOpenButton = page.locator('#sidebar-toggle-button');
+		this.sidebarCloseButton = page.locator('#hide-sidebar-button');
 		this.sidebarNewChatButton = page.locator('#sidebar-new-chat-button');
 		this.headerNewChatButton = page.locator('#new-chat-button');
-		this.headerLanguageButtonEN = page.getByRole('button', { name: 'EN', exact: true });
-		this.headerLanguageButtonFR = page.getByRole('button', { name: 'FR', exact: true });
-
 		this.splashLogo = page.locator('img#logo[alt="CANChat Logo"]');
+		this.toast = page.locator('li[role="status"]');
 
 		this.updateLanguage(lang);
-
-		this.toast = page.locator('li[role="status"]');
 	}
 
 	/**
@@ -69,6 +64,12 @@ export class BasePage {
 	updateLanguage(lang: Language) {
 		this.t = lang === 'fr-CA' ? fr : en;
 
+		this.userProfileButton = this.page.getByRole('button', {
+			name: this.t['User profile'] || 'User profile'
+		});
+		this.headerLanguageButtonEN = this.page.getByRole('button', { name: 'EN', exact: true });
+		this.headerLanguageButtonFR = this.page.getByRole('button', { name: 'FR', exact: true });
+
 		this.menuSettings = this.page.getByRole('menuitem', { name: this.t['Settings'] || 'Settings' });
 		this.menuAdminPanel = this.page.getByRole('menuitem', {
 			name: this.t['Admin Panel'] || 'Admin Panel'
@@ -76,6 +77,9 @@ export class BasePage {
 		this.menuSignOut = this.page.getByRole('menuitem', { name: this.t['Sign Out'] || 'Sign Out' });
 		this.setDefaultModel = this.page.getByRole('button', {
 			name: this.t['Set as default'] || 'Set as default'
+		});
+		this.confirmDialogButton = this.page.getByRole('button', {
+			name: this.t['Confirm'] || 'Confirm'
 		});
 	}
 
