@@ -14,7 +14,6 @@
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		copyToClipboard as _copyToClipboard,
-		approximateToHumanReadable,
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList,
@@ -46,7 +45,6 @@
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
 	import IssueModal from '$lib/components/common/IssueModal.svelte';
 	import SuggestionModal from '$lib/components/common/SuggestionModal.svelte';
-	import Modal from '$lib/components/common/Modal.svelte';
 
 	interface MessageType {
 		id: string;
@@ -883,28 +881,30 @@
 									>
 										{siblings.indexOf(message.id) + 1}/{siblings.length}
 									</div>
-
-									<button
-										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
-										on:click={() => {
-											showNextMessage(message);
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-											stroke-width="2.5"
-											class="size-3.5"
+									<Tooltip content={$i18n.t('Next Response')} placement="bottom">
+										<button
+											aria-label={$i18n.t('Next Response')}
+											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+											on:click={() => {
+												showNextMessage(message);
+											}}
 										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="m8.25 4.5 7.5 7.5-7.5 7.5"
-											/>
-										</svg>
-									</button>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+												stroke-width="2.5"
+												class="size-3.5"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="m8.25 4.5 7.5 7.5-7.5 7.5"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
 								</div>
 							{/if}
 

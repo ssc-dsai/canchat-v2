@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
 
-	import { getContext, tick, createEventDispatcher } from 'svelte';
+	import { tick, createEventDispatcher } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	const dispatch = createEventDispatcher();
@@ -22,7 +24,7 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	export let transparentBackground = false;
 

@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from mcp_backend.models.mcp_servers import MCPServers
+from mcp_backend.management.mcp_manager import validate_command
 
 log = logging.getLogger(__name__)
 
@@ -54,6 +55,9 @@ def get_config_value(request: Request, key: str, default=None):
 
 def set_config_value(request: Request, key: str, value):
     """Helper function to set config values that handles both dict and object formats"""
+    if key not in MCPConfigForm.model_fields.keys:
+        raise ValueError(f"Config key '{key}' is not allowed")
+
     config = request.app.state.config
     if isinstance(config, dict):
         config[key] = value
@@ -436,7 +440,12 @@ async def get_builtin_servers(request: Request, user=Depends(get_admin_user)):
         servers = []
 
         # Only include actual built-in servers
-        builtin_server_names = ["time_server", "news_server", "mpo_sharepoint_server"]
+        builtin_server_names = [
+            "time_server",
+            "news_server",
+            "mpo_sharepoint_server",
+            "pmo_sharepoint_server",
+        ]
 
         for name in server_names:
             if name not in builtin_server_names:
@@ -475,6 +484,7 @@ def get_server_display_name(name: str) -> str:
         "time_server": "MCP: Current Time",
         "news_server": "MCP: News Headlines",
         "mpo_sharepoint_server": "MCP: MPO SharePoint",
+        "pmo_sharepoint_server": "MCP: PMO SharePoint",
     }
     return display_names.get(name, name.replace("_", " ").title())
 
@@ -485,6 +495,7 @@ def get_server_description(name: str) -> str:
         "time_server": "Provides current time and timezone information",
         "news_server": "Provides latest news headlines from NewsDesk",
         "mpo_sharepoint_server": "Provides MPO SharePoint document search and retrieval",
+        "pmo_sharepoint_server": "Provides PMO SharePoint document search and retrieval",
     }
     return descriptions.get(name, f"Built-in MCP server: {name}")
 
@@ -496,7 +507,12 @@ async def restart_builtin_server(
     """Restart a built-in MCP server"""
     try:
         # Check if this is a valid built-in server
-        builtin_server_names = ["time_server", "news_server", "mpo_sharepoint_server"]
+        builtin_server_names = [
+            "time_server",
+            "news_server",
+            "mpo_sharepoint_server",
+            "pmo_sharepoint_server",
+        ]
         if server_name not in builtin_server_names:
             raise HTTPException(
                 status_code=404, detail=f"Built-in server '{server_name}' not found"
@@ -610,6 +626,10 @@ async def create_external_server(
 ):
     """Create a new external MCP server"""
     try:
+        # Validate command at API layer
+        command_list = [form_data.command] + (form_data.args or [])
+        validate_command(command_list)
+
         # Check if server name already exists
         existing_server = MCPServers.get_server_by_name(form_data.name)
         if existing_server:
@@ -724,6 +744,17 @@ async def update_external_server(
 ):
     """Update an external MCP server"""
     try:
+        # Validate if command is being updated
+        if form_data.command is not None:
+            command_list = [form_data.command] + (
+                form_data.args or existing_server.args or []
+            )
+            validate_command(command_list)
+        elif form_data.args is not None:
+            # Command not changing but args are
+            command_list = [existing_server.command] + form_data.args
+            validate_command(command_list)
+
         # Get existing server
         existing_server = MCPServers.get_server_by_id(server_id)
         if not existing_server:
@@ -856,6 +887,10 @@ async def start_external_server(
         server = MCPServers.get_server_by_id(server_id)
         if not server:
             raise HTTPException(status_code=404, detail="Server not found")
+
+        # Validate command before starting
+        command_list = [server.command] + (server.args or [])
+        validate_command(command_list)
 
         if server.server_type != "user_created":
             raise HTTPException(

@@ -1,18 +1,19 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
-	import mermaid from 'mermaid';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
+	import { PaneGroup, Pane } from 'paneforge';
 
-	import { getContext, onDestroy, onMount, tick } from 'svelte';
-	const i18n: Writable<i18nType> = getContext('i18n');
+	import { onDestroy, onMount, tick } from 'svelte';
+	const i18n: Writable<i18nType> = getI18n();
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import { get, type Unsubscriber, type Writable } from 'svelte/store';
+	import { type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import {
 		chatId,
@@ -35,25 +36,19 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
-		tools
+		tools,
+		suggestionCycle
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
 		getMessageContentParts,
-		extractSentencesForAudio,
 		promptTemplate,
-		splitStream,
-		sleep,
 		removeDetailsWithReasoning
 	} from '$lib/utils';
 
-	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
-		addTagById,
 		createNewChat,
-		deleteTagById,
-		deleteTagsById,
 		getAllTags,
 		getChatById,
 		getChatList,
@@ -61,19 +56,14 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
+	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
-	import {
-		chatCompleted,
-		generateQueries,
-		chatAction,
-		generateMoACompletion,
-		stopTask
-	} from '$lib/apis';
+	import { chatCompleted, chatAction, generateMoACompletion, stopTask } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { queryCrewMCPWebSocket } from '$lib/apis/crew-mcp';
+	import { uploadFile } from '$lib/apis/files';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -82,7 +72,6 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
-	import NotificationToast from '../NotificationToast.svelte';
 
 	export let chatIdProp = '';
 
@@ -166,6 +155,10 @@
 			} else {
 				await goto('/');
 			}
+		})();
+	} else {
+		(async () => {
+			await initNewChat();
 		})();
 	}
 
@@ -724,7 +717,7 @@
 		} else {
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
-
+		suggestionCycle.update((n) => n + 1);
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
@@ -1485,17 +1478,18 @@
 								// Don't call chatCompletedHandler for CrewAI responses to avoid 400 error
 								return; // Return early for successful CrewAI response
 							} else {
-								throw new Error('CrewAI returned no result');
+								throw new Error($i18n.t('CrewAI returned no result'));
 							}
 						} catch (error) {
 							console.error('CrewAI Error:', error);
 							const errorMessage = (error as Error).message || String(error);
+							const localizedErrorMessage = $i18n.t(errorMessage);
 
 							// Show error toast
-							toast.error(`CrewAI Error: ${errorMessage}`);
+							toast.error($i18n.t('CrewAI Error: {{error}}', { error: localizedErrorMessage }));
 
 							// Display error message in chat instead of falling back
-							responseMessage.content = `⚠️ **CrewAI MCP Error**\n\n${errorMessage}\n\n*The selected tool(s) could not complete this request. This may be due to:*\n- Request timeout (processing took too long)\n- Network connectivity issues\n- SharePoint permissions or authentication problems\n\nPlease try again, or contact support if the issue persists.`;
+							responseMessage.content = `⚠️ **${$i18n.t('CrewAI MCP Error')}**\n\n${localizedErrorMessage}\n\n*${$i18n.t('The selected tool(s) could not complete this request. This may be due to:')}*\n- ${$i18n.t('Request timeout (processing took too long)')}\n- ${$i18n.t('Network connectivity issues')}\n- ${$i18n.t('SharePoint permissions or authentication problems')}\n\n${$i18n.t('Please try again, or contact support if the issue persists.')}`;
 							responseMessage.done = true;
 							responseMessage.error = true;
 							history.messages[responseMessageId] = responseMessage;
