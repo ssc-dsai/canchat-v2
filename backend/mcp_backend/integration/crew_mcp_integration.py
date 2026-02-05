@@ -38,9 +38,7 @@ class AzureConfig(BaseModel):
     api_key: str = os.getenv("CREWAI_AZURE_OPENAI_API_KEY", "")
     endpoint: str = os.getenv("CREWAI_AZURE_OPENAI_ENDPOINT", "")
     deployment: str = os.getenv("CREWAI_AZURE_OPENAI_DEPLOYMENT_NAME", "")
-    api_version: str = os.getenv(
-        "CREWAI_AZURE_OPENAI_API_VERSION", ""
-    )
+    api_version: str = os.getenv("CREWAI_AZURE_OPENAI_API_VERSION", "")
 
     def validate_config(self) -> bool:
         """Validate that required Azure configuration is present"""
