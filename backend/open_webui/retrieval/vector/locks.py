@@ -500,10 +500,10 @@ class RedisCollectionLockManager:
     - Connection Recovery: Automatically attempts to reconnect if Redis connectivity is lost.
     """
 
-    _instance = None  # Singleton instance
-    _instance_lock = threading.Lock()  # Thread-safe singleton creation
+    _instance: Optional["RedisCollectionLockManager"] = None  # Singleton instance
+    _instance_lock: threading.Lock = threading.Lock()  # Thread-safe singleton creation
 
-    def __new__(cls, redis_url: Optional[str] = None):
+    def __new__(cls, redis_url: Optional[str] = None) -> "RedisCollectionLockManager":
         """
         Enforce singleton pattern: return same instance always.
         """
@@ -511,15 +511,17 @@ class RedisCollectionLockManager:
             with cls._instance_lock:
                 # Double-check: another thread may have created it
                 if cls._instance is None:
-                    instance = super().__new__(cls)
+                    instance: RedisCollectionLockManager = super().__new__(cls)
                     instance.redis_url = redis_url or REDIS_URL
-                    instance._initialized = False
-                    instance.redis_client = None
+                    instance._initialized: bool = False
+                    instance.redis_client: Optional[redis.Redis] = None
 
                     # Lock cache: Map collection_name -> AsyncRedisLock instance
                     # Use WeakValueDictionary so we don't leak memory for unused locks
-                    instance._lock_cache = weakref.WeakValueDictionary()
-                    instance._lock_cache_lock = threading.Lock()
+                    instance._lock_cache: weakref.WeakValueDictionary[str, AsyncRedisLock] = (
+                        weakref.WeakValueDictionary()
+                    )
+                    instance._lock_cache_lock: threading.Lock = threading.Lock()
 
                     # Try initial connection
                     instance._init_redis_client()
