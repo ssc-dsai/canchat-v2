@@ -9,18 +9,38 @@ export class ChatPage extends BasePage {
 	readonly regenerateButton: Locator;
 	readonly responseMessages: Locator;
 	readonly responseMessageGenerating: Locator;
-	readonly responseSelector = '#response-content-container';
+	readonly responseSelector: string = '#response-content-container';
 	chatStatusDescription!: Locator;
+	readonly chatHistoryItems: Locator;
+	readonly searchInput: Locator;
+	readonly clearSearchButton: Locator;
+	readonly selectedCountLabel: Locator;
+	readonly bulkDeleteButton: Locator;
+	readonly newFolderButton: Locator;
+	readonly foldersContainer: Locator;
+	readonly searchTagItems: Locator;
+	readonly searchOptionItems: Locator;
+	readonly searchResultsLabel: Locator;
 
 	constructor(page: Page, lang: Language = 'en-GB') {
 		super(page, lang);
 
 		this.messageInput = page.locator('#chat-input');
 		this.regenerateButton = page.locator('div:nth-child(8) > .visible');
-		this.responseMessages = page.locator('#response-content-container');
+		this.responseMessages = page.locator('#response-content-container p');
 		this.responseMessageGenerating = page.locator('.space-y-2');
 		this.responseSelector = '#response-content-container';
 		this.chatStatusDescription = page.locator('.status-description');
+		this.chatHistoryItems = page.locator('a[href^="/c/"]');
+		this.searchInput = page.locator('#chat-search input');
+		this.clearSearchButton = page.locator('#clear-search-button');
+		this.selectedCountLabel = page.locator('span:has-text("selected")');
+		this.bulkDeleteButton = page.locator('button[title="Delete Selected"]');
+		this.newFolderButton = page.locator('button[aria-label="New Folder"]');
+		this.foldersContainer = page.locator('div:has-text("Chats")').first();
+		this.searchTagItems = page.locator('button[id^="search-tag-"]');
+		this.searchOptionItems = page.locator('button[id^="search-option-"]');
+		this.searchResultsLabel = page.locator('[aria-live="polite"].sr-only');
 
 		this.updateLanguage(lang);
 	}
@@ -53,6 +73,17 @@ export class ChatPage extends BasePage {
 	/**
 	 * Sends a message and waits for the response generation
 	 */
+	async getSelectedModel(index: number = 0): Promise<string> {
+		const button = this.page.locator(`#model-selector-${index}-button`);
+		const text = await button.locator('span').first().innerText();
+		return text.trim();
+	}
+
+	async getSuggestions(): Promise<string[]> {
+		const suggestionButtons = this.page.locator('button:has(span.font-medium)');
+		return await suggestionButtons.allInnerTexts();
+	}
+
 	async sendMessage(text: string, waitForReply: boolean = true, idleMessage: string = '') {
 		await expect(this.messageInput).toBeVisible();
 
@@ -689,5 +720,80 @@ export class ChatPage extends BasePage {
 		const cancelLabel = this.getTranslation('Cancel');
 		await this.page.getByRole('button', { name: cancelLabel }).click();
 		await this.waitToSettle(300);
+	}
+
+	/**
+	 * Clicks on a chat history item by title or content
+	 */
+	async selectChatHistoryItem(title: string) {
+		const item = this.chatHistoryItems.filter({ hasText: title }).first();
+		await item.click();
+		await this.waitToSettle(500);
+	}
+
+	/**
+	 * Opens the context menu for a chat item
+	 */
+	async openChatItemMenu(title: string) {
+		const item = this.page.locator('div.relative.group').filter({ hasText: title }).first();
+		await item.hover();
+		const menuButton = item.locator('button[aria-label="Chat Menu"]');
+		await menuButton.click();
+	}
+
+	/**
+	 * Selects a chat for bulk action via checkbox
+	 */
+	async toggleChatCheckbox(title: string) {
+		const item = this.page.locator('div.relative.group').filter({ hasText: title }).first();
+		await item.hover();
+		const checkbox = item.locator('.checkbox-area');
+		await checkbox.click();
+	}
+
+	/**
+	 * Searches in the chat history
+	 */
+	async searchHistory(term: string) {
+		await this.searchInput.fill(term);
+		await this.waitToSettle(500);
+	}
+
+	/**
+	 * Selects a tag from the search results dropdown
+	 */
+	async selectSearchTag(index: number = 0) {
+		const tag = this.searchTagItems.nth(index);
+		await tag.waitFor({ state: 'visible' });
+		await tag.click();
+	}
+
+	/**
+	 * Selects an option from the search results dropdown
+	 */
+	async selectSearchOption(index: number = 0) {
+		const option = this.searchOptionItems.nth(index);
+		await option.waitFor({ state: 'visible' });
+		await option.click();
+	}
+
+	/**
+	 * Creates a new folder in the sidebar
+	 */
+	async createNewFolder() {
+		const chatsFolder = this.page.locator('div:has-text("Chats")').filter({ has: this.newFolderButton }).first();
+		await chatsFolder.hover();
+		await this.newFolderButton.click();
+		await this.waitToSettle(500);
+	}
+
+	/**
+	 * Moves a chat into a folder (using simple drag and drop)
+	 */
+	async moveChatToFolder(chatTitle: string, folderName: string) {
+		const source = this.chatHistoryItems.filter({ hasText: chatTitle }).first();
+		const target = this.page.locator('div').filter({ hasText: folderName }).first();
+		await source.dragTo(target);
+		await this.waitToSettle(500);
 	}
 }

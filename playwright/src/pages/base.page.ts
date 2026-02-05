@@ -33,6 +33,7 @@ export class BasePage {
 	readonly sidebarOpenButton: Locator;
 	readonly sidebarCloseButton: Locator;
 	readonly sidebarNewChatButton: Locator;
+	readonly headerNewChatButton: Locator;
 
 	// --- Locators: System ---
 	readonly splashLogo: Locator;
@@ -47,9 +48,10 @@ export class BasePage {
 
 		this.userProfileButton = page.getByRole('button', { name: 'User profile' });
 
-		this.sidebarOpenButton = page.locator('#sidebar-toggle-button');
-		this.sidebarCloseButton = page.locator('#hide-sidebar-button');
-		this.sidebarNewChatButton = page.getByRole('link', { name: 'logo New Chat' });
+		this.sidebarOpenButton = page.getByLabel('Show Sidebar');
+		this.sidebarCloseButton = page.getByRole('button', { name: this.t['Hide Sidebar'] || 'Hide Sidebar' });
+		this.sidebarNewChatButton = page.locator('#sidebar-new-chat-button');
+		this.headerNewChatButton = page.locator('#new-chat-button');
 		this.headerLanguageButtonEN = page.getByRole('button', { name: 'EN', exact: true });
 		this.headerLanguageButtonFR = page.getByRole('button', { name: 'FR', exact: true });
 
@@ -102,7 +104,7 @@ export class BasePage {
 	 */
 	async goto(path: string = '/') {
 		await this.page.goto(path);
-		await this.splashLogo.waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});
+		await this.splashLogo.waitFor({ state: 'detached', timeout: 20000 }).catch(() => { });
 		await expect(this.page.locator('body')).toBeVisible();
 	}
 
@@ -121,6 +123,13 @@ export class BasePage {
 			await this.sidebarCloseButton.click();
 			await expect(this.sidebarOpenButton).toBeVisible();
 		}
+	}
+
+	/**
+	 * Returns true if the sidebar is currently open.
+	 */
+	async isSidebarOpen(): Promise<boolean> {
+		return await this.sidebarCloseButton.isVisible();
 	}
 
 	/**
