@@ -623,14 +623,15 @@
 				draggable="false"
 				on:click={async () => {
 					clearSelection();
+					await chatId.set('');
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					suggestionCycle.update((n) => n + 1);
 					setTimeout(() => {
 						newChatButton?.click();
-						if ($mobile) {
-							showSidebar.set(false);
-						}
+					if ($mobile) {
+						showSidebar.set(false);
+					}
 					}, 0);
 					ariaMessage.set($i18n.t('You are now in the new chat.'));
 				}}

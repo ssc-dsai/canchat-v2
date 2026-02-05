@@ -156,6 +156,10 @@
 				await goto('/');
 			}
 		})();
+	} else {
+		(async () => {
+			await initNewChat();
+		})();
 	}
 
 	$: if (selectedModels && chatIdProp !== '') {
