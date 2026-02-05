@@ -11,7 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **🧼 Changelog Sanitization**: Fixed changelog issue for env variables.
 
-
 ## [0.5.7-ccv2-1.12.0] - 2026-02-05
 
 ### Added
