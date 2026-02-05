@@ -513,15 +513,13 @@ class RedisCollectionLockManager:
                 if cls._instance is None:
                     instance: RedisCollectionLockManager = super().__new__(cls)
                     instance.redis_url = redis_url or REDIS_URL
-                    instance._initialized: bool = False
-                    instance.redis_client: Optional[redis.Redis] = None
+                    instance._initialized = False
+                    instance.redis_client = None
 
                     # Lock cache: Map collection_name -> AsyncRedisLock instance
                     # Use WeakValueDictionary so we don't leak memory for unused locks
-                    instance._lock_cache: weakref.WeakValueDictionary[str, AsyncRedisLock] = (
-                        weakref.WeakValueDictionary()
-                    )
-                    instance._lock_cache_lock: threading.Lock = threading.Lock()
+                    instance._lock_cache = weakref.WeakValueDictionary()
+                    instance._lock_cache_lock = threading.Lock()
 
                     # Try initial connection
                     instance._init_redis_client()
