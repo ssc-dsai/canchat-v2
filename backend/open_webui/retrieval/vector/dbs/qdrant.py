@@ -88,6 +88,53 @@ class QdrantClient:
         collections_response = await self.client.get_collections()
         return [collection.name for collection in collections_response.collections]
 
+    async def query_hash_across_collections(
+        self, hash_value: str, collection_prefix: str
+    ) -> Optional[GetResult]:
+        """
+        Query for a hash value across all collections with the given prefix.
+        Returns the first match found, or None if no matches exist.
+
+        Args:
+            hash_value: The hash value to search for
+            collection_prefix: Only search collections starting with this prefix
+
+        Returns:
+            GetResult if hash is found in any collection, None otherwise
+        """
+        try:
+            # Get all collections
+            collections = await self.list_collections()
+
+            # Filter collections by prefix
+            matching_collections = [
+                c for c in collections if c.startswith(collection_prefix)
+            ]
+
+            # Search each collection for the hash
+            for collection_name in matching_collections:
+                result = await self.query(
+                    collection_name=collection_name,
+                    filter={"hash": hash_value},
+                    limit=1,
+                )
+
+                # If we found a match, return it
+                if (
+                    result is not None
+                    and result.ids
+                    and len(result.ids) > 0
+                    and len(result.ids[0]) > 0
+                ):
+                    return result
+
+            # No matches found in any collection
+            return None
+
+        except Exception as e:
+            print(f"Error querying hash across collections: {e}")
+            return None
+
     async def get_collection_sample_metadata(
         self, collection_name: str
     ) -> Optional[dict]:

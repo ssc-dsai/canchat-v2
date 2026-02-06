@@ -729,11 +729,22 @@ async def save_docs_to_vector_db(
     )
 
     # Check if entries with the same hash (metadata.hash) already exist
+    # For file collections, check across ALL file collections, not just the target collection
     if metadata and "hash" in metadata:
-        result = await VECTOR_DB_CLIENT.query(
-            collection_name=collection_name,
-            filter={"hash": metadata["hash"]},
-        )
+        result = None
+
+        # If this is a file collection, search across all file collections
+        if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
+            result = await VECTOR_DB_CLIENT.query_hash_across_collections(
+                hash_value=metadata["hash"],
+                collection_prefix=VECTOR_COLLECTION_PREFIXES.FILE,
+            )
+        else:
+            # For non-file collections, only check the specific collection
+            result = await VECTOR_DB_CLIENT.query(
+                collection_name=collection_name,
+                filter={"hash": metadata["hash"]},
+            )
 
         if (
             result is not None
