@@ -395,6 +395,10 @@
 
 		deleteModelTag = '';
 		models.set(await getModels(localStorage.token));
+		ollamaModels = await getOllamaModels(localStorage.token, urlIdx).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 	};
 
 	const cancelModelPullHandler = async (model: string) => {
