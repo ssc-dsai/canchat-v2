@@ -1330,6 +1330,10 @@ CHAT_CLEANUP_PRESERVE_ARCHIVED = PersistentConfig(
     os.environ.get("CHAT_CLEANUP_PRESERVE_ARCHIVED", "False").lower() == "true",
 )
 
+# Chat cleanup batch sizes for memory management
+CHAT_CLEANUP_BATCH_SIZE = int(os.environ.get("CHAT_CLEANUP_BATCH_SIZE", "50"))
+CHAT_CLEANUP_FILE_BATCH_SIZE = int(os.environ.get("CHAT_CLEANUP_FILE_BATCH_SIZE", "20"))
+
 
 ####################################
 # TASKS
