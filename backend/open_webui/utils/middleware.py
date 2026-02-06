@@ -78,6 +78,25 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
+def estimate_token_count(text: str) -> int:
+    """
+    Estimate the number of tokens in a text string for web search/RAG context.
+    Uses a simple heuristic: ~4 characters per token on average.
+    This is a conservative estimate that works well for most languages.
+
+    Args:
+        text: The text to estimate tokens for
+
+    Returns:
+        Estimated token count
+    """
+    if not text:
+        return 0
+    # Conservative estimate: 4 characters per token
+    # This accounts for English (~4.5 chars/token) and other languages
+    return max(1, len(text) // 4)
+
+
 def fetch_wikipedia_title_and_excerpt(url: str) -> tuple[str, str]:
     """
     Fetch the actual title and excerpt from a Wikipedia URL.
@@ -1428,6 +1447,45 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         log.debug(
             f"Context string preview: {context_string[:500]}..."
         )  # Log first 500 chars
+
+        # Truncate context if it exceeds token limit to prevent blowing context window
+        try:
+            from open_webui.config import RAG_CONTEXT_MAX_TOKENS
+
+            max_context_tokens = RAG_CONTEXT_MAX_TOKENS.value
+        except (ImportError, AttributeError):
+            max_context_tokens = 4000  # Fallback default
+
+        estimated_tokens = estimate_token_count(context_string)
+
+        if estimated_tokens > max_context_tokens:
+            log.warning(
+                f"🚨 RAG context exceeds token limit: {estimated_tokens} > {max_context_tokens} tokens. Truncating..."
+            )
+
+            # Truncate context_string and add notice
+            truncation_notice = f"\n\n⚠️ NOTE: Context truncated to fit within {max_context_tokens} token limit ({estimated_tokens} tokens truncated).\n\n"
+
+            # Reserve space for the truncation notice
+            notice_tokens = estimate_token_count(truncation_notice)
+            available_chars = (max_context_tokens - notice_tokens) * 4
+
+            # Try to truncate at a source boundary for cleaner cuts
+            truncated_context = context_string[:available_chars]
+
+            # Find the last complete </source> tag before truncation point
+            last_source_end = truncated_context.rfind("</source>")
+            if last_source_end > 0:
+                truncated_context = truncated_context[
+                    : last_source_end + 9
+                ]  # +9 for </source>
+
+            context_string = truncation_notice + truncated_context
+
+            final_tokens = estimate_token_count(context_string)
+            log.info(
+                f"📉 Truncated RAG context: {estimated_tokens} → {final_tokens} tokens"
+            )
 
         if (
             log.isEnabledFor(logging.DEBUG)

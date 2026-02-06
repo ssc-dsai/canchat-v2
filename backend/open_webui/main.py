@@ -191,6 +191,7 @@ from open_webui.config import (
     ENABLE_WIKIPEDIA_GROUNDING,
     ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
     WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
+    RAG_CONTEXT_MAX_TOKENS,
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     WEBUI_AUTH,
@@ -346,7 +347,8 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(rf"""
+print(
+    rf"""
   ___                    __        __   _     _   _ ___
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
 | | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
@@ -358,7 +360,8 @@ print(rf"""
 v{VERSION} - building the best open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
-""")
+"""
+)
 
 
 @asynccontextmanager
@@ -676,6 +679,7 @@ app.state.config.ENABLE_WIKIPEDIA_GROUNDING_RERANKER = (
     ENABLE_WIKIPEDIA_GROUNDING_RERANKER
 )
 app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT = WIKIPEDIA_GROUNDING_MAX_CONCURRENT
+app.state.config.RAG_CONTEXT_MAX_TOKENS = RAG_CONTEXT_MAX_TOKENS
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
 )

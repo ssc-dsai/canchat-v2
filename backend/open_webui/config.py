@@ -1867,6 +1867,15 @@ WIKIPEDIA_GROUNDING_MAX_CONCURRENT = PersistentConfig(
     int(os.getenv("WIKIPEDIA_GROUNDING_MAX_CONCURRENT", "5")),
 )
 
+# Maximum tokens for RAG/web search context to prevent exceeding model context windows
+# Default: 4000 tokens (~16000 characters) - conservative limit that works for most models
+# This prevents web search/RAG results from consuming too much of the context window
+RAG_CONTEXT_MAX_TOKENS = PersistentConfig(
+    "RAG_CONTEXT_MAX_TOKENS",
+    "rag.context.max_tokens",
+    int(os.getenv("RAG_CONTEXT_MAX_TOKENS", "4000")),
+)
+
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
 RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
