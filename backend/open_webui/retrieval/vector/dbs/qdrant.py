@@ -12,10 +12,10 @@ from qdrant_client.http.models import (
     ScalarType,
 )
 
-
 from typing import Optional
 
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.locks import get_collection_lock_manager
 from open_webui.config import (
     QDRANT_API_KEY,
     QDRANT_ENABLE_QUANTIZATION,
@@ -26,22 +26,41 @@ from open_webui.config import (
     QDRANT_TIMEOUT_SECONDS,
     QDRANT_URL,
 )
+from open_webui.env import SRC_LOG_LEVELS
+
+import logging
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+
+# Global distributed lock manager for collection-level synchronization
+# Uses Redis for multi-instance coordination
+_collection_lock_manager = get_collection_lock_manager()
 
 
 class QdrantClient:
     def __init__(self):
-        self.client = AsyncQdrantClient(
+        pass
+
+    def _get_client(self):
+        """Create a fresh AsyncQdrantClient for each request to handle event loop boundaries."""
+        return AsyncQdrantClient(
             url=QDRANT_URL,
             api_key=QDRANT_API_KEY,
             timeout=int(QDRANT_TIMEOUT_SECONDS),
             prefer_grpc=QDRANT_PREFER_GRPC,
         )
 
+    @property
+    def client(self):
+        """Always return a fresh client to avoid event loop issues."""
+        return self._get_client()
+
     def _result_to_get_result(self, result) -> GetResult:
         ids = []
         documents = []
         metadatas = []
-
         # Check if result is valid and has records
         if result and len(result) > 0 and len(result[0]) > 0:
             # Iterate over the tuple of records
@@ -104,9 +123,37 @@ class QdrantClient:
         except Exception:
             return None
 
-    async def delete_collection(self, collection_name: str):
-        # Delete the collection based on the collection name.
-        return await self.client.delete_collection(collection_name=collection_name)
+    async def delete_collection(
+        self, collection_name: str, already_locked: bool = False
+    ):
+        """
+        Delete the collection based on the collection name.
+        Uses distributed Redis locking to prevent race conditions across instances.
+        """
+
+        async def _do_delete():
+            try:
+                result = await self.client.delete_collection(
+                    collection_name=collection_name
+                )
+                log.info(f"Deleted collection: {collection_name}")
+                return result
+            except Exception as e:
+                # Collection may already be deleted
+                if not await self.client.collection_exists(
+                    collection_name=collection_name
+                ):
+                    return True
+                log.error(
+                    f"Error deleting collection {collection_name}: {type(e).__name__}: {e}"
+                )
+                raise e
+
+        if already_locked:
+            return await _do_delete()
+
+        async with _collection_lock_manager.acquire_lock(collection_name) as lock:
+            return await _do_delete()
 
     async def search(
         self, collection_name: str, vectors: list[list[float | int]], limit: int
@@ -165,49 +212,109 @@ class QdrantClient:
 
         return None
 
-    async def insert(self, collection_name: str, items: list[VectorItem]):
-        return await self.upsert(collection_name=collection_name, items=items)
-
-    async def upsert(self, collection_name: str, items: list[VectorItem]):
-        # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
-
-        quantization_config = (
-            ScalarQuantization(
-                scalar=ScalarQuantizationConfig(type=ScalarType.INT8, always_ram=True)
-            )
-            if QDRANT_ENABLE_QUANTIZATION
-            else None
-        )
-
-        if not await self.client.collection_exists(collection_name=collection_name):
-            await self.client.create_collection(
-                collection_name=collection_name,
-                on_disk_payload=QDRANT_ON_DISK_PAYLOAD,
-                hnsw_config=HnswConfigDiff(on_disk=QDRANT_ON_DISK_HNSW),
-                vectors_config=VectorParams(
-                    size=len(items[0]["vector"]),
-                    distance=Distance.COSINE,
-                    on_disk=QDRANT_ON_DISK_VECTOR,
-                    multivector_config=models.MultiVectorConfig(
-                        comparator=models.MultiVectorComparator.MAX_SIM
-                    ),
-                    quantization_config=quantization_config,
-                ),
-            )
-
-        points = [
-            PointStruct(
-                id=item["id"],
-                vector=item["vector"],
-                payload={"text": item["text"], "metadata": item["metadata"]},
-            )
-            for item in items
-        ]
-
-        return await self.client.upsert(
+    async def insert(
+        self,
+        collection_name: str,
+        items: list[VectorItem],
+        already_locked: bool = False,
+    ):
+        return await self.upsert(
             collection_name=collection_name,
-            points=points,
+            items=items,
+            already_locked=already_locked,
         )
+
+    async def upsert(
+        self,
+        collection_name: str,
+        items: list[VectorItem],
+        already_locked: bool = False,
+    ):
+        """
+        Update the items in the collection, if the items are not present, insert them.
+        If the collection does not exist, it will be created.
+
+        Uses distributed Redis locking to prevent race conditions across multiple instances.
+        Lock is reentrant - safe to call from within another lock context.
+
+        Args:
+            collection_name: Name of the collection
+            items: List of items to upsert
+            already_locked: If True, assumes caller holds the lock and skips acquisition
+
+        Note:
+            Always uses wait=True when calling Qdrant to ensure data is committed to disk
+            before returning. This prevents upload-retrieval race conditions where immediate
+            queries might not see newly inserted data.
+        """
+
+        async def _do_upsert():
+            quantization_config = (
+                ScalarQuantization(
+                    scalar=ScalarQuantizationConfig(
+                        type=ScalarType.INT8, always_ram=True
+                    )
+                )
+                if QDRANT_ENABLE_QUANTIZATION
+                else None
+            )
+
+            # Atomic check-and-create with lock held
+            if not await self.client.collection_exists(collection_name=collection_name):
+                try:
+                    await self.client.create_collection(
+                        collection_name=collection_name,
+                        on_disk_payload=QDRANT_ON_DISK_PAYLOAD,
+                        hnsw_config=HnswConfigDiff(on_disk=QDRANT_ON_DISK_HNSW),
+                        vectors_config=VectorParams(
+                            size=len(items[0]["vector"]),
+                            distance=Distance.COSINE,
+                            on_disk=QDRANT_ON_DISK_VECTOR,
+                            multivector_config=models.MultiVectorConfig(
+                                comparator=models.MultiVectorComparator.MAX_SIM
+                            ),
+                            quantization_config=quantization_config,
+                        ),
+                    )
+                    log.info(f"Created new collection: {collection_name}")
+                except Exception as e:
+                    # Collection may have been created by another instance/process
+                    # Check if it exists now and continue if so
+                    if await self.client.collection_exists(
+                        collection_name=collection_name
+                    ):
+                        pass  # Another process created it, continue
+                    else:
+                        log.error(
+                            f"Error creating collection {collection_name}: {type(e).__name__}: {e}"
+                        )
+                        raise e
+
+            points = [
+                PointStruct(
+                    id=item["id"],
+                    vector=item["vector"],
+                    payload={"text": item["text"], "metadata": item["metadata"]},
+                )
+                for item in items
+            ]
+
+            # Always use wait=True to ensure Qdrant commits data to disk before returning.
+            # This prevents race conditions where immediate queries might not see newly inserted data.
+            result = await self.client.upsert(
+                collection_name=collection_name,
+                points=points,
+                wait=True,
+            )
+
+            return result
+
+        if already_locked:
+            return await _do_upsert()
+
+        # Acquire distributed lock for this specific collection (reentrant-safe)
+        async with _collection_lock_manager.acquire_lock(collection_name) as lock:
+            return await _do_upsert()
 
     async def delete(
         self,
