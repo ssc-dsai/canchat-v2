@@ -513,9 +513,24 @@ async def get_sources_from_files(
         try:
             if "documents" in context:
                 if "metadatas" in context:
+                    # Truncate each document to prevent 413 Request Entity Too Large
+                    # Web search results can be massive HTML pages
+                    max_doc_chars = 8000  # ~2000 tokens per document
+                    truncated_docs = []
+                    for doc in context["documents"][0]:
+                        if len(doc) > max_doc_chars:
+                            truncated_docs.append(
+                                doc[:max_doc_chars] + "... [content truncated]"
+                            )
+                            log.info(
+                                f"Truncated document from {len(doc)} to {max_doc_chars} chars"
+                            )
+                        else:
+                            truncated_docs.append(doc)
+
                     source = {
                         "source": context["file"],
-                        "document": context["documents"][0],
+                        "document": truncated_docs,
                         "metadata": context["metadatas"][0],
                     }
                     if "distances" in context and context["distances"]:
