@@ -227,11 +227,19 @@ export const getDailyPrompts = async (token: string, domain?: string): Promise<n
 	}
 };
 
-export const getTotalTokens = async (token: string, domain?: string): Promise<number> => {
+export const getTotalTokens = async (
+	token: string,
+	domain?: string,
+	start_date?: string,
+	end_date?: string
+): Promise<number> => {
 	try {
-		const url = domain
-			? `${WEBUI_API_BASE_URL}/metrics/tokens?domain=${encodeURIComponent(domain)}`
-			: `${WEBUI_API_BASE_URL}/metrics/tokens`;
+		const params = new URLSearchParams();
+		if (domain) params.append('domain', domain);
+		if (start_date) params.append('start_date', start_date);
+		if (end_date) params.append('end_date', end_date);
+
+		const url = `${WEBUI_API_BASE_URL}/metrics/tokens${params.toString() ? '?' + params.toString() : ''}`;
 		const res = await fetch(url, {
 			method: 'GET',
 			headers: {

@@ -98,7 +98,12 @@ async def get_daily_prompts_number(domain: str = None, user=Depends(get_metrics_
 
 
 @router.get("/tokens")
-async def get_total_tokens(domain: str = None, user=Depends(get_metrics_user)):
+async def get_total_tokens(
+    domain: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    user=Depends(get_metrics_user),
+):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
         # Force domain to user's domain for analysts
@@ -106,10 +111,27 @@ async def get_total_tokens(domain: str = None, user=Depends(get_metrics_user)):
 
     # Admin and global_analyst can see all domains or filter by domain
 
-    total_tokens = (
-        MessageMetrics.get_message_tokens_sum(domain)
-        if domain
-        else MessageMetrics.get_message_tokens_sum()
+    # Convert dates to timestamps if provided
+    start_timestamp = None
+    end_timestamp = None
+
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            start_timestamp = int(start_dt.timestamp())
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            # End date should include the entire day, so add 24 hours
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            end_timestamp = int(end_dt.timestamp()) + (24 * 60 * 60)
+        except ValueError:
+            pass
+
+    total_tokens = MessageMetrics.get_message_tokens_sum(
+        domain=domain, start_timestamp=start_timestamp, end_timestamp=end_timestamp
     )
 
     return {"total_tokens": total_tokens}

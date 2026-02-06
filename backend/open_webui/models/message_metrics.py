@@ -130,12 +130,21 @@ class MessageMetricsTable:
             logger.error(f"Failed to get daily messages number: {e}")
             return 0
 
-    def get_message_tokens_sum(self, domain: Optional[str] = None) -> Optional[int]:
+    def get_message_tokens_sum(
+        self,
+        domain: Optional[str] = None,
+        start_timestamp: Optional[int] = None,
+        end_timestamp: Optional[int] = None,
+    ) -> Optional[int]:
         try:
             with get_db() as db:
                 query = db.query(MessageMetric)
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
+                if start_timestamp:
+                    query = query.filter(MessageMetric.created_at >= start_timestamp)
+                if end_timestamp:
+                    query = query.filter(MessageMetric.created_at < end_timestamp)
                 result = query.with_entities(
                     func.sum(MessageMetric.total_tokens),
                 ).first()
@@ -175,7 +184,8 @@ class MessageMetricsTable:
         self, days: int = 7, domain: Optional[str] = None, model: Optional[str] = None
     ) -> list[dict]:
         try:
-            result = []
+            from sqlalchemy import case, cast, String
+
             current_time = int(time.time())
 
             # Calculate today's date at midnight for proper day boundary
@@ -184,50 +194,57 @@ class MessageMetricsTable:
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
 
-            # Generate all date strings first to ensure no gaps
-            date_strings = []
-            dates_timestamps = []
+            # Calculate the start of the date range
+            start_timestamp = today_midnight - ((days - 1) * 24 * 60 * 60)
+            end_timestamp = today_midnight + (24 * 60 * 60)  # Include today
+
+            # Generate all expected dates to ensure no gaps
+            expected_dates = {}
             for day in range(days):
-                # Calculate day start (midnight) for each day in the past
                 day_start = today_midnight - (day * 24 * 60 * 60)
                 date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
-                date_strings.append(date_str)
-                dates_timestamps.append(day_start)
+                expected_dates[date_str] = 0
 
-            # Sort date strings to ensure chronological order
-            date_pairs = sorted(zip(date_strings, dates_timestamps))
-            date_strings = [pair[0] for pair in date_pairs]
-            dates_timestamps = [pair[1] for pair in date_pairs]
+            # Fetch data using a single query with GROUP BY
+            with get_db() as db:
+                # Build query with date range filter
+                query = db.query(
+                    func.strftime(
+                        "%Y-%m-%d", func.datetime(MessageMetric.created_at, "unixepoch")
+                    ).label("date"),
+                    func.count(MessageMetric.id).label("total"),
+                ).filter(
+                    MessageMetric.created_at >= start_timestamp,
+                    MessageMetric.created_at < end_timestamp,
+                )
 
-            # Process each day individually
-            for i, (date_str, day_start) in enumerate(
-                zip(date_strings, dates_timestamps)
-            ):
-                # Calculate day boundaries (midnight to midnight)
-                start_time = day_start
-                end_time = start_time + (24 * 60 * 60)
+                if domain:
+                    query = query.filter(MessageMetric.user_domain == domain)
+                if model:
+                    query = query.filter(MessageMetric.model == model)
 
-                with get_db() as db:
-                    query = db.query(MessageMetric).filter(
-                        MessageMetric.created_at >= start_time,
-                        MessageMetric.created_at < end_time,
-                    )
+                # Group by date
+                query = query.group_by("date")
 
-                    if domain:
-                        query = query.filter(MessageMetric.user_domain == domain)
-                    if model:
-                        query = query.filter(MessageMetric.model == model)
+                # Execute query
+                results = query.all()
 
-                    count = query.count()
+                # Update expected_dates with actual results
+                for date_str, total in results:
+                    if date_str in expected_dates:
+                        expected_dates[date_str] = total if total else 0
 
-                    result.append({"date": date_str, "count": count})
+            # Convert to list format and sort chronologically
+            result = [
+                {"date": date, "count": count} for date, count in expected_dates.items()
+            ]
+            return sorted(result, key=lambda x: x["date"])
 
-            # Return in chronological order
-            return result
         except Exception as e:
             logger.error(f"Failed to get historical messages data: {e}")
             # Generate continuous date range as fallback
             fallback = []
+            current_time = int(time.time())
             today = time.strftime("%Y-%m-%d", time.localtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
@@ -244,7 +261,8 @@ class MessageMetricsTable:
         self, days: int = 7, domain: Optional[str] = None
     ) -> list[dict]:
         try:
-            result = []
+            from sqlalchemy import case, cast, String
+
             current_time = int(time.time())
 
             # Calculate today's date at midnight for proper day boundary
@@ -253,55 +271,55 @@ class MessageMetricsTable:
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
 
-            # Generate all date strings first to ensure no gaps
-            date_strings = []
-            dates_timestamps = []
+            # Calculate the start of the date range
+            start_timestamp = today_midnight - ((days - 1) * 24 * 60 * 60)
+            end_timestamp = today_midnight + (24 * 60 * 60)  # Include today
+
+            # Generate all expected dates to ensure no gaps
+            expected_dates = {}
             for day in range(days):
-                # Calculate day start (midnight) for each day in the past
                 day_start = today_midnight - (day * 24 * 60 * 60)
                 date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
-                date_strings.append(date_str)
-                dates_timestamps.append(day_start)
+                expected_dates[date_str] = 0
 
-            # Sort date strings to ensure chronological order
-            date_pairs = sorted(zip(date_strings, dates_timestamps))
-            date_strings = [pair[0] for pair in date_pairs]
-            dates_timestamps = [pair[1] for pair in date_pairs]
+            # Fetch data using a single query with GROUP BY
+            with get_db() as db:
+                # Build query with date range filter
+                query = db.query(
+                    func.strftime(
+                        "%Y-%m-%d", func.datetime(MessageMetric.created_at, "unixepoch")
+                    ).label("date"),
+                    func.sum(MessageMetric.total_tokens).label("total"),
+                ).filter(
+                    MessageMetric.created_at >= start_timestamp,
+                    MessageMetric.created_at < end_timestamp,
+                )
 
-            # Process each day individually
-            for i, (date_str, day_start) in enumerate(
-                zip(date_strings, dates_timestamps)
-            ):
-                # Calculate day boundaries (midnight to midnight)
-                start_time = day_start
-                end_time = start_time + (24 * 60 * 60)
+                if domain:
+                    query = query.filter(MessageMetric.user_domain == domain)
 
-                with get_db() as db:
-                    query = db.query(MessageMetric).filter(
-                        MessageMetric.created_at >= start_time,
-                        MessageMetric.created_at < end_time,
-                    )
+                # Group by date
+                query = query.group_by("date")
 
-                    if domain:
-                        query = query.filter(MessageMetric.user_domain == domain)
+                # Execute query
+                results = query.all()
 
-                    # Sum tokens for this day
-                    tokens_sum = query.with_entities(
-                        func.sum(MessageMetric.total_tokens),
-                    ).first()
+                # Update expected_dates with actual results
+                for date_str, total in results:
+                    if date_str in expected_dates:
+                        expected_dates[date_str] = round(total, 2) if total else 0
 
-                    count = (
-                        round(tokens_sum[0], 2) if tokens_sum and tokens_sum[0] else 0
-                    )
+            # Convert to list format and sort chronologically
+            result = [
+                {"date": date, "count": count} for date, count in expected_dates.items()
+            ]
+            return sorted(result, key=lambda x: x["date"])
 
-                    result.append({"date": date_str, "count": count})
-
-            # Return in chronological order
-            return result
         except Exception as e:
             logger.error(f"Failed to get historical tokens data: {e}")
             # Generate continuous date range as fallback
             fallback = []
+            current_time = int(time.time())
             today = time.strftime("%Y-%m-%d", time.localtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
