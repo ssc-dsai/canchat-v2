@@ -5,13 +5,14 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, WEBSOCKET_REDIS_URL
 from open_webui.config import (
     CHAT_LIFETIME_ENABLED,
     CHAT_LIFETIME_DAYS,
     CHAT_CLEANUP_PRESERVE_PINNED,
     CHAT_CLEANUP_PRESERVE_ARCHIVED,
 )
+from open_webui.socket.utils import RedisLock
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SCHEDULER"])
@@ -36,12 +37,17 @@ async def automated_chat_cleanup():
     Automated chat cleanup job that respects current configuration.
     This is called by the scheduler when chat lifetime is enabled.
 
+    Uses distributed locking to ensure only one replica runs cleanup at a time.
     Runs database operations in an executor to prevent blocking the event loop
     and ensure health checks continue to respond during cleanup.
     """
+    # Distributed lock to ensure only one replica runs cleanup
+    lock = None
+    lock_renewal_task = None
+
     try:
         # Import here to avoid circular imports
-        from open_webui.routers.retrieval import cleanup_expired_chats
+        from open_webui.routers.retrieval import cleanup_expired_chats_streaming
 
         # Get current configuration values
         enabled = CHAT_LIFETIME_ENABLED.value
@@ -53,28 +59,63 @@ async def automated_chat_cleanup():
             log.info("Chat lifetime is disabled - skipping automated cleanup")
             return
 
+        # Try to acquire distributed lock (30 minute timeout)
+        lock = RedisLock(
+            redis_url=WEBSOCKET_REDIS_URL,
+            lock_name="chat_cleanup_job",
+            timeout_secs=1800,  # 30 minutes
+        )
+
+        if not lock.acquire_lock():
+            log.info(
+                "Another replica is already running chat cleanup - skipping this run"
+            )
+            return
+
         log.info(
             f"Starting automated chat cleanup (age > {days} days, preserve_pinned={preserve_pinned}, preserve_archived={preserve_archived})"
         )
 
-        # Run cleanup in thread pool to prevent blocking the main event loop
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,  # Use default ThreadPoolExecutor
-            lambda: asyncio.run(
-                cleanup_expired_chats(
-                    max_age_days=days,
-                    preserve_pinned=preserve_pinned,
-                    preserve_archived=preserve_archived,
-                    force_cleanup_all=False,  # Always use age-based cleanup for automation
-                )
-            ),
+        # Start lock renewal task to keep lock alive during long-running cleanup
+        async def renew_lock_periodically():
+            """Renew lock every 5 minutes to prevent timeout during long cleanup"""
+            while True:
+                await asyncio.sleep(300)  # Renew every 5 minutes
+                if lock and lock.lock_obtained:
+                    renewed = lock.renew_lock()
+                    if renewed:
+                        log.debug("Renewed chat cleanup lock")
+                    else:
+                        log.warning("Failed to renew chat cleanup lock")
+                        break
+
+        lock_renewal_task = asyncio.create_task(renew_lock_periodically())
+
+        # Run streaming cleanup (memory-efficient version)
+        result = await cleanup_expired_chats_streaming(
+            max_age_days=days,
+            preserve_pinned=preserve_pinned,
+            preserve_archived=preserve_archived,
+            force_cleanup_all=False,  # Always use age-based cleanup for automation
         )
 
         log.info(f"Automated chat cleanup completed: {result}")
 
     except Exception as e:
-        log.error(f"Automated chat cleanup failed: {str(e)}")
+        log.error(f"Automated chat cleanup failed: {str(e)}", exc_info=True)
+    finally:
+        # Cancel lock renewal task
+        if lock_renewal_task:
+            lock_renewal_task.cancel()
+            try:
+                await lock_renewal_task
+            except asyncio.CancelledError:
+                pass
+
+        # Always release the lock
+        if lock and lock.lock_obtained:
+            lock.release_lock()
+            log.info("Released chat cleanup lock")
 
 
 def update_cleanup_schedule():

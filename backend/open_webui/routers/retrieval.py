@@ -3583,6 +3583,273 @@ async def cleanup_expired_chats(
         }
 
 
+async def cleanup_expired_chats_streaming(
+    max_age_days: int = 30,
+    preserve_pinned: bool = True,
+    preserve_archived: bool = False,
+    force_cleanup_all: bool = False,
+) -> dict:
+    """
+    Memory-efficient streaming version of cleanup_expired_chats.
+    Processes chats in batches without loading all into memory.
+
+    This version is designed for large-scale cleanup operations and prevents
+    memory exhaustion by processing and deleting chats in small batches.
+
+    Args:
+        max_age_days: Age threshold in days (default: 30 days)
+        preserve_pinned: If True, exclude pinned chats from cleanup (default: True)
+        preserve_archived: If True, exclude archived chats from cleanup (default: False)
+        force_cleanup_all: If True, ignore age restrictions and clean up all chats (default: False)
+
+    Returns:
+        dict: Summary of cleanup operations
+    """
+    try:
+        import time
+        from open_webui.models.files import Files
+        from open_webui.models.chats import Chats
+        from open_webui.models.knowledge import Knowledges
+        from open_webui.storage.provider import Storage
+        from open_webui.config import CHAT_CLEANUP_BATCH_SIZE
+
+        cleanup_summary = {
+            "chats_checked": 0,
+            "expired_chats_found": 0,
+            "chats_deleted": 0,
+            "files_cleaned": 0,
+            "collections_cleaned": 0,
+            "preserved_pinned": 0,
+            "preserved_archived": 0,
+            "errors": [],
+        }
+
+        if force_cleanup_all:
+            log.info("Force cleanup all chats enabled - ignoring age restrictions")
+
+        log.info(
+            f"Starting streaming chat cleanup (age > {max_age_days} days, "
+            f"preserve_pinned={preserve_pinned}, preserve_archived={preserve_archived}, "
+            f"force_cleanup_all={force_cleanup_all})"
+        )
+
+        # Calculate cutoff timestamp
+        cutoff_timestamp = (
+            None
+            if force_cleanup_all
+            else int(time.time()) - (max_age_days * 24 * 60 * 60)
+        )
+
+        # Get knowledge base files once to preserve them
+        kb_referenced_files = set()
+        try:
+            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            for kb in existing_knowledge_bases:
+                if kb.data and isinstance(kb.data, dict):
+                    file_ids = kb.data.get("file_ids", [])
+                    if isinstance(file_ids, list):
+                        kb_referenced_files.update(file_ids)
+            log.info(
+                f"Found {len(kb_referenced_files)} files in knowledge bases to preserve"
+            )
+        except Exception as e:
+            log.error(f"Error getting knowledge base files: {e}")
+            kb_referenced_files = set()
+
+        # Process chats in streaming batches
+        BATCH_SIZE = CHAT_CLEANUP_BATCH_SIZE  # Configurable via environment variable
+        total_processed = 0
+
+        while True:
+            # Get next batch of chats using the model's paginated method
+            chat_batch = Chats.get_chats_for_cleanup_batch(
+                max_age_days=None if force_cleanup_all else max_age_days,
+                preserve_pinned=preserve_pinned,
+                preserve_archived=preserve_archived,
+                batch_size=BATCH_SIZE,
+                offset=0,  # Always get from offset 0 since we delete as we go
+            )
+
+            if not chat_batch:
+                log.info("No more chats to cleanup")
+                break
+
+            batch_size_actual = len(chat_batch)
+            log.info(f"Processing batch of {batch_size_actual} chats...")
+
+            # Track IDs and files for this batch
+            chat_ids_to_delete = []
+            file_ids_to_cleanup = set()
+
+            # Process each chat in the batch
+            for chat in chat_batch:
+                try:
+                    # Extract file IDs from chat
+                    file_ids = extract_file_ids_from_chat_data(chat)
+                    file_ids_to_cleanup.update(file_ids)
+
+                    # Add chat ID for deletion
+                    chat_ids_to_delete.append(chat.id)
+
+                    cleanup_summary["expired_chats_found"] += 1
+
+                except Exception as e:
+                    error_msg = (
+                        f"Error processing chat {getattr(chat, 'id', 'unknown')}: {e}"
+                    )
+                    log.error(error_msg)
+                    cleanup_summary["errors"].append(error_msg)
+
+            # Get all file references EXCEPT the chats we're about to delete
+            all_file_refs = set()
+            try:
+                all_file_refs = get_all_file_references_from_chats(
+                    exclude_chat_ids=chat_ids_to_delete
+                )
+            except Exception as e:
+                error_msg = f"Error getting file references: {e}"
+                log.error(error_msg)
+                cleanup_summary["errors"].append(error_msg)
+                # Continue without file cleanup for this batch to avoid data loss
+
+            # Clean up files for this batch
+            for file_id in file_ids_to_cleanup:
+                try:
+                    # Skip knowledge base files
+                    if file_id in kb_referenced_files:
+                        log.debug(f"Preserving knowledge base file: {file_id}")
+                        continue
+
+                    # Only delete if not referenced by other chats
+                    if file_id not in all_file_refs:
+                        file = Files.get_file_by_id(file_id)
+                        if file:
+                            # Clean up vector collection
+                            collection_name = f"file-{file_id}"
+                            if await VECTOR_DB_CLIENT.has_collection(collection_name):
+                                await VECTOR_DB_CLIENT.delete_collection(
+                                    collection_name
+                                )
+                                cleanup_summary["collections_cleaned"] += 1
+                                log.debug(
+                                    f"Deleted vector collection: {collection_name}"
+                                )
+
+                            # Delete physical file
+                            if file.path:
+                                try:
+                                    Storage.delete_file(file.path)
+                                    log.debug(f"Deleted physical file: {file.path}")
+                                except Exception as e:
+                                    log.warning(
+                                        f"Could not delete physical file {file.path}: {e}"
+                                    )
+
+                            # Delete from database
+                            Files.delete_file_by_id(file_id)
+                            cleanup_summary["files_cleaned"] += 1
+                            log.debug(f"Deleted file record: {file_id}")
+                    else:
+                        log.debug(
+                            f"File {file_id} still referenced by other chats, preserving"
+                        )
+
+                except Exception as e:
+                    error_msg = f"Error cleaning up file {file_id}: {e}"
+                    log.error(error_msg)
+                    cleanup_summary["errors"].append(error_msg)
+
+            # Delete chats for this batch with retry logic
+            if chat_ids_to_delete:
+                log.info(f"Deleting {len(chat_ids_to_delete)} chats from this batch...")
+
+                # Retry deletion up to 3 times in case of transient DB errors
+                max_retries = 3
+                deletion_result = None
+
+                for retry in range(max_retries):
+                    try:
+                        deletion_result = Chats.delete_chat_list(chat_ids_to_delete)
+                        break  # Success, exit retry loop
+                    except Exception as e:
+                        if retry < max_retries - 1:
+                            wait_time = 2**retry  # Exponential backoff: 1s, 2s, 4s
+                            log.warning(
+                                f"Chat deletion attempt {retry + 1} failed, retrying in {wait_time}s: {e}"
+                            )
+                            await asyncio.sleep(wait_time)
+                        else:
+                            error_msg = f"Failed to delete chats after {max_retries} attempts: {e}"
+                            log.error(error_msg)
+                            cleanup_summary["errors"].append(error_msg)
+                            deletion_result = {
+                                "deleted_count": 0,
+                                "errors": [error_msg],
+                            }
+
+                if deletion_result:
+                    cleanup_summary["chats_deleted"] += deletion_result["deleted_count"]
+
+                    if deletion_result["errors"]:
+                        cleanup_summary["errors"].extend(deletion_result["errors"])
+
+                    # Emit WebSocket notification for chat deletions
+                    if deletion_result["deleted_count"] > 0:
+                        try:
+                            from open_webui.socket.main import sio
+
+                            await sio.emit(
+                                "chat-deleted",
+                                {
+                                    "type": "chat:cleanup",
+                                    "deleted_chat_ids": chat_ids_to_delete[
+                                        : deletion_result["deleted_count"]
+                                    ],
+                                    "deleted_count": deletion_result["deleted_count"],
+                                    "timestamp": int(time.time()),
+                                },
+                            )
+                            log.debug(
+                                f"Emitted chat deletion notification for {deletion_result['deleted_count']} chats"
+                            )
+                        except Exception as e:
+                            log.warning(
+                                f"Failed to emit chat deletion notification: {e}"
+                            )
+
+            total_processed += batch_size_actual
+            cleanup_summary["chats_checked"] += batch_size_actual
+
+            log.info(
+                f"Batch complete. Total processed: {total_processed}, "
+                f"Total deleted: {cleanup_summary['chats_deleted']}, "
+                f"Files cleaned: {cleanup_summary['files_cleaned']}"
+            )
+
+            # Clear batch from memory
+            del chat_batch
+            del chat_ids_to_delete
+            del file_ids_to_cleanup
+
+            # If we got fewer chats than batch size, we're done
+            if batch_size_actual < BATCH_SIZE:
+                break
+
+        log.info(f"Streaming chat cleanup completed: {cleanup_summary}")
+        return cleanup_summary
+
+    except Exception as e:
+        log.error(f"Error during streaming chat cleanup: {e}")
+        return {
+            "error": str(e),
+            "chats_checked": cleanup_summary.get("chats_checked", 0),
+            "expired_chats_found": cleanup_summary.get("expired_chats_found", 0),
+            "chats_deleted": cleanup_summary.get("chats_deleted", 0),
+            "files_cleaned": cleanup_summary.get("files_cleaned", 0),
+            "collections_cleaned": cleanup_summary.get("collections_cleaned", 0),
+        }
+
+
 @router.post("/maintenance/cleanup/expired-chats")
 async def api_cleanup_expired_chats(
     max_age_days: int = None,
