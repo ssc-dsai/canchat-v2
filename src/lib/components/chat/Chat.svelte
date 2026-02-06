@@ -598,6 +598,15 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		//ensures the url is reset to the root
+		if (chatIdProp || $chatId) {
+			if ($chatId) {
+				await chatId.set('');
+			}
+			await goto('/');
+			return;
+		}
+
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
 		} else if ($page.url.searchParams.get('model')) {
@@ -655,7 +664,9 @@
 
 		autoScroll = true;
 
-		await chatId.set('');
+		if ($chatId) {
+			await chatId.set('');
+		}
 		await chatTitle.set('');
 
 		history = {
@@ -717,7 +728,6 @@
 		} else {
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
-		suggestionCycle.update((n) => n + 1);
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
