@@ -50,6 +50,8 @@ from open_webui.utils.task import (
     get_task_model_id,
     rag_template,
     tools_function_calling_generation_template,
+    extract_title_from_response,
+    truncate_title_by_chars,
 )
 
 from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
@@ -1527,20 +1529,14 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            if len(res.get("choices", [])) == 1:
-                                title = (
-                                    res.get("choices", [])[0]
-                                    .get("message", {})
-                                    .get(
-                                        "content",
-                                        message.get("content", "New Chat"),
-                                    )
-                                ).strip()
-                            else:
-                                title = None
+                            title = extract_title_from_response(res)
 
                             if not title:
+                                # Fallback: use first message or default
                                 title = messages[0].get("content", "New Chat")
+                            else:
+                                # Truncate title to reasonable length (max 50 characters)
+                                title = truncate_title_by_chars(title, max_chars=50)
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
