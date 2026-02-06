@@ -491,9 +491,14 @@ class SharePointOAuthClient:
                         logger.error(
                             f"Search API error: {response.status} - {error_text}"
                         )
+
+                        # Check for permission/authorization errors
+                        is_permission_error = response.status in [401, 403]
+
                         return False, {
                             "error": error_text,
                             "status_code": response.status,
+                            "is_permission_error": is_permission_error,
                         }
 
         except Exception as e:

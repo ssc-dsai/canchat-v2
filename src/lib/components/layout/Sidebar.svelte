@@ -623,6 +623,7 @@
 				draggable="false"
 				on:click={async () => {
 					clearSelection();
+					await chatId.set('');
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					suggestionCycle.update((n) => n + 1);

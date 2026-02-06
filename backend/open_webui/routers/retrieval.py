@@ -1107,7 +1107,7 @@ async def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+        await save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
         return {
             "status": True,
@@ -1334,8 +1334,11 @@ async def process_web_search(
         log.debug(
             f"[process_web_search] query: '{form_data.query}', engine: '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
         )
-        web_results = search_web(
-            request, request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
+        web_results = await asyncio.to_thread(
+            search_web,
+            request,
+            request.app.state.config.RAG_WEB_SEARCH_ENGINE,
+            form_data.query,
         )
     except Exception as e:
         log.exception(e)
