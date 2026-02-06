@@ -577,7 +577,7 @@ class ChatTable:
                                 FROM json_each(Chat.chat, '$.messages') AS message
                                 WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
                             )
-                            "")).params(  # Case-insensitive search in title
+                            """)).params(  # Case-insensitive search in title
                         search_text=search_text
                     )
                 )
@@ -615,7 +615,7 @@ class ChatTable:
                                 FROM json_array_elements(Chat.chat->'messages') AS message
                                 WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
                             )
-                            "")).params(  # Case-insensitive search in title
+                            """)).params(  # Case-insensitive search in title
                         search_text=search_text
                     )
                 )
@@ -628,13 +628,6 @@ class ChatTable:
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
                             """))
-                elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"""
-                                    EXISTS (
                 elif tag_ids:
                     query = query.filter(
                         and_(
