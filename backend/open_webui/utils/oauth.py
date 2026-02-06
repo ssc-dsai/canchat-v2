@@ -302,9 +302,9 @@ class OAuthManager:
                         },
                     )
             else:
-                raise HTTPException(
-                    status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-                )
+                # Redirect to friendly 403 page instead of throwing exception
+                redirect_url = f"{request.base_url}403"
+                return RedirectResponse(url=redirect_url)
 
         jwt_token = create_token(
             data={"id": user.id},
