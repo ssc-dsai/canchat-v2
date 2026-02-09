@@ -11,8 +11,10 @@ from open_webui.config import (
     CHAT_LIFETIME_DAYS,
     CHAT_CLEANUP_PRESERVE_PINNED,
     CHAT_CLEANUP_PRESERVE_ARCHIVED,
+    CHAT_CLEANUP_LOCK_TIMEOUT,
+    CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL,
 )
-from open_webui.socket.utils import RedisLock
+from open_webui.socket.utils import RedisLock, renew_lock_periodically
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SCHEDULER"])
@@ -59,11 +61,11 @@ async def automated_chat_cleanup():
             log.info("Chat lifetime is disabled - skipping automated cleanup")
             return
 
-        # Try to acquire distributed lock (30 minute timeout)
+        # Try to acquire distributed lock
         lock = RedisLock(
             redis_url=WEBSOCKET_REDIS_URL,
             lock_name="chat_cleanup_job",
-            timeout_secs=1800,  # 30 minutes
+            timeout_secs=CHAT_CLEANUP_LOCK_TIMEOUT,
         )
 
         if not lock.acquire_lock():
@@ -77,19 +79,13 @@ async def automated_chat_cleanup():
         )
 
         # Start lock renewal task to keep lock alive during long-running cleanup
-        async def renew_lock_periodically():
-            """Renew lock every 5 minutes to prevent timeout during long cleanup"""
-            while True:
-                await asyncio.sleep(300)  # Renew every 5 minutes
-                if lock and lock.lock_obtained:
-                    renewed = lock.renew_lock()
-                    if renewed:
-                        log.debug("Renewed chat cleanup lock")
-                    else:
-                        log.warning("Failed to renew chat cleanup lock")
-                        break
-
-        lock_renewal_task = asyncio.create_task(renew_lock_periodically())
+        lock_renewal_task = asyncio.create_task(
+            renew_lock_periodically(
+                lock,
+                renewal_interval_secs=CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL,
+                lock_name="chat_cleanup_job",
+            )
+        )
 
         # Run streaming cleanup (memory-efficient version)
         result = await cleanup_expired_chats_streaming(

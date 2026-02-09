@@ -1,6 +1,41 @@
+import asyncio
 import json
+import logging
 import redis
 import uuid
+
+log = logging.getLogger(__name__)
+
+
+async def renew_lock_periodically(
+    lock, renewal_interval_secs: int = 300, lock_name: str = "lock"
+):
+    """
+    Periodically renew a Redis lock to keep it alive during long-running operations.
+
+    Args:
+        lock: RedisLock instance to renew
+        renewal_interval_secs: Interval in seconds between renewal attempts (default: 300 = 5 minutes)
+        lock_name: Name of the lock for logging purposes
+
+    This function runs in a loop until the lock is no longer held or renewal fails.
+    It should be run as an asyncio task and cancelled when the operation completes.
+    """
+    try:
+        while True:
+            await asyncio.sleep(renewal_interval_secs)
+            if lock and lock.lock_obtained:
+                renewed = lock.renew_lock()
+                if renewed:
+                    log.debug(f"Renewed {lock_name}")
+                else:
+                    log.warning(f"Failed to renew {lock_name}")
+                    break
+    except asyncio.CancelledError:
+        log.debug(f"Lock renewal task for {lock_name} cancelled")
+        raise
+    except Exception as e:
+        log.error(f"Error in lock renewal task for {lock_name}: {e}")
 
 
 class RedisLock:

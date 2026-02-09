@@ -1334,6 +1334,14 @@ CHAT_CLEANUP_PRESERVE_ARCHIVED = PersistentConfig(
 CHAT_CLEANUP_BATCH_SIZE = int(os.environ.get("CHAT_CLEANUP_BATCH_SIZE", "50"))
 CHAT_CLEANUP_FILE_BATCH_SIZE = int(os.environ.get("CHAT_CLEANUP_FILE_BATCH_SIZE", "20"))
 
+# Chat cleanup lock timeout in seconds (30 minutes default)
+CHAT_CLEANUP_LOCK_TIMEOUT = int(os.environ.get("CHAT_CLEANUP_LOCK_TIMEOUT", "1800"))
+
+# Chat cleanup lock renewal interval in seconds (5 minutes default)
+CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL = int(
+    os.environ.get("CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL", "300")
+)
+
 
 ####################################
 # TASKS
