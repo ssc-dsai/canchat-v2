@@ -3875,11 +3875,18 @@ async def cleanup_expired_chats_streaming(
             # Extract chat data (business logic, no ORM)
             chat_ids_to_delete = []
             file_ids_to_cleanup = set()
+            # Track how many times each file appears in this batch for accurate ref counting
+            batch_file_ref_counts = {}
 
             for chat in chat_batch:
                 try:
                     file_ids = extract_file_ids_from_chat_data(chat)
                     file_ids_to_cleanup.update(file_ids)
+                    # Count file references in this batch
+                    for file_id in file_ids:
+                        batch_file_ref_counts[file_id] = (
+                            batch_file_ref_counts.get(file_id, 0) + 1
+                        )
                     chat_ids_to_delete.append(chat.id)
                     cleanup_summary["expired_chats_found"] += 1
                 except Exception as e:
@@ -3889,10 +3896,11 @@ async def cleanup_expired_chats_streaming(
                     log.error(error_msg)
                     cleanup_summary["errors"].append(error_msg)
 
-            # Update file reference counts by decrementing for deleted chats
-            for file_id in file_ids_to_cleanup:
+            # Update file reference counts by decrementing based on batch counts
+            # If 3 chats in the batch reference the same file, decrement by 3
+            for file_id, batch_count in batch_file_ref_counts.items():
                 if file_id in file_ref_counts:
-                    file_ref_counts[file_id] -= 1
+                    file_ref_counts[file_id] -= batch_count
                     # Remove from dict if count reaches 0
                     if file_ref_counts[file_id] <= 0:
                         del file_ref_counts[file_id]
