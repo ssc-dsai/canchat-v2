@@ -2803,6 +2803,73 @@ def get_all_file_references_from_chats(exclude_chat_ids=None):
         return set()
 
 
+# ============================================================================
+# Service Layer Functions - Separate ORM/DB operations from business logic
+# ============================================================================
+
+
+def get_knowledge_base_file_ids() -> set:
+    """
+    Service function to retrieve all file IDs referenced in knowledge bases.
+
+    Returns:
+        set: File IDs from knowledge bases
+    """
+    from open_webui.models.knowledge import Knowledges
+
+    kb_file_ids = set()
+    try:
+        knowledge_bases = Knowledges.get_knowledge_bases()
+        for kb in knowledge_bases:
+            if kb.data and isinstance(kb.data, dict):
+                file_ids = kb.data.get("file_ids", [])
+                if isinstance(file_ids, list):
+                    kb_file_ids.update(file_ids)
+        log.debug(f"Retrieved {len(kb_file_ids)} file IDs from knowledge bases")
+    except Exception as e:
+        log.error(f"Error getting knowledge base file IDs: {e}")
+
+    return kb_file_ids
+
+
+def get_chat_batch_for_cleanup(
+    max_age_days: int = None,
+    preserve_pinned: bool = True,
+    preserve_archived: bool = False,
+    batch_size: int = 100,
+) -> list:
+    """
+    Service function to retrieve next batch of chats for cleanup.
+
+    Args:
+        max_age_days: Age threshold in days
+        preserve_pinned: Exclude pinned chats
+        preserve_archived: Exclude archived chats
+        batch_size: Number of chats to retrieve
+
+    Returns:
+        list: Batch of chat objects to process
+    """
+    from open_webui.models.chats import Chats
+
+    try:
+        return Chats.get_chats_for_cleanup_batch(
+            max_age_days=max_age_days,
+            preserve_pinned=preserve_pinned,
+            preserve_archived=preserve_archived,
+            batch_size=batch_size,
+            offset=0,  # Always 0 since we delete as we go
+        )
+    except Exception as e:
+        log.error(f"Error retrieving chat batch: {e}")
+        return []
+
+
+# ============================================================================
+# Business Logic Functions - Orchestrate cleanup operations
+# ============================================================================
+
+
 async def cleanup_orphaned_files(
     file_ids: set, exclude_from_chats: set = None, kb_files: set = None
 ) -> dict:
@@ -3816,11 +3883,11 @@ async def cleanup_expired_chats_streaming(
     force_cleanup_all: bool = False,
 ) -> dict:
     """
-    Memory-efficient streaming version of cleanup_expired_chats.
-    Processes chats in batches without loading all into memory.
+    Dispatcher function for memory-efficient chat cleanup operations.
 
-    This version is designed for large-scale cleanup operations and prevents
-    memory exhaustion by processing and deleting chats in small batches.
+    Orchestrates chat, file, and knowledge base cleanup by delegating to
+    specialized service functions. Handles batching logic without direct
+    ORM operations.
 
     Args:
         max_age_days: Age threshold in days (default: 30 days)
@@ -3833,10 +3900,6 @@ async def cleanup_expired_chats_streaming(
     """
     try:
         import time
-        from open_webui.models.files import Files
-        from open_webui.models.chats import Chats
-        from open_webui.models.knowledge import Knowledges
-        from open_webui.storage.provider import Storage
         from open_webui.config import CHAT_CLEANUP_BATCH_SIZE
 
         cleanup_summary = {
@@ -3859,54 +3922,27 @@ async def cleanup_expired_chats_streaming(
             f"force_cleanup_all={force_cleanup_all})"
         )
 
-        # Calculate cutoff timestamp
-        cutoff_timestamp = (
-            None
-            if force_cleanup_all
-            else int(time.time()) - (max_age_days * 24 * 60 * 60)
+        # Delegate KB file retrieval to service layer
+        kb_referenced_files = get_knowledge_base_file_ids()
+        log.info(
+            f"Found {len(kb_referenced_files)} files in knowledge bases to preserve"
         )
 
-        # Get knowledge base files once to preserve them
-        kb_referenced_files = set()
-        try:
-            existing_knowledge_bases = Knowledges.get_knowledge_bases()
-            for kb in existing_knowledge_bases:
-                if kb.data and isinstance(kb.data, dict):
-                    file_ids = kb.data.get("file_ids", [])
-                    if isinstance(file_ids, list):
-                        kb_referenced_files.update(file_ids)
-            log.info(
-                f"Found {len(kb_referenced_files)} files in knowledge bases to preserve"
-            )
-        except Exception as e:
-            log.error(f"Error getting knowledge base files: {e}")
-            kb_referenced_files = set()
-
-        # Get all file references once at the start for efficiency
-        # We'll subtract file IDs from deleted chats as we process batches
-        all_file_refs = set()
-        try:
-            all_file_refs = get_all_file_references_from_chats()
-            log.info(
-                f"Found {len(all_file_refs)} total file references across all chats"
-            )
-        except Exception as e:
-            error_msg = f"Error getting initial file references: {e}"
-            log.error(error_msg)
-            cleanup_summary["errors"].append(error_msg)
+        # Delegate file reference retrieval to service layer
+        all_file_refs = get_all_file_references_from_chats()
+        log.info(f"Found {len(all_file_refs)} total file references across all chats")
 
         # Process chats in streaming batches
-        BATCH_SIZE = CHAT_CLEANUP_BATCH_SIZE  # Configurable via environment variable
+        BATCH_SIZE = CHAT_CLEANUP_BATCH_SIZE
         total_processed = 0
 
         while True:
-            # Get next batch of chats using the model's paginated method
-            chat_batch = Chats.get_chats_for_cleanup_batch(
+            # Delegate batch retrieval to service layer
+            chat_batch = get_chat_batch_for_cleanup(
                 max_age_days=None if force_cleanup_all else max_age_days,
                 preserve_pinned=preserve_pinned,
                 preserve_archived=preserve_archived,
                 batch_size=BATCH_SIZE,
-                offset=0,  # Always get from offset 0 since we delete as we go
             )
 
             if not chat_batch:
@@ -3916,22 +3952,16 @@ async def cleanup_expired_chats_streaming(
             batch_size_actual = len(chat_batch)
             log.info(f"Processing batch of {batch_size_actual} chats...")
 
-            # Track IDs and files for this batch
+            # Extract chat data (business logic, no ORM)
             chat_ids_to_delete = []
             file_ids_to_cleanup = set()
 
-            # Process each chat in the batch
             for chat in chat_batch:
                 try:
-                    # Extract file IDs from chat
                     file_ids = extract_file_ids_from_chat_data(chat)
                     file_ids_to_cleanup.update(file_ids)
-
-                    # Add chat ID for deletion
                     chat_ids_to_delete.append(chat.id)
-
                     cleanup_summary["expired_chats_found"] += 1
-
                 except Exception as e:
                     error_msg = (
                         f"Error processing chat {getattr(chat, 'id', 'unknown')}: {e}"
@@ -3939,11 +3969,10 @@ async def cleanup_expired_chats_streaming(
                     log.error(error_msg)
                     cleanup_summary["errors"].append(error_msg)
 
-            # Remove file IDs from the chats we're about to delete from our tracking set
-            # This maintains accurate file reference counts without re-scanning the DB
+            # Update file reference tracking
             all_file_refs.difference_update(file_ids_to_cleanup)
 
-            # Clean up files for this batch using helper function
+            # Delegate file cleanup to specialized function
             file_cleanup_result = await cleanup_orphaned_files(
                 file_ids=file_ids_to_cleanup,
                 exclude_from_chats=all_file_refs,
@@ -3956,22 +3985,19 @@ async def cleanup_expired_chats_streaming(
             if file_cleanup_result["errors"]:
                 cleanup_summary["errors"].extend(file_cleanup_result["errors"])
 
-            # Delete chats for this batch with retry logic
+            # Delegate chat deletion to specialized function
             if chat_ids_to_delete:
                 log.info(f"Deleting {len(chat_ids_to_delete)} chats from this batch...")
-
-                # Use helper function for deletion with retry logic
                 deletion_result = await delete_chats_with_retry(
                     chat_ids_to_delete, max_retries=3
                 )
 
                 if deletion_result:
                     cleanup_summary["chats_deleted"] += deletion_result["deleted_count"]
-
                     if deletion_result.get("errors"):
                         cleanup_summary["errors"].extend(deletion_result["errors"])
 
-                    # Emit WebSocket notification for chat deletions using helper
+                    # Delegate notification to specialized function
                     if deletion_result["deleted_count"] > 0:
                         await emit_chat_deletion_notification(
                             deleted_chat_ids=chat_ids_to_delete,
@@ -3982,9 +4008,9 @@ async def cleanup_expired_chats_streaming(
             cleanup_summary["chats_checked"] += batch_size_actual
 
             log.info(
-                f"Batch complete. Total processed: {total_processed}, "
-                f"Total deleted: {cleanup_summary['chats_deleted']}, "
-                f"Files cleaned: {cleanup_summary['files_cleaned']}"
+                f"Batch complete. Processed: {total_processed}, "
+                f"Deleted: {cleanup_summary['chats_deleted']}, "
+                f"Files: {cleanup_summary['files_cleaned']}"
             )
 
             # Clear batch from memory
