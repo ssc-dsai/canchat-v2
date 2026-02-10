@@ -59,10 +59,16 @@ class RedisLock:
 
     def renew_lock(self):
         try:
-            # xx=True will only set this key if it _has_ already been set
-            return self.redis.set(
-                self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs
-            )
+            # Verify we own the lock before renewing to prevent other replicas from stealing it
+            lock_value = self.redis.get(self.lock_name)
+            if lock_value and lock_value == self.lock_id:
+                # Only renew if we own the lock
+                return self.redis.set(
+                    self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs
+                )
+            else:
+                # We don't own this lock, cannot renew
+                return False
         except Exception as e:
             print(f"Error renewing Redis lock: {e}")
             return False
