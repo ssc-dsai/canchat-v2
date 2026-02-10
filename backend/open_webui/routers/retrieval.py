@@ -2719,23 +2719,23 @@ def extract_file_ids_from_chat_data(chat):
 
 def get_all_file_references_from_chats(exclude_chat_ids=None):
     """
-    Extract all file IDs referenced across all chats in the system.
+    Extract all file IDs with reference counts across all chats in the system.
     Uses pagination to handle large datasets efficiently.
 
     Args:
         exclude_chat_ids: List of chat IDs to exclude from scanning (e.g., chats being deleted)
 
     Returns:
-        set: Set of all file IDs that are still referenced by existing chats
+        dict: Map of file_id -> reference_count for all files referenced by existing chats
     """
     try:
-        log.info("Scanning all chats for file references...")
+        log.info("Scanning all chats for file references with counts...")
         if exclude_chat_ids:
             log.info(
                 f"Excluding {len(exclude_chat_ids)} chats from file reference scan"
             )
 
-        all_file_ids = set()
+        file_ref_counts = {}  # file_id -> count
 
         # Get chats in batches to avoid memory issues
         from open_webui.models.chats import get_db, Chat
@@ -2774,7 +2774,11 @@ def get_all_file_references_from_chats(exclude_chat_ids=None):
                             chat_data.id, chat_data.chat
                         )
                         file_ids = extract_file_ids_from_chat_data(temp_chat)
-                        all_file_ids.update(file_ids)
+                        # Increment reference count for each file
+                        for file_id in file_ids:
+                            file_ref_counts[file_id] = (
+                                file_ref_counts.get(file_id, 0) + 1
+                            )
 
                     except Exception as e:
                         log.error(
@@ -2787,20 +2791,20 @@ def get_all_file_references_from_chats(exclude_chat_ids=None):
                 # Log progress every 1000 records
                 if offset % 1000 == 0:
                     log.info(
-                        f"Scanned {offset} chats for file references, found {len(all_file_ids)} unique file IDs so far"
+                        f"Scanned {offset} chats for file references, found {len(file_ref_counts)} unique file IDs so far"
                     )
 
                 # Clear batch from memory
                 del chat_batch
 
         log.info(
-            f"Completed file reference scan. Found {len(all_file_ids)} total file references across {total_chats_scanned} chats"
+            f"Completed file reference scan. Found {len(file_ref_counts)} total file references across {total_chats_scanned} chats"
         )
-        return all_file_ids
+        return file_ref_counts
 
     except Exception as e:
         log.error(f"Error getting file references from chats: {e}")
-        return set()
+        return {}
 
 
 # ============================================================================
@@ -3008,92 +3012,6 @@ async def emit_chat_deletion_notification(
         log.debug(f"Emitted chat deletion notification for {deleted_count} chats")
     except Exception as e:
         log.warning(f"Failed to emit chat deletion notification: {e}")
-
-
-def get_all_file_references_from_chats(exclude_chat_ids=None):
-    """
-    Extract all file IDs referenced across all chats in the system.
-    Uses pagination to handle large datasets efficiently.
-
-    Args:
-        exclude_chat_ids: List of chat IDs to exclude from scanning (e.g., chats being deleted)
-
-    Returns:
-        set: Set of all file IDs that are still referenced by existing chats
-    """
-    try:
-        log.info("Scanning all chats for file references...")
-        if exclude_chat_ids:
-            log.info(
-                f"Excluding {len(exclude_chat_ids)} chats from file reference scan"
-            )
-
-        all_file_ids = set()
-
-        # Get chats in batches to avoid memory issues
-        from open_webui.models.chats import get_db, Chat
-
-        batch_size = 100
-        offset = 0
-        total_chats_scanned = 0
-
-        with get_db() as db:
-            while True:
-                # Get batch of chats with only required columns for file extraction
-                query = db.query(Chat.id, Chat.chat)  # Only select id and chat columns
-
-                # Exclude chats that are being deleted
-                if exclude_chat_ids:
-                    query = query.filter(~Chat.id.in_(exclude_chat_ids))
-
-                chat_batch = query.offset(offset).limit(batch_size).all()
-
-                if not chat_batch:
-                    break  # No more chats to process
-
-                log.debug(
-                    f"Scanning file references in batch of {len(chat_batch)} chats (offset {offset})"
-                )
-
-                for chat_data in chat_batch:
-                    try:
-                        # Create a minimal object for file ID extraction
-                        class TempChatForFileExtraction:
-                            def __init__(self, chat_id, chat_content):
-                                self.id = chat_id
-                                self.chat = chat_content or {}
-
-                        temp_chat = TempChatForFileExtraction(
-                            chat_data.id, chat_data.chat
-                        )
-                        file_ids = extract_file_ids_from_chat_data(temp_chat)
-                        all_file_ids.update(file_ids)
-
-                    except Exception as e:
-                        log.error(
-                            f"Error extracting file IDs from chat {chat_data.id}: {e}"
-                        )
-
-                total_chats_scanned += len(chat_batch)
-                offset += batch_size
-
-                # Log progress every 1000 records
-                if offset % 1000 == 0:
-                    log.info(
-                        f"Scanned {offset} chats for file references, found {len(all_file_ids)} unique file IDs so far"
-                    )
-
-                # Clear batch from memory
-                del chat_batch
-
-        log.info(
-            f"Completed file reference scan. Found {len(all_file_ids)} total file references across {total_chats_scanned} chats"
-        )
-        return all_file_ids
-
-    except Exception as e:
-        log.error(f"Error scanning chats for file references: {e}")
-        return set()
 
 
 async def cleanup_orphaned_files_by_reference():
@@ -3928,9 +3846,11 @@ async def cleanup_expired_chats_streaming(
             f"Found {len(kb_referenced_files)} files in knowledge bases to preserve"
         )
 
-        # Delegate file reference retrieval to service layer
-        all_file_refs = get_all_file_references_from_chats()
-        log.info(f"Found {len(all_file_refs)} total file references across all chats")
+        # Delegate file reference retrieval to service layer (returns dict with counts)
+        file_ref_counts = get_all_file_references_from_chats()
+        log.info(
+            f"Found {len(file_ref_counts)} unique files with total references across all chats"
+        )
 
         # Process chats in streaming batches
         BATCH_SIZE = CHAT_CLEANUP_BATCH_SIZE
@@ -3969,13 +3889,19 @@ async def cleanup_expired_chats_streaming(
                     log.error(error_msg)
                     cleanup_summary["errors"].append(error_msg)
 
-            # Update file reference tracking
-            all_file_refs.difference_update(file_ids_to_cleanup)
+            # Update file reference counts by decrementing for deleted chats
+            for file_id in file_ids_to_cleanup:
+                if file_id in file_ref_counts:
+                    file_ref_counts[file_id] -= 1
+                    # Remove from dict if count reaches 0
+                    if file_ref_counts[file_id] <= 0:
+                        del file_ref_counts[file_id]
 
             # Delegate file cleanup to specialized function
+            # Convert ref count dict to set for compatibility
             file_cleanup_result = await cleanup_orphaned_files(
                 file_ids=file_ids_to_cleanup,
-                exclude_from_chats=all_file_refs,
+                exclude_from_chats=set(file_ref_counts.keys()),
                 kb_files=kb_referenced_files,
             )
             cleanup_summary["files_cleaned"] += file_cleanup_result["files_cleaned"]

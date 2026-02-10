@@ -59,13 +59,13 @@ class RedisLock:
 
     def renew_lock(self):
         try:
-            # Verify we own the lock before renewing to prevent other replicas from stealing it
-            lock_value = self.redis.get(self.lock_name)
+            # Use GETEX to atomically verify ownership and renew in a single operation
+            # This prevents race conditions where another replica could acquire the lock
+            # between our check and renewal
+            lock_value = self.redis.getex(self.lock_name, ex=self.timeout_secs)
             if lock_value and lock_value == self.lock_id:
-                # Only renew if we own the lock
-                return self.redis.set(
-                    self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs
-                )
+                # We own the lock and it was renewed atomically
+                return True
             else:
                 # We don't own this lock, cannot renew
                 return False
