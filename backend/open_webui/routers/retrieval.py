@@ -33,10 +33,6 @@ from open_webui.storage.provider import Storage
 
 
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.retrieval.vector.locks import get_collection_lock_manager
-
-# Use public accessor for the global collection lock manager
-collection_lock_manager = get_collection_lock_manager()
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -852,39 +848,35 @@ async def save_docs_to_vector_db(
         for idx, text in enumerate(texts)
     ]
 
-    # Acquire distributed Redis lock for atomic operations
-    # Prevents race conditions across multiple instances
-    async with collection_lock_manager.acquire_lock(
-        collection_name, timeout_secs=120
-    ) as lock:
-        try:
-            if await VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-                if overwrite:
-                    log.info(f"Overwriting collection: {collection_name}")
-                    await VECTOR_DB_CLIENT.delete_collection(
-                        collection_name=collection_name,
-                        already_locked=True,
-                    )
-                elif add is False:
-                    return True
+    # Locking is now handled internally by QdrantClient methods
+    # The lock manager automatically handles reentrancy, so delete_collection
+    # and insert can be called sequentially without deadlock
+    try:
+        if await VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            if overwrite:
+                log.info(f"Overwriting collection: {collection_name}")
+                await VECTOR_DB_CLIENT.delete_collection(
+                    collection_name=collection_name,
+                )
+            elif add is False:
+                return True
 
-            await VECTOR_DB_CLIENT.insert(
-                collection_name=collection_name,
-                items=items,
-                already_locked=True,
-            )
-            log.info(
-                f"Successfully indexed {len(items)} document chunks in collection: {collection_name}"
-            )
+        await VECTOR_DB_CLIENT.insert(
+            collection_name=collection_name,
+            items=items,
+        )
+        log.info(
+            f"Successfully indexed {len(items)} document chunks in collection: {collection_name}"
+        )
 
-            return True
+        return True
 
-        except Exception as e:
-            log.error(
-                f"Error saving documents to collection {collection_name}: {type(e).__name__}: {e}",
-                exc_info=True,
-            )
-            raise e
+    except Exception as e:
+        log.error(
+            f"Error saving documents to collection {collection_name}: {type(e).__name__}: {e}",
+            exc_info=True,
+        )
+        raise e
 
 
 class ProcessFileForm(BaseModel):

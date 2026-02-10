@@ -123,12 +123,11 @@ class QdrantClient:
         except Exception:
             return None
 
-    async def delete_collection(
-        self, collection_name: str, already_locked: bool = False
-    ):
+    async def delete_collection(self, collection_name: str):
         """
         Delete the collection based on the collection name.
         Uses distributed Redis locking to prevent race conditions across instances.
+        Lock is automatically reentrant - safe to call from within another locked context.
         """
 
         async def _do_delete():
@@ -149,9 +148,7 @@ class QdrantClient:
                 )
                 raise e
 
-        if already_locked:
-            return await _do_delete()
-
+        # Always acquire lock - reentrancy is automatically handled by task-safe lock manager
         async with _collection_lock_manager.acquire_lock(collection_name) as lock:
             return await _do_delete()
 
@@ -216,31 +213,27 @@ class QdrantClient:
         self,
         collection_name: str,
         items: list[VectorItem],
-        already_locked: bool = False,
     ):
         return await self.upsert(
             collection_name=collection_name,
             items=items,
-            already_locked=already_locked,
         )
 
     async def upsert(
         self,
         collection_name: str,
         items: list[VectorItem],
-        already_locked: bool = False,
     ):
         """
         Update the items in the collection, if the items are not present, insert them.
         If the collection does not exist, it will be created.
 
         Uses distributed Redis locking to prevent race conditions across multiple instances.
-        Lock is reentrant - safe to call from within another lock context.
+        Lock is automatically reentrant - safe to call from within another locked context.
 
         Args:
             collection_name: Name of the collection
             items: List of items to upsert
-            already_locked: If True, assumes caller holds the lock and skips acquisition
 
         Note:
             Always uses wait=True when calling Qdrant to ensure data is committed to disk
@@ -309,10 +302,7 @@ class QdrantClient:
 
             return result
 
-        if already_locked:
-            return await _do_upsert()
-
-        # Acquire distributed lock for this specific collection (reentrant-safe)
+        # Always acquire lock - reentrancy is automatically handled by task-safe lock manager
         async with _collection_lock_manager.acquire_lock(collection_name) as lock:
             return await _do_upsert()
 
