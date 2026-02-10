@@ -204,6 +204,16 @@ export const sanitizeResponseContent = (content: string): string => {
 };
 
 export const processResponseContent = (content: string) => {
+	// Escape tildes in markdown links to prevent strikethrough rendering
+	// Match markdown links: [text](url) where either text or url contains tildes
+	content = content.replace(/\[([^\]]*)\]\(([^)]*)\)/g, (match, text, url) => {
+		if (text.includes('~')) {
+			const escapedText = text.replace(/~/g, '\\~');
+			return `[${escapedText}](${url})`;
+		}
+		return match;
+	});
+
 	return content.trim();
 };
 
