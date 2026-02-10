@@ -207,14 +207,9 @@ export const processResponseContent = (content: string) => {
 	// Escape tildes in markdown links to prevent strikethrough rendering
 	// Match markdown links: [text](url) where either text or url contains tildes
 	content = content.replace(/\[([^\]]*)\]\(([^)]*)\)/g, (match, text, url) => {
-		// Check if either text or url contains tildes that could cause strikethrough
-		if (text.includes('~') || url.includes('~')) {
-			// For URLs, replace tildes with URL-encoded version
-			const escapedUrl = url.replace(/~/g, '%7E');
-			// For text that looks like a file path or URL, wrap in backticks to prevent markdown parsing
-			// Or escape the tildes by using HTML entity or backslash
+		if (text.includes('~')) {
 			const escapedText = text.replace(/~/g, '\\~');
-			return `[${escapedText}](${escapedUrl})`;
+			return `[${escapedText}](${url})`;
 		}
 		return match;
 	});
