@@ -395,6 +395,7 @@
 
 		deleteModelTag = '';
 		models.set(await getModels(localStorage.token));
+		await init();
 	};
 
 	const cancelModelPullHandler = async (model: string) => {
