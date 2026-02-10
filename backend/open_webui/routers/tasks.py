@@ -170,7 +170,7 @@ async def generate_title(
         },
     )
 
-    prompt = f"{content}\n\n" 'Return ONLY the title as plain text: "<emoji> <title>"'
+    prompt = f"{content}\n\nReturn ONLY the title as plain text, formatted as EMOJI + space + TITLE (e.g. 😄 Short Title)"
 
     # Check if model is Gemini 2.5 Flash to disable thinking
     # According to Google's official docs: https://ai.google.dev/gemini-api/docs/openai#thinking
