@@ -3882,6 +3882,19 @@ async def cleanup_expired_chats_streaming(
             log.error(f"Error getting knowledge base files: {e}")
             kb_referenced_files = set()
 
+        # Get all file references once at the start for efficiency
+        # We'll subtract file IDs from deleted chats as we process batches
+        all_file_refs = set()
+        try:
+            all_file_refs = get_all_file_references_from_chats()
+            log.info(
+                f"Found {len(all_file_refs)} total file references across all chats"
+            )
+        except Exception as e:
+            error_msg = f"Error getting initial file references: {e}"
+            log.error(error_msg)
+            cleanup_summary["errors"].append(error_msg)
+
         # Process chats in streaming batches
         BATCH_SIZE = CHAT_CLEANUP_BATCH_SIZE  # Configurable via environment variable
         total_processed = 0
@@ -3926,17 +3939,9 @@ async def cleanup_expired_chats_streaming(
                     log.error(error_msg)
                     cleanup_summary["errors"].append(error_msg)
 
-            # Get all file references EXCEPT the chats we're about to delete
-            all_file_refs = set()
-            try:
-                all_file_refs = get_all_file_references_from_chats(
-                    exclude_chat_ids=chat_ids_to_delete
-                )
-            except Exception as e:
-                error_msg = f"Error getting file references: {e}"
-                log.error(error_msg)
-                cleanup_summary["errors"].append(error_msg)
-                # Continue without file cleanup for this batch to avoid data loss
+            # Remove file IDs from the chats we're about to delete from our tracking set
+            # This maintains accurate file reference counts without re-scanning the DB
+            all_file_refs.difference_update(file_ids_to_cleanup)
 
             # Clean up files for this batch using helper function
             file_cleanup_result = await cleanup_orphaned_files(
