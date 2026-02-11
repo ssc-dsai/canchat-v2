@@ -80,8 +80,10 @@ async def automated_chat_cleanup():
 
 async def automated_user_pool_cleanup():
     """
-    Automated user pool cleanup job that clears all Redis user sessions at midnight.
-    This prevents the USER_POOL from growing forever with stale sessions.
+    Automated user pool cleanup job that removes stale user sessions at midnight.
+    Only removes users from USER_POOL if they don't have active sessions in SESSION_POOL.
+    This prevents the USER_POOL from growing forever with stale sessions while
+    maintaining consistency between USER_POOL and SESSION_POOL.
     """
     try:
         if WEBSOCKET_MANAGER != "redis":
@@ -94,16 +96,36 @@ async def automated_user_pool_cleanup():
         from open_webui.socket.utils import RedisDict
 
         try:
-            # Clear the user pool
             USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-            user_count = len(USER_POOL.keys())
-            USER_POOL.clear()
+            SESSION_POOL = RedisDict(
+                "open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL
+            )
+
+            # Get all active session IDs
+            active_session_ids = set(SESSION_POOL.keys())
+
+            # Remove users whose session IDs are not in SESSION_POOL
+            stale_users = []
+            for user_id in list(USER_POOL.keys()):
+                session_ids = USER_POOL[user_id]
+                # Filter out stale session IDs
+                valid_session_ids = [
+                    sid for sid in session_ids if sid in active_session_ids
+                ]
+
+                if len(valid_session_ids) == 0:
+                    # No valid sessions for this user, remove from USER_POOL
+                    stale_users.append(user_id)
+                    del USER_POOL[user_id]
+                elif len(valid_session_ids) < len(session_ids):
+                    # Some sessions are stale, update with only valid ones
+                    USER_POOL[user_id] = valid_session_ids
 
             log.info(
-                f"Automated user pool cleanup completed: cleared {user_count} users"
+                f"Automated user pool cleanup completed: removed {len(stale_users)} users with stale sessions"
             )
         except Exception as e:
-            log.error(f"Failed to clear user pool from Redis: {str(e)}")
+            log.error(f"Failed to clean up user pool from Redis: {str(e)}")
 
     except Exception as e:
         log.error(f"Automated user pool cleanup failed: {str(e)}")
