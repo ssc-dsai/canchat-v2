@@ -98,7 +98,7 @@ async def automated_user_pool_cleanup():
         try:
             USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
             SESSION_POOL = RedisDict(
-                "open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL
+                "open-webui: session_pool", redis_url=WEBSOCKET_REDIS_URL
             )
 
             # Get all active session IDs
