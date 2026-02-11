@@ -42,7 +42,7 @@ jobs:
             const title = (pr.title || '').trim();
             const body = pr.body || '';
             const baseRef = pr.base.ref;
-            // PR files are needed to verify CHANGELOG.md declaration accuracy.
+            // PR files are needed to verify CHANGELOG.md declaration accuracy
             const files = await github.paginate(github.rest.pulls.listFiles, {
               owner,
               repo,
