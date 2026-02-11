@@ -120,9 +120,12 @@ class FunctionsTable:
 
     async def get_functions(self, active_only: bool = False) -> list[FunctionModel]:
         async with get_async_db() as db:
-            functions = await db.scalars(
-                select(Function).where(Function.is_active == active_only)
-            )
+            query = select(Function)
+            if active_only:
+                query = query.where(Function.is_active == True)
+
+            functions = await db.scalars(query)
+
             return [
                 FunctionModel.model_validate(function) for function in functions.all()
             ]
@@ -131,11 +134,11 @@ class FunctionsTable:
         self, type: str, active_only: bool = False
     ) -> list[FunctionModel]:
         async with get_async_db() as db:
-            functions = await db.scalars(
-                select(Function).where(
-                    Function.type == type, Function.is_active == active_only
-                )
-            )
+            query = select(Function).where(Function.type == type)
+            if active_only:
+                query = query.where(Function.is_active == True)
+
+            functions = await db.scalars(query)
             return [
                 FunctionModel.model_validate(function) for function in functions.all()
             ]
