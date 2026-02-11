@@ -342,9 +342,9 @@ async def get_filtered_models(models, user):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("models", []):
-        model_info = Models.get_model_by_id(model["model"])
+        model_info = await Models.get_model_by_id(model["model"])
         if model_info:
-            if user.id == model_info.user_id or has_access(
+            if user.id == model_info.user_id or await has_access(
                 user.id, type="read", access_control=model_info.access_control
             ):
                 filtered_models.append(model)
@@ -988,7 +988,7 @@ async def generate_chat_completion(
         del payload["metadata"]
 
     model_id = payload["model"]
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
 
     if model_info:
         if model_info.base_model_id:
@@ -1009,7 +1009,7 @@ async def generate_chat_completion(
         if not bypass_filter and user.role == "user":
             if not (
                 user.id == model_info.user_id
-                or has_access(
+                or await has_access(
                     user.id, type="read", access_control=model_info.access_control
                 )
             ):
@@ -1098,7 +1098,7 @@ async def generate_openai_completion(
     if ":" not in model_id:
         model_id = f"{model_id}:latest"
 
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -1111,7 +1111,7 @@ async def generate_openai_completion(
         if user.role == "user":
             if not (
                 user.id == model_info.user_id
-                or has_access(
+                or await has_access(
                     user.id, type="read", access_control=model_info.access_control
                 )
             ):
@@ -1173,7 +1173,7 @@ async def generate_openai_chat_completion(
     if ":" not in model_id:
         model_id = f"{model_id}:latest"
 
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -1188,7 +1188,7 @@ async def generate_openai_chat_completion(
         if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
             if not (
                 user.id == model_info.user_id
-                or has_access(
+                or await has_access(
                     user.id, type="read", access_control=model_info.access_control
                 )
             ):
@@ -1281,9 +1281,9 @@ async def get_openai_models(
         # Filter models based on user access control
         filtered_models = []
         for model in models:
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = await Models.get_model_by_id(model["id"])
             if model_info:
-                if user.id == model_info.user_id or has_access(
+                if user.id == model_info.user_id or await has_access(
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)

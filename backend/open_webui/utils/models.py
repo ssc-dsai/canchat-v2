@@ -99,14 +99,16 @@ async def get_all_models(request):
         models = models + arena_models
 
     global_action_ids = [
-        function.id for function in Functions.get_global_action_functions()
+        function.id for function in await Functions.get_global_action_functions()
     ]
     enabled_action_ids = [
         function.id
-        for function in Functions.get_functions_by_type("action", active_only=True)
+        for function in await Functions.get_functions_by_type(
+            "action", active_only=True
+        )
     ]
 
-    custom_models = Models.get_all_models()
+    custom_models = await Models.get_all_models()
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             for model in models:
@@ -190,11 +192,11 @@ async def get_all_models(request):
                 }
             ]
 
-    def get_function_module_by_id(function_id):
+    async def get_function_module_by_id(function_id):
         if function_id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[function_id]
         else:
-            function_module, _, _ = load_function_module_by_id(function_id)
+            function_module, _, _ = await load_function_module_by_id(function_id)
             request.app.state.FUNCTIONS[function_id] = function_module
 
     for model in models:
@@ -206,11 +208,11 @@ async def get_all_models(request):
 
         model["actions"] = []
         for action_id in action_ids:
-            action_function = Functions.get_function_by_id(action_id)
+            action_function = await Functions.get_function_by_id(action_id)
             if action_function is None:
                 raise Exception(f"Action not found: {action_id}")
 
-            function_module = get_function_module_by_id(action_id)
+            function_module = await get_function_module_by_id(action_id)
             model["actions"].extend(
                 get_action_items_from_module(action_function, function_module)
             )
@@ -220,9 +222,9 @@ async def get_all_models(request):
     return models
 
 
-def check_model_access(user, model):
+async def check_model_access(user, model):
     if model.get("arena"):
-        if not has_access(
+        if not await has_access(
             user.id,
             type="read",
             access_control=model.get("info", {})
@@ -231,12 +233,12 @@ def check_model_access(user, model):
         ):
             raise Exception("Model not found")
     else:
-        model_info = Models.get_model_by_id(model.get("id"))
+        model_info = await Models.get_model_by_id(model.get("id"))
         if not model_info:
             raise Exception("Model not found")
         elif not (
             user.id == model_info.user_id
-            or has_access(
+            or await has_access(
                 user.id, type="read", access_control=model_info.access_control
             )
         ):

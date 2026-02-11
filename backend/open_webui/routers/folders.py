@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 from pydantic import BaseModel
 
 
@@ -33,7 +32,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[FolderModel])
 async def get_folders(user=Depends(get_verified_user)):
-    folders = Folders.get_folders_by_user_id(user.id)
+    folders = await Folders.get_folders_by_user_id(user.id)
 
     return [
         {
@@ -41,7 +40,7 @@ async def get_folders(user=Depends(get_verified_user)):
             "items": {
                 "chats": [
                     {"title": chat.title, "id": chat.id}
-                    for chat in Chats.get_chats_by_folder_id_and_user_id(
+                    for chat in await Chats.get_chats_by_folder_id_and_user_id(
                         folder.id, user.id
                     )
                 ]
@@ -57,8 +56,8 @@ async def get_folders(user=Depends(get_verified_user)):
 
 
 @router.post("/")
-def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
-    folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+async def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
+    folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
         None, user.id, form_data.name
     )
 
@@ -69,7 +68,7 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
         )
 
     try:
-        folder = Folders.insert_new_folder(user.id, form_data.name)
+        folder = await Folders.insert_new_folder(user.id, form_data.name)
         return folder
     except Exception as e:
         log.exception(e)
@@ -85,9 +84,9 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/{id}", response_model=Optional[FolderModel])
+@router.get("/{id}", response_model=FolderModel | None)
 async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         return folder
     else:
@@ -106,9 +105,9 @@ async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
 async def update_folder_name_by_id(
     id: str, form_data: FolderForm, user=Depends(get_verified_user)
 ):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+        existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
             folder.parent_id, user.id, form_data.name
         )
         if existing_folder:
@@ -118,7 +117,7 @@ async def update_folder_name_by_id(
             )
 
         try:
-            folder = Folders.update_folder_name_by_id_and_user_id(
+            folder = await Folders.update_folder_name_by_id_and_user_id(
                 id, user.id, form_data.name
             )
 
@@ -143,16 +142,16 @@ async def update_folder_name_by_id(
 
 
 class FolderParentIdForm(BaseModel):
-    parent_id: Optional[str] = None
+    parent_id: str | None = None
 
 
 @router.post("/{id}/update/parent")
 async def update_folder_parent_id_by_id(
     id: str, form_data: FolderParentIdForm, user=Depends(get_verified_user)
 ):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+        existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
             form_data.parent_id, user.id, folder.name
         )
 
@@ -163,7 +162,7 @@ async def update_folder_parent_id_by_id(
             )
 
         try:
-            folder = Folders.update_folder_parent_id_by_id_and_user_id(
+            folder = await Folders.update_folder_parent_id_by_id_and_user_id(
                 id, user.id, form_data.parent_id
             )
             return folder
@@ -194,10 +193,10 @@ class FolderIsExpandedForm(BaseModel):
 async def update_folder_is_expanded_by_id(
     id: str, form_data: FolderIsExpandedForm, user=Depends(get_verified_user)
 ):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            folder = Folders.update_folder_is_expanded_by_id_and_user_id(
+            folder = await Folders.update_folder_is_expanded_by_id_and_user_id(
                 id, user.id, form_data.is_expanded
             )
             return folder
@@ -222,10 +221,10 @@ async def update_folder_is_expanded_by_id(
 
 @router.delete("/{id}")
 async def delete_folder_by_id(id: str, user=Depends(get_verified_user)):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            result = Folders.delete_folder_by_id_and_user_id(id, user.id)
+            result = await Folders.delete_folder_by_id_and_user_id(id, user.id)
             if result:
                 return result
             else:

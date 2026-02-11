@@ -2,7 +2,8 @@ from typing import Optional
 
 from open_webui.models.base import Base
 from pydantic import BaseModel
-from sqlalchemy import Boolean, Column, String, Text
+from sqlalchemy import Boolean, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 ####################
 # DB MODEL
@@ -12,10 +13,10 @@ from sqlalchemy import Boolean, Column, String, Text
 class Auth(Base):
     __tablename__ = "auth"
 
-    id = Column(String, primary_key=True)
-    email = Column(String)
-    password = Column(Text)
-    active = Column(Boolean)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    email: Mapped[str] = mapped_column(String)
+    password: Mapped[str] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean)
 
 
 class AuthModel(BaseModel):

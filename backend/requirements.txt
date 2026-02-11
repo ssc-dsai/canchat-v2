@@ -18,12 +18,14 @@ aiofiles==25.1.0
 # PDF processing libraries for SharePoint document parsing
 pdfplumber==0.11.4
 
-sqlalchemy==2.0.32
+sqlalchemy==2.0.46
 alembic==1.14.0
 peewee==3.17.8
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
 PyMySQL==1.1.1
+asyncpg==0.31.0
+aiosqlite==0.21.0
 bcrypt==4.2.0
 
 pymongo==4.16.0

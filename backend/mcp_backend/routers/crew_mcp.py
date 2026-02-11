@@ -165,7 +165,7 @@ Respond with just the title, no quotes or formatting."""
     if title_res and len(title_res.get("choices", [])) == 1:
         title = title_res["choices"][0]["message"]["content"].strip()
         if title:
-            Chats.update_chat_title_by_id(request.chat_id, title)
+            _ = await Chats.update_chat_title_by_id(request.chat_id, title)
             return title
 
     return None
@@ -207,7 +207,7 @@ Assistant: {result[:1000]}..."""
                 tags_json = json.loads(json_match.group())
                 tags = tags_json.get("tags", [])
                 if isinstance(tags, list) and tags:
-                    Chats.update_chat_tags_by_id(request.chat_id, tags, user)
+                    _ = await Chats.update_chat_tags_by_id(request.chat_id, tags, user)
                     return tags
             except json.JSONDecodeError:
                 pass
