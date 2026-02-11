@@ -165,10 +165,8 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
 
     async def get_filter_function_ids(model):
 
-        functions = await Functions.get_global_filter_functions()
-        # Sort by priority
-        functions.sort(key=lambda f: (f.valves if f.valves else {}).get("priority", 0))
-
+        # Get filter functions sorted by valve priority.
+        functions = await Functions.get_global_filter_functions(sorted=True)
         filter_ids = [function.id for function in functions]
         if "info" in model and "meta" in model["info"]:
             filter_ids.extend(model["info"]["meta"].get("filterIds", []))

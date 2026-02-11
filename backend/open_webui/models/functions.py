@@ -45,7 +45,7 @@ class FunctionModel(BaseModel):
     type: str
     content: str
     meta: FunctionMeta
-    valves: dict
+
     is_active: bool = False
     is_global: bool = False
     updated_at: int  # timestamp in epoch
@@ -86,17 +86,16 @@ class FunctionsTable:
     async def insert_new_function(
         self, user_id: str, type: str, form_data: FunctionForm
     ) -> FunctionModel | None:
-        function = FunctionModel(
-            **{
-                **form_data.model_dump(),
-                "user_id": user_id,
-                "type": type,
-                "updated_at": int(time.time()),
-                "created_at": int(time.time()),
-            }
-        )
-
         try:
+            function = FunctionModel(
+                **{
+                    **form_data.model_dump(),
+                    "user_id": user_id,
+                    "type": type,
+                    "updated_at": int(time.time()),
+                    "created_at": int(time.time()),
+                }
+            )
             async with get_async_db() as db:
                 result = Function(**function.model_dump())
                 db.add(result)
@@ -141,7 +140,9 @@ class FunctionsTable:
                 FunctionModel.model_validate(function) for function in functions.all()
             ]
 
-    async def get_global_filter_functions(self) -> list[FunctionModel]:
+    async def get_global_filter_functions(
+        self, sorted: bool = False
+    ) -> list[FunctionModel]:
         async with get_async_db() as db:
             functions = await db.scalars(
                 select(Function).where(
@@ -150,11 +151,20 @@ class FunctionsTable:
                     Function.is_global == True,
                 )
             )
-            return [
-                FunctionModel.model_validate(function) for function in functions.all()
-            ]
 
-    async def get_global_action_functions(self) -> list[FunctionModel]:
+            if sorted:
+                f = [function for function in functions.all()]
+                f.sort(key=lambda f: (f.valves if f.valves else {}).get("priority", 0))
+                return [FunctionModel.model_validate(function) for function in f]
+            else:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in functions.all()
+                ]
+
+    async def get_global_action_functions(
+        self, sorted: bool = False
+    ) -> list[FunctionModel]:
         async with get_async_db() as db:
             functions = await db.scalars(
                 select(Function).where(
@@ -163,9 +173,16 @@ class FunctionsTable:
                     Function.is_global == True,
                 )
             )
-            return [
-                FunctionModel.model_validate(function) for function in functions.all()
-            ]
+
+            if sorted:
+                f = [function for function in functions.all()]
+                f.sort(key=lambda f: (f.valves if f.valves else {}).get("priority", 0))
+                return [FunctionModel.model_validate(function) for function in f]
+            else:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in functions.all()
+                ]
 
     async def get_function_valves_by_id(self, id: str) -> dict | None:
         async with get_async_db() as db:

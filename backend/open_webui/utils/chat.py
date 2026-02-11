@@ -190,9 +190,8 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         }
     )
 
-    functions = await Functions.get_global_filter_functions()
-    # Sort by priority
-    functions.sort(key=lambda f: (f.valves if f.valves else {}).get("priority", 0))
+    # Get filter functions sorted by valve priority.
+    functions = await Functions.get_global_filter_functions(sorted=True)
 
     filter_ids = [function.id for function in functions]
 
