@@ -17,7 +17,7 @@ If your issue or contribution pertains directly to the core Ollama technology, p
 
 ### 🚨 Reporting Issues
 
-Noticed something off? Have an idea? Check our [Issues tab](https://github.com/open-webui/open-webui/issues) to see if it's already been reported or suggested. If not, feel free to open a new issue. When reporting an issue, please follow our issue templates. These templates are designed to ensure that all necessary details are provided from the start, enabling us to address your concerns more efficiently.
+Noticed something off? Have an idea? Check our [Issues tab](https://github.com/ssc-dsai/canchat-v2/issues) to see if it's already been reported or suggested. If not, feel free to open a new issue. When reporting an issue, please follow our issue templates. These templates are designed to ensure that all necessary details are provided from the start, enabling us to address your concerns more efficiently.
 
 > [!IMPORTANT]
 >
@@ -38,13 +38,33 @@ Looking to contribute? Great! Here's how you can help:
 
 ### 🛠 Pull Requests
 
-We welcome pull requests. Before submitting one, please:
+We welcome pull requests, including from public contributors.
 
-1. Open a discussion regarding your ideas [here](https://github.com/open-webui/open-webui/discussions/new/choose).
-2. Follow the project's coding standards and include tests for new features.
-3. Update documentation as necessary.
-4. Write clear, descriptive commit messages.
-5. It's essential to complete your pull request in a timely manner. We move fast, and having PRs hang around too long is not feasible. If you can't get it done within a reasonable time frame, we may have to close it to keep the project moving forward.
+Before submitting one, please:
+
+1. Follow the PR template in `.github/pull_request_template.md`.
+2. Use a conventional PR title prefix: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `build`, `perf`, `style`, or `revert`.
+3. Target the `dev` branch unless a maintainer explicitly asks otherwise.
+4. Include tests you ran and their outcomes in the PR body.
+5. Complete the PR body changelog section (`Added`, `Changed`, `Fixed`, `Removed`, `Security`, `Breaking`), using `N/A` where applicable.
+6. Keep PRs moving. If a PR remains inactive for too long, maintainers may close it to keep delivery flow healthy.
+
+### ✅ PR Template Reminder Bot
+
+This repository runs a comment-only PR template validator.
+Reference: <https://docs.github.com/en/actions/reference/workflows-and-actions>
+
+- If required title/body fields are missing, the bot adds the label `needs-pr-template-fix` and leaves a checklist comment.
+- When everything is complete, the bot updates its comment and removes the label.
+- The check does not block merges directly; it is a governance signal for contributors and reviewers.
+
+### 👀 Reviewer Governance
+
+Reviewers should use the following rules:
+
+1. Do not approve PRs that have the `needs-pr-template-fix` label.
+2. Request template completion when required sections are missing or still contain placeholders.
+3. Do not require Jira ticket IDs for external/public contributions.
 
 ### 📚 Documentation & Tutorials
 
@@ -66,7 +86,7 @@ To add a new language:
 
 Got questions or feedback? Join our [Discord community](https://discord.gg/5rJgQTnV4s) or open an issue. We're here to help!
 
-## 🙏 Thank You!
+## 🙏 Thank You
 
 Your contributions, big or small, make a significant impact on CANChat. We're excited to see what you bring to the project!
 

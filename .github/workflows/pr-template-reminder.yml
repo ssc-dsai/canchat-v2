@@ -1,0 +1,210 @@
+name: PR Template Reminder
+
+on:
+  # Re-run validation whenever PR metadata/content changes.
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  # Read repo content and write PR comments/labels for guidance.
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  validate-pr-template:
+    name: Validate PR Template (comment-only)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate title and body
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = pr.number;
+            // Marker keeps this bot comment "sticky"
+            const marker = '<!-- pr-template-reminder -->';
+            // Required section from the PR template
+            const requiredHeadings = [
+              '## Summary',
+              '## Type of Change',
+              '## Target Branch',
+              '## Testing',
+              '## Changelog',
+              '## Dependencies / Config Changes',
+              '## Risk'
+            ];
+
+            const errors = [];
+            const title = (pr.title || '').trim();
+            const body = pr.body || '';
+            const baseRef = pr.base.ref;
+            // PR files are needed to verify CHANGELOG.md declaration accuracy.
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100
+            });
+            const changelogFileChanged = files.some((f) => f.filename === 'CHANGELOG.md');
+
+            // Enforce conventional PR title prefixes
+            const titleRegex = /^(feat|fix|docs|chore|refactor|test|ci|build|perf|style|revert)(\(.+\))?:\s.+/;
+            if (!titleRegex.test(title)) {
+              errors.push('PR title must use an allowed conventional prefix (e.g., `fix: ...`, `feat(ui): ...`).');
+            }
+
+            if (baseRef !== 'dev') {
+              errors.push(`PR base branch must be \'dev\' (current: \`${baseRef}\`).`);
+            }
+
+            for (const heading of requiredHeadings) {
+              if (!body.includes(heading)) {
+                errors.push(`Missing required section: \`${heading}\`.`);
+              }
+            }
+
+            const placeholderPatterns = [
+              /Describe the problem, what changed, and the expected impact\./i,
+              /`command`\s*->\s*`pass\|fail\|not run \(reason\)`/i,
+              /Any additional context that helps reviewers\./i,
+              /Use this template to keep reviews fast, clear, and consistent\./i,
+            ];
+            // Catch copy/pasted template placeholders that should be replaced.
+            for (const pattern of placeholderPatterns) {
+              if (pattern.test(body)) {
+                errors.push('Template placeholder text is still present; please replace with PR-specific content.');
+                break;
+              }
+            }
+
+            // Testing accountability
+            const testingSectionMatch = body.match(/## Testing([\s\S]*?)(\n## |$)/);
+            if (!testingSectionMatch) {
+              errors.push('Testing section is missing.');
+            } else {
+              const testingSection = testingSectionMatch[1];
+              const hasCommand = /`[^`]+`/.test(testingSection);
+              const hasOutcome = /\b(pass|fail|not run)\b/i.test(testingSection);
+              const wroteTestsChecked = /-\s*\[[xX]\]\s*I added or updated automated tests for this PR\./.test(testingSection);
+              const noNewTestsChecked = /-\s*\[[xX]\]\s*I did not add or update automated tests for this PR\./.test(testingSection);
+              const noNewTestsReasonMatch = testingSection.match(/I did not add or update automated tests for this PR\.\s*Reason:\s*(.+)/i);
+              const noNewTestsReason = noNewTestsReasonMatch ? noNewTestsReasonMatch[1].trim() : '';
+              const hasValidNoNewTestsReason = noNewTestsChecked && noNewTestsReason.length >= 8 && !/^<?\s*(required|n\/a|na|none)\s*>?$/i.test(noNewTestsReason);
+              const hasValidCommandEvidence = hasCommand && hasOutcome;
+
+              if (wroteTestsChecked === noNewTestsChecked) {
+                errors.push('Testing section must check exactly one declaration: either "I added or updated automated tests" or "I did not add or update automated tests".');
+              }
+
+              if (noNewTestsChecked && !hasValidNoNewTestsReason) {
+                errors.push('If no automated tests were added, include a meaningful reason after "Reason:".');
+              }
+
+              if (!hasValidCommandEvidence) {
+                errors.push('Testing section must include at least one command with an outcome (`pass`, `fail`, or `not run`).');
+              }
+            }
+
+            // Changelog accountability
+            const changelogSectionMatch = body.match(/## Changelog([\s\S]*?)(\n## |$)/);
+            if (!changelogSectionMatch) {
+              errors.push('Changelog section is missing.');
+            } else {
+              const changelogSection = changelogSectionMatch[1];
+              const changelogUpdatedChecked = /-\s*\[[xX]\]\s*I updated `CHANGELOG\.md` for this PR\./.test(changelogSection);
+              const changelogNotUpdatedChecked = /-\s*\[[xX]\]\s*I did not update `CHANGELOG\.md` for this PR\./.test(changelogSection);
+              const changelogReasonMatch = changelogSection.match(/I did not update `CHANGELOG\.md` for this PR\.\s*Reason:\s*(.+)/i);
+              const changelogReason = changelogReasonMatch ? changelogReasonMatch[1].trim() : '';
+              const hasValidChangelogReason = changelogNotUpdatedChecked && changelogReason.length >= 8 && !/^<?\s*(required|n\/a|na|none)\s*>?$/i.test(changelogReason);
+
+              if (changelogUpdatedChecked === changelogNotUpdatedChecked) {
+                errors.push('Changelog section must check exactly one declaration: either "I updated CHANGELOG.md" or "I did not update CHANGELOG.md".');
+              }
+
+              if (changelogUpdatedChecked && !changelogFileChanged) {
+                errors.push('Changelog section says `CHANGELOG.md` was updated, but this PR does not modify `CHANGELOG.md`.');
+              }
+
+              if (changelogNotUpdatedChecked && !hasValidChangelogReason) {
+                errors.push('If `CHANGELOG.md` was not updated, include a meaningful reason after "Reason:".');
+              }
+
+              if (changelogNotUpdatedChecked && changelogFileChanged) {
+                errors.push('Changelog section says `CHANGELOG.md` was not updated, but this PR modifies `CHANGELOG.md`.');
+              }
+            }
+
+            // Build comment once, then update a single sticky comment.
+            const warningBody = [
+              marker,
+              '## PR Template Reminder',
+              '',
+              'Please complete the PR template before requesting approval.',
+              '',
+              ...errors.map((e) => `- [ ] ${e}`),
+              '',
+              'When all items are addressed, this comment will be updated automatically and the label `needs-pr-template-fix` will be removed.'
+            ].join('\n');
+
+            const successBody = [
+              marker,
+              '## PR Template Reminder',
+              '',
+              'All PR template checks passed. Thanks for completing the template.'
+            ].join('\n');
+
+            // Find and update existing comment
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100
+            });
+
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+
+            const targetBody = errors.length > 0 ? warningBody : successBody;
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body: targetBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: targetBody
+              });
+            }
+
+            // Label PR is there are template errors
+            const label = 'needs-pr-template-fix';
+            const currentLabels = (pr.labels || []).map((l) => l.name);
+
+            if (errors.length > 0 && !currentLabels.includes(label)) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: [label]
+              });
+            }
+
+            if (errors.length === 0 && currentLabels.includes(label)) {
+              await github.rest.issues.removeLabel({
+                owner,
+                repo,
+                issue_number,
+                name: label
+              }).catch(() => {});
+            }
+
+            core.info(errors.length > 0 ? `PR template issues found: ${errors.length}` : 'PR template is complete.');
