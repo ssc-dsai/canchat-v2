@@ -2000,6 +2000,14 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
 
+# Maximum characters per document to prevent 413 Request Entity Too Large
+# Web search results can be massive HTML pages. Default: 8000 chars (~2000 tokens)
+RAG_WEB_SEARCH_MAX_DOC_CHARS = PersistentConfig(
+    "RAG_WEB_SEARCH_MAX_DOC_CHARS",
+    "rag.web.search.max_doc_chars",
+    int(os.getenv("RAG_WEB_SEARCH_MAX_DOC_CHARS", "8000")),
+)
+
 RAG_WEB_LOADER_ENGINE = PersistentConfig(
     "RAG_WEB_LOADER_ENGINE",
     "rag.web.loader.engine",

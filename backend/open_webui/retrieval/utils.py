@@ -515,7 +515,9 @@ async def get_sources_from_files(
                 if "metadatas" in context:
                     # Truncate each document to prevent 413 Request Entity Too Large
                     # Web search results can be massive HTML pages
-                    max_doc_chars = 8000  # ~2000 tokens per document
+                    from open_webui.config import RAG_WEB_SEARCH_MAX_DOC_CHARS
+
+                    max_doc_chars = RAG_WEB_SEARCH_MAX_DOC_CHARS.value
                     truncated_docs = []
                     for doc in context["documents"][0]:
                         if len(doc) > max_doc_chars:
