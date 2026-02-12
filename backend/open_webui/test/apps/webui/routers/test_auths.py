@@ -131,7 +131,7 @@ class TestAuths(AbstractPostgresTest):
         assert data["token_type"] == "Bearer"
 
     def test_add_user(self):
-        with mock_webui_user():
+        with mock_webui_user(role="admin"):
             response = self.fast_api_client.post(
                 self.create_url("/add"),
                 json={

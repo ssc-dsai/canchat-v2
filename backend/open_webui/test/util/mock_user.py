@@ -37,8 +37,6 @@ def mock_user(app: FastAPI, **kwargs):
 
     app.dependency_overrides = {
         get_current_user: create_user,
-        get_verified_user: create_user,
-        get_admin_user: create_user,
         get_current_user_by_api_key: create_user,
     }
     yield

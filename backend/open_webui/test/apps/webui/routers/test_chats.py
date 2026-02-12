@@ -57,7 +57,7 @@ class TestChats(AbstractPostgresTest):
         assert len(self.chats.get_chats()) == 0
 
     def test_get_user_chat_list_by_user_id(self):
-        with mock_webui_user(id="3"):
+        with mock_webui_user(id="3", role="admin"):
             response = self.fast_api_client.get(self.create_url("/list/user/2"))
         assert response.status_code == 200
         first_chat = response.json()[0]
@@ -112,7 +112,7 @@ class TestChats(AbstractPostgresTest):
         assert first_chat["updated_at"] is not None
 
     def test_get_all_user_chats_in_db(self):
-        with mock_webui_user(id="4"):
+        with mock_webui_user(id="4", role="admin"):
             response = self.fast_api_client.get(self.create_url("/all/db"))
         assert response.status_code == 200
         assert len(response.json()) == 1

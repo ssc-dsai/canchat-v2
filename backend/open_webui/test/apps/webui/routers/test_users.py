@@ -48,7 +48,7 @@ class TestUsers(AbstractPostgresTest):
 
     def test_users(self):
         # Get all users
-        with mock_webui_user(id="3"):
+        with mock_webui_user(id="3", role="admin"):
             response = self.fast_api_client.get(self.create_url(""))
         assert response.status_code == 200
         assert len(response.json()) == 2
@@ -64,7 +64,7 @@ class TestUsers(AbstractPostgresTest):
         assert user2["name"] == "user 2"
 
         # update role
-        with mock_webui_user(id="3"):
+        with mock_webui_user(id="3", role="admin"):
             response = self.fast_api_client.post(
                 self.create_url("/update/role"), json={"id": "2", "role": "admin"}
             )
@@ -74,7 +74,7 @@ class TestUsers(AbstractPostgresTest):
         assert user["role"] == "admin"
 
         # Get all users
-        with mock_webui_user(id="3"):
+        with mock_webui_user(id="3", role="admin"):
             response = self.fast_api_client.get(self.create_url(""))
         assert response.status_code == 200
         assert len(response.json()) == 2
@@ -154,7 +154,7 @@ class TestUsers(AbstractPostgresTest):
         assert response.status_code == 200
 
         # Get all users
-        with mock_webui_user(id="3"):
+        with mock_webui_user(id="3", role="admin"):
             response = self.fast_api_client.get(self.create_url(""))
         assert response.status_code == 200
         assert len(response.json()) == 2
@@ -168,12 +168,12 @@ class TestUsers(AbstractPostgresTest):
         assert user2["role"] == "admin"
 
         # Delete user by id
-        with mock_webui_user(id="1"):
+        with mock_webui_user(id="1", role="admin"):
             response = self.fast_api_client.delete(self.create_url("/2"))
         assert response.status_code == 200
 
         # Get all users
-        with mock_webui_user(id="3"):
+        with mock_webui_user(id="3", role="admin"):
             response = self.fast_api_client.get(self.create_url(""))
         assert response.status_code == 200
         assert len(response.json()) == 1
