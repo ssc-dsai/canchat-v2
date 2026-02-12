@@ -43,9 +43,9 @@ class TestAudio(AbstractPostgresTest):
             "1", "John Doe", "john.doe@openwebui.com", "/user.png", "user"
         )
 
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     # GET /config
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     def test_get_audio_config(self):
         with mock_webui_user(role="admin"):
             response = self.fast_api_client.get(self.create_url("/config"))
@@ -79,9 +79,9 @@ class TestAudio(AbstractPostgresTest):
             response = self.fast_api_client.get(self.create_url("/config"))
         assert response.status_code == 401
 
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     # POST /config/update
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     def test_update_audio_config(self):
         payload = {
             "tts": {
@@ -136,22 +136,22 @@ class TestAudio(AbstractPostgresTest):
     def test_update_audio_config_non_admin_forbidden(self):
         payload = {
             "tts": {
-                "OPENAI_API_BASE_URL": "http://x",
-                "OPENAI_API_KEY": "x",
-                "API_KEY": "x",
-                "ENGINE": "openai",
-                "MODEL": "tts-1",
-                "VOICE": "alloy",
-                "SPLIT_ON": "punctuation",
-                "AZURE_SPEECH_REGION": "",
-                "AZURE_SPEECH_OUTPUT_FORMAT": "",
+                "OPENAI_API_BASE_URL": "http://new-tts-url/v1",
+                "OPENAI_API_KEY": "new-tts-key",
+                "API_KEY": "new-api-key",
+                "ENGINE": "elevenlabs",
+                "MODEL": "eleven_multilingual_v2",
+                "VOICE": "EXAVITQu4vr4xnSDxMaL",
+                "SPLIT_ON": "sentence",
+                "AZURE_SPEECH_REGION": "westus",
+                "AZURE_SPEECH_OUTPUT_FORMAT": "audio-24khz-160kbitrate-mono-mp3",
             },
             "stt": {
-                "OPENAI_API_BASE_URL": "http://x",
-                "OPENAI_API_KEY": "x",
+                "OPENAI_API_BASE_URL": "http://new-stt-url/v1",
+                "OPENAI_API_KEY": "new-stt-key",
                 "ENGINE": "openai",
                 "MODEL": "whisper-1",
-                "WHISPER_MODEL": "base",
+                "WHISPER_MODEL": "large",
             },
         }
         with mock_webui_user(role="user"):
@@ -169,9 +169,9 @@ class TestAudio(AbstractPostgresTest):
             )
         assert response.status_code == 422
 
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     # POST /transcriptions
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     def test_transcription_unsupported_content_type(self):
         """Uploading a file with an unsupported content type should return 400."""
         file = io.BytesIO(b"not audio data")
@@ -278,9 +278,9 @@ class TestAudio(AbstractPostgresTest):
             )
         assert response.status_code == 400
 
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     # GET /models
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     def test_get_models_openai_engine(self):
         self.app.state.config.TTS_ENGINE = "openai"
         with mock_webui_user():
@@ -318,9 +318,9 @@ class TestAudio(AbstractPostgresTest):
         assert models[0]["id"] == "model-a"
         assert models[1]["name"] == "Model B"
 
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     # GET /voices
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     def test_get_voices_openai_engine(self):
         self.app.state.config.TTS_ENGINE = "openai"
         with mock_webui_user():
@@ -380,9 +380,9 @@ class TestAudio(AbstractPostgresTest):
         assert "en-US-Guy24kRUS" in voice_ids
         assert "en-US-Aria24kRUS" in voice_ids
 
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     # POST /speech
-    # ------------------------------------------------------------------ #
+    # ------------------------------------------------------------------
     @patch("aiohttp.ClientSession")
     def test_speech_openai_engine(self, mock_session_cls):
         """Test TTS with the openai engine — mock the external HTTP call."""
