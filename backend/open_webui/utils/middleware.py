@@ -636,7 +636,7 @@ async def chat_web_search_handler(
                 },
             }
         )
-        return
+        return form_data
 
     all_results = []
 
