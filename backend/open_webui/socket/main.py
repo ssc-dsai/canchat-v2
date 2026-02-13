@@ -216,7 +216,7 @@ async def crew_mcp_query(sid, data):
             return
 
         log.info(
-            f"CrewMCP WebSocket query from user {user_session. get('id')}: {query[: 100]}"
+            f"CrewMCP WebSocket query from user {user_session.get('id')}: {query[: 100]}"
         )
 
         # Emit processing status
@@ -250,8 +250,16 @@ async def crew_mcp_query(sid, data):
             )
             return
 
-        # Get the Graph access token from session (stored during websocket connect)
-        user_access_token = user_session.get("graph_access_token")
+        # Get Token from SESSION_SERVICE since there are less chances it can be expired or missing.
+        from open_webui.session.session_service import SESSION_SERVICE
+
+        user_access_token: str
+        session = await SESSION_SERVICE.get_session(user_session.get("id"))
+        if session and (gat := session.graph_access_token):
+            user_access_token = gat.token
+        else:
+            # Get the Graph access token from session (stored during websocket connect)
+            user_access_token = user_session.get("graph_access_token")
 
         # **ENHANCED LOGGING**
         log.info(f"crew-mcp-query:  Checking for graph_access_token in session")
@@ -267,7 +275,7 @@ async def crew_mcp_query(sid, data):
             )
         else:
             log.warning(
-                f"crew-mcp-query: NO TOKEN FOUND in session.  Session has keys: {list(user_session. keys())}"
+                f"crew-mcp-query: NO TOKEN FOUND in session.  Session has keys: {list(user_session.keys())}"
             )
             log.warning(
                 f"crew-mcp-query: user_access_token value = {repr(user_access_token)}"

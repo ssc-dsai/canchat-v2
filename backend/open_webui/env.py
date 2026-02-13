@@ -94,6 +94,7 @@ log_sources = [
     "SCHEDULER",
     "WEBHOOK",
     "SOCKET",
+    "SESSION",
     "JIRA",
     "METRICS",
 ]

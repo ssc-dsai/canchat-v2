@@ -1,5 +1,5 @@
 import json
-import redis
+import redis.asyncio as redis
 import uuid
 
 
@@ -46,9 +46,9 @@ class RedisDict:
         self.name = name
         self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
 
-    def __setitem__(self, key, value):
+    async def __setitem__(self, key, value):
         serialized_value = json.dumps(value)
-        self.redis.hset(self.name, key, serialized_value)
+        await self.redis.hset(self.name, key, serialized_value)
 
     def __getitem__(self, key):
         value = self.redis.hget(self.name, key)

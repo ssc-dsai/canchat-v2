@@ -67,6 +67,10 @@ ignore-words-list = 'ans'
 
 [tool.pytest.ini_options]
 # Add the root of the project to the Python path to resolve imports like open_webui.app
-pythonpath = ["backend","backend/open_webui"]
-# Define the directory where pytest should look for tests
-testpaths = ["backend/open_webui/test"]
+minversion = "6.0"
+addopts = "-ra -q"
+pythonpath = "./backend"
+testpaths = [
+    "backend/test",
+    "backend/open_webui/test",
+]
