@@ -22,6 +22,8 @@ def search_google_pse(
         api_key (str): A Programmable Search Engine API key
         search_engine_id (str): A Programmable Search Engine ID
         query (str): The query to search for
+        count (int): Number of results to return
+        filter_list (Optional[list[str]]): Optional list of domains to filter
     """
     url = "https://www.googleapis.com/customsearch/v1"
 
@@ -33,13 +35,32 @@ def search_google_pse(
         "num": count,
     }
 
-    response = requests.request("GET", url, headers=headers, params=params)
-    response.raise_for_status()
+    try:
+        # Add timeout to prevent hanging on complex queries
+        log.info(f"Google PSE query: {query}")
+        response = requests.get(url, headers=headers, params=params, timeout=15)
+        log.info(f"Google PSE response status: {response.status_code}")
+        response.raise_for_status()
+    except requests.exceptions.Timeout:
+        log.error(f"Google PSE TIMEOUT after 15s for query: {query}")
+        raise
+    except requests.exceptions.RequestException as e:
+        log.error(f"Google PSE request failed: {e}")
+        # Try to log the actual error from Google
+        try:
+            if hasattr(e, "response") and e.response is not None:
+                error_data = e.response.json()
+                log.error(f"Google PSE error details: {error_data}")
+        except:
+            pass
+        raise
 
     json_response = response.json()
     results = json_response.get("items", [])
+
     if filter_list:
         results = get_filtered_results(results, filter_list)
+
     return [
         SearchResult(
             link=result["link"],

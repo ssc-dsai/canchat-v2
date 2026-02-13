@@ -2,6 +2,7 @@ import socket
 import urllib.parse
 import validators
 from typing import Union, Sequence, Iterator
+import requests
 
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.documents import Document
@@ -53,7 +54,35 @@ def resolve_hostname(hostname):
 
 
 class SafeWebBaseLoader(WebBaseLoader):
-    """WebBaseLoader with enhanced error handling for URLs."""
+    """WebBaseLoader with enhanced error handling and timeouts for URLs."""
+
+    def _scrape(self, url: str, parser: str = None, bs_kwargs: dict = None):
+        """Scrape a URL with timeout handling."""
+        from bs4 import BeautifulSoup
+        import time
+
+        start = time.time()
+        try:
+            # Override to add timeout to prevent hanging
+            html_doc = self.session.get(url, timeout=15)
+            elapsed = time.time() - start
+            content_length = len(html_doc.content) if html_doc.content else 0
+            log.info(
+                f"Fetched {url} in {elapsed:.2f}s ({content_length} bytes, status={html_doc.status_code})"
+            )
+            html_doc.raise_for_status()
+        except requests.exceptions.Timeout:
+            elapsed = time.time() - start
+            log.error(f"Timeout fetching {url} after {elapsed:.2f} seconds")
+            raise
+        except Exception as e:
+            elapsed = time.time() - start
+            log.error(f"Error fetching {url} after {elapsed:.2f}s: {e}")
+            raise
+
+        return BeautifulSoup(
+            html_doc.text, parser or self.default_parser, **(bs_kwargs or {})
+        )
 
     def lazy_load(self) -> Iterator[Document]:
         """Lazy load text from the url(s) in web_path with error handling."""
@@ -74,6 +103,8 @@ class SafeWebBaseLoader(WebBaseLoader):
                     metadata["language"] = html.get("lang", "No language found.")
 
                 yield Document(page_content=text, metadata=metadata)
+            except requests.exceptions.Timeout:
+                log.error(f"Timeout loading content from {path}")
             except Exception as e:
                 # Log the error and continue with the next URL
                 log.error(f"Error loading {path}: {e}")
