@@ -1,6 +1,41 @@
+import asyncio
 import json
+import logging
 import redis
 import uuid
+
+log = logging.getLogger(__name__)
+
+
+async def renew_lock_periodically(
+    lock, renewal_interval_secs: int = 300, lock_name: str = "lock"
+):
+    """
+    Periodically renew a Redis lock to keep it alive during long-running operations.
+
+    Args:
+        lock: RedisLock instance to renew
+        renewal_interval_secs: Interval in seconds between renewal attempts (default: 300 = 5 minutes)
+        lock_name: Name of the lock for logging purposes
+
+    This function runs in a loop until the lock is no longer held or renewal fails.
+    It should be run as an asyncio task and cancelled when the operation completes.
+    """
+    try:
+        while True:
+            await asyncio.sleep(renewal_interval_secs)
+            if lock and lock.lock_obtained:
+                renewed = lock.renew_lock()
+                if renewed:
+                    log.debug(f"Renewed {lock_name}")
+                else:
+                    log.warning(f"Failed to renew {lock_name}")
+                    break
+    except asyncio.CancelledError:
+        log.debug(f"Lock renewal task for {lock_name} cancelled")
+        raise
+    except Exception as e:
+        log.error(f"Error in lock renewal task for {lock_name}: {e}")
 
 
 class RedisLock:
@@ -24,10 +59,16 @@ class RedisLock:
 
     def renew_lock(self):
         try:
-            # xx=True will only set this key if it _has_ already been set
-            return self.redis.set(
-                self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs
-            )
+            # Use GETEX to atomically verify ownership and renew in a single operation
+            # This prevents race conditions where another replica could acquire the lock
+            # between our check and renewal
+            lock_value = self.redis.getex(self.lock_name, ex=self.timeout_secs)
+            if lock_value and lock_value == self.lock_id:
+                # We own the lock and it was renewed atomically
+                return True
+            else:
+                # We don't own this lock, cannot renew
+                return False
         except Exception as e:
             print(f"Error renewing Redis lock: {e}")
             return False
