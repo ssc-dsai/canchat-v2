@@ -1950,6 +1950,9 @@
 		: ' '} w-full max-w-full flex flex-col"
 	id="chat-container"
 >
+	<h1 class="sr-only">
+		{$chatTitle ? `${$i18n.t('Chat')}: ${$chatTitle}` : $i18n.t('New Chat')}
+	</h1>
 	{#if !chatIdProp || (loaded && chatIdProp)}
 		<Navbar
 			bind:this={navbarElement}
