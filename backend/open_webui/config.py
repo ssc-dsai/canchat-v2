@@ -1991,6 +1991,12 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
 
+RAG_WEB_SEARCH_REQUEST_TIMEOUT = PersistentConfig(
+    "RAG_WEB_SEARCH_REQUEST_TIMEOUT",
+    "rag.web.search.request_timeout",
+    int(os.getenv("RAG_WEB_SEARCH_REQUEST_TIMEOUT", "15")),
+)
+
 RAG_WEB_LOADER_ENGINE = PersistentConfig(
     "RAG_WEB_LOADER_ENGINE",
     "rag.web.loader.engine",
