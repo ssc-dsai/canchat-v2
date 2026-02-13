@@ -1,36 +1,29 @@
 """
-Distributed Locking for Vector Database Operations
+Distributed Locking for Vector Database Operations.
 
 This module provides distributed locks using Redis to prevent race conditions
-during concurrent operations across multiple instances/processes.
+across concurrent operations in multiple workers/instances.
 
-Performance Characteristics:
-- Uses synchronous redis-py with run_in_executor for event-loop safety
-- Lua scripts registered once per lock instance (not per operation)
-- Heartbeat uses asyncio.Event for efficient signaling (no polling)
-
-Usage:
-    lock_manager = get_collection_lock_manager()
-
-    async with lock_manager.acquire_lock("collection-name") as lock:
-        # Critical section - only one instance can execute this at a time
-        pass
-
-Monitoring:
-    lock.get_metrics()  # Returns dict with acquire_attempts, heartbeat_extensions, etc.
+Design notes:
+- Uses native async redis-py (`redis.asyncio`) to avoid threadpool overhead.
+- Redis client lifecycle is event-loop aware to avoid cross-loop errors.
+- Lua scripts are registered per client instance and re-registered on reconnect.
+- Lock ownership is tracked per asyncio task for safe reentrancy.
 """
 
 import asyncio
+import inspect
 import logging
 import threading
 import time
 import uuid
 import weakref
-from functools import partial
-from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
+from enum import Enum
+from typing import Any, Dict, Optional
 
-import redis
+import redis.asyncio as redis
+from redis.exceptions import RedisError
 
 from open_webui.env import REDIS_URL, SRC_LOG_LEVELS
 
@@ -38,8 +31,26 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-# Lua script for atomic compare-and-delete
-# Returns 1 if lock was deleted, 0 if lock was not owned by us
+class CircuitState(Enum):
+    """Circuit breaker states for Redis health.
+
+    States:
+    - CLOSED: Redis is healthy and lock operations proceed normally.
+    - OPEN: Redis has experienced repeated failures (threshold reached); the circuit
+      is opened to fail-fast lock operations and avoid overloading Redis. Lock
+      calls should fail immediately until the recovery window elapses.
+    - HALF_OPEN: After the open period, the manager transitions to HALF_OPEN to
+      allow limited operations to test whether Redis has recovered. Successful
+      checks close the circuit; further failures reopen it.
+    """
+
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+
+# Lua script for atomic compare-and-delete.
+# Returns 1 if lock was deleted, 0 if lock was not owned by us.
 RELEASE_LOCK_LUA = """
 if redis.call("get", KEYS[1]) == ARGV[1] then
     return redis.call("del", KEYS[1])
@@ -48,8 +59,8 @@ else
 end
 """
 
-# Lua script for atomic compare-and-extend (for lease renewal)
-# Returns 1 if TTL was extended, 0 if lock was not owned by us
+# Lua script for atomic compare-and-extend (for lease renewal).
+# Returns 1 if TTL was extended, 0 if lock was not owned by us.
 EXTEND_LOCK_LUA = """
 if redis.call("get", KEYS[1]) == ARGV[1] then
     return redis.call("expire", KEYS[1], ARGV[2])
@@ -60,22 +71,9 @@ end
 
 
 class AsyncRedisLock:
-    """
-    Async Redis-based distributed lock with automatic expiration.
+    """Async Redis distributed lock with task-safe reentrancy and heartbeat renewal."""
 
-    Features:
-    - Distributed: Works across multiple processes and servers
-    - Async: Compatible with FastAPI's async/await
-    - Non-blocking: Uses run_in_executor to avoid blocking the event loop
-    - Resilient: Dynamically accesses manager's current client, survives Redis restarts
-    - Auto-expire: Prevents deadlocks if process crashes
-    - Task-safe reentrancy: Tracks ownership per asyncio task, not globally
-    - Atomic release: Uses Lua script to prevent releasing other processes' locks
-    - Lease renewal: Background task extends TTL for long-running operations
-    """
-
-    # Default heartbeat interval (extend TTL every N seconds)
-    HEARTBEAT_INTERVAL = 10.0  # seconds
+    HEARTBEAT_INTERVAL = 10.0  # seconds (upper bound)
 
     def __init__(
         self,
@@ -87,25 +85,21 @@ class AsyncRedisLock:
         self.lock_name = f"lock:collection:{lock_name}"
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
+        # Renew at least once before expiration for all TTL values.
+        self._heartbeat_interval = max(1.0, min(self.HEARTBEAT_INTERVAL, timeout_secs / 3))
 
         # Task-safe ownership tracking: {task_id: reentry_count}
-        # Each asyncio task gets its own entry
         self._owners: Dict[int, int] = {}
-        self._owners_lock = threading.Lock()  # Thread-safe access to _owners
+        self._owners_lock = threading.Lock()
 
         # Heartbeat task for renewal
         self._heartbeat_task: Optional[asyncio.Task] = None
-        self._heartbeat_stop: Optional[asyncio.Event] = (
-            None  # Created when loop available
-        )
+        self._heartbeat_stop: Optional[asyncio.Event] = None
 
-        # Track which client was used for script registration (for reconnection handling)
+        # Track which client was used for script registration.
         self._last_registered_client = None
         self._release_script = None
         self._extend_script = None
-
-        # Eagerly register scripts if manager has a client ready
-        self._ensure_scripts_registered()
 
         # Metrics for observability
         self._acquire_attempts = 0
@@ -118,16 +112,10 @@ class AsyncRedisLock:
         return self.manager.redis_client
 
     def _ensure_scripts_registered(self):
-        """
-        Register Lua scripts on the current client if it has changed.
-
-        This handles Redis reconnection scenarios where the manager creates
-        a new client instance. Cached lock objects will detect the change
-        and re-register their scripts on the new client.
-        """
+        """Register Lua scripts on the current client if it has changed."""
         current_client = self.redis_client
         if current_client is None:
-            return  # Manager hasn't initialized yet, will register on first operation
+            return
 
         if self._last_registered_client is not current_client:
             log.info(
@@ -139,23 +127,12 @@ class AsyncRedisLock:
             self._last_registered_client = current_client
             self._script_registration_time = time.time()
 
-    async def _run_in_executor(self, func, *args, **kwargs):
-        """Run a blocking function in the default executor.
-
-        Moves blocking redis-py (synchronous) calls off the asyncio
-        event loop into a threadpool so other coroutines remain
-        responsive. Uses `functools.partial` to support keyword args.
-        """
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, partial(func, *args, **kwargs))
-
     def _get_task_id(self) -> int:
         """Get unique identifier for current asyncio task."""
         try:
             task = asyncio.current_task()
             return id(task) if task else id(threading.current_thread())
         except RuntimeError:
-            # No event loop running
             return id(threading.current_thread())
 
     def _try_reentrant_acquire(self, task_id: Optional[int] = None) -> bool:
@@ -173,55 +150,44 @@ class AsyncRedisLock:
         return False
 
     async def _heartbeat_loop(self):
-        """
-        Background task that periodically extends the lock TTL.
-
-        This prevents lock expiration during long-running operations.
-        Uses asyncio.Event for efficient signaling (no polling).
-        """
+        """Background task that periodically extends the lock TTL."""
         try:
             while True:
                 try:
-                    # Wait for interval or stop signal using asyncio.Event
-                    # This is more efficient than polling with threading.Event
                     await asyncio.wait_for(
-                        self._heartbeat_stop.wait(), timeout=self.HEARTBEAT_INTERVAL
+                        self._heartbeat_stop.wait(), timeout=self._heartbeat_interval
                     )
-                    # If we reach here, stop was signaled
                     break
                 except asyncio.TimeoutError:
-                    # Timeout is expected - time to extend the lock
                     pass
 
-                # Extend the lock TTL using atomic Lua script (via executor)
                 try:
-                    # Ensure scripts are registered on current client (handles reconnection)
-                    await self._run_in_executor(self._ensure_scripts_registered)
+                    await self.manager._ensure_initialized()
+                    self._ensure_scripts_registered()
 
-                    result = await self._run_in_executor(
-                        self._extend_script,
-                        keys=[self.lock_name],
-                        args=[self.lock_id, self.timeout_secs],
+                    result = await self._extend_script(
+                        keys=[self.lock_name], args=[self.lock_id, self.timeout_secs]
                     )
 
                     if result == 0:
-                        # Lock was lost (expired or taken by someone else)
                         log.warning(
                             f"[LOCK:HEARTBEAT_LOST] Lock lost during heartbeat: {self.lock_name}. "
-                            f"Another process may have acquired it."
+                            "Another process may have acquired it."
                         )
-                        # Clear all owners since we lost the lock
                         with self._owners_lock:
                             self._owners.clear()
                         break
-                    else:
-                        self._heartbeat_extensions += 1
-                        log.debug(
-                            f"[LOCK:HEARTBEAT] Extended TTL for lock: {self.lock_name} "
-                            f"(total: {self._heartbeat_extensions})"
-                        )
+
+                    self._heartbeat_extensions += 1
+                    log.debug(
+                        f"[LOCK:HEARTBEAT] Extended TTL for lock: {self.lock_name} "
+                        f"(total: {self._heartbeat_extensions})"
+                    )
                 except Exception as e:
-                    # Log error but keep trying (transient Redis issues)
+                    if isinstance(e, RedisError):
+                        await self.manager._mark_client_unhealthy(
+                            e, f"heartbeat:{self.lock_name}"
+                        )
                     log.error(
                         f"[LOCK:HEARTBEAT_ERROR] Error extending lock TTL: {self.lock_name}, "
                         f"error={type(e).__name__}: {e}"
@@ -236,42 +202,30 @@ class AsyncRedisLock:
             )
 
     def _start_heartbeat(self):
-        """Start the background heartbeat task."""
+        """Start heartbeat: create Event and schedule the loop on the running loop."""
         if self._heartbeat_task is None or self._heartbeat_task.done():
             try:
+                # Bind Event/Task to the current loop; skip if none running.
                 loop = asyncio.get_running_loop()
-                # Create asyncio.Event for efficient async signaling
                 self._heartbeat_stop = asyncio.Event()
                 self._heartbeat_task = loop.create_task(self._heartbeat_loop())
             except RuntimeError:
-                # No running loop - heartbeat will be started when needed
                 pass
 
     def _stop_heartbeat(self):
-        """Stop the background heartbeat task."""
+        """Stop heartbeat: set stop Event (graceful) and cancel Task (fallback)."""
         if self._heartbeat_stop is not None and not self._heartbeat_stop.is_set():
+            # Signal graceful stop.
             self._heartbeat_stop.set()
         if self._heartbeat_task and not self._heartbeat_task.done():
+            # Fallback: cancel running task.
             self._heartbeat_task.cancel()
         self._heartbeat_task = None
 
     async def acquire(
         self, blocking: bool = True, timeout: Optional[float] = None
     ) -> bool:
-        """
-        Acquire the distributed lock.
-
-        Task-safe: Each asyncio task is tracked separately. If the same task
-        calls acquire() multiple times, it increments a reentry counter.
-        Different tasks block on the Redis lock.
-
-        Args:
-            blocking: If True, wait until lock is available
-            timeout: Maximum time to wait (None = wait forever)
-
-        Returns:
-            bool: True if lock acquired, False otherwise
-        """
+        """Acquire the distributed lock."""
         task_id = self._get_task_id()
         if self._try_reentrant_acquire(task_id):
             return True
@@ -285,19 +239,17 @@ class AsyncRedisLock:
         while True:
             attempt += 1
             self._acquire_attempts += 1
-            try:
-                # Ensure scripts are registered on current client (handles reconnection)
-                await self._run_in_executor(self._ensure_scripts_registered)
 
-                # Verify redis_client exists
+            try:
+                await self.manager._ensure_initialized()
+                self._ensure_scripts_registered()
+
                 client = self.redis_client
-                if not client:
+                if client is None:
                     log.error(f"Redis client is None for lock: {self.lock_name}")
                     return False
 
-                # Execute blocking Redis SET NX call in thread pool
-                acquired = await self._run_in_executor(
-                    self.redis_client.set,
+                acquired = await client.set(
                     self.lock_name,
                     self.lock_id,
                     nx=True,
@@ -308,11 +260,10 @@ class AsyncRedisLock:
                     with self._owners_lock:
                         self._owners[task_id] = 1
 
-                    # Start heartbeat for renewal
                     self._start_heartbeat()
 
                     elapsed = time.time() - start_time
-                    if elapsed > 1.0:  # Only log if took longer than 1 second
+                    if elapsed > 1.0:
                         log.info(
                             f"[LOCK:ACQUIRED] Lock acquired after {attempt} attempts "
                             f"({elapsed:.2f}s): {self.lock_name}, task={task_id}"
@@ -323,11 +274,9 @@ class AsyncRedisLock:
                         )
                     return True
 
-                # Lock not available
                 if not blocking:
                     return False
 
-                # Check timeout
                 if timeout is not None:
                     elapsed = time.time() - start_time
                     if elapsed >= timeout:
@@ -337,30 +286,21 @@ class AsyncRedisLock:
                         )
                         return False
 
-                # Wait before retrying
                 await asyncio.sleep(0.05)
 
             except Exception as e:
+                if isinstance(e, RedisError):
+                    await self.manager._mark_client_unhealthy(e, f"acquire:{self.lock_name}")
                 log.error(
                     f"Exception acquiring Redis lock {self.lock_name}: {type(e).__name__}: {e}"
                 )
                 return False
 
     async def release(self) -> bool:
-        """
-        Release the distributed lock.
-
-        Uses atomic Lua script to ensure we only delete the lock if we own it.
-        This prevents accidentally deleting a lock that expired and was acquired
-        by another process.
-
-        Returns:
-            bool: True if lock was released, False otherwise
-        """
+        """Release the distributed lock using atomic compare-and-delete Lua script."""
         task_id = self._get_task_id()
 
         with self._owners_lock:
-            # Check if this task owns the lock
             if task_id not in self._owners:
                 log.warning(
                     f"[LOCK:RELEASE_NOT_OWNER] Attempted to release lock not owned by this task: "
@@ -368,7 +308,6 @@ class AsyncRedisLock:
                 )
                 return False
 
-            # Handle reentrant unlocking
             if self._owners[task_id] > 1:
                 self._owners[task_id] -= 1
                 log.debug(
@@ -377,29 +316,24 @@ class AsyncRedisLock:
                 )
                 return True
 
-            # Last release - remove from owners
             del self._owners[task_id]
 
-        # Check if any other tasks still hold the lock
         with self._owners_lock:
             if self._owners:
-                # Other tasks still hold it - don't release Redis lock yet
                 log.debug(
                     f"[LOCK:RELEASE_PARTIAL] Lock still held by other tasks: {self.lock_name}, "
                     f"remaining_tasks={len(self._owners)}"
                 )
                 return True
 
-        # No more owners - stop heartbeat and release Redis lock
         self._stop_heartbeat()
 
         try:
-            # Ensure scripts are registered on current client (handles reconnection)
-            await self._run_in_executor(self._ensure_scripts_registered)
+            await self.manager._ensure_initialized()
+            self._ensure_scripts_registered()
 
-            # Use atomic Lua script for compare-and-delete (via executor)
-            result = await self._run_in_executor(
-                self._release_script, keys=[self.lock_name], args=[self.lock_id]
+            result = await self._release_script(
+                keys=[self.lock_name], args=[self.lock_id]
             )
 
             if result == 1:
@@ -407,15 +341,16 @@ class AsyncRedisLock:
                     f"[LOCK:RELEASED] Lock released: {self.lock_name}, task={task_id}"
                 )
                 return True
-            else:
-                # Lock expired or taken by someone else
-                log.warning(
-                    f"[LOCK:RELEASE_EXPIRED] Lock expired or owned by another process: "
-                    f"{self.lock_name}. This may indicate the operation took too long."
-                )
-                return False
+
+            log.warning(
+                f"[LOCK:RELEASE_EXPIRED] Lock expired or owned by another process: "
+                f"{self.lock_name}. This may indicate the operation took too long."
+            )
+            return False
 
         except Exception as e:
+            if isinstance(e, RedisError):
+                await self.manager._mark_client_unhealthy(e, f"release:{self.lock_name}")
             log.error(
                 f"Exception releasing Redis lock {self.lock_name}: {type(e).__name__}: {e}"
             )
@@ -433,30 +368,22 @@ class AsyncRedisLock:
             return len(self._owners)
 
     async def extend(self, additional_secs: Optional[int] = None) -> bool:
-        """
-        Manually extend the lock TTL.
-
-        Useful for operations that know they'll take a long time.
-
-        Args:
-            additional_secs: New TTL in seconds (default: self.timeout_secs)
-
-        Returns:
-            bool: True if TTL was extended, False if lock not owned
-        """
+        """Manually extend the lock TTL."""
         if not self.is_owned_by_current_task():
             return False
 
         try:
             ttl = additional_secs if additional_secs else self.timeout_secs
-            # Ensure scripts are registered on current client (handles reconnection)
-            await self._run_in_executor(self._ensure_scripts_registered)
+            await self.manager._ensure_initialized()
+            self._ensure_scripts_registered()
 
-            result = await self._run_in_executor(
-                self._extend_script, keys=[self.lock_name], args=[self.lock_id, ttl]
+            result = await self._extend_script(
+                keys=[self.lock_name], args=[self.lock_id, ttl]
             )
             return result == 1
         except Exception as e:
+            if isinstance(e, RedisError):
+                await self.manager._mark_client_unhealthy(e, f"extend:{self.lock_name}")
             log.error(f"Error extending lock TTL: {type(e).__name__}: {e}")
             return False
 
@@ -466,6 +393,7 @@ class AsyncRedisLock:
             "lock_name": self.lock_name,
             "lock_id": self.lock_id,
             "timeout_secs": self.timeout_secs,
+            "heartbeat_interval_secs": self._heartbeat_interval,
             "acquire_attempts": self._acquire_attempts,
             "heartbeat_extensions": self._heartbeat_extensions,
             "owner_count": self.get_owner_count(),
@@ -486,90 +414,240 @@ class AsyncRedisLock:
 
 
 class RedisCollectionLockManager:
-    """
-    Manages distributed locks for vector database collections using Redis.
+    """Singleton manager for distributed collection locks with Redis circuit breaker."""
 
-    Singleton pattern: Only ONE instance exists globally.
-
-    Features:
-    - Singleton: Enforced via __new__ (only one instance ever created)
-    - Single Redis connection: Reused across all operations
-    - Thread-safe initialization: Uses threading.Lock
-    - Lock caching: Reuses same lock instance per collection name to support nested locks
-      from the same task on the same collection. Uses WeakValueDictionary to avoid memory leaks.
-    - Connection Recovery: Automatically attempts to reconnect if Redis connectivity is lost.
-    """
-
-    _instance: Optional["RedisCollectionLockManager"] = None  # Singleton instance
-    _instance_lock: threading.Lock = threading.Lock()  # Thread-safe singleton creation
+    _instance: Optional["RedisCollectionLockManager"] = None
+    _instance_lock: threading.Lock = threading.Lock()
 
     def __new__(cls, redis_url: Optional[str] = None) -> "RedisCollectionLockManager":
-        """
-        Enforce singleton pattern: return same instance always.
-        """
+        """Enforce singleton pattern: return the same instance always."""
         if cls._instance is None:
             with cls._instance_lock:
-                # Double-check: another thread may have created it
                 if cls._instance is None:
                     instance: RedisCollectionLockManager = super().__new__(cls)
                     instance.redis_url = redis_url or REDIS_URL
+
+                    if not instance.redis_url:
+                        raise RuntimeError(
+                            "REDIS_URL environment variable is required for distributed locking. "
+                            "Please set REDIS_URL to your Redis connection string (e.g., redis://localhost:6379/0)"
+                        )
+
+                    if (
+                        "localhost" in instance.redis_url
+                        or "127.0.0.1" in instance.redis_url
+                    ):
+                        log.warning(
+                            f"[LOCK:SECURITY] Using default localhost Redis ({instance.redis_url}). "
+                            "For multi-instance deployments, ensure all instances share a central Redis."
+                        )
+
                     instance._initialized = False
                     instance.redis_client = None
+                    instance._redis_loop_id: Optional[int] = None
+                    instance._redis_loop: Optional[asyncio.AbstractEventLoop] = None
+                    # NOTE: threading.Lock is intentional; protected sections only
+                    # perform synchronous reference/state updates. Never add await
+                    # calls while holding this lock.
+                    instance._client_state_lock = threading.Lock()
 
-                    # Lock cache: Map collection_name -> AsyncRedisLock instance
-                    # Use WeakValueDictionary so we don't leak memory for unused locks
+                    # Lock cache: Map collection_name -> AsyncRedisLock.
                     instance._lock_cache = weakref.WeakValueDictionary()
                     instance._lock_cache_lock = threading.Lock()
 
-                    # Try initial connection
-                    instance._init_redis_client()
-
+                    instance._circuit_initialized = False
                     cls._instance = instance
 
         return cls._instance
 
-    def _init_redis_client(self):
-        """
-        Initialize the synchronous Redis client (called in new or recovery).
-        Can be run in executor for non-blocking recovery.
-        """
-        try:
-            import redis
-
-            self.redis_client = redis.from_url(
-                self.redis_url,
-                encoding="utf-8",
-                decode_responses=False,
-                socket_connect_timeout=5,
-                socket_keepalive=True,
-            )
-            self.redis_client.ping()
-            self._initialized = True
-            log.info(
-                f"[LOCK:INIT] Redis lock manager initialized successfully: "
-                f"url={self.redis_url}, mode=synchronous_wrapped"
-            )
-        except Exception as e:
-            log.error(
-                f"[LOCK:INIT_ERROR] Failed to initialize Redis lock manager: "
-                f"error={type(e).__name__}: {e}"
-            )
-            self._initialized = False
-
-    async def _ensure_initialized(self):
-        """Check that Redis client is initialized, attempt recovery if not key."""
-        if self._initialized and self.redis_client:
+    def __init__(self):
+        """Initialize circuit breaker state and metrics once."""
+        if getattr(self, "_circuit_initialized", False):
             return
 
+        self._circuit_initialized = True
+        self.circuit_state = CircuitState.CLOSED
+        self.circuit_open_time: Optional[float] = None
+        self.circuit_recovery_threshold = 30
+        self.consecutive_failures = 0
+        self.failure_threshold = 3
+
+        # Metrics
+        self.health_check_failures = 0
+        self.acquire_timeouts = 0
+        self.recovery_attempts = 0
+        self.successful_recoveries = 0
+
+    @staticmethod
+    async def _maybe_await(value):
+        """If `value` is awaitable, await and return its result; otherwise return it.
+
+        This helper lets callers accept either sync results or coroutines/futures
+        without duplicating sync/async branching.
+        """
+        if inspect.isawaitable(value):
+            return await value
+        return value
+
+    async def _close_redis_client(self, client) -> None:
+        """Close a redis client regardless of close/aclose implementation details."""
+        if client is None:
+            return
+
+        try:
+            close_method = getattr(client, "aclose", None)
+            if close_method is not None:
+                await self._maybe_await(close_method())
+                return
+
+            close_method = getattr(client, "close", None)
+            if close_method is not None:
+                await self._maybe_await(close_method())
+        except Exception as e:
+            log.debug(
+                f"[LOCK:CLOSE_CLIENT_ERROR] Error closing Redis client: {type(e).__name__}: {e}"
+            )
+
+    def _close_client_in_loop(
+        self, loop: Optional[asyncio.AbstractEventLoop], client
+    ) -> bool:
+        """
+        Try to schedule Redis client close on its original loop.
+
+        Returns True when close work was scheduled, False if caller should close inline.
+        """
+        if client is None or loop is None:
+            return False
+
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        if loop is current_loop:
+            return False
+
+        if loop.is_closed():
+            log.debug(
+                "[LOCK:CLOSE_CLIENT_SKIP] Skipping stale Redis client close: original loop is closed"
+            )
+            return True
+
+        try:
+            loop.call_soon_threadsafe(lambda: loop.create_task(self._close_redis_client(client)))
+            return True
+        except Exception as e:
+            log.debug(
+                f"[LOCK:CLOSE_CLIENT_SCHEDULE_ERROR] Failed to schedule stale client close: "
+                f"{type(e).__name__}: {e}"
+            )
+            return False
+
+    def _client_ready_for_current_loop(self) -> bool:
+        """Return True if Redis client exists and is bound to current loop."""
+        try:
+            current_loop_id = id(asyncio.get_running_loop())
+        except RuntimeError:
+            return False
+
+        with self._client_state_lock:
+            return (
+                self._initialized
+                and self.redis_client is not None
+                and self._redis_loop_id == current_loop_id
+            )
+
+    async def _init_redis_client(self, retries: int = 1, delay: float = 0.0):
+        """Initialize an async Redis client for the current event loop."""
+        current_loop_id = id(asyncio.get_running_loop())
+
+        for attempt in range(retries):
+            candidate_client = None
+            try:
+                candidate_client = redis.from_url(
+                    self.redis_url,
+                    encoding="utf-8",
+                    decode_responses=False,
+                    socket_connect_timeout=2,
+                    socket_keepalive=True,
+                    health_check_interval=30,
+                )
+                await candidate_client.ping()
+
+                old_client = None
+                old_loop = None
+                with self._client_state_lock:
+                    old_client = self.redis_client
+                    old_loop = self._redis_loop
+                    self.redis_client = candidate_client
+                    self._redis_loop_id = current_loop_id
+                    self._redis_loop = asyncio.get_running_loop()
+                    self._initialized = True
+
+                if old_client is not None and old_client is not candidate_client:
+                    if not self._close_client_in_loop(old_loop, old_client):
+                        await self._close_redis_client(old_client)
+
+                log.info(
+                    f"[LOCK:INIT] Redis lock manager initialized successfully: url={self.redis_url}, "
+                    f"loop_id={current_loop_id}"
+                )
+                return
+
+            except Exception as e:
+                if candidate_client is not None:
+                    await self._close_redis_client(candidate_client)
+
+                if attempt < retries - 1:
+                    await asyncio.sleep(delay)
+                else:
+                    log.debug(f"[LOCK:INIT_PENDING] Redis not ready yet: {e}")
+                    with self._client_state_lock:
+                        self._initialized = False
+                        self._redis_loop = None
+
+    async def _mark_client_unhealthy(self, error: Exception, operation: str) -> None:
+        """Mark current Redis client unhealthy and close it to force re-initialization."""
+        stale_client = None
+        stale_loop = None
+        with self._client_state_lock:
+            stale_client = self.redis_client
+            stale_loop = self._redis_loop
+            self.redis_client = None
+            self._redis_loop_id = None
+            self._redis_loop = None
+            self._initialized = False
+
+        if not self._close_client_in_loop(stale_loop, stale_client):
+            await self._close_redis_client(stale_client)
         log.warning(
-            "[LOCK:RECOVER] Redis client not initialized, attempting to reconnect..."
+            f"[LOCK:CLIENT_UNHEALTHY] Marked Redis client unhealthy after {operation}: "
+            f"{type(error).__name__}: {error}"
         )
 
-        # Run initialization in executor to avoid blocking event loop
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._init_redis_client)
+    async def _ensure_initialized(self):
+        """Ensure Redis client is initialized and loop-compatible."""
+        if self._client_ready_for_current_loop():
+            return
 
-        if not self._initialized:
+        with self._client_state_lock:
+            had_client = self.redis_client is not None
+            was_initialized = self._initialized
+            stale_loop_id = self._redis_loop_id
+
+        if had_client and was_initialized:
+            log.info(
+                f"[LOCK:RECOVER] Redis client loop mismatch (existing_loop={stale_loop_id}), "
+                "reconnecting for current loop..."
+            )
+        else:
+            log.warning(
+                "[LOCK:RECOVER] Redis client missing or uninitialized, attempting to reconnect..."
+            )
+
+        await self._init_redis_client(retries=1)
+
+        if not self._client_ready_for_current_loop():
             raise RuntimeError("Redis lock manager not initialized and recovery failed")
 
     def _create_lock(
@@ -577,17 +655,11 @@ class RedisCollectionLockManager:
         collection_name: str,
         timeout_secs: int = 30,
     ) -> AsyncRedisLock:
-        """
-        Get or create a lock instance for a collection.
-
-        Locks are cached and reused for reentrancy. They dynamically access
-        the manager's current redis_client, so they survive reconnections.
-        """
+        """Get or create a cached lock instance for a collection."""
         log.info(
             f"[LOCK:_CREATE_LOCK_CALLED] collection={collection_name}, timeout={timeout_secs}s"
         )
         with self._lock_cache_lock:
-            # Check cache (WeakValueDictionary handles cleanup)
             lock = self._lock_cache.get(collection_name)
 
             if lock is None:
@@ -605,9 +677,17 @@ class RedisCollectionLockManager:
 
     @asynccontextmanager
     async def acquire_lock(self, collection_name: str, timeout_secs: int = 30):
-        """
-        Context manager for acquiring a collection lock.
-        """
+        """Acquire a collection lock with circuit breaker guardrails."""
+        if self._should_fail_fast():
+            log.error(
+                f"[LOCK:CIRCUIT_OPEN] Failing fast: circuit is OPEN for collection {collection_name}. "
+                "Redis appears to be persistently unavailable."
+            )
+            raise RuntimeError(
+                f"Redis circuit breaker is OPEN. Distribution locking unavailable for {collection_name}. "
+                f"Waiting {self.circuit_recovery_threshold}s before retry."
+            )
+
         await self._ensure_initialized()
 
         log.info(
@@ -615,7 +695,6 @@ class RedisCollectionLockManager:
             f"collection={collection_name}, timeout={timeout_secs}s"
         )
 
-        # Create or retrieve lock instance (lock will access manager's client dynamically)
         lock = self._create_lock(collection_name, timeout_secs)
 
         if lock._try_reentrant_acquire():
@@ -625,7 +704,15 @@ class RedisCollectionLockManager:
             )
             acquired = True
         else:
-            acquired = await lock.acquire(blocking=True, timeout=timeout_secs * 2)
+            try:
+                acquired = await lock.acquire(blocking=True, timeout=timeout_secs * 2)
+            except asyncio.TimeoutError:
+                self.acquire_timeouts += 1
+                log.error(
+                    f"[LOCK:ACQUIRE_TIMEOUT] Lock acquisition timeout for {collection_name} "
+                    f"(total timeouts: {self.acquire_timeouts})"
+                )
+                raise
 
         if not acquired:
             log.error(
@@ -655,72 +742,145 @@ class RedisCollectionLockManager:
                     f"collection={collection_name}, error={type(e).__name__}: {e}"
                 )
 
-    async def health_check(self) -> bool:
-        """
-        Check if Redis connection is healthy.
-        """
-        try:
-            await self._ensure_initialized()
+    async def health_check(self, retries: int = 5) -> bool:
+        """Comprehensive Redis health check with retries and functional validation."""
+        for attempt in range(retries):
+            try:
+                if not self._client_ready_for_current_loop():
+                    await self._init_redis_client(retries=1)
 
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, self.redis_client.ping)
+                if not self._client_ready_for_current_loop() or not self.redis_client:
+                    raise RuntimeError("Redis client is not ready after initialization")
 
-            log.debug(f"[LOCK:HEALTH_OK] Redis health check passed")
-            return True
-        except Exception as e:
-            log.error(
-                f"[LOCK:HEALTH_ERROR] Redis health check failed: {type(e).__name__}: {e}"
-            )
+                check_key = f"lock:health_check:{uuid.uuid4()}"
+                await self.redis_client.set(check_key, "ok", ex=10)
+                val = await self.redis_client.get(check_key)
+                await self.redis_client.delete(check_key)
+
+                if val != b"ok":
+                    raise RuntimeError(
+                        f"Redis functional test failed. Expected b'ok', got: {val!r}"
+                    )
+
+                self.consecutive_failures = 0
+
+                if self.circuit_state in (
+                    CircuitState.OPEN,
+                    CircuitState.HALF_OPEN,
+                ):
+                    self.successful_recoveries += 1
+                    log.info(
+                        "[LOCK:CIRCUIT_CLOSED] Redis recovered. "
+                        f"Successful recoveries: {self.successful_recoveries}"
+                    )
+
+                self.circuit_state = CircuitState.CLOSED
+                self.circuit_open_time = None
+                log.info(
+                    f"[LOCK:HEALTH_OK] Redis validated successfully: {self.redis_url}"
+                )
+                return True
+
+            except Exception as e:
+                self.consecutive_failures += 1
+                await self._mark_client_unhealthy(e, "health_check")
+                log.warning(
+                    f"[LOCK:HEALTH_RETRY] Redis health check attempt {attempt + 1}/{retries} failed "
+                    f"(consecutive failures: {self.consecutive_failures}): {type(e).__name__}: {e}"
+                )
+
+            if attempt < retries - 1:
+                wait_time = min(2**attempt, 5)
+                await asyncio.sleep(wait_time)
+
+        self.health_check_failures += 1
+
+        if self.consecutive_failures >= self.failure_threshold:
+            if self.circuit_state == CircuitState.CLOSED:
+                log.error(
+                    f"[LOCK:CIRCUIT_OPEN] Redis health check failed {self.consecutive_failures} times. "
+                    f"Opening circuit for {self.circuit_recovery_threshold}s."
+                )
+                self.circuit_state = CircuitState.OPEN
+                self.circuit_open_time = time.time()
+            elif self.circuit_state == CircuitState.HALF_OPEN:
+                log.error("[LOCK:CIRCUIT_OPEN_AGAIN] Recovery test failed, reopening circuit.")
+                self.circuit_state = CircuitState.OPEN
+                self.circuit_open_time = time.time()
+
+        log.error(
+            f"[LOCK:HEALTH_FAIL] Redis health check failed after {retries} attempts. "
+            f"Circuit state: {self.circuit_state.value}"
+        )
+        return False
+
+    def _should_fail_fast(self) -> bool:
+        """Return True if circuit breaker should block lock operations."""
+        if self.circuit_state == CircuitState.CLOSED:
             return False
 
+        if self.circuit_state == CircuitState.OPEN:
+            if self.circuit_open_time is None:
+                return True
+
+            elapsed = time.time() - self.circuit_open_time
+            if elapsed > self.circuit_recovery_threshold:
+                log.info(
+                    f"[LOCK:CIRCUIT_HALF_OPEN] {elapsed:.1f}s elapsed. "
+                    "Transitioning to HALF_OPEN to test recovery."
+                )
+                self.circuit_state = CircuitState.HALF_OPEN
+                self.recovery_attempts += 1
+                return False
+            return True
+
+        return False
+
+    def get_health_metrics(self) -> Dict[str, Any]:
+        """Return health metrics for monitoring and readiness checks."""
+        return {
+            "circuit_state": self.circuit_state.value,
+            "consecutive_failures": self.consecutive_failures,
+            "health_check_failures": self.health_check_failures,
+            "acquire_timeouts": self.acquire_timeouts,
+            "recovery_attempts": self.recovery_attempts,
+            "successful_recoveries": self.successful_recoveries,
+            "redis_initialized": self._initialized,
+            "redis_url": self.redis_url if self.redis_url else "NOT_SET",
+            "redis_loop_id": self._redis_loop_id,
+        }
+
     async def close(self):
-        """Close Redis connection and cleanup active locks."""
-        # Use a copy of values since we iterate
+        """Close Redis connection and cleanup active lock heartbeats."""
         with self._lock_cache_lock:
-            # We only need to stop heartbeats for locks that are still alive
             locks = list(self._lock_cache.values())
 
         for lock in locks:
             lock._stop_heartbeat()
 
-        if self.redis_client:
-            try:
-                self.redis_client.close()
-            except Exception as e:
-                log.error(
-                    f"[LOCK:CLOSE_ERROR] Error closing Redis client: {type(e).__name__}: {e}"
-                )
-        self._initialized = False
+        stale_client = None
+        stale_loop = None
+        with self._client_state_lock:
+            stale_client = self.redis_client
+            stale_loop = self._redis_loop
+            self.redis_client = None
+            self._redis_loop_id = None
+            self._redis_loop = None
+            self._initialized = False
+
+        if not self._close_client_in_loop(stale_loop, stale_client):
+            await self._close_redis_client(stale_client)
 
 
 # Global singleton instance - managed by RedisCollectionLockManager.__new__
-# This is only for type hints and direct access if needed
 _redis_collection_lock_manager: Optional[RedisCollectionLockManager] = None
 
 
 def get_collection_lock_manager() -> RedisCollectionLockManager:
-    """
-    Get the global Redis collection lock manager instance (singleton).
-
-    This enforces a single manager across the entire application:
-    - First call: Creates the singleton instance
-    - Subsequent calls: Returns same instance
-    - Thread-safe: Uses threading.Lock internally in __new__
-
-    Returns:
-        RedisCollectionLockManager: The singleton lock manager instance
-
-    Example:
-        lock_manager = get_collection_lock_manager()
-        async with lock_manager.acquire_lock("my-collection") as lock:
-            # Only one instance can execute this across ALL processes
-            pass
-    """
+    """Get the global Redis collection lock manager singleton."""
     global _redis_collection_lock_manager
 
     if _redis_collection_lock_manager is None:
-        # Calling RedisCollectionLockManager() multiple times returns same instance
-        # This is enforced by RedisCollectionLockManager.__new__
         _redis_collection_lock_manager = RedisCollectionLockManager()
 
     return _redis_collection_lock_manager
