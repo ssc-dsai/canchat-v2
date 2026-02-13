@@ -1,13 +1,20 @@
 import logging
 import time
-from typing import Optional
 
-from open_webui.internal.db import JSONField, get_db
+from open_webui.internal.db import JSONField, get_async_db
 from open_webui.models.base import Base
 from open_webui.models.users import Users, UserResponse
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import (
+    BigInteger,
+    delete,
+    select,
+    String,
+    Text,
+    JSON,
+)
+from sqlalchemy.orm import Mapped, mapped_column
 
 from open_webui.utils.access_control import has_access
 
@@ -19,18 +26,25 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
+class ToolMeta(BaseModel):
+    description: str | None = None
+    manifest: dict | None = {}
+
+
 class Tool(Base):
     __tablename__ = "tool"
 
-    id = Column(String, primary_key=True)
-    user_id = Column(String)
-    name = Column(Text)
-    content = Column(Text)
-    specs = Column(JSONField)
-    meta = Column(JSONField)
-    valves = Column(JSONField)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(Text)
+    content: Mapped[str] = mapped_column(Text)
+    specs: Mapped[list[dict]] = mapped_column(JSONField)
+    meta: Mapped[ToolMeta] = mapped_column(JSONField)
+    valves = mapped_column(JSONField)
 
-    access_control = Column(JSON, nullable=True)  # Controls data access levels.
+    access_control: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True
+    )  # Controls data access levels.
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
     # - `{}`: Private access, restricted exclusively to the owner.
@@ -47,13 +61,8 @@ class Tool(Base):
     #      }
     #   }
 
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
-
-
-class ToolMeta(BaseModel):
-    description: Optional[str] = None
-    manifest: Optional[dict] = {}
+    updated_at: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[int] = mapped_column(BigInteger)
 
 
 class ToolModel(BaseModel):
@@ -63,7 +72,7 @@ class ToolModel(BaseModel):
     content: str
     specs: list[dict]
     meta: ToolMeta
-    access_control: Optional[dict] = None
+    access_control: dict | None = None
 
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
@@ -77,7 +86,7 @@ class ToolModel(BaseModel):
 
 
 class ToolUserModel(ToolModel):
-    user: Optional[UserResponse] = None
+    user: UserResponse | None = None
 
 
 class ToolResponse(BaseModel):
@@ -85,13 +94,13 @@ class ToolResponse(BaseModel):
     user_id: str
     name: str
     meta: ToolMeta
-    access_control: Optional[dict] = None
+    access_control: dict | None = None
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
 
 class ToolUserResponse(ToolResponse):
-    user: Optional[UserResponse] = None
+    user: UserResponse | None = None
 
 
 class ToolForm(BaseModel):
@@ -99,18 +108,18 @@ class ToolForm(BaseModel):
     name: str
     content: str
     meta: ToolMeta
-    access_control: Optional[dict] = None
+    access_control: dict | None = None
 
 
 class ToolValves(BaseModel):
-    valves: Optional[dict] = None
+    valves: dict | None = None
 
 
 class ToolsTable:
-    def insert_new_tool(
+    async def insert_new_tool(
         self, user_id: str, form_data: ToolForm, specs: list[dict]
-    ) -> Optional[ToolModel]:
-        with get_db() as db:
+    ) -> ToolModel | None:
+        async with get_async_db() as db:
             tool = ToolModel(
                 **{
                     **form_data.model_dump(),
@@ -124,8 +133,8 @@ class ToolsTable:
             try:
                 result = Tool(**tool.model_dump())
                 db.add(result)
-                db.commit()
-                db.refresh(result)
+                await db.commit()
+                await db.refresh(result)
                 if result:
                     return ToolModel.model_validate(result)
                 else:
@@ -134,19 +143,30 @@ class ToolsTable:
                 print(f"Error creating tool: {e}")
                 return None
 
-    def get_tool_by_id(self, id: str) -> Optional[ToolModel]:
+    async def get_tool_by_id(self, id: str) -> ToolModel | None:
         try:
-            with get_db() as db:
-                tool = db.get(Tool, id)
+            async with get_async_db() as db:
+                tool = await db.get(Tool, id)
                 return ToolModel.model_validate(tool)
         except Exception:
             return None
 
-    def get_tools(self) -> list[ToolUserModel]:
-        with get_db() as db:
-            tools = []
-            for tool in db.query(Tool).order_by(Tool.updated_at.desc()).all():
-                user = Users.get_user_by_id(tool.user_id)
+    async def get_tools(self) -> list[ToolUserModel]:
+        async with get_async_db() as db:
+            tools: list[ToolUserModel] = []
+
+            # Import User model to do the join
+            from open_webui.models.users import User
+
+            query = (
+                select(Tool, User)
+                .join(User, Tool.user_id == User.id, isouter=True)
+                .order_by(Tool.updated_at.desc())
+            )
+
+            result = await db.execute(query)
+
+            for tool, user in result.all():
                 tools.append(
                     ToolUserModel.model_validate(
                         {
@@ -157,98 +177,136 @@ class ToolsTable:
                 )
             return tools
 
-    def get_tools_by_user_id(
+    async def get_tools_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ToolUserModel]:
-        tools = self.get_tools()
+        async with get_async_db() as db:
+            tools: list[ToolUserModel] = []
 
-        return [
-            tool
-            for tool in tools
-            if tool.user_id == user_id
-            or has_access(user_id, permission, tool.access_control)
-        ]
+            # Import User model to do the join
+            from open_webui.models.users import User, UserModel
 
-    def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
+            query = (
+                select(Tool, User)
+                .join(User, Tool.user_id == User.id, isouter=True)
+                .where(Tool.user_id == user_id)
+                .order_by(Tool.updated_at.desc())
+            )
+
+            result = await db.execute(query)
+
+            for tool, user in result.all():
+                if await has_access(user_id, permission, tool.access_control):
+                    tools.append(
+                        ToolUserModel.model_validate(
+                            {
+                                **ToolModel.model_validate(tool).model_dump(),
+                                "user": (
+                                    UserModel.model_validate(user).model_dump()
+                                    if user
+                                    else None
+                                ),
+                            }
+                        )
+                    )
+            return tools
+
+    async def get_tool_valves_by_id(self, id: str) -> dict | None:
         try:
-            with get_db() as db:
-                tool = db.get(Tool, id)
+            async with get_async_db() as db:
+                tool = await db.get(Tool, id)
                 return tool.valves if tool.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
 
-    def update_tool_valves_by_id(self, id: str, valves: dict) -> Optional[ToolValves]:
+    async def update_tool_valves_by_id(
+        self, id: str, valves: dict
+    ) -> ToolValves | None:
         try:
-            with get_db() as db:
-                db.query(Tool).filter_by(id=id).update(
-                    {"valves": valves, "updated_at": int(time.time())}
-                )
-                db.commit()
-                return self.get_tool_by_id(id)
+            async with get_async_db() as db:
+                if tool := await db.get(Tool, id):
+                    tool.valves = valves
+                    await db.commit()
+                    await db.refresh(tool)
+                    return ToolValves(valves=tool.valves)
+                return None
         except Exception:
             return None
 
-    def get_user_valves_by_id_and_user_id(
+    async def get_user_valves_by_id_and_user_id(
         self, id: str, user_id: str
-    ) -> Optional[dict]:
+    ) -> dict | None:
         try:
-            user = Users.get_user_by_id(user_id)
-            user_settings = user.settings.model_dump() if user.settings else {}
+            if user := await Users.get_user_by_id(user_id):
+                user_settings = user.settings.model_dump() if user.settings else {}
 
-            # Check if user has "tools" and "valves" settings
-            if "tools" not in user_settings:
-                user_settings["tools"] = {}
-            if "valves" not in user_settings["tools"]:
-                user_settings["tools"]["valves"] = {}
+                # Check if user has "tools" and "valves" settings
+                if "tools" not in user_settings:
+                    user_settings["tools"] = {}
+                if "valves" not in user_settings["tools"]:
+                    user_settings["tools"]["valves"] = {}
 
-            return user_settings["tools"]["valves"].get(id, {})
+                return user_settings["tools"]["valves"].get(id, {})
+            return None
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
 
-    def update_user_valves_by_id_and_user_id(
+    async def update_user_valves_by_id_and_user_id(
         self, id: str, user_id: str, valves: dict
-    ) -> Optional[dict]:
+    ) -> dict | None:
         try:
-            user = Users.get_user_by_id(user_id)
-            user_settings = user.settings.model_dump() if user.settings else {}
+            if user := await Users.get_user_by_id(user_id):
+                user_settings = user.settings.model_dump() if user.settings else {}
 
-            # Check if user has "tools" and "valves" settings
-            if "tools" not in user_settings:
-                user_settings["tools"] = {}
-            if "valves" not in user_settings["tools"]:
-                user_settings["tools"]["valves"] = {}
+                # Check if user has "tools" and "valves" settings
+                if "tools" not in user_settings:
+                    user_settings["tools"] = {}
+                if "valves" not in user_settings["tools"]:
+                    user_settings["tools"]["valves"] = {}
 
-            user_settings["tools"]["valves"][id] = valves
+                user_settings["tools"]["valves"][id] = valves
 
-            # Update the user settings in the database
-            Users.update_user_by_id(user_id, {"settings": user_settings})
+                # Update the user settings in the database
+                updated_user = await Users.update_user_by_id(
+                    user_id, {"settings": user_settings}
+                )
 
-            return user_settings["tools"]["valves"][id]
+                return (
+                    updated_user.settings["tools"]["valves"][id]
+                    if updated_user
+                    else None
+                )
+            return None
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
 
-    def update_tool_by_id(self, id: str, updated: dict) -> Optional[ToolModel]:
+    async def update_tool_by_id(self, id: str, updated: dict) -> ToolModel | None:
         try:
-            with get_db() as db:
-                db.query(Tool).filter_by(id=id).update(
-                    {**updated, "updated_at": int(time.time())}
-                )
-                db.commit()
+            async with get_async_db() as db:
+                if tool := await db.get(Tool, id):
+                    for key, value in updated.items():
+                        if hasattr(tool, key):
+                            setattr(tool, key, value)
+                        else:
+                            log.error(f"{key} is not a valid attribute of Tool")
 
-                tool = db.query(Tool).get(id)
-                db.refresh(tool)
-                return ToolModel.model_validate(tool)
+                    tool.updated_at = int(time.time())
+
+                    await db.commit()
+                    await db.refresh(tool)
+                    return ToolModel.model_validate(tool)
+                return None
         except Exception:
             return None
 
-    def delete_tool_by_id(self, id: str) -> bool:
+    async def delete_tool_by_id(self, id: str) -> bool:
         try:
-            with get_db() as db:
-                db.query(Tool).filter_by(id=id).delete()
-                db.commit()
+            async with get_async_db() as db:
+                _ = await db.execute(delete(Tool).where(Tool.id == id))
+                await db.commit()
 
                 return True
         except Exception:

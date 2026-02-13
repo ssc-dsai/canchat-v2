@@ -12,13 +12,13 @@ from open_webui.constants import VECTOR_COLLECTION_PREFIXES
 log = logging.getLogger(__name__)
 
 
-def get_file_and_user_for_reindex(file_id: str):
+async def get_file_and_user_for_reindex(file_id: str):
     """Get file and user objects needed for re-indexing."""
-    file = Files.get_file_by_id(file_id)
+    file = await Files.get_file_by_id(file_id)
     if not file:
         return None, None
 
-    user = Users.get_user_by_id(file.user_id) if file.user_id else None
+    user = await Users.get_user_by_id(file.user_id) if file.user_id else None
     return file, user
 
 
@@ -46,7 +46,7 @@ async def attempt_reindex_and_retry(
         from open_webui.retrieval.utils import query_doc
 
         # Get file and user
-        file, user = get_file_and_user_for_reindex(file_id)
+        file, user = await get_file_and_user_for_reindex(file_id)
         if not file:
             log.error(f"File {file_id} not found in database for re-indexing")
             return None

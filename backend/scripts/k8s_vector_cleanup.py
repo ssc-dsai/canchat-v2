@@ -119,7 +119,7 @@ def main():
         logger.info("🔌 Testing database connectivity...")
         try:
             # Try to get knowledge bases as a connectivity test
-            knowledge_bases = Knowledges.get_knowledge_bases()
+            knowledge_bases = await Knowledges.get_knowledge_bases()
             logger.info(f"✓ Database connection successful")
             logger.info(f"📊 Found {len(knowledge_bases)} knowledge bases to preserve")
         except Exception as e:

@@ -67,7 +67,7 @@ def replace_imports(content):
     return content
 
 
-def load_tools_module_by_id(toolkit_id, content=None):
+async def load_tools_module_by_id(toolkit_id, content=None):
     """
     Load a tool module by its ID from the database or from provided content.
 
@@ -91,14 +91,14 @@ def load_tools_module_by_id(toolkit_id, content=None):
     """
 
     if content is None:
-        tool = Tools.get_tool_by_id(toolkit_id)
+        tool = await Tools.get_tool_by_id(toolkit_id)
         if not tool:
             raise Exception(f"Toolkit not found: {toolkit_id}")
 
         content = tool.content
 
         content = replace_imports(content)
-        Tools.update_tool_by_id(toolkit_id, {"content": content})
+        _ = await Tools.update_tool_by_id(toolkit_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
@@ -135,7 +135,7 @@ def load_tools_module_by_id(toolkit_id, content=None):
         os.unlink(temp_file.name)
 
 
-def load_function_module_by_id(function_id, content=None):
+async def load_function_module_by_id(function_id: str, content=None):
     """
     Load a function module by its ID from the database or from provided content.
 
@@ -155,13 +155,13 @@ def load_function_module_by_id(function_id, content=None):
     """
 
     if content is None:
-        function = Functions.get_function_by_id(function_id)
+        function = await Functions.get_function_by_id(function_id)
         if not function:
             raise Exception(f"Function not found: {function_id}")
         content = function.content
 
         content = replace_imports(content)
-        Functions.update_function_by_id(function_id, {"content": content})
+        _ = await Functions.update_function_by_id(function_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
         install_frontmatter_requirements(frontmatter.get("requirements", ""))
@@ -197,7 +197,7 @@ def load_function_module_by_id(function_id, content=None):
         log.error(f"Error loading module: {function_id}: {e}")
         del sys.modules[module_name]  # Cleanup by removing the module in case of error
 
-        Functions.update_function_by_id(function_id, {"is_active": False})
+        _ = await Functions.update_function_by_id(function_id, {"is_active": False})
         raise e
     finally:
         os.unlink(temp_file.name)

@@ -69,11 +69,11 @@ class OAuthManager:
     def get_client(self, provider_name):
         return self.oauth.create_client(provider_name)
 
-    def get_user_role(self, user, user_data):
-        if user and Users.get_num_users() == 1:
+    async def get_user_role(self, user, user_data):
+        if user and await Users.get_num_users() == 1:
             # If the user is the only user, assign the role "admin" - actually repairs role for single user on login
             return "admin"
-        if not user and Users.get_num_users() == 0:
+        if not user and await Users.get_num_users() == 0:
             # If there are no users, assign the role "admin", as the first user will be an admin
             return "admin"
 
@@ -115,12 +115,14 @@ class OAuthManager:
 
         return role
 
-    def update_user_groups(self, user, user_data, default_permissions):
+    async def update_user_groups(self, user, user_data, default_permissions):
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
         user_oauth_groups: list[str] = user_data.get(oauth_claim, list())
-        user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
-        all_available_groups: list[GroupModel] = Groups.get_groups()
+        user_current_groups: list[GroupModel] = await Groups.get_groups_by_member_id(
+            user.id
+        )
+        all_available_groups: list[GroupModel] = await Groups.get_groups()
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
@@ -141,7 +143,7 @@ class OAuthManager:
                     permissions=group_permissions,
                     user_ids=user_ids,
                 )
-                Groups.update_group_by_id(
+                _ = await Groups.update_group_by_id(
                     id=group_model.id, form_data=update_form, overwrite=False
                 )
 
@@ -166,7 +168,7 @@ class OAuthManager:
                     permissions=group_permissions,
                     user_ids=user_ids,
                 )
-                Groups.update_group_by_id(
+                _ = await Groups.update_group_by_id(
                     id=group_model.id, form_data=update_form, overwrite=False
                 )
 
@@ -219,27 +221,27 @@ class OAuthManager:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
         # Check if the user exists
-        user = Users.get_user_by_oauth_sub(provider_sub)
+        user = await Users.get_user_by_oauth_sub(provider_sub)
 
         if not user:
             # If the user does not exist, check if merging is enabled
             if auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
                 # Check if the user exists by email
-                user = Users.get_user_by_email(email)
+                user = await Users.get_user_by_email(email)
                 if user:
                     # Update the user with the new oauth sub
-                    Users.update_user_oauth_sub_by_id(user.id, provider_sub)
+                    _ = await Users.update_user_oauth_sub_by_id(user.id, provider_sub)
 
         if user:
-            determined_role = self.get_user_role(user, user_data)
+            determined_role = await self.get_user_role(user, user_data)
             if user.role != determined_role:
-                Users.update_user_role_by_id(user.id, determined_role)
+                _ = await Users.update_user_role_by_id(user.id, determined_role)
 
         if not user:
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
-                existing_user = Users.get_user_by_email(
+                existing_user = await Users.get_user_by_email(
                     user_data.get("email", "").lower()
                 )
                 if existing_user:
@@ -278,9 +280,9 @@ class OAuthManager:
                     picture_url = "/user.png"
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
 
-                role = self.get_user_role(None, user_data)
+                role = await self.get_user_role(None, user_data)
 
-                user = Auths.insert_new_auth(
+                user = await Auths.insert_new_auth(
                     email=email,
                     password=get_password_hash(
                         str(uuid.uuid4())
@@ -312,7 +314,7 @@ class OAuthManager:
         )
 
         if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT and user.role != "admin":
-            self.update_user_groups(
+            await self.update_user_groups(
                 user=user,
                 user_data=user_data,
                 default_permissions=request.app.state.config.USER_PERMISSIONS,

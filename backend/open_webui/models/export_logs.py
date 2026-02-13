@@ -2,9 +2,10 @@ import time
 from typing import Optional
 import uuid
 from pydantic import BaseModel
-from sqlalchemy import Column, Text, BigInteger, Integer, func
+from sqlalchemy import BigInteger, Integer, select, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
-from open_webui.internal.db import get_db
+from open_webui.internal.db import get_async_db
 from open_webui.models.base import Base
 from logging import getLogger
 
@@ -14,15 +15,15 @@ logger = getLogger(__name__)
 class ExportLog(Base):
     __tablename__ = "export_logs"
 
-    id = Column(Text, primary_key=True)
-    user_id = Column(Text)
-    email_domain = Column(Text)
-    export_timestamp = Column(BigInteger)
-    file_size = Column(BigInteger)
-    row_count = Column(Integer)
-    date_range_start = Column(BigInteger)
-    date_range_end = Column(BigInteger)
-    created_at = Column(BigInteger)
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    user_id: Mapped[str] = mapped_column(Text)
+    email_domain: Mapped[str] = mapped_column(Text)
+    export_timestamp: Mapped[int] = mapped_column(BigInteger)
+    file_size: Mapped[int] = mapped_column(BigInteger)
+    row_count: Mapped[int] = mapped_column(Integer)
+    date_range_start: Mapped[int] = mapped_column(BigInteger)
+    date_range_end: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[int] = mapped_column(BigInteger)
 
 
 class ExportLogModel(BaseModel):
@@ -47,10 +48,10 @@ class ExportLogForm(BaseModel):
 
 
 class ExportLogsTable:
-    def insert_new_export_log(
+    async def insert_new_export_log(
         self, form_data: ExportLogForm
     ) -> Optional[ExportLogModel]:
-        with get_db() as db:
+        async with get_async_db() as db:
             try:
                 id = str(uuid.uuid4())
                 export_timestamp = int(time.time())
@@ -69,66 +70,30 @@ class ExportLogsTable:
                 )
 
                 db.add(export_log)
-                db.commit()
-                db.refresh(export_log)
+                await db.commit()
+                await db.refresh(export_log)
 
-                return ExportLogModel(
-                    id=export_log.id,
-                    user_id=export_log.user_id,
-                    email_domain=export_log.email_domain,
-                    export_timestamp=export_log.export_timestamp,
-                    file_size=export_log.file_size,
-                    row_count=export_log.row_count,
-                    date_range_start=export_log.date_range_start,
-                    date_range_end=export_log.date_range_end,
-                    created_at=export_log.created_at,
-                )
+                return ExportLogModel.model_validate(export_log)
             except Exception as e:
                 logger.error(f"Error inserting export log: {e}")
                 return None
 
-    def get_export_logs_by_user(self, user_id: str) -> list[ExportLogModel]:
-        with get_db() as db:
+    async def get_export_logs_by_user(self, user_id: str) -> list[ExportLogModel]:
+        async with get_async_db() as db:
             try:
-                export_logs = (
-                    db.query(ExportLog).filter(ExportLog.user_id == user_id).all()
+                export_logs = await db.scalars(
+                    select(ExportLog).where(ExportLog.user_id == user_id)
                 )
-                return [
-                    ExportLogModel(
-                        id=log.id,
-                        user_id=log.user_id,
-                        email_domain=log.email_domain,
-                        export_timestamp=log.export_timestamp,
-                        file_size=log.file_size,
-                        row_count=log.row_count,
-                        date_range_start=log.date_range_start,
-                        date_range_end=log.date_range_end,
-                        created_at=log.created_at,
-                    )
-                    for log in export_logs
-                ]
+                return [ExportLogModel.model_validate(log) for log in export_logs.all()]
             except Exception as e:
                 logger.error(f"Error getting export logs for user {user_id}: {e}")
                 return []
 
-    def get_all_export_logs(self) -> list[ExportLogModel]:
-        with get_db() as db:
+    async def get_all_export_logs(self) -> list[ExportLogModel]:
+        async with get_async_db() as db:
             try:
-                export_logs = db.query(ExportLog).all()
-                return [
-                    ExportLogModel(
-                        id=log.id,
-                        user_id=log.user_id,
-                        email_domain=log.email_domain,
-                        export_timestamp=log.export_timestamp,
-                        file_size=log.file_size,
-                        row_count=log.row_count,
-                        date_range_start=log.date_range_start,
-                        date_range_end=log.date_range_end,
-                        created_at=log.created_at,
-                    )
-                    for log in export_logs
-                ]
+                export_logs = await db.scalars(select(ExportLog))
+                return [ExportLogModel.model_validate(log) for log in export_logs.all()]
             except Exception as e:
                 logger.error(f"Error getting all export logs: {e}")
                 return []

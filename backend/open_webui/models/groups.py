@@ -1,15 +1,15 @@
 import logging
 import time
-from typing import Optional
 import uuid
 from threading import Lock
 
-from open_webui.internal.db import get_db
+from open_webui.internal.db import get_async_db
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.base import Base
 
 from pydantic import BaseModel, ConfigDict, field_validator
-from sqlalchemy import BigInteger, Column, String, Text, JSON, or_, func
+from sqlalchemy import BigInteger, delete, select, String, Text, update, JSON, or_, func
+from sqlalchemy.orm import Mapped, mapped_column
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -53,21 +53,21 @@ def _is_cache_valid() -> bool:
 class Group(Base):
     __tablename__ = "group"
 
-    id = Column(Text, unique=True, primary_key=True)
-    user_id = Column(Text)
+    id: Mapped[str] = mapped_column(Text, unique=True, primary_key=True)
+    user_id: Mapped[str] = mapped_column(Text)
 
-    name = Column(Text)
-    description = Column(Text)
+    name: Mapped[str] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text)
 
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
-    permissions = Column(JSON, nullable=True)
-    user_ids = Column(JSON, nullable=True)
-    allowed_domains = Column(JSON, nullable=True)
+    permissions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    user_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    allowed_domains: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
-    created_at = Column(BigInteger)
-    updated_at = Column(BigInteger)
+    created_at: Mapped[int] = mapped_column(BigInteger)
+    updated_at: Mapped[int] = mapped_column(BigInteger)
 
 
 class GroupModel(BaseModel):
@@ -78,12 +78,12 @@ class GroupModel(BaseModel):
     name: str
     description: str
 
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
+    data: dict | None = None
+    meta: dict | None = None
 
-    permissions: Optional[dict] = None
+    permissions: dict | None = None
     user_ids: list[str] = []
-    allowed_domains: Optional[list[str]] = []
+    allowed_domains: list[str] | None = []
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -106,11 +106,11 @@ class GroupResponse(BaseModel):
     user_id: str
     name: str
     description: str
-    permissions: Optional[dict] = None
-    data: Optional[dict] = None
-    meta: Optional[dict] = None
+    permissions: dict | None = None
+    data: dict | None = None
+    meta: dict | None = None
     user_ids: list[str] = []
-    allowed_domains: Optional[list[str]] = []
+    allowed_domains: list[str | None] = []
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
@@ -125,20 +125,20 @@ class GroupResponse(BaseModel):
 class GroupForm(BaseModel):
     name: str
     description: str
-    permissions: Optional[dict] = None
-    allowed_domains: Optional[list[str]] = []
+    permissions: dict | None = None
+    allowed_domains: list[str | None] = []
 
 
 class GroupUpdateForm(GroupForm):
-    user_ids: Optional[list[str]] = None
-    allowed_domains: Optional[list[str]] = None
+    user_ids: list[str | None] = None
+    allowed_domains: list[str | None] = None
 
 
 class GroupTable:
-    def insert_new_group(
+    async def insert_new_group(
         self, user_id: str, form_data: GroupForm
-    ) -> Optional[GroupModel]:
-        with get_db() as db:
+    ) -> GroupModel | None:
+        async with get_async_db() as db:
             group = GroupModel(
                 **{
                     **form_data.model_dump(exclude_none=True),
@@ -152,8 +152,8 @@ class GroupTable:
             try:
                 result = Group(**group.model_dump())
                 db.add(result)
-                db.commit()
-                db.refresh(result)
+                await db.commit()
+                await db.refresh(result)
                 if result:
                     # Invalidate cache when new group is created
                     _invalidate_group_membership_cache()
@@ -164,14 +164,12 @@ class GroupTable:
             except Exception:
                 return None
 
-    def get_groups(self) -> list[GroupModel]:
-        with get_db() as db:
-            return [
-                GroupModel.model_validate(group)
-                for group in db.query(Group).order_by(Group.updated_at.desc()).all()
-            ]
+    async def get_groups(self) -> list[GroupModel]:
+        async with get_async_db() as db:
+            groups = await db.scalars(select(Group).order_by(Group.updated_at.desc()))
+            return [GroupModel.model_validate(group) for group in groups.all()]
 
-    def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
+    async def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
         """
         Get groups where user is either:
         1. Explicitly added to user_ids list, OR
@@ -184,7 +182,7 @@ class GroupTable:
         )  # Import here to avoid circular imports
 
         # Get user info for domain checking
-        user = Users.get_user_by_id(user_id)
+        user = await Users.get_user_by_id(user_id)
         user_domain = user.domain if user else None
 
         # Generate cache key
@@ -199,8 +197,8 @@ class GroupTable:
         # Cache miss - compute groups using SQL filtering
         log.debug(f"Cache miss for user {user_id}, computing groups")
 
-        with get_db() as db:
-            query = db.query(Group).filter(
+        async with get_async_db() as db:
+            query = select(Group).where(
                 or_(
                     func.json_array_length(Group.user_ids) > 0,
                     func.json_array_length(Group.allowed_domains) > 0,
@@ -220,10 +218,12 @@ class GroupTable:
                 )
 
             # Apply OR conditions and get results
-            matching_groups = (
-                query.filter(or_(*conditions)).order_by(Group.updated_at.desc()).all()
+            matching_groups = await db.scalars(
+                query.where(or_(*conditions)).order_by(Group.updated_at.desc())
             )
-            result = [GroupModel.model_validate(group) for group in matching_groups]
+            result = [
+                GroupModel.model_validate(group) for group in matching_groups.all()
+            ]
 
             # Cache the result
             with _cache_lock:
@@ -231,15 +231,15 @@ class GroupTable:
 
             return result
 
-    def get_group_by_id(self, id: str) -> Optional[GroupModel]:
+    async def get_group_by_id(self, id: str) -> GroupModel | None:
         try:
-            with get_db() as db:
-                group = db.query(Group).filter_by(id=id).first()
+            async with get_async_db() as db:
+                group = await db.scalar(select(Group).where(Group.id == id))
                 return GroupModel.model_validate(group) if group else None
         except Exception:
             return None
 
-    def get_group_user_ids_by_id(self, id: str) -> Optional[list[str]]:
+    async def get_group_user_ids_by_id(self, id: str) -> list[str | None]:
         """
         Get all user IDs for a group, including both:
         1. Explicitly added users in user_ids
@@ -249,7 +249,7 @@ class GroupTable:
             Users,
         )  # Import here to avoid circular imports
 
-        group = self.get_group_by_id(id)
+        group = await self.get_group_by_id(id)
         if not group:
             return None
 
@@ -258,78 +258,71 @@ class GroupTable:
 
         # Add domain-based users
         if group.allowed_domains:
-            all_users = Users.get_users()
+            all_users = await Users.get_users()
             for user in all_users:
                 if user.domain and user.domain in group.allowed_domains:
                     user_ids.add(user.id)
 
         return list(user_ids)
 
-    def update_group_by_id(
+    async def update_group_by_id(
         self, id: str, form_data: GroupUpdateForm, overwrite: bool = False
-    ) -> Optional[GroupModel]:
+    ) -> GroupModel | None:
         try:
-            with get_db() as db:
-                # Get current group state before update to check for domain changes
-                current_group = self.get_group_by_id(id)
+            async with get_async_db() as db:
+                if group := await db.scalar(select(Group).where(Group.id == id)):
+                    group.allowed_domains = form_data.allowed_domains
+                    group.user_ids = form_data.user_ids
+                    await db.commit()
+                    await db.refresh(group)
+                    # Invalidate cache when group is updated (membership may have changed)
+                    _invalidate_group_membership_cache()
 
-                # Update the group
-                db.query(Group).filter_by(id=id).update(
-                    {
-                        **form_data.model_dump(exclude_none=True),
-                        "updated_at": int(time.time()),
-                    }
-                )
-                db.commit()
-
-                # Get updated group
-                updated_group = self.get_group_by_id(id=id)
-
-                # Invalidate cache when group is updated (membership may have changed)
-                _invalidate_group_membership_cache()
-
-                return updated_group
+                return GroupModel.model_validate(group) if group else None
         except Exception as e:
             log.exception(e)
             return None
 
-    def delete_group_by_id(self, id: str) -> bool:
+    async def delete_group_by_id(self, id: str) -> bool:
         try:
-            with get_db() as db:
-                db.query(Group).filter_by(id=id).delete()
-                db.commit()
+            async with get_async_db() as db:
+                _ = await db.execute(delete(Group).where(Group.id == id))
+                await db.commit()
                 # Invalidate cache when group is deleted
                 _invalidate_group_membership_cache()
                 return True
         except Exception:
             return False
 
-    def delete_all_groups(self) -> bool:
-        with get_db() as db:
+    async def delete_all_groups(self) -> bool:
+        async with get_async_db() as db:
             try:
-                db.query(Group).delete()
-                db.commit()
-                # Invalidate cache when all groups are deleted
+                _ = await db.execute(delete(Group))
+                await db.commit()
+                # Invalidate cache when group is deleted
                 _invalidate_group_membership_cache()
-
                 return True
             except Exception:
                 return False
 
-    def remove_user_from_all_groups(self, user_id: str) -> bool:
-        with get_db() as db:
+    async def remove_user_from_all_groups(self, user_id: str) -> bool:
+        async with get_async_db() as db:
             try:
-                groups = self.get_groups_by_member_id(user_id)
+                groups = await self.get_groups_by_member_id(user_id)
 
                 for group in groups:
                     group.user_ids.remove(user_id)
-                    db.query(Group).filter_by(id=group.id).update(
-                        {
-                            "user_ids": group.user_ids,
-                            "updated_at": int(time.time()),
-                        }
+                    _ = await db.execute(
+                        update(Group)
+                        .where(Group.id == group.id)
+                        .values(
+                            {
+                                "user_ids": group.user_ids,
+                                "updated_at": int(time.time()),
+                            }
+                        )
                     )
-                    db.commit()
+                    await db.commit()
 
                 # Invalidate cache when user is removed from groups
                 _invalidate_group_membership_cache()

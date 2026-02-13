@@ -127,7 +127,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
 
                 # Re-create engine with new URL
                 new_engine = create_engine(database_url, pool_pre_ping=True)
-                db_module.engine = new_engine
+                db_module.async_engine = new_engine
                 db_module.SessionLocal = sessionmaker(
                     autocommit=False,
                     autoflush=False,

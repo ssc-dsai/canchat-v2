@@ -1,8 +1,7 @@
 import time
-from typing import Optional
 from logging import getLogger
 
-from open_webui.internal.db import JSONField, get_db
+from open_webui.internal.db import JSONField, get_async_db
 
 from open_webui.models.base import Base
 from open_webui.models.chats import Chats
@@ -10,7 +9,8 @@ from open_webui.models.groups import Groups
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, delete, func, select, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 # Add logger for the users module
 logger = getLogger(__name__)
@@ -20,31 +20,31 @@ logger = getLogger(__name__)
 ####################
 
 
+class UserSettings(BaseModel):
+    ui: dict | None = {}
+    model_config = ConfigDict(extra="allow")
+    pass
+
+
 class User(Base):
     __tablename__ = "user"
 
-    id = Column(String, primary_key=True)
-    name = Column(String)
-    email = Column(String)
-    role = Column(String)
-    profile_image_url = Column(Text)
-    domain = Column(String)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    email: Mapped[str] = mapped_column(String)
+    role: Mapped[str] = mapped_column(String)
+    profile_image_url: Mapped[str] = mapped_column(Text)
+    domain: Mapped[str] = mapped_column(String)
 
-    last_active_at = Column(BigInteger)
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    last_active_at: Mapped[int] = mapped_column(BigInteger)
+    updated_at: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[int] = mapped_column(BigInteger)
 
-    api_key = Column(String, nullable=True, unique=True)
-    settings = Column(JSONField, nullable=True)
-    info = Column(JSONField, nullable=True)
+    api_key: Mapped[str] = mapped_column(String, nullable=True, unique=True)
+    settings: Mapped[UserSettings | None] = mapped_column(JSONField, nullable=True)
+    info: Mapped[dict | None] = mapped_column(JSONField, nullable=True)
 
-    oauth_sub = Column(Text, unique=True)
-
-
-class UserSettings(BaseModel):
-    ui: Optional[dict] = {}
-    model_config = ConfigDict(extra="allow")
-    pass
+    oauth_sub: Mapped[str] = mapped_column(Text, unique=True)
 
 
 class UserModel(BaseModel):
@@ -59,11 +59,11 @@ class UserModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    api_key: Optional[str] = None
-    settings: Optional[UserSettings] = None
-    info: Optional[dict] = None
+    api_key: str | None = None
+    settings: UserSettings | None = None
+    info: dict | None = None
 
-    oauth_sub: Optional[str] = None
+    oauth_sub: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -97,21 +97,21 @@ class UserUpdateForm(BaseModel):
     name: str
     email: str
     profile_image_url: str
-    password: Optional[str] = None
+    password: str | None = None
 
 
 class UsersTable:
-    def insert_new_user(
+    async def insert_new_user(
         self,
         id: str,
         name: str,
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
-        oauth_sub: Optional[str] = None,
+        oauth_sub: str | None = None,
         domain: str = "*",
-    ) -> Optional[UserModel]:
-        with get_db() as db:
+    ) -> UserModel | None:
+        async with get_async_db() as db:
             user = UserModel(
                 **{
                     "id": id,
@@ -128,227 +128,255 @@ class UsersTable:
             )
             result = User(**user.model_dump())
             db.add(result)
-            db.commit()
-            db.refresh(result)
+            await db.commit()
+            await db.refresh(result)
             if result:
                 return user
             else:
                 return None
 
-    def get_user_by_id(self, id: str) -> Optional[UserModel]:
+    async def get_user_by_id(self, id: str) -> UserModel | None:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(id=id).first()
+            async with get_async_db() as db:
+                result = await db.execute(select(User).where(User.id == id))
+                user = result.scalars().first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
+    async def get_user_by_api_key(self, api_key: str) -> UserModel | None:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(api_key=api_key).first()
+            async with get_async_db() as db:
+                result = await db.execute(select(User).where(User.api_key == api_key))
+                user = result.scalars().first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def get_user_by_email(self, email: str) -> Optional[UserModel]:
+    async def get_user_by_email(self, email: str) -> UserModel | None:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(email=email).first()
+            async with get_async_db() as db:
+                result = await db.execute(select(User).where(User.email == email))
+                user = result.scalars().first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
+    async def get_user_by_oauth_sub(self, sub: str) -> UserModel | None:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(oauth_sub=sub).first()
+            async with get_async_db() as db:
+                result = await db.execute(select(User).where(User.oauth_sub == sub))
+                user = result.scalars().first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def get_users(
-        self, skip: Optional[int] = None, limit: Optional[int] = None
+    async def get_users(
+        self, skip: int | None = None, limit: int | None = None
     ) -> list[UserModel]:
-        with get_db() as db:
-            query = db.query(User).order_by(User.created_at.desc())
-
+        async with get_async_db() as db:
+            query = select(User).order_by(User.created_at.desc())
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
-            users = query.all()
+            result = await db.execute(query)
+            users = result.scalars().all()
 
             return [UserModel.model_validate(user) for user in users]
 
-    def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
-        with get_db() as db:
-            users = db.query(User).filter(User.id.in_(user_ids)).all()
+    async def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
+        async with get_async_db() as db:
+            result = await db.execute(select(User).where(User.id.in_(user_ids)))
+            users = result.scalars().all()
+
             return [UserModel.model_validate(user) for user in users]
 
-    def get_user_domains(self) -> list[str]:
-        with get_db() as db:
-            return [domain[0] for domain in db.query(User.domain).distinct().all()]
+    async def get_user_domains(self) -> list[str]:
+        async with get_async_db() as db:
+            result = await db.execute(select(User.domain).distinct())
 
-    def get_num_users(self, domain: Optional[str] = None) -> Optional[int]:
+            return [domain[0] for domain in result.scalars().all()]
+
+    async def get_num_users(self, domain: str | None = None) -> int | None:
         try:
-            with get_db() as db:
+            async with get_async_db() as db:
+                statement = select(func.count(User.id))
                 if domain:
-                    return db.query(User).filter_by(domain=domain).count()
-                return db.query(User).count()
+                    statement = statement.where(User.domain == domain)
+
+                result = await db.execute(statement)
+                return result.scalar_one_or_none()
         except Exception:
             return None
 
-    def get_first_user(self) -> UserModel:
+    async def get_first_user(self) -> UserModel | None:
         try:
-            with get_db() as db:
-                user = db.query(User).order_by(User.created_at).first()
-                return UserModel.model_validate(user)
+            async with get_async_db() as db:
+                result = await db.execute(select(User).order_by(User.created_at.asc()))
+                return UserModel.model_validate(result.scalar_one())
         except Exception:
             return None
 
-    def get_user_webhook_url_by_id(self, id: str) -> Optional[str]:
+    async def get_user_webhook_url_by_id(self, id: str) -> str | None:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(id=id).first()
+            async with get_async_db() as db:
+                result = await db.execute(select(User).where(User.id == id))
+                user = result.scalar_one()
 
                 if user.settings is None:
                     return None
                 else:
-                    return (
-                        user.settings.get("ui", {})
-                        .get("notifications", {})
-                        .get("webhook_url", None)
+                    return user.settings.ui.get("notifications", {}).get(
+                        "webhook_url", None
                     )
         except Exception:
             return None
 
-    def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
+    async def update_user_role_by_id(self, id: str, role: str) -> UserModel | None:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update({"role": role})
-                db.commit()
-                user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+            async with get_async_db() as db:
+                user = await db.scalar(select(User).where(User.id == id))
+
+                if user:
+                    user.role = role
+                    await db.commit()
+                    return UserModel.model_validate(user)
+                return None
         except Exception:
             return None
 
-    def update_user_profile_image_url_by_id(
+    async def update_user_profile_image_url_by_id(
         self, id: str, profile_image_url: str
-    ) -> Optional[UserModel]:
+    ) -> UserModel | None:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update(
-                    {"profile_image_url": profile_image_url}
-                )
-                db.commit()
+            async with get_async_db() as db:
+                user = await db.scalar(select(User).where(User.id == id))
 
-                user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                if user:
+                    user.profile_image_url = profile_image_url
+                    await db.commit()
+                    return UserModel.model_validate(user)
+                return None
         except Exception:
             return None
 
-    def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
+    async def update_user_last_active_by_id(self, id: str) -> UserModel | None:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update(
-                    {"last_active_at": int(time.time())}
-                )
-                db.commit()
+            async with get_async_db() as db:
+                user = await db.scalar(select(User).where(User.id == id))
 
-                user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                if user:
+                    user.last_active_at = int(time.time())
+                    await db.commit()
+                    return UserModel.model_validate(user)
+                return None
         except Exception:
             return None
 
-    def get_daily_users_number(
-        self, days: int = 1, domain: Optional[str] = None
-    ) -> Optional[int]:
+    async def get_daily_users_number(
+        self, days: int = 1, domain: str | None = None
+    ) -> int | None:
         try:
-            with get_db() as db:
+            async with get_async_db() as db:
                 start_time = int(time.time()) - (days * 24 * 60 * 60)
-                query = db.query(User).filter(User.last_active_at >= start_time)
+                query = (
+                    select(func.count())
+                    .select_from(User)
+                    .where(User.last_active_at >= start_time)
+                )
 
                 if domain:
-                    query = query.filter(User.domain == domain)
+                    query = query.where(User.domain == domain)
 
-                return query.count()
+                return await db.scalar(query)
+
         except Exception as e:
             logger.error(f"Failed to get daily users number: {e}")
             return None
 
-    def update_user_oauth_sub_by_id(
+    async def update_user_oauth_sub_by_id(
         self, id: str, oauth_sub: str
-    ) -> Optional[UserModel]:
+    ) -> UserModel | None:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update({"oauth_sub": oauth_sub})
-                db.commit()
+            async with get_async_db() as db:
+                user = await db.scalar(select(User).where(User.id == id))
 
-                user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
+                if user:
+                    user.oauth_sub = oauth_sub
+                    await db.commit()
+                    return UserModel.model_validate(user)
+                return None
         except Exception:
             return None
 
-    def update_user_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
+    async def update_user_by_id(self, id: str, updated: dict) -> UserModel | None:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update(updated)
-                db.commit()
+            async with get_async_db() as db:
+                user = await db.scalar(select(User).where(User.id == id))
 
-                user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
-                # return UserModel(**user.dict())
+                if user:
+                    for key, value in updated.items():
+                        if hasattr(user, key):
+                            setattr(user, key, value)
+                        else:
+                            logger.error(f"{key} is not a valid attribute of User")
+
+                    await db.commit()
+                    await db.refresh(user)
+                    return UserModel.model_validate(user)
+                return None
         except Exception:
             return None
 
-    def delete_user_by_id(self, id: str) -> bool:
+    async def delete_user_by_id(self, id: str) -> bool:
         try:
             # Remove User from Groups
-            Groups.remove_user_from_all_groups(id)
+            _ = await Groups.remove_user_from_all_groups(id)
 
             # Delete User Chats
-            result = Chats.delete_chats_by_user_id(id)
-            if result:
-                with get_db() as db:
-                    # Delete User
-                    db.query(User).filter_by(id=id).delete()
-                    db.commit()
+            _ = await Chats.delete_chats_by_user_id(id)
+            async with get_async_db() as db:
+                # Delete User
+                _ = await db.execute(delete(User).where(User.id == id))
+                await db.commit()
 
-                return True
-            else:
+            return True
+        except Exception:
+            return False
+
+    async def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
+        try:
+            async with get_async_db() as db:
+                if user := await db.scalar(select(User).where(User.id == id)):
+                    user.api_key = api_key
+                    await db.commit()
+                    await db.refresh(user)
+                    return True
                 return False
         except Exception:
             return False
 
-    def update_user_api_key_by_id(self, id: str, api_key: str) -> str:
+    async def get_user_api_key_by_id(self, id: str) -> str | None:
         try:
-            with get_db() as db:
-                result = db.query(User).filter_by(id=id).update({"api_key": api_key})
-                db.commit()
-                return True if result == 1 else False
-        except Exception:
-            return False
-
-    def get_user_api_key_by_id(self, id: str) -> Optional[str]:
-        try:
-            with get_db() as db:
-                user = db.query(User).filter_by(id=id).first()
-                return user.api_key
+            async with get_async_db() as db:
+                if user := await db.scalar(select(User).where(User.id == id)):
+                    return user.api_key
+                return None
         except Exception:
             return None
 
-    def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
-        with get_db() as db:
-            users = db.query(User).filter(User.id.in_(user_ids)).all()
-            return [user.id for user in users]
+    async def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
+        async with get_async_db() as db:
+            users = await db.scalars(select(User).where(User.id.in_(user_ids)))
+            return [user.id for user in users.all()]
 
-    def get_historical_users_data(
-        self, days: int = 7, domain: Optional[str] = None
-    ) -> list[dict]:
+    async def get_historical_users_data(
+        self, days: int = 7, domain: str | None = None
+    ) -> list[dict[str, str | int]]:
         try:
-            result = []
+            result: list[dict[str, str | int]] = []
             current_time = int(time.time())
 
             # Calculate today's date at midnight for proper day boundary
@@ -358,8 +386,8 @@ class UsersTable:
             )
 
             # Generate all date strings first to ensure no gaps
-            date_strings = []
-            dates_timestamps = []
+            date_strings: list[str] = []
+            dates_timestamps: list[int] = []
             for day in range(days):
                 # Calculate day start (midnight) for each day in the past
                 day_start = today_midnight - (day * 24 * 60 * 60)
@@ -380,24 +408,28 @@ class UsersTable:
                 start_time = day_start
                 end_time = start_time + (24 * 60 * 60)
 
-                with get_db() as db:
-                    query = db.query(User).filter(
-                        User.created_at < end_time,
+                async with get_async_db() as db:
+                    query = (
+                        select(func.count())
+                        .select_from(User)
+                        .where(
+                            User.created_at < end_time,
+                        )
                     )
 
                     if domain:
-                        query = query.filter(User.domain == domain)
+                        query = query.where(User.domain == domain)
 
-                    count = query.count()
+                    count = await db.scalar(query)
 
-                    result.append({"date": date_str, "count": count})
+                    result.append({"date": date_str, "count": count if count else 0})
 
             # Return in chronological order
             return result
         except Exception as e:
             logger.error(f"Failed to get historical users data: {e}")
             # Generate continuous date range as fallback
-            fallback = []
+            fallback: list[dict[str, str | int]] = []
             today = time.strftime("%Y-%m-%d", time.localtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
@@ -410,31 +442,38 @@ class UsersTable:
 
             return sorted(fallback, key=lambda x: x["date"])
 
-    def get_range_metrics(
-        self, start_timestamp: int, end_timestamp: int, domain: str = None
-    ) -> dict:
+    async def get_range_metrics(
+        self, start_timestamp: int, end_timestamp: int, domain: str | None = None
+    ) -> dict[str, int]:
         """Get user metrics for a specific date range"""
         try:
-            with get_db() as db:
+            async with get_async_db() as db:
                 # Get the total count of users active in the range
-                query = db.query(User).filter(
-                    User.last_active_at >= start_timestamp,
-                    User.last_active_at < end_timestamp,
+                query = (
+                    select(func.count())
+                    .select_from(User)
+                    .where(
+                        User.last_active_at >= start_timestamp,
+                        User.last_active_at < end_timestamp,
+                    )
                 )
 
                 if domain:
-                    query = query.filter(User.domain == domain)
+                    query = query.where(User.domain == domain)
 
-                active_users = query.count()
+                active_users = await db.scalar(query)
 
                 # Get the total count of all users (for domain if specified)
-                total_query = db.query(User)
+                total_query = select(func.count()).select_from(User)
                 if domain:
                     total_query = total_query.filter(User.domain == domain)
 
-                total_users = total_query.count()
+                total_users = await db.scalar(total_query)
 
-                return {"total_users": total_users, "active_users": active_users}
+                return {
+                    "total_users": total_users if total_users else 0,
+                    "active_users": active_users if active_users else 0,
+                }
         except Exception as e:
             logger.error(f"Failed to get range metrics: {e}")
             return {"total_users": 0, "active_users": 0}

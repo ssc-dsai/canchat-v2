@@ -76,7 +76,7 @@ from open_webui.routers.retrieval import (
     load_reranker_model,
 )
 
-from open_webui.internal.db import Session, get_db
+from open_webui.internal.db import Session, get_async_db
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -1094,11 +1094,11 @@ app.include_router(crew_mcp.router, prefix="/api/v1/crew-mcp", tags=["crew-mcp"]
 
 @app.get("/api/models")
 async def get_models(request: Request, user=Depends(get_verified_user)):
-    def get_filtered_models(models, user):
+    async def get_filtered_models(models, user):
         filtered_models = []
         for model in models:
             if model.get("arena"):
-                if has_access(
+                if await has_access(
                     user.id,
                     type="read",
                     access_control=model.get("info", {})
@@ -1108,9 +1108,9 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = await Models.get_model_by_id(model["id"])
             if model_info:
-                if user.id == model_info.user_id or has_access(
+                if user.id == model_info.user_id or await has_access(
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
@@ -1139,7 +1139,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
     if (
         user.role == "user" or user.role == "analyst" or user.role == "global_analyst"
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
-        models = get_filtered_models(models, user)
+        models = await get_filtered_models(models, user)
 
     log.debug(
         f"/api/models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}"
@@ -1172,7 +1172,7 @@ async def chat_completion(
         # Check if user has access to the model
         if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
             try:
-                check_model_access(user, model)
+                await check_model_access(user, model)
             except Exception as e:
                 raise e
 
@@ -1274,11 +1274,11 @@ async def get_app_config(request: Request):
                 detail="Invalid token",
             )
         if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
+            user = await Users.get_user_by_id(data["id"])
 
     onboarding = False
     if user is None:
-        user_count = Users.get_num_users()
+        user_count = await Users.get_num_users()
         onboarding = user_count == 0
 
     return {
@@ -1436,11 +1436,11 @@ async def healthcheck():
 
 
 @app.get("/health/db")
-def healthcheck_with_db():
+async def healthcheck_with_db():
     try:
         # Use a dedicated session for health checks to avoid conflicts with long-running operations
-        with get_db() as db:
-            db.execute(text("SELECT 1;")).all()
+        async with get_async_db() as db:
+            _ = await db.execute(text("SELECT 1;"))
         return {"status": True}
     except Exception as e:
         log.error(f"Database health check failed: {e}")

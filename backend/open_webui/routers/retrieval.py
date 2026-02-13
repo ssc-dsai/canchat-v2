@@ -10,7 +10,6 @@ import asyncio
 
 import uuid
 from datetime import datetime, timedelta
-from typing import List, Optional
 
 from fastapi import (
     Depends,
@@ -178,7 +177,7 @@ router = APIRouter()
 
 
 class CollectionNameForm(BaseModel):
-    collection_name: Optional[str] = None
+    collection_name: str | None = None
 
 
 class ProcessUrlForm(CollectionNameForm):
@@ -236,11 +235,11 @@ class OllamaConfigForm(BaseModel):
 
 
 class EmbeddingModelUpdateForm(BaseModel):
-    openai_config: Optional[OpenAIConfigForm] = None
-    ollama_config: Optional[OllamaConfigForm] = None
+    openai_config: OpenAIConfigForm | None = None
+    ollama_config: OllamaConfigForm | None = None
     embedding_engine: str
     embedding_model: str
-    embedding_batch_size: Optional[int] = 1
+    embedding_batch_size: int | None = 1
 
 
 @router.post("/embedding/update")
@@ -415,66 +414,66 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
 
 
 class FileConfig(BaseModel):
-    max_size: Optional[int] = None
-    max_count: Optional[int] = None
+    max_size: int | None = None
+    max_count: int | None = None
 
 
 class ContentExtractionConfig(BaseModel):
     engine: str = ""
-    tika_server_url: Optional[str] = None
+    tika_server_url: str | None = None
 
 
 class ChunkParamUpdateForm(BaseModel):
-    text_splitter: Optional[str] = None
+    text_splitter: str | None = None
     chunk_size: int
     chunk_overlap: int
 
 
 class YoutubeLoaderConfig(BaseModel):
     language: list[str]
-    translation: Optional[str] = None
+    translation: str | None = None
     proxy_url: str = ""
 
 
 class WebSearchConfig(BaseModel):
     enabled: bool
     bypass_embedding_and_retrieval: bool
-    engine: Optional[str] = None
-    searxng_query_url: Optional[str] = None
-    google_pse_api_key: Optional[str] = None
-    google_pse_engine_id: Optional[str] = None
-    brave_search_api_key: Optional[str] = None
-    kagi_search_api_key: Optional[str] = None
-    mojeek_search_api_key: Optional[str] = None
-    serpstack_api_key: Optional[str] = None
-    serpstack_https: Optional[bool] = None
-    serper_api_key: Optional[str] = None
-    serply_api_key: Optional[str] = None
-    tavily_api_key: Optional[str] = None
-    searchapi_api_key: Optional[str] = None
-    searchapi_engine: Optional[str] = None
-    jina_api_key: Optional[str] = None
-    bing_search_v7_endpoint: Optional[str] = None
-    bing_search_v7_subscription_key: Optional[str] = None
-    result_count: Optional[int] = None
-    concurrent_requests: Optional[int] = None
+    engine: str | None = None
+    searxng_query_url: str | None = None
+    google_pse_api_key: str | None = None
+    google_pse_engine_id: str | None = None
+    brave_search_api_key: str | None = None
+    kagi_search_api_key: str | None = None
+    mojeek_search_api_key: str | None = None
+    serpstack_api_key: str | None = None
+    serpstack_https: bool | None = None
+    serper_api_key: str | None = None
+    serply_api_key: str | None = None
+    tavily_api_key: str | None = None
+    searchapi_api_key: str | None = None
+    searchapi_engine: str | None = None
+    jina_api_key: str | None = None
+    bing_search_v7_endpoint: str | None = None
+    bing_search_v7_subscription_key: str | None = None
+    result_count: int | None = None
+    concurrent_requests: int | None = None
 
 
 class WebConfig(BaseModel):
-    search: Optional[WebSearchConfig] = None
-    web_loader_ssl_verification: Optional[bool] = None
+    search: WebSearchConfig | None = None
+    web_loader_ssl_verification: bool | None = None
 
 
 class ConfigUpdateForm(BaseModel):
-    RAG_FULL_CONTEXT: Optional[bool] = None
-    pdf_extract_images: Optional[bool] = None
-    enable_google_drive_integration: Optional[bool] = None
-    enable_wikipedia_grounding: Optional[bool] = None
-    file: Optional[FileConfig] = None
-    content_extraction: Optional[ContentExtractionConfig] = None
-    chunk: Optional[ChunkParamUpdateForm] = None
-    youtube: Optional[YoutubeLoaderConfig] = None
-    web: Optional[WebConfig] = None
+    RAG_FULL_CONTEXT: bool | None = None
+    pdf_extract_images: bool | None = None
+    enable_google_drive_integration: bool | None = None
+    enable_wikipedia_grounding: bool | None = None
+    file: FileConfig | None = None
+    content_extraction: ContentExtractionConfig | None = None
+    chunk: ChunkParamUpdateForm | None = None
+    youtube: YoutubeLoaderConfig | None = None
+    web: WebConfig | None = None
 
 
 @router.post("/config/update")
@@ -664,10 +663,10 @@ async def get_query_settings(request: Request, user=Depends(get_admin_user)):
 
 
 class QuerySettingsForm(BaseModel):
-    k: Optional[int] = None
-    r: Optional[float] = None
-    template: Optional[str] = None
-    hybrid: Optional[bool] = None
+    k: int | None = None
+    r: float | None = None
+    template: str | None = None
+    hybrid: bool | None = None
 
 
 @router.post("/query/settings/update")
@@ -702,7 +701,7 @@ async def save_docs_to_vector_db(
     request: Request,
     docs,
     collection_name,
-    metadata: Optional[dict] = None,
+    metadata: dict | None = None,
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
@@ -816,7 +815,7 @@ async def save_docs_to_vector_db(
             log.info(f"collection {collection_name} already exists")
 
             if overwrite:
-                await VECTOR_DB_CLIENT.delete_collection(
+                _ = await VECTOR_DB_CLIENT.delete_collection(
                     collection_name=collection_name
                 )
                 log.info(f"deleting existing collection {collection_name}")
@@ -864,7 +863,7 @@ async def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
-        await VECTOR_DB_CLIENT.insert(
+        _ = await VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
         )
@@ -877,8 +876,8 @@ async def save_docs_to_vector_db(
 
 class ProcessFileForm(BaseModel):
     file_id: str
-    content: Optional[str] = None
-    collection_name: Optional[str] = None
+    content: str | None = None
+    collection_name: str | None = None
 
 
 @router.post("/process/file")
@@ -888,7 +887,7 @@ async def process_file(
     user=Depends(get_verified_user),
 ):
     try:
-        file = Files.get_file_by_id(form_data.file_id)
+        file = await Files.get_file_by_id(form_data.file_id)
 
         collection_name = form_data.collection_name
 
@@ -899,7 +898,7 @@ async def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            await VECTOR_DB_CLIENT.delete_collection(
+            _ = await VECTOR_DB_CLIENT.delete_collection(
                 collection_name=f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}"
             )
 
@@ -998,13 +997,13 @@ async def process_file(
             text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
-        Files.update_file_data_by_id(
+        _ = await Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
 
         hash = calculate_sha256_string(text_content)
-        Files.update_file_hash_by_id(file.id, hash)
+        _ = await Files.update_file_hash_by_id(file.id, hash)
 
         try:
             result = await save_docs_to_vector_db(
@@ -1020,7 +1019,7 @@ async def process_file(
             )
 
             if result:
-                Files.update_file_metadata_by_id(
+                _ = await Files.update_file_metadata_by_id(
                     file.id,
                     {
                         "collection_name": collection_name,
@@ -1052,7 +1051,7 @@ async def process_file(
 class ProcessTextForm(BaseModel):
     name: str
     content: str
-    collection_name: Optional[str] = None
+    collection_name: str | None = None
 
 
 @router.post("/process/text")
@@ -1421,9 +1420,9 @@ async def process_web_search(
 class QueryDocForm(BaseModel):
     collection_name: str
     query: str
-    k: Optional[int] = None
-    r: Optional[float] = None
-    hybrid: Optional[bool] = None
+    k: int | None = None
+    r: float | None = None
+    hybrid: bool | None = None
 
 
 @router.post("/query/doc")
@@ -1496,9 +1495,9 @@ async def query_doc_handler(
 class QueryCollectionsForm(BaseModel):
     collection_names: list[str]
     query: str
-    k: Optional[int] = None
-    r: Optional[float] = None
-    hybrid: Optional[bool] = None
+    k: int | None = None
+    r: float | None = None
+    hybrid: bool | None = None
 
 
 @router.post("/query/collection")
@@ -1583,10 +1582,10 @@ async def delete_entries_from_collection(
         if await VECTOR_DB_CLIENT.has_collection(
             collection_name=form_data.collection_name
         ):
-            file = Files.get_file_by_id(form_data.file_id)
+            file = await Files.get_file_by_id(form_data.file_id)
             hash = file.hash
 
-            await VECTOR_DB_CLIENT.delete(
+            _ = await VECTOR_DB_CLIENT.delete(
                 collection_name=form_data.collection_name,
                 metadata={"hash": hash},
             )
@@ -1601,7 +1600,7 @@ async def delete_entries_from_collection(
 @router.post("/reset/db")
 async def reset_vector_db(user=Depends(get_admin_user)):
     await VECTOR_DB_CLIENT.reset()
-    Knowledges.delete_all_knowledge()
+    _ = await Knowledges.delete_all_knowledge()
 
 
 @router.post("/reset/uploads")
@@ -1630,24 +1629,24 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
 if ENV == "dev":
 
     @router.get("/ef/{text}")
-    async def get_embeddings(request: Request, text: Optional[str] = "Hello World!"):
+    async def get_embeddings(request: Request, text: str | None = "Hello World!"):
         return {"result": request.app.state.EMBEDDING_FUNCTION(text)}
 
 
 class BatchProcessFilesForm(BaseModel):
-    files: List[FileModel]
+    files: list[FileModel]
     collection_name: str
 
 
 class BatchProcessFilesResult(BaseModel):
     file_id: str
     status: str
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class BatchProcessFilesResponse(BaseModel):
-    results: List[BatchProcessFilesResult]
-    errors: List[BatchProcessFilesResult]
+    results: list[BatchProcessFilesResult]
+    errors: list[BatchProcessFilesResult]
 
 
 @router.post("/process/files/batch")
@@ -1659,17 +1658,17 @@ async def process_files_batch(
     """
     Process a batch of files and save them to the vector database.
     """
-    results: List[BatchProcessFilesResult] = []
-    errors: List[BatchProcessFilesResult] = []
+    results: list[BatchProcessFilesResult] = []
+    errors: list[BatchProcessFilesResult] = []
     collection_name = form_data.collection_name
 
     # Prepare all documents first
-    all_docs: List[Document] = []
+    all_docs: list[Document] = []
     for file in form_data.files:
         try:
             text_content = file.data.get("content", "")
 
-            docs: List[Document] = [
+            docs: list[Document] = [
                 Document(
                     page_content=text_content.replace("<br/>", "\n"),
                     metadata={
@@ -1683,8 +1682,9 @@ async def process_files_batch(
             ]
 
             hash = calculate_sha256_string(text_content)
-            Files.update_file_hash_by_id(file.id, hash)
-            Files.update_file_data_by_id(file.id, {"content": text_content})
+            _ = await Files.update_file_data_by_id(
+                file.id, {"content": text_content, "hash": hash}
+            )
 
             all_docs.extend(docs)
             results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
@@ -1707,7 +1707,7 @@ async def process_files_batch(
 
             # Update all files with collection name
             for result in results:
-                Files.update_file_metadata_by_id(
+                _ = await Files.update_file_metadata_by_id(
                     result.file_id, {"collection_name": collection_name}
                 )
                 result.status = "completed"
@@ -1767,7 +1767,7 @@ async def cleanup_file_vectors(file_id: str, collection_name: str = None) -> boo
                 # For shared collections, we need to delete by filter
                 # Note: This requires the vector client to support filtering by metadata
                 try:
-                    await VECTOR_DB_CLIENT.delete(
+                    _ = await VECTOR_DB_CLIENT.delete(
                         collection_name=target_collection,
                         points_selector={
                             "filter": {
@@ -1833,7 +1833,7 @@ async def cleanup_orphaned_vectors() -> dict:
         from open_webui.models.knowledge import Knowledges
 
         try:
-            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
             existing_kb_ids = {kb.id for kb in existing_knowledge_bases}
             log.info(f"Found {len(existing_kb_ids)} knowledge bases to preserve")
         except Exception as e:
@@ -1879,7 +1879,7 @@ async def cleanup_orphaned_vectors() -> dict:
 
                 # Check if file still exists in database
                 try:
-                    file = Files.get_file_by_id(file_id)
+                    file = await Files.get_file_by_id(file_id)
                     if not file:
                         # File doesn't exist, delete the collection
                         await VECTOR_DB_CLIENT.delete_collection(
@@ -2717,13 +2717,13 @@ def extract_file_ids_from_chat_data(chat):
         return set()
 
 
-def get_all_file_references_from_chats(exclude_chat_ids=None):
+async def get_all_file_references_from_chats(exclude_chat_ids=None):
     """
     Extract all file IDs referenced across all chats in the system.
     Uses pagination to handle large datasets efficiently.
 
     Args:
-        exclude_chat_ids: List of chat IDs to exclude from scanning (e.g., chats being deleted)
+        exclude_chat_ids: list of chat IDs to exclude from scanning (e.g., chats being deleted)
 
     Returns:
         set: Set of all file IDs that are still referenced by existing chats
@@ -2738,22 +2738,23 @@ def get_all_file_references_from_chats(exclude_chat_ids=None):
         all_file_ids = set()
 
         # Get chats in batches to avoid memory issues
-        from open_webui.models.chats import get_db, Chat
+        from open_webui.models.chats import get_async_db, Chat
+        from sqlalchemy import select
 
         batch_size = 100
         offset = 0
         total_chats_scanned = 0
 
-        with get_db() as db:
+        async with get_async_db() as db:
             while True:
                 # Get batch of chats with only required columns for file extraction
-                query = db.query(Chat.id, Chat.chat)  # Only select id and chat columns
+                query = select(Chat.id, Chat.chat)  # Only select id and chat columns
 
                 # Exclude chats that are being deleted
                 if exclude_chat_ids:
-                    query = query.filter(~Chat.id.in_(exclude_chat_ids))
+                    query = query.where(~Chat.id.in_(exclude_chat_ids))
 
-                chat_batch = query.offset(offset).limit(batch_size).all()
+                chat_batch = await db.execute(query.offset(offset).limit(batch_size))
 
                 if not chat_batch:
                     break  # No more chats to process
@@ -2762,7 +2763,7 @@ def get_all_file_references_from_chats(exclude_chat_ids=None):
                     f"Scanning file references in batch of {len(chat_batch)} chats (offset {offset})"
                 )
 
-                for chat_data in chat_batch:
+                for id, chat_data in chat_batch.all():
                     try:
                         # Create a minimal object for file ID extraction
                         class TempChatForFileExtraction:
@@ -2824,12 +2825,12 @@ async def cleanup_orphaned_files_by_reference():
         log.info("Starting reference-based file cleanup...")
 
         # Get all file references from existing chats
-        referenced_file_ids = get_all_file_references_from_chats()
+        referenced_file_ids = await get_all_file_references_from_chats()
 
         # Get knowledge base files that should be preserved
         kb_referenced_files = set()
         try:
-            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
             for kb in existing_knowledge_bases:
                 if kb.data and isinstance(kb.data, dict):
                     file_ids = kb.data.get("file_ids", [])
@@ -2843,7 +2844,7 @@ async def cleanup_orphaned_files_by_reference():
             kb_referenced_files = set()
 
         # Get all files from the database
-        all_files = Files.get_files()
+        all_files = await Files.get_files()
 
         for file in all_files:
             cleanup_summary["files_checked"] += 1
@@ -2873,7 +2874,7 @@ async def cleanup_orphaned_files_by_reference():
                         log.info(f"Deleted physical file: {file.path}")
 
                     # Delete from database
-                    Files.delete_file_by_id(file.id)
+                    _ = await Files.delete_file_by_id(file.id)
                     cleanup_summary["files_deleted"] += 1
                     log.info(f"Deleted orphaned file: {file.id}")
 
@@ -2946,7 +2947,7 @@ async def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
         # Get knowledge base files to preserve their collections
         kb_file_ids = set()
         try:
-            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
             for kb in existing_knowledge_bases:
                 if kb.data and isinstance(kb.data, dict):
                     file_ids = kb.data.get("file_ids", [])
@@ -2993,7 +2994,7 @@ async def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
 
                     # Get file from database to check its age
                     try:
-                        file = Files.get_file_by_id(file_id)
+                        file = await Files.get_file_by_id(file_id)
                         if file:
                             # Check if file is old based on its creation timestamp
                             if hasattr(file, "created_at") and file.created_at:
@@ -3051,7 +3052,7 @@ async def reindex_file_on_demand(file_id: str, request: Request, user=None) -> b
         log.info(f"Re-indexing file {file_id} on demand...")
 
         # Get file from database
-        file = Files.get_file_by_id(file_id)
+        file = await Files.get_file_by_id(file_id)
         if not file:
             log.error(f"File {file_id} not found in database")
             return False
@@ -3158,7 +3159,7 @@ async def cleanup_orphaned_chat_files() -> dict:
         from open_webui.models.knowledge import Knowledges
 
         try:
-            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
             existing_kb_ids = {kb.id for kb in existing_knowledge_bases}
             log.info(f"Found {len(existing_kb_ids)} knowledge bases to preserve")
         except Exception as e:
@@ -3209,7 +3210,7 @@ async def cleanup_orphaned_chat_files() -> dict:
                     continue
 
                 # Check if file exists in database
-                file = Files.get_file_by_id(file_id)
+                file = await Files.get_file_by_id(file_id)
                 if not file:
                     # File doesn't exist in database - orphaned
                     cleanup_summary["orphaned_files_found"] += 1
@@ -3237,7 +3238,7 @@ async def cleanup_orphaned_chat_files() -> dict:
                     log.warning(f"Could not delete physical file {file.path}: {e}")
 
                 # Delete from database
-                Files.delete_file_by_id(file_id)
+                _ = await Files.delete_file_by_id(file_id)
                 cleanup_summary["files_deleted"] += 1
 
                 log.info(f"Cleaned up chat file: {file_id}")
@@ -3336,13 +3337,13 @@ async def cleanup_expired_chats(
         # Get expired chats
         if force_cleanup_all:
             # Get all chats regardless of age
-            expired_chats = Chats.get_all_chats_for_cleanup(
+            expired_chats = await Chats.get_all_chats_for_cleanup(
                 preserve_pinned=preserve_pinned,
                 preserve_archived=preserve_archived,
             )
         else:
             # Get only expired chats based on age
-            expired_chats = Chats.get_expired_chats(
+            expired_chats = await Chats.get_expired_chats(
                 max_age_days=max_age_days,
                 preserve_pinned=preserve_pinned,
                 preserve_archived=preserve_archived,
@@ -3453,14 +3454,14 @@ async def cleanup_expired_chats(
 
         # Get all file references once before the loop to avoid repeated scanning
         # Exclude the chats we're about to delete from the reference scan
-        all_file_refs = get_all_file_references_from_chats(
+        all_file_refs = await get_all_file_references_from_chats(
             exclude_chat_ids=chat_ids_to_delete
         )
 
         # Get knowledge base files that should be preserved
         kb_referenced_files = set()
         try:
-            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
             for kb in existing_knowledge_bases:
                 if kb.data and isinstance(kb.data, dict):
                     file_ids = kb.data.get("file_ids", [])
@@ -3494,7 +3495,7 @@ async def cleanup_expired_chats(
                     # Only delete if this file is not referenced by any remaining chats
                     if file_id not in all_file_refs:
                         # Get file info
-                        file = Files.get_file_by_id(file_id)
+                        file = await Files.get_file_by_id(file_id)
                         if file:
                             # Clean up vector collection
                             collection_name = f"file-{file_id}"
@@ -3518,7 +3519,7 @@ async def cleanup_expired_chats(
                                     )
 
                             # Delete from database
-                            Files.delete_file_by_id(file_id)
+                            _ = await Files.delete_file_by_id(file_id)
                             cleanup_summary["files_cleaned"] += 1
                             log.debug(f"Deleted file record: {file_id}")
                     else:
@@ -3539,7 +3540,7 @@ async def cleanup_expired_chats(
         # Delete chats in batch
         if chat_ids_to_delete:
             log.info(f"Deleting {len(chat_ids_to_delete)} expired chats...")
-            deletion_result = Chats.delete_chat_list(chat_ids_to_delete)
+            deletion_result = await Chats.delete_chat_list(chat_ids_to_delete)
             cleanup_summary["chats_deleted"] = deletion_result["deleted_count"]
 
             if deletion_result["errors"]:

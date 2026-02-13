@@ -86,7 +86,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         try:
-            _user_context.set(get_current_user(request=request, auth_token=None).email)
+            _user_context.set(
+                (await get_current_user(request=request, auth_token=None)).email
+            )
         except Exception:
             pass
 

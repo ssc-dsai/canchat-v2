@@ -399,7 +399,7 @@ async def get_sources_from_files(
                 documents = []
                 metadatas = []
                 for file_id in file_ids:
-                    file_object = Files.get_file_by_id(file_id)
+                    file_object = await Files.get_file_by_id(file_id)
 
                     if file_object:
                         documents.append(file_object.data.get("content", ""))
@@ -417,7 +417,7 @@ async def get_sources_from_files(
                 }
 
             elif file.get("id"):
-                file_object = Files.get_file_by_id(file.get("id"))
+                file_object = await Files.get_file_by_id(file.get("id"))
                 if file_object:
                     context = {
                         "documents": [[file_object.data.get("content", "")]],
