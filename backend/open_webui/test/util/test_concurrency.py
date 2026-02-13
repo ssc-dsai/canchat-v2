@@ -39,7 +39,9 @@ async def _safe_delete_collection(client: QdrantClient, collection_name: str) ->
         pass
 
 
-async def _collect_document_ids(client: QdrantClient, collection_name: str) -> list[str]:
+async def _collect_document_ids(
+    client: QdrantClient, collection_name: str
+) -> list[str]:
     try:
         qdrant_client = await client._get_client()
         points, _ = await qdrant_client.scroll(
@@ -316,8 +318,12 @@ async def test_concurrent_locks_are_collection_scoped(qdrant_client):
 
     try:
         await asyncio.gather(
-            asyncio.create_task(upload_with_outer_lock(collection_a, str(uuid.uuid4()))),
-            asyncio.create_task(upload_with_outer_lock(collection_b, str(uuid.uuid4()))),
+            asyncio.create_task(
+                upload_with_outer_lock(collection_a, str(uuid.uuid4()))
+            ),
+            asyncio.create_task(
+                upload_with_outer_lock(collection_b, str(uuid.uuid4()))
+            ),
         )
 
         ids_a = await _collect_document_ids(qdrant_client, collection_a)

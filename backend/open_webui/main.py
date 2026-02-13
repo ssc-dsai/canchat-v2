@@ -369,7 +369,7 @@ async def lifespan(app: FastAPI):
         from open_webui.retrieval.vector.locks import get_collection_lock_manager
 
         redis_lock_manager = get_collection_lock_manager()
-        
+
         # Perform async health check to verify connectivity
         if not await redis_lock_manager.health_check():
             raise RuntimeError(
@@ -1535,7 +1535,6 @@ async def healthcheck_redis():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Redis health check error: {str(e)}",
         )
-
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

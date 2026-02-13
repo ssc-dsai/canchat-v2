@@ -86,7 +86,9 @@ class AsyncRedisLock:
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
         # Renew at least once before expiration for all TTL values.
-        self._heartbeat_interval = max(1.0, min(self.HEARTBEAT_INTERVAL, timeout_secs / 3))
+        self._heartbeat_interval = max(
+            1.0, min(self.HEARTBEAT_INTERVAL, timeout_secs / 3)
+        )
 
         # Task-safe ownership tracking: {task_id: reentry_count}
         self._owners: Dict[int, int] = {}
@@ -290,7 +292,9 @@ class AsyncRedisLock:
 
             except Exception as e:
                 if isinstance(e, RedisError):
-                    await self.manager._mark_client_unhealthy(e, f"acquire:{self.lock_name}")
+                    await self.manager._mark_client_unhealthy(
+                        e, f"acquire:{self.lock_name}"
+                    )
                 log.error(
                     f"Exception acquiring Redis lock {self.lock_name}: {type(e).__name__}: {e}"
                 )
@@ -350,7 +354,9 @@ class AsyncRedisLock:
 
         except Exception as e:
             if isinstance(e, RedisError):
-                await self.manager._mark_client_unhealthy(e, f"release:{self.lock_name}")
+                await self.manager._mark_client_unhealthy(
+                    e, f"release:{self.lock_name}"
+                )
             log.error(
                 f"Exception releasing Redis lock {self.lock_name}: {type(e).__name__}: {e}"
             )
@@ -534,7 +540,9 @@ class RedisCollectionLockManager:
             return True
 
         try:
-            loop.call_soon_threadsafe(lambda: loop.create_task(self._close_redis_client(client)))
+            loop.call_soon_threadsafe(
+                lambda: loop.create_task(self._close_redis_client(client))
+            )
             return True
         except Exception as e:
             log.debug(
@@ -804,7 +812,9 @@ class RedisCollectionLockManager:
                 self.circuit_state = CircuitState.OPEN
                 self.circuit_open_time = time.time()
             elif self.circuit_state == CircuitState.HALF_OPEN:
-                log.error("[LOCK:CIRCUIT_OPEN_AGAIN] Recovery test failed, reopening circuit.")
+                log.error(
+                    "[LOCK:CIRCUIT_OPEN_AGAIN] Recovery test failed, reopening circuit."
+                )
                 self.circuit_state = CircuitState.OPEN
                 self.circuit_open_time = time.time()
 
