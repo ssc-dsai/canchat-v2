@@ -9,7 +9,7 @@ from langchain_core.documents import Document
 
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.config import ENABLE_RAG_LOCAL_WEB_FETCH
+from open_webui.config import ENABLE_RAG_LOCAL_WEB_FETCH, RAG_WEB_SEARCH_REQUEST_TIMEOUT
 from open_webui.env import SRC_LOG_LEVELS
 
 import logging
@@ -62,9 +62,10 @@ class SafeWebBaseLoader(WebBaseLoader):
         import time
 
         start = time.time()
+        timeout = RAG_WEB_SEARCH_REQUEST_TIMEOUT.value
         try:
             # Override to add timeout to prevent hanging
-            html_doc = self.session.get(url, timeout=15)
+            html_doc = self.session.get(url, timeout=timeout)
             elapsed = time.time() - start
             content_length = len(html_doc.content) if html_doc.content else 0
             log.info(

@@ -4,6 +4,7 @@ from typing import Optional
 import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.config import RAG_WEB_SEARCH_REQUEST_TIMEOUT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -37,12 +38,15 @@ def search_google_pse(
 
     try:
         # Add timeout to prevent hanging on complex queries
+        timeout = RAG_WEB_SEARCH_REQUEST_TIMEOUT.value
         log.info(f"Google PSE query: {query}")
-        response = requests.get(url, headers=headers, params=params, timeout=15)
+        response = requests.get(url, headers=headers, params=params, timeout=timeout)
         log.info(f"Google PSE response status: {response.status_code}")
         response.raise_for_status()
     except requests.exceptions.Timeout:
-        log.error(f"Google PSE TIMEOUT after 15s for query: {query}")
+        log.error(
+            f"Google PSE TIMEOUT after {RAG_WEB_SEARCH_REQUEST_TIMEOUT.value}s for query: {query}"
+        )
         raise
     except requests.exceptions.RequestException as e:
         log.error(f"Google PSE request failed: {e}")
