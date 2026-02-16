@@ -1399,8 +1399,9 @@
 					}
 					responseMessage.userContext = userContext;
 
-					// Check if user has selected ANY tools for this chat
-					const hasSelectedTools = selectedToolIds.length > 0;
+					// Web search/wiki grounding are exclusive with tool execution
+					const hasSelectedTools =
+						selectedToolIds.length > 0 && !webSearchEnabled && !wikiGroundingEnabled;
 
 					if (hasSelectedTools) {
 						// Use CrewAI when user has selected any tools
@@ -1649,7 +1650,10 @@
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
-				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+				tool_ids:
+					selectedToolIds.length > 0 && !webSearchEnabled && !wikiGroundingEnabled
+						? selectedToolIds
+						: undefined,
 				features: {
 					image_generation: imageGenerationEnabled,
 					web_search: webSearchEnabled,
