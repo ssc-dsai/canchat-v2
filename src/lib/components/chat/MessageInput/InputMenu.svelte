@@ -299,7 +299,9 @@
 				<Tooltip
 					content={wikiGroundingEnabled
 						? $i18n.t('Web Search disabled - Wiki Grounding is active')
-						: $i18n.t('Web Search (Beta)')}
+						: hasMcpToolsEnabled
+							? $i18n.t('Web Search disabled - MCP tools are active')
+							: $i18n.t('Web Search (Beta)')}
 					placement="right"
 				>
 					<button
