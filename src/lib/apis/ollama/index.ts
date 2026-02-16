@@ -1,4 +1,8 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
+import i18next from 'i18next';
+
+const getErrorMessage = (err: any) =>
+	err?.message === 'Failed to fetch' ? i18next.t('Failed to fetch') : err?.message;
 
 export const verifyOllamaConnection = async (
 	token: string = '',
@@ -24,8 +28,7 @@ export const verifyOllamaConnection = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.error('[verifyOllamaConnection] error:', err);
-			error = `Ollama: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Ollama connection check failed. Please try again.'}`;
+			error = `Ollama: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Ollama connection check failed. Please try again.')}`;
 			return [];
 		});
 
