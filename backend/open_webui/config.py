@@ -1991,10 +1991,31 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
 
+
+def _get_positive_int_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name, str(default))
+    try:
+        value = int(raw_value)
+        if value < 1:
+            raise ValueError
+        return value
+    except (TypeError, ValueError):
+        log.warning(
+            f"Invalid value for {name}='{raw_value}'. Falling back to {default}."
+        )
+        return default
+
+
 RAG_WEB_SEARCH_REQUEST_TIMEOUT = PersistentConfig(
     "RAG_WEB_SEARCH_REQUEST_TIMEOUT",
     "rag.web.search.request_timeout",
-    int(os.getenv("RAG_WEB_SEARCH_REQUEST_TIMEOUT", "15")),
+    _get_positive_int_env("RAG_WEB_SEARCH_REQUEST_TIMEOUT", 15),
+)
+
+RAG_WEB_SEARCH_TOTAL_TIMEOUT = PersistentConfig(
+    "RAG_WEB_SEARCH_TOTAL_TIMEOUT",
+    "rag.web.search.total_timeout",
+    _get_positive_int_env("RAG_WEB_SEARCH_TOTAL_TIMEOUT", 120),
 )
 
 RAG_WEB_LOADER_ENGINE = PersistentConfig(
