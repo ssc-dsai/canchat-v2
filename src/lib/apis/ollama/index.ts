@@ -24,7 +24,8 @@ export const verifyOllamaConnection = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `Ollama: ${err?.error?.message ?? 'Network Problem'}`;
+			console.error('[verifyOllamaConnection] error:', err);
+			error = `Ollama: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Ollama connection check failed. Please try again.'}`;
 			return [];
 		});
 

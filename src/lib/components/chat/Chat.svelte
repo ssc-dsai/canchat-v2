@@ -1712,19 +1712,19 @@
 
 		console.error(innerError);
 		if ('detail' in innerError) {
-			toast.error(innerError.detail);
-			errorMessage = innerError.detail;
+			errorMessage = $i18n.t(String(innerError.detail));
+			toast.error(errorMessage);
 		} else if ('error' in innerError) {
 			if ('message' in innerError.error) {
-				toast.error(innerError.error.message);
-				errorMessage = innerError.error.message;
+				errorMessage = $i18n.t(String(innerError.error.message));
+				toast.error(errorMessage);
 			} else {
-				toast.error(innerError.error);
-				errorMessage = innerError.error;
+				errorMessage = $i18n.t(String(innerError.error));
+				toast.error(errorMessage);
 			}
 		} else if ('message' in innerError) {
-			toast.error(innerError.message);
-			errorMessage = innerError.message;
+			errorMessage = $i18n.t(String(innerError.message));
+			toast.error(errorMessage);
 		}
 
 		responseMessage.error = {

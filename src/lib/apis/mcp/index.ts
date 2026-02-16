@@ -24,7 +24,8 @@ export const verifyMCPConnection = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[verifyMCPConnection] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'MCP connection check failed. Please try again.'}`;
 			return null;
 		});
 
@@ -51,7 +52,8 @@ export const getMCPConfig = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[getMCPConfig] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to load MCP configuration. Please try again.'}`;
 			return [];
 		});
 
@@ -79,7 +81,8 @@ export const updateMCPConfig = async (token: string = '', config: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[updateMCPConfig] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to update MCP configuration. Please try again.'}`;
 			return [];
 		});
 
@@ -106,7 +109,8 @@ export const getMCPURLs = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[getMCPURLs] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to load MCP server URLs. Please try again.'}`;
 			return [];
 		});
 
@@ -136,7 +140,8 @@ export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[updateMCPURLs] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to update MCP server URLs. Please try again.'}`;
 			return [];
 		});
 
@@ -163,7 +168,8 @@ export const getMCPTools = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[getMCPTools] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to load MCP tools. Please try again.'}`;
 			return [];
 		});
 
@@ -198,7 +204,8 @@ export const callMCPTool = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[callMCPTool] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'MCP tool call failed. Please try again.'}`;
 			return null;
 		});
 
@@ -225,7 +232,8 @@ export const getBuiltinServers = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[getBuiltinServers] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to load built-in MCP servers. Please try again.'}`;
 			return { servers: [] };
 		});
 
@@ -252,7 +260,8 @@ export const restartBuiltinServer = async (token: string = '', serverName: strin
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[restartBuiltinServer] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to restart built-in MCP server. Please try again.'}`;
 			return null;
 		});
 
@@ -281,7 +290,8 @@ export const getExternalServers = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[getExternalServers] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to load external MCP servers. Please try again.'}`;
 			return { servers: [] };
 		});
 
@@ -309,7 +319,8 @@ export const createExternalServer = async (token: string = '', serverData: objec
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[createExternalServer] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to create external MCP server. Please try again.'}`;
 			return null;
 		});
 
@@ -336,7 +347,8 @@ export const getExternalServer = async (token: string = '', serverId: string = '
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[getExternalServer] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to load external MCP server. Please try again.'}`;
 			return null;
 		});
 
@@ -368,7 +380,8 @@ export const updateExternalServer = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[updateExternalServer] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to update external MCP server. Please try again.'}`;
 			return null;
 		});
 
@@ -395,7 +408,8 @@ export const deleteExternalServer = async (token: string = '', serverId: string 
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[deleteExternalServer] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to delete external MCP server. Please try again.'}`;
 			return null;
 		});
 
@@ -422,7 +436,8 @@ export const startExternalServer = async (token: string = '', serverId: string =
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[startExternalServer] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to start external MCP server. Please try again.'}`;
 			return null;
 		});
 
@@ -449,7 +464,8 @@ export const stopExternalServer = async (token: string = '', serverId: string = 
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[stopExternalServer] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to stop external MCP server. Please try again.'}`;
 			return null;
 		});
 
@@ -476,7 +492,8 @@ export const restartExternalServer = async (token: string = '', serverId: string
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[restartExternalServer] error:', err);
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to restart external MCP server. Please try again.'}`;
 			return null;
 		});
 

@@ -19,7 +19,8 @@ export const getCrewMCPStatus = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[getCrewMCPStatus] error:', err);
+			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to load CrewAI MCP status. Please try again.'}`;
 			return null;
 		});
 
@@ -46,7 +47,8 @@ export const getCrewMCPTools = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			console.error('[getCrewMCPTools] error:', err);
+			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to load CrewAI MCP tools. Please try again.'}`;
 			return null;
 		});
 
@@ -70,7 +72,7 @@ export const queryCrewMCP = async (
 	// Create an AbortController with extended timeout for long-running MCP operations
 	// SharePoint document analysis can take 120-180 seconds in production
 	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes timeout
+	const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {
 		method: 'POST',
@@ -95,11 +97,12 @@ export const queryCrewMCP = async (
 		})
 		.catch((err) => {
 			clearTimeout(timeoutId);
+			console.error('[queryCrewMCP] error:', err);
 			if (err.name === 'AbortError') {
 				error =
 					'CrewAI MCP: Request timeout after 3 minutes. The analysis may be too complex or the SharePoint site has too many documents.';
 			} else {
-				error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+				error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'CrewAI MCP query failed. Please try again.'}`;
 			}
 			return null;
 		});

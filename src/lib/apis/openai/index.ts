@@ -227,7 +227,8 @@ export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
+			console.error('[getOpenAIModels] error:', err);
+			error = `OpenAI: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Unable to load OpenAI models. Please try again.'}`;
 			return [];
 		});
 
@@ -262,7 +263,8 @@ export const verifyOpenAIConnection = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
+			console.error('[verifyOpenAIConnection] error:', err);
+			error = `OpenAI: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'OpenAI connection check failed. Please try again.'}`;
 			return [];
 		});
 
@@ -318,11 +320,22 @@ export const generateOpenAIChatCompletion = async (
 		body: JSON.stringify(body)
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				try {
+					throw await res.json();
+				} catch (_jsonError) {
+					const errorText = await res.text().catch(() => '');
+					throw {
+						message:
+							errorText?.trim() || `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`
+					};
+				}
+			}
 			return res.json();
 		})
 		.catch((err) => {
-			error = `${err?.detail ?? 'Network Problem'}`;
+			console.error('[generateOpenAIChatCompletion] error:', err);
+			error = `${err?.detail ?? err?.error?.message ?? err?.message ?? 'Chat completion failed. Please try again.'}`;
 			return null;
 		});
 

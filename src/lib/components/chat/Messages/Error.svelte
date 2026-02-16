@@ -8,7 +8,16 @@
 	export let content = '';
 
 	const localizeErrorContent = (value: string) => {
-		return value.replace('Network Problem', $i18n.t('Network Problem'));
+		const normalized = value.replace('Network Problem', $i18n.t('Network Problem'));
+		const prefixes = ['MCP: ', 'CrewAI MCP: ', 'OpenAI: ', 'Ollama: '];
+
+		for (const prefix of prefixes) {
+			if (normalized.startsWith(prefix)) {
+				return `${prefix}${$i18n.t(normalized.slice(prefix.length))}`;
+			}
+		}
+
+		return $i18n.t(normalized);
 	};
 </script>
 
