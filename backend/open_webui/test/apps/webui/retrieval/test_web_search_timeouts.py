@@ -81,6 +81,7 @@ def test_url_fetch_timeout_continue_behavior(monkeypatch):
 
 def test_total_timeout_enforcement(monkeypatch):
     """process_web_search should return HTTP 408 when the total web-search budget is exceeded."""
+
     # Simulate search work that outlives the limit
     def slow_search_web(request, engine, query, request_timeout=None):
         time.sleep(2)
@@ -121,7 +122,9 @@ def test_http_helper_non_json_response_raises_request_exception(monkeypatch):
 
     monkeypatch.setattr(web_http.requests, "get", fake_get)
 
-    with pytest.raises(requests.exceptions.RequestException, match="returned invalid JSON"):
+    with pytest.raises(
+        requests.exceptions.RequestException, match="returned invalid JSON"
+    ):
         web_http.get_json_with_timeout(
             "https://provider.example",
             provider_name="Test Provider",
