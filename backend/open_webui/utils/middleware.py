@@ -78,6 +78,25 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
+def sanitize_tool_ids_for_features(
+    tool_ids: Optional[list], features: Optional[dict]
+) -> Optional[list]:
+    """
+    Guardrail: web search or wiki grounding must not run with other tool calls.
+    Ignore tool_ids when either feature is active.
+    """
+    if not tool_ids:
+        return tool_ids
+
+    if not features:
+        return tool_ids
+
+    if features.get("web_search") or features.get("wiki_grounding"):
+        return None
+
+    return tool_ids
+
+
 def fetch_wikipedia_title_and_excerpt(url: str) -> tuple[str, str]:
     """
     Fetch the actual title and excerpt from a Wikipedia URL.
@@ -1351,6 +1370,16 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         form_data["files"] = files
 
     features = form_data.pop("features", None)
+    # Sanitize tool_ids to ensure web_search/wiki_grounding do not run with tool calls
+    original_tool_ids = form_data.get("tool_ids")
+    form_data["tool_ids"] = sanitize_tool_ids_for_features(original_tool_ids, features)
+
+    if original_tool_ids and not form_data.get("tool_ids"):
+        log.info(
+            "Ignoring tool_ids because exclusive feature mode is active "
+            "(web_search/wiki_grounding)."
+        )
+
     if features:
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
