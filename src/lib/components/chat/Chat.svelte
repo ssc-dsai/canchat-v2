@@ -117,6 +117,17 @@
 
 	let taskId = null;
 
+	// Chat Input Handler for draft saving
+	const handleInputChange = (input) => {
+		if (chatIdProp) {
+			if (input.prompt) {
+				localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
+			} else {
+				localStorage.removeItem(`chat-input-${$chatId}`);
+			}
+		}
+	};
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
@@ -158,6 +169,7 @@
 		})();
 	} else {
 		(async () => {
+			prompt = '';
 			await initNewChat();
 		})();
 	}
@@ -2049,13 +2061,7 @@
 								bind:atSelectedModel
 								{stopResponse}
 								{createMessagePair}
-								onChange={(input) => {
-									if (input.prompt) {
-										localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
-									} else {
-										localStorage.removeItem(`chat-input-${$chatId}`);
-									}
-								}}
+								onChange={handleInputChange}
 								on:upload={async (e) => {
 									const { type, data } = e.detail;
 
@@ -2099,6 +2105,7 @@
 								bind:wikiGroundingEnabled
 								bind:wikiGroundingMode
 								bind:atSelectedModel
+								onChange={handleInputChange}
 								{stopResponse}
 								{createMessagePair}
 								on:upload={async (e) => {
