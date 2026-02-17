@@ -119,7 +119,7 @@
 
 	// Chat Input Handler for draft saving
 	const handleInputChange = (input) => {
-		if (chatIdProp) {
+		if ($chatId) {
 			if (input.prompt) {
 				localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
 			} else {
