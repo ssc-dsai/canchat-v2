@@ -1173,7 +1173,9 @@ async def process_web(
         )
 
 
-def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
+def search_web(
+    request: Request, engine: str, query: str, request_timeout: Optional[int] = None
+) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
     - SEARXNG_QUERY_URL
@@ -1186,8 +1188,13 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     - SERPLY_API_KEY
     - TAVILY_API_KEY
     - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
+
     Args:
+        request (Request): FastAPI request object with app config.
+        engine (str): Configured web search engine identifier.
         query (str): The query to search for
+        request_timeout (Optional[int]): Optional per-request timeout override in seconds.
+            If not provided, providers use the configured default request timeout.
     """
 
     # TODO: add playwright to search the web
@@ -1212,6 +1219,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request_timeout=request_timeout,
             )
         else:
             raise Exception(
@@ -1224,6 +1232,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request_timeout=request_timeout,
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
@@ -1332,9 +1341,19 @@ async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     total_timeout = RAG_WEB_SEARCH_TOTAL_TIMEOUT.value
+    start_time = time.monotonic()
+
+    def get_remaining_timeout() -> int:
+        elapsed = time.monotonic() - start_time
+        remaining = total_timeout - elapsed
+        if remaining <= 0:
+            raise TimeoutError()
+        return max(1, int(remaining))
+
     try:
         async with asyncio.timeout(total_timeout):
             try:
+                request_timeout = get_remaining_timeout()
                 log.debug(
                     f"[process_web_search] query: '{form_data.query}', engine: '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
                 )
@@ -1343,7 +1362,10 @@ async def process_web_search(
                     request,
                     request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                     form_data.query,
+                    request_timeout,
                 )
+            except TimeoutError:
+                raise
             except Exception as e:
                 log.exception(e)
 
@@ -1356,13 +1378,14 @@ async def process_web_search(
 
             try:
                 urls = [result.link for result in web_results]
+                request_timeout = get_remaining_timeout()
                 loader = get_web_loader(
                     urls,
                     verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
                     requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                    request_timeout=request_timeout,
                 )
                 docs = await asyncio.to_thread(loader.load)
-
                 # Add metadata for tracking
                 for doc in docs:
                     if not hasattr(doc, "metadata"):
@@ -1413,14 +1436,15 @@ async def process_web_search(
                     "filenames": urls,
                     "loaded_count": len(docs),
                 }
-
+            except (TimeoutError, asyncio.TimeoutError):
+                raise
             except Exception as e:
                 log.exception(e)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(e),
                 )
-    except TimeoutError:
+    except (TimeoutError, asyncio.TimeoutError):
         log.error(
             f"[process_web_search] exceeded total timeout of {total_timeout}s for query: '{form_data.query}'"
         )

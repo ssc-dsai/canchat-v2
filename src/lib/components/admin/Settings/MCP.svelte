@@ -84,17 +84,22 @@
 		return serverName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 	};
 
+	const translateIfKey = (text: string) => ($i18n.exists(text) ? $i18n.t(text) : text);
+
 	const localizeApiError = (rawError: unknown) => {
-		const value = String(rawError ?? '');
+		const normalized = String(rawError ?? '').replace(
+			'Network Problem',
+			$i18n.t('Network Problem')
+		);
 		const prefixes = ['MCP: ', 'CrewAI MCP: ', 'OpenAI: ', 'Ollama: '];
 
 		for (const prefix of prefixes) {
-			if (value.startsWith(prefix)) {
-				return `${prefix}${$i18n.t(value.slice(prefix.length))}`;
+			if (normalized.startsWith(prefix)) {
+				return `${prefix}${translateIfKey(normalized.slice(prefix.length))}`;
 			}
 		}
 
-		return $i18n.t(value);
+		return translateIfKey(normalized);
 	};
 
 	// Reactive statement to ensure we always have at least one input field

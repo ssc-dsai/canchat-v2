@@ -1,7 +1,7 @@
 import socket
 import urllib.parse
 import validators
-from typing import Union, Sequence, Iterator
+from typing import Union, Sequence, Iterator, Optional
 import requests
 
 from langchain_community.document_loaders import WebBaseLoader
@@ -56,13 +56,17 @@ def resolve_hostname(hostname):
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling and timeouts for URLs."""
 
+    def __init__(self, *args, request_timeout: Optional[int] = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.request_timeout = request_timeout
+
     def _scrape(self, url: str, parser: str = None, bs_kwargs: dict = None):
         """Scrape a URL with timeout handling."""
         from bs4 import BeautifulSoup
         import time
 
         start = time.time()
-        timeout = RAG_WEB_SEARCH_REQUEST_TIMEOUT.value
+        timeout = self.request_timeout or RAG_WEB_SEARCH_REQUEST_TIMEOUT.value
         try:
             # Override to add timeout to prevent hanging
             html_doc = self.session.get(url, timeout=timeout)
@@ -115,6 +119,7 @@ def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
     requests_per_second: int = 2,
+    request_timeout: Optional[int] = None,
 ):
     # Check if the URL is valid
     if not validate_url(urls):
@@ -124,4 +129,5 @@ def get_web_loader(
         verify_ssl=verify_ssl,
         requests_per_second=requests_per_second,
         continue_on_failure=True,
+        request_timeout=request_timeout,
     )
