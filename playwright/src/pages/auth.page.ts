@@ -1,4 +1,5 @@
 import { BasePage, type Language } from './base.page';
+import type { ChatPage } from './chat.page';
 import { type Page, type Locator, expect } from '@playwright/test';
 
 export class AuthPage extends BasePage {
@@ -70,6 +71,67 @@ export class AuthPage extends BasePage {
 		if (await this.onboardingButton.isVisible({ timeout: 2000 })) {
 			await this.onboardingButton.click();
 		}
+	}
+
+	/**
+	 * Returns the localized pending-activation message.
+	 */
+	private getPendingActivationMessage(lang: Language) {
+		return lang === 'fr-CA'
+			? 'Veuillez patienter pendant que nous activons votre compte.'
+			: 'Please wait while we activate your account.';
+	}
+
+	/**
+	 * Verifies the pending-activation banner and sign-out button are visible.
+	 */
+	async verifyPendingActivation(lang: Language) {
+		const pendingMessage = this.page.getByText(this.getPendingActivationMessage(lang));
+		await expect(pendingMessage).toBeVisible({ timeout: 30000 });
+		await expect(this.signOutButtonPendingUser).toBeVisible({ timeout: 30000 });
+	}
+
+	/**
+	 * Logs in and waits for the chat input to be visible.
+	 */
+	async loginAndOpenChat(
+		user: { email: string; password: string },
+		chatPage: ChatPage,
+		lang: Language
+	) {
+		await this.login(user.email, user.password);
+		await chatPage.goto(`/?lang=${lang}`);
+		await expect(this.page.locator('#chat-input')).toBeVisible({ timeout: 60000 });
+	}
+
+	/**
+	 * Logs in and handles pending vs. standard users.
+	 */
+	async loginAndHandleUser(
+		user: { email: string; password: string; role: string },
+		chatPage: ChatPage,
+		lang: Language
+	) {
+		await this.login(user.email, user.password);
+		if (user.role === 'pending') {
+			await this.verifyPendingActivation(lang);
+			await this.signOutPendingUser();
+			return;
+		}
+
+		await chatPage.goto(`/?lang=${lang}`);
+		await expect(this.page.locator('#chat-input')).toBeVisible({ timeout: 60000 });
+		await chatPage.signOut();
+	}
+
+	/**
+	 * Clears auth state and confirms redirection to the login page.
+	 */
+	async clearAuthAndReturnToLogin() {
+		await this.page.evaluate(() => localStorage.removeItem('token')).catch(() => {});
+		await this.page.context().clearCookies().catch(() => {});
+		await this.page.reload();
+		await expect(this.page).toHaveURL(/\/auth/);
 	}
 
 	/**
