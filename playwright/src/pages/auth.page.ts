@@ -129,7 +129,10 @@ export class AuthPage extends BasePage {
 	 */
 	async clearAuthAndReturnToLogin() {
 		await this.page.evaluate(() => localStorage.removeItem('token')).catch(() => {});
-		await this.page.context().clearCookies().catch(() => {});
+		await this.page
+			.context()
+			.clearCookies()
+			.catch(() => {});
 		await this.page.reload();
 		await expect(this.page).toHaveURL(/\/auth/);
 	}
