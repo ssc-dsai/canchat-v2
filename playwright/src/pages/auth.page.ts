@@ -26,13 +26,13 @@ export class AuthPage extends BasePage {
 		super.updateLanguage(lang);
 
 		this.emailInput = this.page.getByRole('textbox', {
-			name: /Enter Your Email|Entrez votre adresse courriel/i
+			name: this.t['Enter Your Email'] || 'Enter Your Email'
 		});
 		this.passwordInput = this.page.getByRole('textbox', {
-			name: /Enter Your Password|Entrez votre mot de passe/i
+			name: this.t['Enter Your Password'] || 'Enter Your Password'
 		});
 		this.signInButton = this.page.getByRole('button', {
-			name: /Sign in|S'identifier/i
+			name: this.t['Sign in'] || 'Sign in'
 		});
 		this.createAccountButton = this.page.getByRole('button', {
 			name: this.t['Create Admin Account'] || 'Create Admin Account'

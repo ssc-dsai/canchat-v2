@@ -25,9 +25,9 @@ const getPendingMessage = (locale: Language) =>
 		? 'Veuillez patienter pendant que nous activons votre compte.'
 		: 'Please wait while we activate your account.';
 
-const rolesToValidate = ['admin', 'pending', 'user', 'analyst', 'globalanalyst'];
-
-const rolesForSession = ['admin', 'user', 'analyst', 'globalanalyst'];
+const users = usersData.users as UserRecord[];
+const usersForLoginValidation = users;
+const usersForSession = users.filter((user) => user.role !== 'pending');
 
 const navigateExternal = async (page: Page) => {
 	try {
@@ -40,52 +40,40 @@ const navigateExternal = async (page: Page) => {
 test.describe('Login Validation & Session Persistence', () => {
 	test.setTimeout(180000);
 
-	test('CHAT-LOGIN-TC001: Users can connect with valid credentials', async ({
-		browser,
-		locale
-	}, testInfo) => {
-		for (const role of rolesToValidate) {
-			const user = getUserByUsername(role);
-			if (!user) {
-				testInfo.annotations.push({
-					type: 'warning',
-					description: `Skipping role ${role} because user data is missing.`
-				});
-				continue;
-			}
+		test('CHAT-LOGIN-TC001: Users can connect with valid credentials', async ({
+				guestPage,
+				locale
+			}, testInfo) => {
+				const page = guestPage.page;
+				const authPage = new AuthPage(page, locale as Language);
+				const chatPage = new ChatPage(page, locale as Language);
 
-			const context = await browser.newContext({
-				locale: locale,
-				permissions: testInfo.project.use.permissions
+				for (const user of usersForLoginValidation) {
+					if (!user) {
+						testInfo.annotations.push({
+							type: 'warning',
+							description: 'Skipping a user because user data is missing.'
+						});
+						continue;
+					}
+
+					await authPage.login(user.email, user.password);
+
+					if (user.role === 'pending') {
+						const pendingMessage = page.getByText(getPendingMessage(locale as Language));
+						await expect(pendingMessage).toBeVisible({ timeout: 30000 });
+						await expect(authPage.signOutButtonPendingUser).toBeVisible({ timeout: 30000 });
+						await authPage.signOutPendingUser();
+					} else {
+						await chatPage.goto(`/?lang=${locale}`);
+						await expect(page.locator('#chat-input')).toBeVisible({ timeout: 60000 });
+						await chatPage.signOut();
+					}
+				}
 			});
-			const page = await context.newPage();
-			const authPage = new AuthPage(page, locale as Language);
-			const chatPage = new ChatPage(page, locale as Language);
-
-			await authPage.login(user.email, user.password);
-
-			if (role === 'pending') {
-				const pendingMessage = page.getByText(
-					/Please wait while we activate your account\.|Veuillez patienter pendant que nous activons votre compte\./i
-				);
-				const pendingSignOutButton = page.getByRole('button', {
-					name: /Sign Out|Déconnexion|Se déconnecter/i
-				});
-				await expect(pendingMessage).toBeVisible({ timeout: 30000 });
-				await expect(pendingSignOutButton).toBeVisible({ timeout: 30000 });
-				await pendingSignOutButton.click();
-				await expect(page).toHaveURL(/\/auth/);
-			} else {
-				await chatPage.goto(`/?lang=${locale}`);
-				await expect(page.locator('#chat-input')).toBeVisible({ timeout: 60000 });
-			}
-
-			await context.close();
-		}
-	});
 
 	test('CHAT-LOGIN-TC002: Redirects to login when session token expires', async ({
-		browser,
+		guestPage,
 		locale
 	}, testInfo) => {
 		const user = getUserByUsername('user');
@@ -96,11 +84,7 @@ test.describe('Login Validation & Session Persistence', () => {
 			});
 			return;
 		}
-		const context = await browser.newContext({
-			locale: locale,
-			permissions: testInfo.project.use.permissions
-		});
-		const page = await context.newPage();
+		const page = guestPage.page;
 		const authPage = new AuthPage(page, locale as Language);
 
 		const chatPage = new ChatPage(page, locale as Language);
@@ -109,7 +93,7 @@ test.describe('Login Validation & Session Persistence', () => {
 		await expect(page.locator('#chat-input')).toBeVisible({ timeout: 60000 });
 
 		await page.evaluate(() => localStorage.removeItem('token'));
-		await context.clearCookies();
+		await page.context().clearCookies();
 
 		await page.reload();
 		await expect(page).toHaveURL(/\/auth/);
@@ -117,31 +101,24 @@ test.describe('Login Validation & Session Persistence', () => {
 		await authPage.login(user.email, user.password);
 		await chatPage.goto(`/?lang=${locale}`);
 		await expect(page.locator('#chat-input')).toBeVisible({ timeout: 60000 });
-
-		await context.close();
 	});
 
 	test('CHAT-SESSION-TC001: User stays connected during session using cookies', async ({
-		browser,
+		guestPage,
 		locale
 	}, testInfo) => {
-		for (const role of rolesForSession) {
-			const user = getUserByUsername(role);
+		const page = guestPage.page;
+		const authPage = new AuthPage(page, locale as Language);
+		const chatPage = new ChatPage(page, locale as Language);
+
+		for (const user of usersForSession) {
 			if (!user) {
 				testInfo.annotations.push({
 					type: 'warning',
-					description: `Skipping role ${role} because user data is missing.`
+					description: 'Skipping a user because user data is missing.'
 				});
 				continue;
 			}
-
-			const context = await browser.newContext({
-				locale: locale,
-				permissions: testInfo.project.use.permissions
-			});
-			const page = await context.newPage();
-			const authPage = new AuthPage(page, locale as Language);
-			const chatPage = new ChatPage(page, locale as Language);
 
 			await authPage.login(user.email, user.password);
 			await chatPage.goto(`/?lang=${locale}`);
@@ -157,8 +134,9 @@ test.describe('Login Validation & Session Persistence', () => {
 			await expect(page.locator('#chat-input')).toBeVisible({ timeout: 60000 });
 
 			await page.evaluate(() => localStorage.removeItem('token')).catch(() => {});
-			await context.clearCookies().catch(() => {});
-			await context.close();
+			await page.context().clearCookies().catch(() => {});
+			await page.reload();
+			await expect(page).toHaveURL(/\/auth/);
 		}
 	});
 });
