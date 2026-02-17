@@ -35,26 +35,26 @@ const navigateExternal = async (page: Page) => {
 test.describe('Login Validation & Session Persistence', () => {
 	test.setTimeout(180000);
 
-		test('CHAT-LOGIN-TC001: Users can connect with valid credentials', async ({
-				guestPage,
-				locale
-			}, testInfo) => {
-				const page = guestPage.page;
-				const authPage = new AuthPage(page, locale as Language);
-				const chatPage = new ChatPage(page, locale as Language);
+	test('CHAT-LOGIN-TC001: Users can connect with valid credentials', async ({
+		guestPage,
+		locale
+	}, testInfo) => {
+		const page = guestPage.page;
+		const authPage = new AuthPage(page, locale as Language);
+		const chatPage = new ChatPage(page, locale as Language);
 
-				for (const user of usersForLoginValidation) {
-					if (!user) {
-						testInfo.annotations.push({
-							type: 'warning',
-							description: 'Skipping a user because user data is missing.'
-						});
-						continue;
-					}
+		for (const user of usersForLoginValidation) {
+			if (!user) {
+				testInfo.annotations.push({
+					type: 'warning',
+					description: 'Skipping a user because user data is missing.'
+				});
+				continue;
+			}
 
-					await authPage.loginAndHandleUser(user, chatPage, locale as Language);
-				}
-			});
+			await authPage.loginAndHandleUser(user, chatPage, locale as Language);
+		}
+	});
 
 	test('CHAT-LOGIN-TC002: Redirects to login when session token expires', async ({
 		guestPage,
