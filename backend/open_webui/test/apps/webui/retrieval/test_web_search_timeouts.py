@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from open_webui.retrieval.web import brave
 from open_webui.retrieval.web import google_pse
 from open_webui.retrieval.web import http as web_http
+from open_webui.retrieval.web import serper
 from open_webui.retrieval.web.utils import SafeWebBaseLoader
 from open_webui.routers import retrieval
 
@@ -17,12 +18,14 @@ def test_brave_timeout_path(monkeypatch):
     """Brave search should propagate request timeouts and use configured timeout seconds."""
     called = {}
 
-    def fake_get(url, headers=None, params=None, timeout=None):
+    def fake_request(
+        method, url, headers=None, params=None, data=None, json=None, timeout=None
+    ):
         called["timeout"] = timeout
         raise requests.exceptions.Timeout("timed out")
 
     monkeypatch.setattr(web_http.RAG_WEB_SEARCH_REQUEST_TIMEOUT, "value", 9)
-    monkeypatch.setattr(web_http.requests, "get", fake_get)
+    monkeypatch.setattr(web_http.requests, "request", fake_request)
 
     with pytest.raises(requests.exceptions.Timeout):
         brave.search_brave(
@@ -40,12 +43,14 @@ def test_google_pse_timeout_path(monkeypatch):
     called = {}
 
     # Simulate provider timeout and capture timeout seconds passed to requests.get
-    def fake_get(url, headers=None, params=None, timeout=None):
+    def fake_request(
+        method, url, headers=None, params=None, data=None, json=None, timeout=None
+    ):
         called["timeout"] = timeout
         raise requests.exceptions.Timeout("timed out")
 
     monkeypatch.setattr(web_http.RAG_WEB_SEARCH_REQUEST_TIMEOUT, "value", 7)
-    monkeypatch.setattr(web_http.requests, "get", fake_get)
+    monkeypatch.setattr(web_http.requests, "request", fake_request)
 
     with pytest.raises(requests.exceptions.Timeout):
         google_pse.search_google_pse(
@@ -56,6 +61,31 @@ def test_google_pse_timeout_path(monkeypatch):
         )
 
     assert called["timeout"] == 7
+
+
+def test_serper_timeout_path(monkeypatch):
+    """Serper (POST provider) should propagate request timeouts and use configured timeout seconds."""
+    called = {}
+
+    def fake_request(
+        method, url, headers=None, params=None, data=None, json=None, timeout=None
+    ):
+        called["method"] = method
+        called["timeout"] = timeout
+        raise requests.exceptions.Timeout("timed out")
+
+    monkeypatch.setattr(web_http.RAG_WEB_SEARCH_REQUEST_TIMEOUT, "value", 11)
+    monkeypatch.setattr(web_http.requests, "request", fake_request)
+
+    with pytest.raises(requests.exceptions.Timeout):
+        serper.search_serper(
+            api_key="k",
+            query="timeout query",
+            count=3,
+        )
+
+    assert called["method"] == "POST"
+    assert called["timeout"] == 11
 
 
 def test_url_fetch_timeout_continue_behavior(monkeypatch):
@@ -117,10 +147,12 @@ def test_http_helper_non_json_response_raises_request_exception(monkeypatch):
             raise ValueError("invalid json")
 
     # HTTP succeeds but body is not valid JSON
-    def fake_get(url, headers=None, params=None, timeout=None):
+    def fake_request(
+        method, url, headers=None, params=None, data=None, json=None, timeout=None
+    ):
         return FakeResponse()
 
-    monkeypatch.setattr(web_http.requests, "get", fake_get)
+    monkeypatch.setattr(web_http.requests, "request", fake_request)
 
     with pytest.raises(
         requests.exceptions.RequestException, match="returned invalid JSON"

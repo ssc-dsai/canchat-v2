@@ -10,18 +10,29 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def get_json_with_timeout(
+def request_json_with_timeout(
+    method: str,
     url: str,
     *,
     provider_name: str,
     headers: dict[str, str] | None = None,
     params: dict[str, Any] | None = None,
+    data: Any = None,
+    json: Any = None,
     timeout_seconds: Optional[int] = None,
 ) -> dict[str, Any]:
-    """Perform a provider API GET call with shared timeout/error handling and return parsed JSON."""
+    """Perform a provider API request with shared timeout/error handling and return parsed JSON."""
     timeout = timeout_seconds or RAG_WEB_SEARCH_REQUEST_TIMEOUT.value
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=timeout)
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=headers,
+            params=params,
+            data=data,
+            json=json,
+            timeout=timeout,
+        )
         response.raise_for_status()
         return response.json()
     except requests.exceptions.Timeout:
@@ -46,3 +57,22 @@ def get_json_with_timeout(
         raise requests.exceptions.RequestException(
             f"{provider_name} returned invalid JSON"
         ) from e
+
+
+def get_json_with_timeout(
+    url: str,
+    *,
+    provider_name: str,
+    headers: dict[str, str] | None = None,
+    params: dict[str, Any] | None = None,
+    timeout_seconds: Optional[int] = None,
+) -> dict[str, Any]:
+    """Perform a provider API GET call with shared timeout/error handling and return parsed JSON."""
+    return request_json_with_timeout(
+        "GET",
+        url,
+        provider_name=provider_name,
+        headers=headers,
+        params=params,
+        timeout_seconds=timeout_seconds,
+    )
