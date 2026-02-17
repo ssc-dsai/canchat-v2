@@ -4,7 +4,7 @@ import { socket } from '$lib/stores';
 import type { Socket } from 'socket.io-client';
 import i18next from 'i18next';
 
-const getErrorMessage = (err: any) =>
+const getFetchErrorMessage = (err: any) =>
 	err?.message === 'Failed to fetch' ? i18next.t('Failed to fetch') : err?.message;
 
 export const getCrewMCPStatus = async (token: string = '') => {
@@ -23,7 +23,7 @@ export const getCrewMCPStatus = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to load CrewAI MCP status. Please try again.')}`;
+			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load CrewAI MCP status. Please try again.')}`;
 			return null;
 		});
 
@@ -50,7 +50,7 @@ export const getCrewMCPTools = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to load CrewAI MCP tools. Please try again.')}`;
+			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load CrewAI MCP tools. Please try again.')}`;
 			return null;
 		});
 
@@ -102,7 +102,7 @@ export const queryCrewMCP = async (
 			if (err.name === 'AbortError') {
 				error = `CrewAI MCP: ${i18next.t('Request timeout after 3 minutes. The analysis may be too complex or the SharePoint site has too many documents.')}`;
 			} else {
-				error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('CrewAI MCP query failed. Please try again.')}`;
+				error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('CrewAI MCP query failed. Please try again.')}`;
 			}
 			return null;
 		});

@@ -2,7 +2,7 @@ import logging
 from pprint import pprint
 from typing import Optional
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from open_webui.retrieval.web.http import get_json_with_timeout
+from open_webui.retrieval.web.utils import get_json_with_timeout
 from open_webui.env import SRC_LOG_LEVELS
 import argparse
 

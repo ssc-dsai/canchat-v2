@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from open_webui.retrieval.web.http import request_json_with_timeout
+from open_webui.retrieval.web.utils import request_json_with_timeout
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)

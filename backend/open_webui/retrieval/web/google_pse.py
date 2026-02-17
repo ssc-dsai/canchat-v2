@@ -3,7 +3,7 @@ from typing import Optional
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.retrieval.web.http import get_json_with_timeout
+from open_webui.retrieval.web.utils import get_json_with_timeout
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -25,6 +25,7 @@ def search_google_pse(
         query (str): The query to search for
         count (int): Number of results to return
         filter_list (Optional[list[str]]): Optional list of domains to filter
+        request_timeout (Optional[int]): Optional timeout override in seconds for this request
     """
     url = "https://www.googleapis.com/customsearch/v1"
 

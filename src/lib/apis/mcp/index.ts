@@ -1,7 +1,7 @@
 import { MCP_API_BASE_URL } from '$lib/constants';
 import i18next from 'i18next';
 
-const getErrorMessage = (err: any) =>
+const getFetchErrorMessage = (err: any) =>
 	err?.message === 'Failed to fetch' ? i18next.t('Failed to fetch') : err?.message;
 
 export const verifyMCPConnection = async (
@@ -28,7 +28,7 @@ export const verifyMCPConnection = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('MCP connection check failed. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('MCP connection check failed. Please try again.')}`;
 			return null;
 		});
 
@@ -55,7 +55,7 @@ export const getMCPConfig = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to load MCP configuration. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load MCP configuration. Please try again.')}`;
 			return [];
 		});
 
@@ -83,7 +83,7 @@ export const updateMCPConfig = async (token: string = '', config: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to update MCP configuration. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to update MCP configuration. Please try again.')}`;
 			return [];
 		});
 
@@ -110,7 +110,7 @@ export const getMCPURLs = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to load MCP server URLs. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load MCP server URLs. Please try again.')}`;
 			return [];
 		});
 
@@ -140,7 +140,7 @@ export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to update MCP server URLs. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to update MCP server URLs. Please try again.')}`;
 			return [];
 		});
 
@@ -167,7 +167,7 @@ export const getMCPTools = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to load MCP tools. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load MCP tools. Please try again.')}`;
 			return [];
 		});
 
@@ -202,7 +202,7 @@ export const callMCPTool = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('MCP tool call failed. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('MCP tool call failed. Please try again.')}`;
 			return null;
 		});
 
@@ -229,7 +229,7 @@ export const getBuiltinServers = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to load built-in MCP servers. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load built-in MCP servers. Please try again.')}`;
 			return { servers: [] };
 		});
 
@@ -256,7 +256,7 @@ export const restartBuiltinServer = async (token: string = '', serverName: strin
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to restart built-in MCP server. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to restart built-in MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -285,7 +285,7 @@ export const getExternalServers = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to load external MCP servers. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load external MCP servers. Please try again.')}`;
 			return { servers: [] };
 		});
 
@@ -313,7 +313,7 @@ export const createExternalServer = async (token: string = '', serverData: objec
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to create external MCP server. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to create external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -340,7 +340,7 @@ export const getExternalServer = async (token: string = '', serverId: string = '
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to load external MCP server. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -372,7 +372,7 @@ export const updateExternalServer = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to update external MCP server. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to update external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -399,7 +399,7 @@ export const deleteExternalServer = async (token: string = '', serverId: string 
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to delete external MCP server. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to delete external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -426,7 +426,7 @@ export const startExternalServer = async (token: string = '', serverId: string =
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to start external MCP server. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to start external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -453,7 +453,7 @@ export const stopExternalServer = async (token: string = '', serverId: string = 
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to stop external MCP server. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to stop external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -480,7 +480,7 @@ export const restartExternalServer = async (token: string = '', serverId: string
 			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? getErrorMessage(err) ?? i18next.t('Unable to restart external MCP server. Please try again.')}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to restart external MCP server. Please try again.')}`;
 			return null;
 		});
 

@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 import validators
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from open_webui.retrieval.web.http import get_json_with_timeout
+from open_webui.retrieval.web.utils import get_json_with_timeout
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -35,6 +35,9 @@ def search_brave(
     Args:
         api_key (str): A Brave Search API key
         query (str): The query to search for
+        count (int): Number of results to return
+        filter_list (Optional[list[str]]): Optional list of domains to filter
+        request_timeout (Optional[int]): Optional timeout override in seconds for this request
     """
     url = "https://api.search.brave.com/res/v1/web/search"
     headers = {

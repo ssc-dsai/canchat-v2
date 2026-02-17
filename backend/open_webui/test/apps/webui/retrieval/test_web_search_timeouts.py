@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 
 from open_webui.retrieval.web import brave
 from open_webui.retrieval.web import google_pse
-from open_webui.retrieval.web import http as web_http
+from open_webui.retrieval.web import utils as web_utils
 from open_webui.retrieval.web import serper
 from open_webui.retrieval.web.utils import SafeWebBaseLoader
 from open_webui.routers import retrieval
@@ -24,8 +24,8 @@ def test_brave_timeout_path(monkeypatch):
         called["timeout"] = timeout
         raise requests.exceptions.Timeout("timed out")
 
-    monkeypatch.setattr(web_http.RAG_WEB_SEARCH_REQUEST_TIMEOUT, "value", 9)
-    monkeypatch.setattr(web_http.requests, "request", fake_request)
+    monkeypatch.setattr(web_utils.RAG_WEB_SEARCH_REQUEST_TIMEOUT, "value", 9)
+    monkeypatch.setattr(web_utils.requests, "request", fake_request)
 
     with pytest.raises(requests.exceptions.Timeout):
         brave.search_brave(
@@ -49,8 +49,8 @@ def test_google_pse_timeout_path(monkeypatch):
         called["timeout"] = timeout
         raise requests.exceptions.Timeout("timed out")
 
-    monkeypatch.setattr(web_http.RAG_WEB_SEARCH_REQUEST_TIMEOUT, "value", 7)
-    monkeypatch.setattr(web_http.requests, "request", fake_request)
+    monkeypatch.setattr(web_utils.RAG_WEB_SEARCH_REQUEST_TIMEOUT, "value", 7)
+    monkeypatch.setattr(web_utils.requests, "request", fake_request)
 
     with pytest.raises(requests.exceptions.Timeout):
         google_pse.search_google_pse(
@@ -74,8 +74,8 @@ def test_serper_timeout_path(monkeypatch):
         called["timeout"] = timeout
         raise requests.exceptions.Timeout("timed out")
 
-    monkeypatch.setattr(web_http.RAG_WEB_SEARCH_REQUEST_TIMEOUT, "value", 11)
-    monkeypatch.setattr(web_http.requests, "request", fake_request)
+    monkeypatch.setattr(web_utils.RAG_WEB_SEARCH_REQUEST_TIMEOUT, "value", 11)
+    monkeypatch.setattr(web_utils.requests, "request", fake_request)
 
     with pytest.raises(requests.exceptions.Timeout):
         serper.search_serper(
@@ -152,12 +152,12 @@ def test_http_helper_non_json_response_raises_request_exception(monkeypatch):
     ):
         return FakeResponse()
 
-    monkeypatch.setattr(web_http.requests, "request", fake_request)
+    monkeypatch.setattr(web_utils.requests, "request", fake_request)
 
     with pytest.raises(
         requests.exceptions.RequestException, match="returned invalid JSON"
     ):
-        web_http.get_json_with_timeout(
+        web_utils.get_json_with_timeout(
             "https://provider.example",
             provider_name="Test Provider",
         )
