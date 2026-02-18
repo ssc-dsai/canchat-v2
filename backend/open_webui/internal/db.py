@@ -1,6 +1,6 @@
 import json
 import logging
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from typing import Any, Optional
 
 from open_webui.internal.wrappers import register_connection
@@ -15,6 +15,7 @@ from open_webui.env import (
 )
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, types
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession, create_async_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import QueuePool, NullPool
 from sqlalchemy.sql.type_api import _T
@@ -93,7 +94,9 @@ def run_migrations():
 
 run_migrations()
 
+
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
+
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -130,4 +133,55 @@ def get_session():
         db.close()
 
 
+# Leaving in place a Blocking context manager for the config
 get_db = contextmanager(get_session)
+
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    async_engine = create_async_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
+else:
+    __db_url: str = SQLALCHEMY_DATABASE_URL
+    if "postgresql" in SQLALCHEMY_DATABASE_URL:
+        __db_url = SQLALCHEMY_DATABASE_URL.replace(
+            "postgresql://", "postgresql+asyncpg://"
+        )
+
+    if DATABASE_POOL_SIZE > 0:
+        async_engine = create_async_engine(
+            __db_url,
+            pool_size=DATABASE_POOL_SIZE,
+            max_overflow=DATABASE_POOL_MAX_OVERFLOW,
+            pool_timeout=DATABASE_POOL_TIMEOUT,
+            pool_recycle=DATABASE_POOL_RECYCLE,
+            pool_pre_ping=True,
+        )
+    else:
+        async_engine = create_async_engine(__db_url, pool_pre_ping=True)
+
+
+AsyncSessionLocal = async_sessionmaker(
+    bind=async_engine,
+    expire_on_commit=False,  # Recommended for async
+    class_=AsyncSession,  # Ensure it's an AsyncSession
+)
+
+
+@asynccontextmanager
+async def get_async_db():
+    """
+    Provides an asynchronous SQLAlchemy session.
+    This can be used as a dependency in web frameworks like FastAPI.
+    """
+    db: AsyncSession = AsyncSessionLocal()
+    try:
+        yield db
+        # For web frameworks, commit/rollback often happens explicitly in routes.
+        # If you want to auto-commit on success and rollback on error,
+        # you could add:
+        # await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    finally:
+        await db.close()

@@ -1,8 +1,7 @@
 import logging
 import time
-from typing import Optional
 
-from open_webui.internal.db import JSONField, get_db
+from open_webui.internal.db import JSONField, get_async_db
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.base import Base
 from open_webui.models.users import Users, UserResponse
@@ -10,8 +9,8 @@ from open_webui.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
-
+from sqlalchemy import BigInteger, Boolean, delete, JSON, select, Text, update
+from sqlalchemy.orm import Mapped, mapped_column
 
 from open_webui.utils.access_control import has_access
 
@@ -32,14 +31,14 @@ class ModelParams(BaseModel):
 
 # ModelMeta is a model for the data stored in the meta field of the Model table
 class ModelMeta(BaseModel):
-    profile_image_url: Optional[str] = "/static/favicon.png"
+    profile_image_url: str | None = "/static/favicon.png"
 
-    description: Optional[str] = None
+    description: str | None = None
     """
         User-facing description of the model.
     """
 
-    capabilities: Optional[dict] = None
+    capabilities: dict | None = None
 
     model_config = ConfigDict(extra="allow")
 
@@ -49,33 +48,35 @@ class ModelMeta(BaseModel):
 class Model(Base):
     __tablename__ = "model"
 
-    id = Column(Text, primary_key=True)
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
-    user_id = Column(Text)
+    user_id: Mapped[str] = mapped_column(Text)
 
-    base_model_id = Column(Text, nullable=True)
+    base_model_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     """
         An optional pointer to the actual model that should be used when proxying requests.
     """
 
-    name = Column(Text)
+    name: Mapped[str] = mapped_column(Text)
     """
         The human-readable display name of the model.
     """
 
-    params = Column(JSONField)
+    params: Mapped[ModelParams] = mapped_column(JSONField)
     """
         Holds a JSON encoded blob of parameters, see `ModelParams`.
     """
 
-    meta = Column(JSONField)
+    meta: Mapped[ModelMeta] = mapped_column(JSONField)
     """
         Holds a JSON encoded blob of metadata, see `ModelMeta`.
     """
 
-    access_control = Column(JSON, nullable=True)  # Controls data access levels.
+    access_control: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True
+    )  # Controls data access levels.
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
     # - `{}`: Private access, restricted exclusively to the owner.
@@ -92,22 +93,22 @@ class Model(Base):
     #      }
     #   }
 
-    is_active = Column(Boolean, default=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    updated_at: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[int] = mapped_column(BigInteger)
 
 
 class ModelModel(BaseModel):
     id: str
     user_id: str
-    base_model_id: Optional[str] = None
+    base_model_id: str | None = None
 
     name: str
     params: ModelParams
     meta: ModelMeta
 
-    access_control: Optional[dict] = None
+    access_control: dict | None = None
 
     is_active: bool
     updated_at: int  # timestamp in epoch
@@ -122,7 +123,7 @@ class ModelModel(BaseModel):
 
 
 class ModelUserResponse(ModelModel):
-    user: Optional[UserResponse] = None
+    user: UserResponse | None = None
 
 
 class ModelResponse(ModelModel):
@@ -131,18 +132,18 @@ class ModelResponse(ModelModel):
 
 class ModelForm(BaseModel):
     id: str
-    base_model_id: Optional[str] = None
+    base_model_id: str | None = None
     name: str
     meta: ModelMeta
     params: ModelParams
-    access_control: Optional[dict] = None
+    access_control: dict | None = None
     is_active: bool = True
 
 
 class ModelsTable:
-    def insert_new_model(
+    async def insert_new_model(
         self, form_data: ModelForm, user_id: str
-    ) -> Optional[ModelModel]:
+    ) -> ModelModel | None:
         model = ModelModel(
             **{
                 **form_data.model_dump(),
@@ -152,11 +153,11 @@ class ModelsTable:
             }
         )
         try:
-            with get_db() as db:
+            async with get_async_db() as db:
                 result = Model(**model.model_dump())
                 db.add(result)
-                db.commit()
-                db.refresh(result)
+                await db.commit()
+                await db.refresh(result)
 
                 if result:
                     return ModelModel.model_validate(result)
@@ -166,15 +167,18 @@ class ModelsTable:
             print(e)
             return None
 
-    def get_all_models(self) -> list[ModelModel]:
-        with get_db() as db:
-            return [ModelModel.model_validate(model) for model in db.query(Model).all()]
+    async def get_all_models(self) -> list[ModelModel]:
+        async with get_async_db() as db:
+            models = await db.scalars(select(Model))
+            return [ModelModel.model_validate(model) for model in models.all()]
 
-    def get_models(self) -> list[ModelUserResponse]:
-        with get_db() as db:
-            models = []
-            for model in db.query(Model).filter(Model.base_model_id != None).all():
-                user = Users.get_user_by_id(model.user_id)
+    async def get_models(self) -> list[ModelUserResponse]:
+        async with get_async_db() as db:
+            models: list[ModelUserResponse] = []
+            for model in (
+                await db.scalars(select(Model).where(Model.base_model_id != None))
+            ).all():
+                user = await Users.get_user_by_id(model.user_id)
                 models.append(
                     ModelUserResponse.model_validate(
                         {
@@ -185,83 +189,79 @@ class ModelsTable:
                 )
             return models
 
-    def get_base_models(self) -> list[ModelModel]:
-        with get_db() as db:
-            return [
-                ModelModel.model_validate(model)
-                for model in db.query(Model).filter(Model.base_model_id == None).all()
-            ]
+    async def get_base_models(self) -> list[ModelModel]:
+        async with get_async_db() as db:
+            models = await db.scalars(select(Model).filter(Model.base_model_id == None))
+            return [ModelModel.model_validate(model) for model in models.all()]
 
-    def get_models_by_user_id(
+    async def get_models_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
-        models = self.get_models()
+        models = await self.get_models()
         return [
             model
             for model in models
             if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            or await has_access(user_id, permission, model.access_control)
         ]
 
-    def get_model_by_id(self, id: str) -> Optional[ModelModel]:
+    async def get_model_by_id(self, id: str) -> ModelModel | None:
         try:
-            with get_db() as db:
-                model = db.get(Model, id)
+            async with get_async_db() as db:
+                model = await db.get(Model, id)
                 return ModelModel.model_validate(model)
         except Exception:
             return None
 
-    def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
-        with get_db() as db:
+    async def toggle_model_by_id(self, id: str) -> ModelModel | None:
+        async with get_async_db() as db:
             try:
-                is_active = db.query(Model).filter_by(id=id).first().is_active
+                if model := await db.scalar(select(Model).where(Model.id == id)):
+                    model.is_active = not model.is_active
+                    model.updated_at = int(time.time())
 
-                db.query(Model).filter_by(id=id).update(
-                    {
-                        "is_active": not is_active,
-                        "updated_at": int(time.time()),
-                    }
-                )
-                db.commit()
-
-                return self.get_model_by_id(id)
+                    await db.commit()
+                    await db.refresh(model)
+                    return ModelModel.model_validate(model)
+                return None
             except Exception:
                 return None
 
-    def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
+    async def update_model_by_id(
+        self, id: str, model_form: ModelForm
+    ) -> ModelModel | None:
         try:
-            with get_db() as db:
-                # update only the fields that are present in the model
-                result = (
-                    db.query(Model)
-                    .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}))
+            async with get_async_db() as db:
+                _ = await db.execute(
+                    update(Model)
+                    .where(Model.id == id)
+                    .values(model_form.model_dump(exclude={"id"}))
                 )
-                db.commit()
+                await db.commit()
 
-                model = db.get(Model, id)
-                db.refresh(model)
+                model = await db.get(Model, id)
+                await db.refresh(model)
                 return ModelModel.model_validate(model)
         except Exception as e:
             print(e)
 
             return None
 
-    def delete_model_by_id(self, id: str) -> bool:
+    async def delete_model_by_id(self, id: str) -> bool:
         try:
-            with get_db() as db:
-                db.query(Model).filter_by(id=id).delete()
-                db.commit()
+            async with get_async_db() as db:
+                _ = await db.execute(delete(Model).where(Model.id == id))
+                await db.commit()
 
                 return True
         except Exception:
             return False
 
-    def delete_all_models(self) -> bool:
+    async def delete_all_models(self) -> bool:
         try:
-            with get_db() as db:
-                db.query(Model).delete()
-                db.commit()
+            async with get_async_db() as db:
+                _ = await db.execute(delete(Model))
+                await db.commit()
 
                 return True
         except Exception:

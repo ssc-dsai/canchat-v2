@@ -578,7 +578,7 @@ class MCPServerUpdateForm(BaseModel):
 async def get_external_servers(request: Request, user=Depends(get_admin_user)):
     """Get all external (user-created) MCP servers"""
     try:
-        servers = MCPServers.get_user_created_servers()
+        servers = await MCPServers.get_user_created_servers()
 
         # Convert to dictionaries and enrich with runtime status from MCP manager
         server_dicts = []
@@ -631,7 +631,7 @@ async def create_external_server(
         validate_command(command_list)
 
         # Check if server name already exists
-        existing_server = MCPServers.get_server_by_name(form_data.name)
+        existing_server = await MCPServers.get_server_by_name(form_data.name)
         if existing_server:
             raise HTTPException(
                 status_code=400,
@@ -660,7 +660,7 @@ async def create_external_server(
             "is_deletable": True,
         }
 
-        server = MCPServers.insert_new_server(**server_data)
+        server = await MCPServers.insert_new_server(**server_data)
         if not server:
             raise HTTPException(
                 status_code=500, detail="Failed to create server in database"
@@ -714,7 +714,7 @@ async def create_external_server(
 async def get_external_server(server_id: str, user=Depends(get_admin_user)):
     """Get a specific external MCP server by ID"""
     try:
-        server = MCPServers.get_server_by_id(server_id)
+        server = await MCPServers.get_server_by_id(server_id)
         if not server:
             raise HTTPException(status_code=404, detail="Server not found")
 
@@ -756,7 +756,7 @@ async def update_external_server(
             validate_command(command_list)
 
         # Get existing server
-        existing_server = MCPServers.get_server_by_id(server_id)
+        existing_server = await MCPServers.get_server_by_id(server_id)
         if not existing_server:
             raise HTTPException(status_code=404, detail="Server not found")
 
@@ -765,7 +765,7 @@ async def update_external_server(
 
         # Check if new name conflicts with existing servers
         if form_data.name and form_data.name != existing_server.name:
-            existing_with_name = MCPServers.get_server_by_name(form_data.name)
+            existing_with_name = await MCPServers.get_server_by_name(form_data.name)
             if existing_with_name:
                 raise HTTPException(
                     status_code=400,
@@ -779,7 +779,7 @@ async def update_external_server(
                 update_data[field] = value
 
         # Update server in database
-        server = MCPServers.update_server_by_id(server_id, update_data)
+        server = await MCPServers.update_server_by_id(server_id, update_data)
         if not server:
             raise HTTPException(status_code=500, detail="Failed to update server")
 
@@ -839,7 +839,7 @@ async def delete_external_server(
     """Delete an external MCP server"""
     try:
         # Get existing server
-        server = MCPServers.get_server_by_id(server_id)
+        server = await MCPServers.get_server_by_id(server_id)
         if not server:
             raise HTTPException(status_code=404, detail="Server not found")
 
@@ -860,7 +860,7 @@ async def delete_external_server(
                 log.exception(f"Error removing server from MCP manager: {e}")
 
         # Delete from database
-        success = MCPServers.delete_server_by_id(server_id)
+        success = await MCPServers.delete_server_by_id(server_id)
         if not success:
             raise HTTPException(
                 status_code=500, detail="Failed to delete server from database"
@@ -884,7 +884,7 @@ async def start_external_server(
     """Start an external MCP server"""
     try:
         # Get server from database
-        server = MCPServers.get_server_by_id(server_id)
+        server = await MCPServers.get_server_by_id(server_id)
         if not server:
             raise HTTPException(status_code=404, detail="Server not found")
 
@@ -925,7 +925,7 @@ async def start_external_server(
             )
 
         # Update server status in database
-        MCPServers.update_server_status(server_id, True)
+        _ = await MCPServers.update_server_status(server_id, True)
 
         return {"message": f"Server {server.name} started successfully"}
 
@@ -945,7 +945,7 @@ async def stop_external_server(
     """Stop an external MCP server"""
     try:
         # Get server from database
-        server = MCPServers.get_server_by_id(server_id)
+        server = await MCPServers.get_server_by_id(server_id)
         if not server:
             raise HTTPException(status_code=404, detail="Server not found")
 
@@ -968,7 +968,7 @@ async def stop_external_server(
             )
 
         # Update server status in database
-        MCPServers.update_server_status(server_id, False)
+        _ = await MCPServers.update_server_status(server_id, False)
 
         return {"message": f"Server {server.name} stopped successfully"}
 
@@ -988,7 +988,7 @@ async def restart_external_server(
     """Restart an external MCP server"""
     try:
         # Get server from database
-        server = MCPServers.get_server_by_id(server_id)
+        server = await MCPServers.get_server_by_id(server_id)
         if not server:
             raise HTTPException(status_code=404, detail="Server not found")
 
@@ -1011,7 +1011,7 @@ async def restart_external_server(
             )
 
         # Update server status in database
-        MCPServers.update_server_status(server_id, True)
+        _ = await MCPServers.update_server_status(server_id, True)
 
         return {"message": f"Server {server.name} restarted successfully"}
 

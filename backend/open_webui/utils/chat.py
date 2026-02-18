@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 
@@ -73,7 +74,7 @@ async def generate_chat_completion(
     # Check if user has access to the model
     if not bypass_filter and user.role == "user":
         try:
-            check_model_access(user, model)
+            await check_model_access(user, model)
         except Exception as e:
             raise e
 
@@ -189,42 +190,38 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         }
     )
 
-    def get_priority(function_id):
-        function = Functions.get_function_by_id(function_id)
-        if function is not None and hasattr(function, "valves"):
-            # TODO: Fix FunctionModel to include vavles
-            return (function.valves if function.valves else {}).get("priority", 0)
-        return 0
+    # Get filter functions sorted by valve priority.
+    functions = await Functions.get_global_filter_functions(sorted=True)
 
-    filter_ids = [function.id for function in Functions.get_global_filter_functions()]
+    filter_ids = [function.id for function in functions]
+
     if "info" in model and "meta" in model["info"]:
         filter_ids.extend(model["info"]["meta"].get("filterIds", []))
         filter_ids = list(set(filter_ids))
 
     enabled_filter_ids = [
         function.id
-        for function in Functions.get_functions_by_type("filter", active_only=True)
+        for function in await Functions.get_functions_by_type(
+            "filter", active_only=True
+        )
     ]
     filter_ids = [
         filter_id for filter_id in filter_ids if filter_id in enabled_filter_ids
     ]
 
-    # Sort filter_ids by priority, using the get_priority function
-    filter_ids.sort(key=get_priority)
-
     for filter_id in filter_ids:
-        filter = Functions.get_function_by_id(filter_id)
+        filter = await Functions.get_function_by_id(filter_id)
         if not filter:
             continue
 
         if filter_id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[filter_id]
         else:
-            function_module, _, _ = load_function_module_by_id(filter_id)
+            function_module, _, _ = await load_function_module_by_id(filter_id)
             request.app.state.FUNCTIONS[filter_id] = function_module
 
         if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            valves = Functions.get_function_valves_by_id(filter_id)
+            valves = await Functions.get_function_valves_by_id(filter_id)
             function_module.valves = function_module.Valves(
                 **(valves if valves else {})
             )
@@ -263,7 +260,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
                 try:
                     if hasattr(function_module, "UserValves"):
                         __user__["valves"] = function_module.UserValves(
-                            **Functions.get_user_valves_by_id_and_user_id(
+                            **await Functions.get_user_valves_by_id_and_user_id(
                                 filter_id, user.id
                             )
                         )
@@ -289,7 +286,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     else:
         sub_action_id = None
 
-    action = Functions.get_function_by_id(action_id)
+    action = await Functions.get_function_by_id(action_id)
     if not action:
         raise Exception(f"Action not found: {action_id}")
 
@@ -324,11 +321,11 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     if action_id in request.app.state.FUNCTIONS:
         function_module = request.app.state.FUNCTIONS[action_id]
     else:
-        function_module, _, _ = load_function_module_by_id(action_id)
+        function_module, _, _ = await load_function_module_by_id(action_id)
         request.app.state.FUNCTIONS[action_id] = function_module
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-        valves = Functions.get_function_valves_by_id(action_id)
+        valves = await Functions.get_function_valves_by_id(action_id)
         function_module.valves = function_module.Valves(**(valves if valves else {}))
 
     if hasattr(function_module, "action"):
@@ -364,8 +361,10 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                 try:
                     if hasattr(function_module, "UserValves"):
                         __user__["valves"] = function_module.UserValves(
-                            **Functions.get_user_valves_by_id_and_user_id(
-                                action_id, user.id
+                            **(
+                                await Functions.get_user_valves_by_id_and_user_id(
+                                    action_id, user.id
+                                )
                             )
                         )
                 except Exception as e:

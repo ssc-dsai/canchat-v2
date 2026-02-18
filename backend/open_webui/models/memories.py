@@ -1,11 +1,11 @@
 import time
 import uuid
-from typing import Optional
 
-from open_webui.internal.db import get_db
+from open_webui.internal.db import get_async_db
 from open_webui.models.base import Base
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, delete, select, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 ####################
 # Memory DB Schema
@@ -15,11 +15,11 @@ from sqlalchemy import BigInteger, Column, String, Text
 class Memory(Base):
     __tablename__ = "memory"
 
-    id = Column(String, primary_key=True)
-    user_id = Column(String)
-    content = Column(Text)
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String)
+    content: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[int] = mapped_column(BigInteger)
 
 
 class MemoryModel(BaseModel):
@@ -38,12 +38,12 @@ class MemoryModel(BaseModel):
 
 
 class MemoriesTable:
-    def insert_new_memory(
+    async def insert_new_memory(
         self,
         user_id: str,
         content: str,
-    ) -> Optional[MemoryModel]:
-        with get_db() as db:
+    ) -> MemoryModel | None:
+        async with get_async_db() as db:
             id = str(uuid.uuid4())
 
             memory = MemoryModel(
@@ -57,78 +57,83 @@ class MemoriesTable:
             )
             result = Memory(**memory.model_dump())
             db.add(result)
-            db.commit()
-            db.refresh(result)
+            await db.commit()
+            await db.refresh(result)
             if result:
                 return MemoryModel.model_validate(result)
             else:
                 return None
 
-    def update_memory_by_id(
+    async def update_memory_by_id(
         self,
         id: str,
         content: str,
-    ) -> Optional[MemoryModel]:
-        with get_db() as db:
+    ) -> MemoryModel | None:
+        async with get_async_db() as db:
             try:
-                db.query(Memory).filter_by(id=id).update(
-                    {"content": content, "updated_at": int(time.time())}
+                if memory := await db.scalar(select(Memory).where(Memory.id == id)):
+                    memory.content = content
+                    memory.updated_at = int(time.time())
+
+                    await db.commit()
+                    await db.refresh(memory)
+                return MemoryModel.model_validate(memory) if memory else None
+            except Exception:
+                return None
+
+    async def get_memories(self) -> list[MemoryModel]:
+        async with get_async_db() as db:
+            try:
+                memories = await db.scalars(select(Memory))
+                return [MemoryModel.model_validate(memory) for memory in memories.all()]
+            except Exception:
+                return []
+
+    async def get_memories_by_user_id(self, user_id: str) -> list[MemoryModel]:
+        async with get_async_db() as db:
+            try:
+                memories = await db.scalars(
+                    select(Memory).where(Memory.user_id == user_id)
                 )
-                db.commit()
-                return self.get_memory_by_id(id)
+                return [MemoryModel.model_validate(memory) for memory in memories.all()]
             except Exception:
-                return None
+                return []
 
-    def get_memories(self) -> list[MemoryModel]:
-        with get_db() as db:
+    async def get_memory_by_id(self, id: str) -> MemoryModel | None:
+        async with get_async_db() as db:
             try:
-                memories = db.query(Memory).all()
-                return [MemoryModel.model_validate(memory) for memory in memories]
-            except Exception:
-                return None
-
-    def get_memories_by_user_id(self, user_id: str) -> list[MemoryModel]:
-        with get_db() as db:
-            try:
-                memories = db.query(Memory).filter_by(user_id=user_id).all()
-                return [MemoryModel.model_validate(memory) for memory in memories]
-            except Exception:
-                return None
-
-    def get_memory_by_id(self, id: str) -> Optional[MemoryModel]:
-        with get_db() as db:
-            try:
-                memory = db.get(Memory, id)
+                memory = await db.get(Memory, id)
                 return MemoryModel.model_validate(memory)
             except Exception:
                 return None
 
-    def delete_memory_by_id(self, id: str) -> bool:
-        with get_db() as db:
+    async def delete_memory_by_id(self, id: str) -> bool:
+        async with get_async_db() as db:
             try:
-                db.query(Memory).filter_by(id=id).delete()
-                db.commit()
-
-                return True
-
-            except Exception:
-                return False
-
-    def delete_memories_by_user_id(self, user_id: str) -> bool:
-        with get_db() as db:
-            try:
-                db.query(Memory).filter_by(user_id=user_id).delete()
-                db.commit()
+                _ = db.execute(delete(Memory).where(Memory.id == id))
+                await db.commit()
 
                 return True
             except Exception:
                 return False
 
-    def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
-        with get_db() as db:
+    async def delete_memories_by_user_id(self, user_id: str) -> bool:
+        async with get_async_db() as db:
             try:
-                db.query(Memory).filter_by(id=id, user_id=user_id).delete()
-                db.commit()
+                _ = db.execute(delete(Memory).where(Memory.user_id == user_id))
+                await db.commit()
+
+                return True
+            except Exception:
+                return False
+
+    async def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
+        async with get_async_db() as db:
+            try:
+                _ = db.execute(
+                    delete(Memory).where(Memory.id == id, Memory.user_id == user_id)
+                )
+                await db.commit()
 
                 return True
             except Exception:
