@@ -523,9 +523,12 @@ async def disconnect(sid):
         del SESSION_POOL[sid]
 
         user_id = user["id"]
-        USER_POOL[user_id] = [_sid for _sid in USER_POOL[user_id] if _sid != sid]
+        current_sids = USER_POOL.get(user_id, [])
+        remaining_sids = [_sid for _sid in current_sids if _sid != sid]
 
-        if len(USER_POOL[user_id]) == 0:
+        if len(remaining_sids) > 0:
+            USER_POOL[user_id] = remaining_sids
+        elif user_id in USER_POOL:
             del USER_POOL[user_id]
 
         await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
