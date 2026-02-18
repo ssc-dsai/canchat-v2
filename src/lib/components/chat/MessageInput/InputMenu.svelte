@@ -174,10 +174,9 @@
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if Object.keys(tools).length > 0}
-				<div class="relative">
+				{#if Object.keys(tools).length > 0}
 					<div
-						class="max-h-28 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500 pr-1"
+						class="max-h-[11rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500"
 					>
 						{#each Object.keys(tools) as toolId}
 							<Tooltip
@@ -197,7 +196,7 @@
 												$i18n
 											)
 										: tools[toolId].name}
-									class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {tools[
+									class="flex min-h-[2.75rem] w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {tools[
 										toolId
 									].isMcp &&
 									(webSearchEnabled || wikiGroundingEnabled)
@@ -267,14 +266,9 @@
 							</Tooltip>
 						{/each}
 					</div>
-					<!-- Scroll indicator gradient -->
-					<div
-						class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-gray-850 to-transparent pointer-events-none opacity-80"
-					></div>
-				</div>
 
-				<hr class="border-black/5 dark:border-white/5 my-1" />
-			{/if}
+					<hr class="border-black/5 dark:border-white/5 my-1" />
+				{/if}
 
 			{#if showImageGeneration}
 				<Tooltip content={$i18n.t('Image Generation')} placement="right">
