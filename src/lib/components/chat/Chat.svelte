@@ -101,21 +101,35 @@
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
-	let selectedToolIds: string[] = [];
-	let imageGenerationEnabled = false;
-	let webSearchEnabled = false;
-	let wikiGroundingEnabled = false;
-	let wikiGroundingMode = 'off'; // 'off', 'on'
-
 	let chat = null;
 	let tags = [];
+	let taskId = null;
 
-	let history = {
-		messages: {},
-		currentId: null
+	// Default transient state values
+	const TRANSIENT_DEFAULTS = {
+		prompt: '',
+		files: [],
+		selectedToolIds: [],
+		imageGenerationEnabled: false,
+		webSearchEnabled: false,
+		wikiGroundingEnabled: false,
+		wikiGroundingMode: 'off',
+		history: { messages: {}, currentId: null },
+		chatFiles: [],
+		params: {}
 	};
 
-	let taskId = null;
+	// Declare chat Input and transient state variables cleanly
+	let prompt = TRANSIENT_DEFAULTS.prompt;
+	let files = TRANSIENT_DEFAULTS.files;
+	let selectedToolIds: string[] = [];
+	let imageGenerationEnabled = TRANSIENT_DEFAULTS.imageGenerationEnabled;
+	let webSearchEnabled = TRANSIENT_DEFAULTS.webSearchEnabled;
+	let wikiGroundingEnabled = TRANSIENT_DEFAULTS.wikiGroundingEnabled;
+	let wikiGroundingMode = TRANSIENT_DEFAULTS.wikiGroundingMode;
+	let history = structuredClone(TRANSIENT_DEFAULTS.history);
+	let chatFiles = TRANSIENT_DEFAULTS.chatFiles;
+	let params = TRANSIENT_DEFAULTS.params;
 
 	// Chat Input Handler for draft saving
 	const handleInputChange = (input) => {
@@ -128,15 +142,25 @@
 		}
 	};
 
-	// Chat Input
-	let prompt = '';
-	let chatFiles = [];
-	let files = [];
-	let params = {};
+	const resetTransientChatInputState = () => {
+		prompt = TRANSIENT_DEFAULTS.prompt;
+		files = [];
+		selectedToolIds = [];
+		imageGenerationEnabled = TRANSIENT_DEFAULTS.imageGenerationEnabled;
+		webSearchEnabled = TRANSIENT_DEFAULTS.webSearchEnabled;
+		wikiGroundingEnabled = TRANSIENT_DEFAULTS.wikiGroundingEnabled;
+		wikiGroundingMode = TRANSIENT_DEFAULTS.wikiGroundingMode;
+		history = structuredClone(TRANSIENT_DEFAULTS.history);
+		chatFiles = [];
+		params = {};
+	};
 
 	$: if (chatIdProp) {
 		(async () => {
-			// First, try to restore from localStorage before resetting
+			// Reset all transient state first
+			resetTransientChatInputState();
+
+			// Restore from localStorage if available
 			let storedInput = null;
 			const storedData = localStorage.getItem(`chat-input-${chatIdProp}`);
 			if (storedData) {
@@ -145,14 +169,17 @@
 				} catch (e) {}
 			}
 
-			// Reset states, but use stored values if available
-			prompt = storedInput?.prompt || '';
-			files = storedInput?.files || [];
-			selectedToolIds = storedInput?.selectedToolIds || [];
-			webSearchEnabled = storedInput?.webSearchEnabled || false;
-			wikiGroundingEnabled = storedInput?.wikiGroundingEnabled || false;
-			wikiGroundingMode = storedInput?.wikiGroundingEnabled ? 'on' : 'off';
-			imageGenerationEnabled = storedInput?.imageGenerationEnabled || false;
+			// Override with stored values if available
+			if (storedInput?.prompt) prompt = storedInput.prompt;
+			if (storedInput?.files) files = storedInput.files;
+			if (storedInput?.selectedToolIds) selectedToolIds = storedInput.selectedToolIds;
+			if (storedInput?.webSearchEnabled !== undefined)
+				webSearchEnabled = storedInput.webSearchEnabled;
+			if (storedInput?.wikiGroundingEnabled !== undefined)
+				wikiGroundingEnabled = storedInput.wikiGroundingEnabled;
+			if (storedInput?.imageGenerationEnabled !== undefined)
+				imageGenerationEnabled = storedInput.imageGenerationEnabled;
+			if (storedInput?.wikiGroundingEnabled) wikiGroundingMode = 'on';
 
 			loaded = false;
 
@@ -169,7 +196,6 @@
 		})();
 	} else {
 		(async () => {
-			prompt = '';
 			await initNewChat();
 		})();
 	}
@@ -415,12 +441,7 @@
 					imageGenerationEnabled = input.imageGenerationEnabled;
 				}
 			} catch (e) {
-				prompt = '';
-				files = [];
-				selectedToolIds = [];
-				webSearchEnabled = false;
-				wikiGroundingEnabled = false;
-				imageGenerationEnabled = false;
+				resetTransientChatInputState();
 			}
 		}
 
@@ -610,6 +631,9 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		// Clear transient chat/input state immediately to avoid prompt carryover during route transitions
+		resetTransientChatInputState();
+
 		//ensures the url is reset to the root
 		if (chatIdProp || $chatId) {
 			if ($chatId) {
@@ -680,14 +704,6 @@
 			await chatId.set('');
 		}
 		await chatTitle.set('');
-
-		history = {
-			messages: {},
-			currentId: null
-		};
-
-		chatFiles = [];
-		params = {};
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
