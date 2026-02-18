@@ -359,8 +359,7 @@ export class ChatPage extends BasePage {
 	 * Saves the edited answer as a new copy
 	 */
 	async saveAnswerAsCopy(): Promise<void> {
-		//const label = this.getTranslation('Save as Copy'); //Bug CHAT-1439
-		const label = 'Save as Copy';
+		const label = this.getTranslation('Save As Copy');
 		await this.page.getByRole('button', { name: label }).click();
 		await this.waitToSettle(500);
 	}

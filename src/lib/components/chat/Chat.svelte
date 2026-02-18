@@ -1399,8 +1399,9 @@
 					}
 					responseMessage.userContext = userContext;
 
-					// Check if user has selected ANY tools for this chat
-					const hasSelectedTools = selectedToolIds.length > 0;
+					// Web search/wiki grounding are exclusive with tool execution
+					const hasSelectedTools =
+						selectedToolIds.length > 0 && !webSearchEnabled && !wikiGroundingEnabled;
 
 					if (hasSelectedTools) {
 						// Use CrewAI when user has selected any tools
@@ -1649,7 +1650,10 @@
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
-				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+				tool_ids:
+					selectedToolIds.length > 0 && !webSearchEnabled && !wikiGroundingEnabled
+						? selectedToolIds
+						: undefined,
 				features: {
 					image_generation: imageGenerationEnabled,
 					web_search: webSearchEnabled,
@@ -1712,19 +1716,19 @@
 
 		console.error(innerError);
 		if ('detail' in innerError) {
-			toast.error(innerError.detail);
-			errorMessage = innerError.detail;
+			errorMessage = $i18n.t(String(innerError.detail));
+			toast.error(errorMessage);
 		} else if ('error' in innerError) {
 			if ('message' in innerError.error) {
-				toast.error(innerError.error.message);
-				errorMessage = innerError.error.message;
+				errorMessage = $i18n.t(String(innerError.error.message));
+				toast.error(errorMessage);
 			} else {
-				toast.error(innerError.error);
-				errorMessage = innerError.error;
+				errorMessage = $i18n.t(String(innerError.error));
+				toast.error(errorMessage);
 			}
 		} else if ('message' in innerError) {
-			toast.error(innerError.message);
-			errorMessage = innerError.message;
+			errorMessage = $i18n.t(String(innerError.message));
+			toast.error(errorMessage);
 		}
 
 		responseMessage.error = {

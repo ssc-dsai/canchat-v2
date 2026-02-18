@@ -80,6 +80,7 @@ from open_webui.config import (
     UPLOAD_DIR,
     DEFAULT_LOCALE,
     ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
+    RAG_WEB_SEARCH_TOTAL_TIMEOUT,
 )
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -1172,7 +1173,9 @@ async def process_web(
         )
 
 
-def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
+def search_web(
+    request: Request, engine: str, query: str, request_timeout: Optional[int] = None
+) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
     - SEARXNG_QUERY_URL
@@ -1185,8 +1188,13 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     - SERPLY_API_KEY
     - TAVILY_API_KEY
     - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
+
     Args:
+        request (Request): FastAPI request object with app config.
+        engine (str): Configured web search engine identifier.
         query (str): The query to search for
+        request_timeout (Optional[int]): Optional per-request timeout override in seconds.
+            If not provided, providers use the configured default request timeout.
     """
 
     # TODO: add playwright to search the web
@@ -1211,6 +1219,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request_timeout=request_timeout,
             )
         else:
             raise Exception(
@@ -1223,6 +1232,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request_timeout=request_timeout,
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
@@ -1330,91 +1340,117 @@ class SearchForm(BaseModel):
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
-    try:
-        log.debug(
-            f"[process_web_search] query: '{form_data.query}', engine: '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
-        )
-        web_results = await asyncio.to_thread(
-            search_web,
-            request,
-            request.app.state.config.RAG_WEB_SEARCH_ENGINE,
-            form_data.query,
-        )
-    except Exception as e:
-        log.exception(e)
+    total_timeout = RAG_WEB_SEARCH_TOTAL_TIMEOUT.value
+    start_time = time.monotonic()
 
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
-        )
-
-    log.debug(f"[process_web_search] web_results: {web_results}")
+    def get_remaining_timeout() -> int:
+        elapsed = time.monotonic() - start_time
+        remaining = total_timeout - elapsed
+        if remaining <= 0:
+            raise TimeoutError()
+        return max(1, int(remaining))
 
     try:
-        urls = [result.link for result in web_results]
-        loader = get_web_loader(
-            urls,
-            verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
-        )
-        docs = loader.load()
+        async with asyncio.timeout(total_timeout):
+            try:
+                request_timeout = get_remaining_timeout()
+                log.debug(
+                    f"[process_web_search] query: '{form_data.query}', engine: '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
+                )
+                web_results = await asyncio.to_thread(
+                    search_web,
+                    request,
+                    request.app.state.config.RAG_WEB_SEARCH_ENGINE,
+                    form_data.query,
+                    request_timeout,
+                )
+            except TimeoutError:
+                raise
+            except Exception as e:
+                log.exception(e)
 
-        # Add metadata for tracking
-        for doc in docs:
-            if not hasattr(doc, "metadata"):
-                doc.metadata = {}
-            doc.metadata.update(
-                {
-                    "created_at": int(time.time()),
-                    "search_query": form_data.query,
-                    "search_engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
-                    "type": "web_search",
-                }
-            )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
+                )
 
-        if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            # Return raw results without embedding
-            return {
-                "status": True,
-                "collection_name": None,
-                "docs": [
-                    {
-                        "content": doc.page_content,
-                        "metadata": doc.metadata,
+            log.debug(f"[process_web_search] web_results: {web_results}")
+
+            try:
+                urls = [result.link for result in web_results]
+                request_timeout = get_remaining_timeout()
+                loader = get_web_loader(
+                    urls,
+                    verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+                    requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                    request_timeout=request_timeout,
+                )
+                docs = await asyncio.to_thread(loader.load)
+                # Add metadata for tracking
+                for doc in docs:
+                    if not hasattr(doc, "metadata"):
+                        doc.metadata = {}
+                    doc.metadata.update(
+                        {
+                            "created_at": int(time.time()),
+                            "search_query": form_data.query,
+                            "search_engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
+                            "type": "web_search",
+                        }
+                    )
+
+                if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                    # Return raw results without embedding
+                    return {
+                        "status": True,
+                        "collection_name": None,
+                        "docs": [
+                            {
+                                "content": doc.page_content,
+                                "metadata": doc.metadata,
+                            }
+                            for doc in docs
+                        ],
+                        "filenames": urls,
+                        "loaded_count": len(docs),
                     }
-                    for doc in docs
-                ],
-                "filenames": urls,
-                "loaded_count": len(docs),
-            }
 
-        # Use timestamp + random UUID to ensure uniqueness without hash-based caching
-        timestamp = int(time.time())
-        unique_id = str(uuid.uuid4())[:8]
-        collection_name = (
-            f"{VECTOR_COLLECTION_PREFIXES.WEB_SEARCH}{timestamp}-{unique_id}"
+                # Use timestamp + random UUID to ensure uniqueness without hash-based caching
+                timestamp = int(time.time())
+                unique_id = str(uuid.uuid4())[:8]
+                collection_name = (
+                    f"{VECTOR_COLLECTION_PREFIXES.WEB_SEARCH}{timestamp}-{unique_id}"
+                )
+
+                await save_docs_to_vector_db(
+                    request,
+                    docs,
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
+
+                return {
+                    "status": True,
+                    "collection_name": collection_name,
+                    "filenames": urls,
+                    "loaded_count": len(docs),
+                }
+            except (TimeoutError, asyncio.TimeoutError):
+                raise
+            except Exception as e:
+                log.exception(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e),
+                )
+    except (TimeoutError, asyncio.TimeoutError):
+        log.error(
+            f"[process_web_search] exceeded total timeout of {total_timeout}s for query: '{form_data.query}'"
         )
-
-        await save_docs_to_vector_db(
-            request,
-            docs,
-            collection_name,
-            overwrite=True,
-            user=user,
-        )
-
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filenames": urls,
-            "loaded_count": len(docs),
-        }
-
-    except Exception as e:
-        log.exception(e)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            status_code=status.HTTP_408_REQUEST_TIMEOUT,
+            detail=f"Web search timed out after {total_timeout} seconds",
         )
 
 
