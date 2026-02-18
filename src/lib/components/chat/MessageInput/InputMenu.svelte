@@ -84,6 +84,7 @@
 	let show = false;
 
 	let showImageGeneration = false;
+	const hoverOnlyTooltipOptions = { trigger: 'mouseenter' };
 
 	$: showImageGeneration =
 		$config?.features?.enable_image_generation &&
@@ -174,104 +175,109 @@
 			align="start"
 			transition={flyAndScale}
 		>
-				{#if Object.keys(tools).length > 0}
-					<div
-						class="max-h-[11rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500"
-					>
-						{#each Object.keys(tools) as toolId}
-							<Tooltip
-								content={tools[toolId].isMcp && webSearchEnabled
-									? $i18n.t('MCP tools disabled - Web Search is active')
-									: tools[toolId].isMcp && wikiGroundingEnabled
-										? $i18n.t('MCP tools disabled - Wiki Grounding is active')
-										: getToolTooltipContent(tools[toolId], $i18n)}
-								placement="right"
-								className="w-full"
+			{#if Object.keys(tools).length > 0}
+				<div
+					class="max-h-[10rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500"
+				>
+					{#each Object.keys(tools) as toolId}
+						<Tooltip
+							content={tools[toolId].isMcp && webSearchEnabled
+								? $i18n.t('MCP tools disabled - Web Search is active')
+								: tools[toolId].isMcp && wikiGroundingEnabled
+									? $i18n.t('MCP tools disabled - Wiki Grounding is active')
+									: getToolTooltipContent(tools[toolId], $i18n)}
+							placement="right"
+							className="w-full"
+							tippyOptions={hoverOnlyTooltipOptions}
+						>
+							<button
+								role="menuitem"
+								aria-label={tools[toolId].isMcp
+									? getMCPToolName(
+											tools[toolId].meta?.manifest?.original_name || tools[toolId].name,
+											$i18n
+										)
+									: tools[toolId].name}
+								class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {tools[
+									toolId
+								].isMcp &&
+								(webSearchEnabled || wikiGroundingEnabled)
+									? 'opacity-50 cursor-not-allowed'
+									: ''}"
+								on:click={() => {
+									if (tools[toolId].isMcp && (webSearchEnabled || wikiGroundingEnabled)) {
+										return; // Don't allow toggling MCP tools when web search or wiki grounding is active
+									}
+									tools[toolId].enabled = !tools[toolId].enabled;
+									// If enabling an MCP tool, disable web search and wiki grounding
+									if (tools[toolId].isMcp && tools[toolId].enabled) {
+										webSearchEnabled = false;
+										wikiGroundingEnabled = false;
+										wikiGroundingMode = 'off';
+									}
+								}}
 							>
-								<button
-									role="menuitem"
-									aria-label={tools[toolId].isMcp
-										? getMCPToolName(
-												tools[toolId].meta?.manifest?.original_name || tools[toolId].name,
-												$i18n
-											)
-										: tools[toolId].name}
-									class="flex min-h-[2.75rem] w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {tools[
-										toolId
-									].isMcp &&
-									(webSearchEnabled || wikiGroundingEnabled)
-										? 'opacity-50 cursor-not-allowed'
-										: ''}"
-									on:click={() => {
-										if (tools[toolId].isMcp && (webSearchEnabled || wikiGroundingEnabled)) {
-											return; // Don't allow toggling MCP tools when web search or wiki grounding is active
-										}
-										tools[toolId].enabled = !tools[toolId].enabled;
-										// If enabling an MCP tool, disable web search and wiki grounding
-										if (tools[toolId].isMcp && tools[toolId].enabled) {
-											webSearchEnabled = false;
-											wikiGroundingEnabled = false;
-											wikiGroundingMode = 'off';
-										}
-									}}
-								>
-									<div class="flex-1 flex gap-2 items-center">
-										<div class="flex-shrink-0">
+								<div class="flex-1 flex gap-2 items-center">
+									<div class="flex-shrink-0">
+										{#if tools[toolId].isMcp}
+											<Cog6Solid />
+										{:else}
+											<WrenchSolid />
+										{/if}
+									</div>
+
+									<div class="flex flex-col items-start min-w-0 flex-1">
+										<div class="text-sm font-medium leading-tight">
 											{#if tools[toolId].isMcp}
-												<Cog6Solid />
+												{getMCPToolName(tools[toolId].originalName, $i18n)}
 											{:else}
-												<WrenchSolid />
+												{tools[toolId].name}
 											{/if}
 										</div>
-
-										<div class="flex flex-col items-start min-w-0 flex-1">
-											<div class="text-sm font-medium leading-tight">
-												{#if tools[toolId].isMcp}
-													{getMCPToolName(tools[toolId].originalName, $i18n)}
-												{:else}
-													{tools[toolId].name}
-												{/if}
-											</div>
-										</div>
 									</div>
+								</div>
 
-									<div class=" flex-shrink-0">
-										<Switch
-											state={tools[toolId].enabled}
-											ariaLabel={tools[toolId].isMcp
-												? `${$i18n.t('Toggle')} ${getMCPToolName(tools[toolId].meta?.manifest?.original_name || tools[toolId].name, $i18n)}`
-												: `${$i18n.t('Toggle')} ${tools[toolId].name}`}
-											disabled={tools[toolId].isMcp && (webSearchEnabled || wikiGroundingEnabled)}
-											on:change={async (e) => {
-												if (tools[toolId].isMcp && (webSearchEnabled || wikiGroundingEnabled)) {
-													return; // Don't allow toggling MCP tools
+								<div class=" flex-shrink-0">
+									<Switch
+										state={tools[toolId].enabled}
+										ariaLabel={tools[toolId].isMcp
+											? `${$i18n.t('Toggle')} ${getMCPToolName(tools[toolId].meta?.manifest?.original_name || tools[toolId].name, $i18n)}`
+											: `${$i18n.t('Toggle')} ${tools[toolId].name}`}
+										disabled={tools[toolId].isMcp && (webSearchEnabled || wikiGroundingEnabled)}
+										on:change={async (e) => {
+											if (tools[toolId].isMcp && (webSearchEnabled || wikiGroundingEnabled)) {
+												return; // Don't allow toggling MCP tools
+											}
+											const state = e.detail;
+											await tick();
+											if (state) {
+												selectedToolIds = [...selectedToolIds, toolId];
+												// If enabling an MCP tool, disable web search and wiki grounding
+												if (tools[toolId].isMcp) {
+													webSearchEnabled = false;
+													wikiGroundingEnabled = false;
+													wikiGroundingMode = 'off';
 												}
-												const state = e.detail;
-												await tick();
-												if (state) {
-													selectedToolIds = [...selectedToolIds, toolId];
-													// If enabling an MCP tool, disable web search and wiki grounding
-													if (tools[toolId].isMcp) {
-														webSearchEnabled = false;
-														wikiGroundingEnabled = false;
-														wikiGroundingMode = 'off';
-													}
-												} else {
-													selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
-												}
-											}}
-										/>
-									</div>
-								</button>
-							</Tooltip>
-						{/each}
-					</div>
+											} else {
+												selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+											}
+										}}
+									/>
+								</div>
+							</button>
+						</Tooltip>
+					{/each}
+				</div>
 
-					<hr class="border-black/5 dark:border-white/5 my-1" />
-				{/if}
+				<hr class="border-black/5 dark:border-white/5 my-1" />
+			{/if}
 
 			{#if showImageGeneration}
-				<Tooltip content={$i18n.t('Image Generation')} placement="right">
+				<Tooltip
+					content={$i18n.t('Image Generation')}
+					placement="right"
+					tippyOptions={hoverOnlyTooltipOptions}
+				>
 					<button
 						role="menuitem"
 						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
@@ -297,6 +303,7 @@
 							? $i18n.t('Web Search disabled - MCP tools are active')
 							: $i18n.t('Web Search (Beta)')}
 					placement="right"
+					tippyOptions={hoverOnlyTooltipOptions}
 				>
 					<button
 						role="menuitem"
