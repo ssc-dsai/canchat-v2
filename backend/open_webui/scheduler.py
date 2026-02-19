@@ -1,11 +1,11 @@
 # scheduler.py
 import logging
 import asyncio
+import threading
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime
 
-from open_webui.env import SRC_LOG_LEVELS, WEBSOCKET_REDIS_URL
+from open_webui.env import SRC_LOG_LEVELS, WEBSOCKET_REDIS_URL, WEBSOCKET_MANAGER
 from open_webui.config import (
     CHAT_LIFETIME_ENABLED,
     CHAT_LIFETIME_DAYS,
@@ -13,6 +13,10 @@ from open_webui.config import (
     CHAT_CLEANUP_PRESERVE_ARCHIVED,
     CHAT_CLEANUP_LOCK_TIMEOUT,
     CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL,
+    CHAT_CLEANUP_SCHEDULE_CRON,
+    CHAT_CLEANUP_SCHEDULE_TIMEZONE,
+    CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS,
+    CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS,
 )
 from open_webui.socket.utils import RedisLock, renew_lock_periodically
 
@@ -24,11 +28,16 @@ scheduler = None
 CLEANUP_JOB_ID = "chat_lifetime_cleanup"
 
 
+def describe_cron_schedule(cron_expr: str) -> str:
+    """Return raw cron expression for schedule display."""
+    return cron_expr
+
+
 def get_scheduler():
     """Get or create the global scheduler instance"""
     global scheduler
     if scheduler is None:
-        scheduler = AsyncIOScheduler()
+        scheduler = AsyncIOScheduler(timezone=CHAT_CLEANUP_SCHEDULE_TIMEZONE)
         scheduler.start()
         log.info("Chat lifetime scheduler started")
     return scheduler
@@ -39,13 +48,17 @@ async def automated_chat_cleanup():
     Automated chat cleanup job that respects current configuration.
     This is called by the scheduler when chat lifetime is enabled.
 
-    Uses distributed locking to ensure only one replica runs cleanup at a time.
-    Runs database operations in an executor to prevent blocking the event loop
-    and ensure health checks continue to respond during cleanup.
+    Uses Redis-based distributed locking to ensure only one replica runs cleanup at a time.
+    Strict policy: if lock safety cannot be guaranteed (no Redis manager, lock contention,
+    or Redis lock error), the cleanup run is skipped.
+
+    Cleanup is executed in an executor thread to avoid blocking the main event loop.
+    If lock ownership is lost mid-run, the cleanup function is signaled to stop early.
     """
     # Distributed lock to ensure only one replica runs cleanup
     lock = None
     lock_renewal_task = None
+    lock_lost_flag = threading.Event()
 
     try:
         # Import here to avoid circular imports
@@ -61,39 +74,69 @@ async def automated_chat_cleanup():
             log.info("Chat lifetime is disabled - skipping automated cleanup")
             return
 
-        # Try to acquire distributed lock
-        lock = RedisLock(
-            redis_url=WEBSOCKET_REDIS_URL,
-            lock_name="chat_cleanup_job",
-            timeout_secs=CHAT_CLEANUP_LOCK_TIMEOUT,
-        )
+        if WEBSOCKET_MANAGER == "redis":
+            lock = RedisLock(
+                redis_url=WEBSOCKET_REDIS_URL,
+                lock_name="chat_cleanup_job",
+                timeout_secs=CHAT_CLEANUP_LOCK_TIMEOUT,
+            )
 
-        if not lock.acquire_lock():
-            log.info(
-                "Another replica is already running chat cleanup - skipping this run"
+            if not lock.acquire_lock():
+                if lock.last_error:
+                    log.error(
+                        f"Skipping automated chat cleanup: lock acquisition failed due to Redis error: {lock.last_error}"
+                    )
+                else:
+                    log.info(
+                        "Another replica is already running chat cleanup - skipping this run"
+                    )
+                return
+        elif not CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS:
+            # Strict policy by default: skip cleanup when single-run guarantees are unavailable.
+            log.warning(
+                "Skipping automated chat cleanup: distributed lock is unavailable "
+                "(WEBSOCKET_MANAGER is not 'redis'). Set CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true "
+                "for single-instance local development."
             )
             return
+        else:
+            log.warning(
+                "Running automated chat cleanup without distributed lock "
+                "(CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true). Use only in single-instance environments."
+            )
 
         log.info(
             f"Starting automated chat cleanup (age > {days} days, preserve_pinned={preserve_pinned}, preserve_archived={preserve_archived})"
         )
 
         # Start lock renewal task to keep lock alive during long-running cleanup
-        lock_renewal_task = asyncio.create_task(
-            renew_lock_periodically(
-                lock,
-                renewal_interval_secs=CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL,
-                lock_name="chat_cleanup_job",
+        if lock:
+            lock_renewal_task = asyncio.create_task(
+                renew_lock_periodically(
+                    lock,
+                    renewal_interval_secs=CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL,
+                    lock_name="chat_cleanup_job",
+                    on_lock_lost=lock_lost_flag.set,
+                )
             )
+
+        # Run cleanup in thread pool to avoid blocking the main event loop.
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: asyncio.run(
+                cleanup_expired_chats_streaming(
+                    max_age_days=days,
+                    preserve_pinned=preserve_pinned,
+                    preserve_archived=preserve_archived,
+                    force_cleanup_all=False,  # Always use age-based cleanup for automation
+                    should_continue=lambda: not lock_lost_flag.is_set(),
+                )
+            ),
         )
 
-        # Run streaming cleanup (memory-efficient version)
-        result = await cleanup_expired_chats_streaming(
-            max_age_days=days,
-            preserve_pinned=preserve_pinned,
-            preserve_archived=preserve_archived,
-            force_cleanup_all=False,  # Always use age-based cleanup for automation
-        )
+        if lock_lost_flag.is_set():
+            log.error("Chat cleanup lock lost during execution; cleanup stopped early.")
 
         log.info(f"Automated chat cleanup completed: {result}")
 
@@ -129,18 +172,28 @@ def update_cleanup_schedule():
 
         # Check if chat lifetime is enabled
         if CHAT_LIFETIME_ENABLED.value:
-            # Schedule daily cleanup at 2 AM
-            trigger = CronTrigger(hour=2, minute=0)
+            trigger = CronTrigger.from_crontab(
+                CHAT_CLEANUP_SCHEDULE_CRON,
+                timezone=CHAT_CLEANUP_SCHEDULE_TIMEZONE,
+            )
             scheduler_instance.add_job(
                 automated_chat_cleanup,
                 trigger=trigger,
                 id=CLEANUP_JOB_ID,
                 name="Automated Chat Lifetime Cleanup",
                 replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=max(
+                    1, int(CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS)
+                ),
             )
 
             days = CHAT_LIFETIME_DAYS.value
-            log.info(f"Scheduled daily chat cleanup at 2:00 AM (lifetime: {days} days)")
+            log.info(
+                f"Scheduled chat cleanup with cron '{CHAT_CLEANUP_SCHEDULE_CRON}' "
+                f"(timezone: {CHAT_CLEANUP_SCHEDULE_TIMEZONE}, lifetime: {days} days)"
+            )
         else:
             log.info("Chat lifetime disabled - no automated cleanup scheduled")
 
@@ -189,6 +242,22 @@ def get_schedule_info():
                 "status": "Disabled",
                 "next_run": None,
                 "lifetime_days": CHAT_LIFETIME_DAYS.value,
+                "schedule": describe_cron_schedule(CHAT_CLEANUP_SCHEDULE_CRON),
+                "schedule_cron": CHAT_CLEANUP_SCHEDULE_CRON,
+                "schedule_timezone": CHAT_CLEANUP_SCHEDULE_TIMEZONE,
+            }
+
+        if WEBSOCKET_MANAGER != "redis" and not CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS:
+            return {
+                "enabled": True,
+                "status": "Blocked",
+                "next_run": None,
+                "lifetime_days": CHAT_LIFETIME_DAYS.value,
+                "schedule": describe_cron_schedule(CHAT_CLEANUP_SCHEDULE_CRON),
+                "schedule_cron": CHAT_CLEANUP_SCHEDULE_CRON,
+                "schedule_timezone": CHAT_CLEANUP_SCHEDULE_TIMEZONE,
+                "reason": "WEBSOCKET_MANAGER is not 'redis'; distributed lock is unavailable. "
+                "Set CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true for single-instance local development.",
             }
 
         scheduler_instance = get_scheduler()
@@ -201,7 +270,9 @@ def get_schedule_info():
                 "status": "Scheduled",
                 "next_run": next_run.isoformat() if next_run else None,
                 "lifetime_days": CHAT_LIFETIME_DAYS.value,
-                "schedule": "Daily at 2:00 AM",
+                "schedule": describe_cron_schedule(CHAT_CLEANUP_SCHEDULE_CRON),
+                "schedule_cron": CHAT_CLEANUP_SCHEDULE_CRON,
+                "schedule_timezone": CHAT_CLEANUP_SCHEDULE_TIMEZONE,
             }
         else:
             return {
@@ -209,6 +280,9 @@ def get_schedule_info():
                 "status": "Error",
                 "next_run": None,
                 "lifetime_days": CHAT_LIFETIME_DAYS.value,
+                "schedule": describe_cron_schedule(CHAT_CLEANUP_SCHEDULE_CRON),
+                "schedule_cron": CHAT_CLEANUP_SCHEDULE_CRON,
+                "schedule_timezone": CHAT_CLEANUP_SCHEDULE_TIMEZONE,
                 "error": "Job not found in scheduler",
             }
 
@@ -218,5 +292,8 @@ def get_schedule_info():
             "status": "Error",
             "next_run": None,
             "lifetime_days": CHAT_LIFETIME_DAYS.value,
+            "schedule": describe_cron_schedule(CHAT_CLEANUP_SCHEDULE_CRON),
+            "schedule_cron": CHAT_CLEANUP_SCHEDULE_CRON,
+            "schedule_timezone": CHAT_CLEANUP_SCHEDULE_TIMEZONE,
             "error": str(e),
         }

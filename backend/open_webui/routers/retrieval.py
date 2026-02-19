@@ -10,7 +10,7 @@ import asyncio
 
 import uuid
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from fastapi import (
     Depends,
@@ -2946,7 +2946,9 @@ async def cleanup_orphaned_files(
     return cleanup_stats
 
 
-async def delete_chats_with_retry(chat_ids: list, max_retries: int = 3) -> dict:
+async def delete_chats_with_retry(
+    chat_ids: list, max_retries: int = 3, context_label: Optional[str] = None
+) -> dict:
     """
     Delete a list of chats with retry logic for transient errors.
     Separated from cleanup logic to follow single responsibility principle.
@@ -2954,6 +2956,7 @@ async def delete_chats_with_retry(chat_ids: list, max_retries: int = 3) -> dict:
     Args:
         chat_ids: List of chat IDs to delete
         max_retries: Maximum number of retry attempts
+        context_label: Optional label included in deletion logs for easier tracing
 
     Returns:
         dict: Result with deleted_count and any errors
@@ -2964,7 +2967,9 @@ async def delete_chats_with_retry(chat_ids: list, max_retries: int = 3) -> dict:
 
     for retry in range(max_retries):
         try:
-            deletion_result = Chats.delete_chat_list(chat_ids)
+            deletion_result = Chats.delete_chat_list(
+                chat_ids, log_context=context_label
+            )
             break  # Success, exit retry loop
         except Exception as e:
             if retry < max_retries - 1:
@@ -3799,6 +3804,7 @@ async def cleanup_expired_chats_streaming(
     preserve_pinned: bool = True,
     preserve_archived: bool = False,
     force_cleanup_all: bool = False,
+    should_continue: Optional[Callable[[], bool]] = None,
 ) -> dict:
     """
     Dispatcher function for memory-efficient chat cleanup operations.
@@ -3812,13 +3818,17 @@ async def cleanup_expired_chats_streaming(
         preserve_pinned: If True, exclude pinned chats from cleanup (default: True)
         preserve_archived: If True, exclude archived chats from cleanup (default: False)
         force_cleanup_all: If True, ignore age restrictions and clean up all chats (default: False)
+        should_continue: Optional callback returning True while cleanup is allowed to continue.
+            When it returns False, cleanup stops before further destructive work.
 
     Returns:
         dict: Summary of cleanup operations
     """
     try:
-        import time
-        from open_webui.config import CHAT_CLEANUP_BATCH_SIZE
+        from open_webui.config import (
+            CHAT_CLEANUP_BATCH_SIZE,
+            CHAT_CLEANUP_FILE_BATCH_SIZE,
+        )
 
         cleanup_summary = {
             "chats_checked": 0,
@@ -3853,10 +3863,19 @@ async def cleanup_expired_chats_streaming(
         )
 
         # Process chats in streaming batches
-        BATCH_SIZE = CHAT_CLEANUP_BATCH_SIZE
+        BATCH_SIZE = max(1, CHAT_CLEANUP_BATCH_SIZE)
+        FILE_BATCH_SIZE = max(1, CHAT_CLEANUP_FILE_BATCH_SIZE)
         total_processed = 0
+        deferred_file_reconciliation_ids = set()
+        cleanup_batch_number = 0
 
         while True:
+            if should_continue and not should_continue():
+                message = "Stopping chat cleanup: distributed lock ownership was lost."
+                log.warning(message)
+                cleanup_summary["errors"].append(message)
+                break
+
             # Delegate batch retrieval to service layer
             chat_batch = get_chat_batch_for_cleanup(
                 max_age_days=None if force_cleanup_all else max_age_days,
@@ -3869,8 +3888,12 @@ async def cleanup_expired_chats_streaming(
                 log.info("No more chats to cleanup")
                 break
 
+            cleanup_batch_number += 1
             batch_size_actual = len(chat_batch)
-            log.info(f"Processing batch of {batch_size_actual} chats...")
+            log.info(
+                f"Cleanup batch {cleanup_batch_number}: processing {batch_size_actual} chats "
+                f"(processed_so_far={total_processed})"
+            )
 
             # Extract chat data (business logic, no ORM)
             chat_ids_to_delete = []
@@ -3896,47 +3919,99 @@ async def cleanup_expired_chats_streaming(
                     log.error(error_msg)
                     cleanup_summary["errors"].append(error_msg)
 
-            # Update file reference counts by decrementing based on batch counts
-            # If 3 chats in the batch reference the same file, decrement by 3
-            for file_id, batch_count in batch_file_ref_counts.items():
-                if file_id in file_ref_counts:
-                    file_ref_counts[file_id] -= batch_count
-                    # Remove from dict if count reaches 0
-                    if file_ref_counts[file_id] <= 0:
-                        del file_ref_counts[file_id]
+            if not chat_ids_to_delete:
+                message = (
+                    "Stopping chat cleanup: no valid chat IDs found in current batch "
+                    "to avoid an infinite loop."
+                )
+                log.error(message)
+                cleanup_summary["errors"].append(message)
+                break
 
-            # Delegate file cleanup to specialized function
-            # Convert ref count dict to set for compatibility
-            file_cleanup_result = await cleanup_orphaned_files(
-                file_ids=file_ids_to_cleanup,
-                exclude_from_chats=set(file_ref_counts.keys()),
-                kb_files=kb_referenced_files,
+            if should_continue and not should_continue():
+                message = "Stopping chat cleanup before chat deletion: lock ownership was lost."
+                log.warning(message)
+                cleanup_summary["errors"].append(message)
+                break
+
+            batch_context = f"cleanup batch {cleanup_batch_number}"
+            log.info(
+                f"{batch_context}: deleting {len(chat_ids_to_delete)} chats from this batch..."
             )
-            cleanup_summary["files_cleaned"] += file_cleanup_result["files_cleaned"]
-            cleanup_summary["collections_cleaned"] += file_cleanup_result[
-                "collections_cleaned"
-            ]
-            if file_cleanup_result["errors"]:
-                cleanup_summary["errors"].extend(file_cleanup_result["errors"])
+            deletion_result = await delete_chats_with_retry(
+                chat_ids_to_delete,
+                max_retries=3,
+                context_label=batch_context,
+            )
 
-            # Delegate chat deletion to specialized function
-            if chat_ids_to_delete:
-                log.info(f"Deleting {len(chat_ids_to_delete)} chats from this batch...")
-                deletion_result = await delete_chats_with_retry(
-                    chat_ids_to_delete, max_retries=3
+            if not deletion_result:
+                message = "Stopping chat cleanup: no deletion result was returned for this batch."
+                log.error(message)
+                cleanup_summary["errors"].append(message)
+                break
+
+            deleted_count = deletion_result.get("deleted_count", 0)
+            cleanup_summary["chats_deleted"] += deleted_count
+            if deletion_result.get("errors"):
+                cleanup_summary["errors"].extend(deletion_result["errors"])
+
+            # Delegate notification to specialized function
+            if deleted_count > 0:
+                await emit_chat_deletion_notification(
+                    deleted_chat_ids=chat_ids_to_delete,
+                    deleted_count=deleted_count,
                 )
 
-                if deletion_result:
-                    cleanup_summary["chats_deleted"] += deletion_result["deleted_count"]
-                    if deletion_result.get("errors"):
-                        cleanup_summary["errors"].extend(deletion_result["errors"])
+            # Prevent re-processing the same batch forever when nothing can be deleted.
+            if deleted_count == 0:
+                message = (
+                    "Stopping chat cleanup: no chats were deleted in this batch "
+                    "to avoid an infinite loop."
+                )
+                log.error(message)
+                cleanup_summary["errors"].append(message)
+                break
 
-                    # Delegate notification to specialized function
-                    if deletion_result["deleted_count"] > 0:
-                        await emit_chat_deletion_notification(
-                            deleted_chat_ids=chat_ids_to_delete,
-                            deleted_count=deletion_result["deleted_count"],
-                        )
+            # Only clean files when all chats in this batch were deleted.
+            # Partial deletion means we cannot safely determine which file refs still exist.
+            if deleted_count != len(chat_ids_to_delete):
+                message = (
+                    "Partial chat deletion detected; skipping file cleanup for this batch "
+                    "to avoid deleting files referenced by undeleted chats."
+                )
+                log.warning(message)
+                cleanup_summary["errors"].append(message)
+                deferred_file_reconciliation_ids.update(file_ids_to_cleanup)
+            else:
+                # Update file reference counts by decrementing based on batch counts.
+                for file_id, batch_count in batch_file_ref_counts.items():
+                    if file_id in file_ref_counts:
+                        file_ref_counts[file_id] -= batch_count
+                        if file_ref_counts[file_id] <= 0:
+                            del file_ref_counts[file_id]
+
+                if should_continue and not should_continue():
+                    message = "Stopping chat cleanup before file deletion: lock ownership was lost."
+                    log.warning(message)
+                    cleanup_summary["errors"].append(message)
+                    break
+
+                file_ids_list = list(file_ids_to_cleanup)
+                for i in range(0, len(file_ids_list), FILE_BATCH_SIZE):
+                    file_batch = set(file_ids_list[i : i + FILE_BATCH_SIZE])
+                    file_cleanup_result = await cleanup_orphaned_files(
+                        file_ids=file_batch,
+                        exclude_from_chats=set(file_ref_counts.keys()),
+                        kb_files=kb_referenced_files,
+                    )
+                    cleanup_summary["files_cleaned"] += file_cleanup_result[
+                        "files_cleaned"
+                    ]
+                    cleanup_summary["collections_cleaned"] += file_cleanup_result[
+                        "collections_cleaned"
+                    ]
+                    if file_cleanup_result["errors"]:
+                        cleanup_summary["errors"].extend(file_cleanup_result["errors"])
 
             total_processed += batch_size_actual
             cleanup_summary["chats_checked"] += batch_size_actual
@@ -3955,6 +4030,37 @@ async def cleanup_expired_chats_streaming(
             # If we got fewer chats than batch size, we're done
             if batch_size_actual < BATCH_SIZE:
                 break
+
+        # Reconcile files from partial-deletion batches after chat cleanup completes.
+        # This ensures files from already-deleted chats are eventually cleaned safely.
+        if deferred_file_reconciliation_ids:
+            if should_continue and not should_continue():
+                message = (
+                    "Skipping deferred file reconciliation: lock ownership was lost."
+                )
+                log.warning(message)
+                cleanup_summary["errors"].append(message)
+            else:
+                log.info(
+                    f"Running deferred file reconciliation for {len(deferred_file_reconciliation_ids)} files"
+                )
+                current_file_refs = get_all_file_references_from_chats()
+                deferred_file_ids = list(deferred_file_reconciliation_ids)
+                for i in range(0, len(deferred_file_ids), FILE_BATCH_SIZE):
+                    deferred_batch = set(deferred_file_ids[i : i + FILE_BATCH_SIZE])
+                    file_cleanup_result = await cleanup_orphaned_files(
+                        file_ids=deferred_batch,
+                        exclude_from_chats=set(current_file_refs.keys()),
+                        kb_files=kb_referenced_files,
+                    )
+                    cleanup_summary["files_cleaned"] += file_cleanup_result[
+                        "files_cleaned"
+                    ]
+                    cleanup_summary["collections_cleaned"] += file_cleanup_result[
+                        "collections_cleaned"
+                    ]
+                    if file_cleanup_result["errors"]:
+                        cleanup_summary["errors"].extend(file_cleanup_result["errors"])
 
         log.info(f"Streaming chat cleanup completed: {cleanup_summary}")
         return cleanup_summary
@@ -3982,15 +4088,25 @@ async def api_cleanup_expired_chats(
     API endpoint to cleanup expired chats based on configured lifetime.
     Cleans up chats older than the specified age and their associated files.
     PRESERVES pinned and/or archived chats based on configuration.
+    Uses the same distributed lock as the scheduler to prevent concurrent cleanup runs.
     Used by K8s CronJobs for scheduled chat lifecycle management.
     """
+    lock = None
+    lock_renewal_task = None
+    lock_lost_event = asyncio.Event()
+
     try:
         from open_webui.config import (
             CHAT_LIFETIME_ENABLED,
             CHAT_LIFETIME_DAYS,
             CHAT_CLEANUP_PRESERVE_PINNED,
             CHAT_CLEANUP_PRESERVE_ARCHIVED,
+            CHAT_CLEANUP_LOCK_TIMEOUT,
+            CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL,
+            CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS,
         )
+        from open_webui.env import WEBSOCKET_MANAGER, WEBSOCKET_REDIS_URL
+        from open_webui.socket.utils import RedisLock, renew_lock_periodically
 
         # Use config defaults if not specified
         if max_age_days is None:
@@ -4000,22 +4116,57 @@ async def api_cleanup_expired_chats(
         if preserve_archived is None:
             preserve_archived = CHAT_CLEANUP_PRESERVE_ARCHIVED.value
 
+        if WEBSOCKET_MANAGER == "redis":
+            lock = RedisLock(
+                redis_url=WEBSOCKET_REDIS_URL,
+                lock_name="chat_cleanup_job",
+                timeout_secs=CHAT_CLEANUP_LOCK_TIMEOUT,
+            )
+
+            if not lock.acquire_lock():
+                if lock.last_error:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail=f"Chat cleanup lock unavailable: {lock.last_error}",
+                    )
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Another cleanup job is already running.",
+                )
+
+            lock_renewal_task = asyncio.create_task(
+                renew_lock_periodically(
+                    lock,
+                    renewal_interval_secs=CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL,
+                    lock_name="chat_cleanup_job",
+                    on_lock_lost=lock_lost_event.set,
+                )
+            )
+        elif not CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Chat cleanup requires WEBSOCKET_MANAGER=redis for distributed locking. "
+                "Set CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true for single-instance local development.",
+            )
+
         # Check if chat lifetime is enabled to determine cleanup behavior
         if CHAT_LIFETIME_ENABLED.value:
             # Use normal age-based cleanup
-            result = await cleanup_expired_chats(
+            result = await cleanup_expired_chats_streaming(
                 max_age_days=max_age_days,
                 preserve_pinned=preserve_pinned,
                 preserve_archived=preserve_archived,
                 force_cleanup_all=False,
+                should_continue=lambda: not lock_lost_event.is_set(),
             )
         else:
             # Chat lifetime is disabled - clean up ALL chats immediately
-            result = await cleanup_expired_chats(
+            result = await cleanup_expired_chats_streaming(
                 max_age_days=0,  # Not used when force_cleanup_all=True
                 preserve_pinned=preserve_pinned,
                 preserve_archived=preserve_archived,
                 force_cleanup_all=True,
+                should_continue=lambda: not lock_lost_event.is_set(),
             )
 
         return {
@@ -4026,6 +4177,8 @@ async def api_cleanup_expired_chats(
             "preserve_archived": preserve_archived,
             "cleanup_result": result,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f"Expired chats cleanup API failed: {str(e)}")
         raise HTTPException(
@@ -4036,6 +4189,16 @@ async def api_cleanup_expired_chats(
                 "error": str(e),
             },
         )
+    finally:
+        if lock_renewal_task:
+            lock_renewal_task.cancel()
+            try:
+                await lock_renewal_task
+            except asyncio.CancelledError:
+                pass
+
+        if lock and lock.lock_obtained:
+            lock.release_lock()
 
 
 @router.get("/monitoring/wikipedia-grounding/queue-status")

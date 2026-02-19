@@ -1067,13 +1067,19 @@ class ChatTable:
         """
         return self.get_chats_for_cleanup(None, preserve_pinned, preserve_archived)
 
-    def delete_chat_list(self, chat_ids: list[str], batch_size: int = 100) -> dict:
+    def delete_chat_list(
+        self,
+        chat_ids: list[str],
+        batch_size: int = 100,
+        log_context: Optional[str] = None,
+    ) -> dict:
         """
         Delete multiple chats by their IDs and return deletion summary.
         Uses batching for large datasets to prevent memory issues.
 
         Args:
             chat_ids: List of chat IDs to delete
+            log_context: Optional caller context prefix for log messages
 
         Returns:
             Dictionary with deletion results
@@ -1090,10 +1096,15 @@ class ChatTable:
                 return result
 
             with get_db() as db:
+                total_batches = max(1, (len(chat_ids) + batch_size - 1) // batch_size)
+                context_prefix = f"{log_context} -> " if log_context else ""
+
                 for i in range(0, len(chat_ids), batch_size):
                     batch_ids = chat_ids[i : i + batch_size]
+                    sub_batch_number = i // batch_size + 1
                     log.info(
-                        f"Deleting chat batch {i//batch_size + 1}: {len(batch_ids)} chats"
+                        f"{context_prefix}deleting DB sub-batch "
+                        f"{sub_batch_number}/{total_batches}: {len(batch_ids)} chats"
                     )
 
                     try:
@@ -1111,21 +1122,23 @@ class ChatTable:
                         if not_found_count > 0:
                             result["failed_count"] += not_found_count
                             result["errors"].append(
-                                f"Batch {i//batch_size + 1}: {not_found_count} chats not found"
+                                f"DB sub-batch {sub_batch_number}: {not_found_count} chats not found"
                             )
 
                         # Commit this batch
                         db.commit()
 
                         log.debug(
-                            f"Successfully deleted {deleted_count} chats in batch {i//batch_size + 1}"
+                            f"{context_prefix}successfully deleted {deleted_count} chats "
+                            f"in DB sub-batch {sub_batch_number}"
                         )
 
                     except Exception as e:
                         # Handle batch failure
                         result["failed_count"] += len(batch_ids)
                         error_msg = (
-                            f"Error deleting chat batch {i//batch_size + 1}: {str(e)}"
+                            f"{context_prefix}error deleting DB sub-batch "
+                            f"{sub_batch_number}: {str(e)}"
                         )
                         result["errors"].append(error_msg)
                         log.error(error_msg)

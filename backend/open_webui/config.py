@@ -1342,6 +1342,24 @@ CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL = int(
     os.environ.get("CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL", "300")
 )
 
+# Chat cleanup schedule in cron format (default: daily at 2 AM)
+CHAT_CLEANUP_SCHEDULE_CRON = os.environ.get("CHAT_CLEANUP_SCHEDULE_CRON", "0 2 * * *")
+
+# Chat cleanup schedule timezone (default: Toronto)
+CHAT_CLEANUP_SCHEDULE_TIMEZONE = os.environ.get(
+    "CHAT_CLEANUP_SCHEDULE_TIMEZONE", "America/Toronto"
+)
+
+# Chat cleanup scheduler misfire grace in seconds
+CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS = int(
+    os.environ.get("CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS", "300")
+)
+
+# Allow chat cleanup without Redis lock in local/single-instance environments
+CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS = (
+    os.environ.get("CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", "False").lower() == "true"
+)
+
 
 ####################################
 # TASKS

@@ -6,9 +6,28 @@ import uuid
 
 log = logging.getLogger(__name__)
 
+RENEW_LOCK_SCRIPT = """
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+    return redis.call("EXPIRE", KEYS[1], ARGV[2])
+else
+    return 0
+end
+"""
+
+RELEASE_LOCK_SCRIPT = """
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+    return redis.call("DEL", KEYS[1])
+else
+    return 0
+end
+"""
+
 
 async def renew_lock_periodically(
-    lock, renewal_interval_secs: int = 300, lock_name: str = "lock"
+    lock,
+    renewal_interval_secs: int = 300,
+    lock_name: str = "lock",
+    on_lock_lost=None,
 ):
     """
     Periodically renew a Redis lock to keep it alive during long-running operations.
@@ -17,8 +36,11 @@ async def renew_lock_periodically(
         lock: RedisLock instance to renew
         renewal_interval_secs: Interval in seconds between renewal attempts (default: 300 = 5 minutes)
         lock_name: Name of the lock for logging purposes
+        on_lock_lost: Optional callback invoked when lock renewal fails or the renewal task errors.
 
-    This function runs in a loop until the lock is no longer held or renewal fails.
+    This function runs in a loop until the lock is no longer held, renewal fails, or an
+    unexpected renewal error occurs. On lock loss, it marks the lock as no longer held and
+    triggers on_lock_lost when provided.
     It should be run as an asyncio task and cancelled when the operation completes.
     """
     try:
@@ -30,54 +52,81 @@ async def renew_lock_periodically(
                     log.debug(f"Renewed {lock_name}")
                 else:
                     log.warning(f"Failed to renew {lock_name}")
+                    lock.lock_obtained = False
+                    if on_lock_lost:
+                        on_lock_lost()
                     break
     except asyncio.CancelledError:
         log.debug(f"Lock renewal task for {lock_name} cancelled")
         raise
     except Exception as e:
         log.error(f"Error in lock renewal task for {lock_name}: {e}")
+        if lock:
+            lock.lock_obtained = False
+        if on_lock_lost:
+            on_lock_lost()
 
 
 class RedisLock:
     def __init__(self, redis_url, lock_name, timeout_secs):
+        """Initialize a Redis-backed distributed lock instance."""
         self.lock_name = lock_name
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
         self.lock_obtained = False
+        self.last_error = None
         self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
 
     def acquire_lock(self):
+        """Acquire lock key with NX semantics and TTL; returns True on success."""
         try:
+            self.last_error = None
             # nx=True will only set this key if it _hasn't_ already been set
             self.lock_obtained = self.redis.set(
                 self.lock_name, self.lock_id, nx=True, ex=self.timeout_secs
             )
             return self.lock_obtained
         except Exception as e:
+            self.last_error = e
             print(f"Error acquiring Redis lock: {e}")
             return False
 
     def renew_lock(self):
+        """
+        Renew this lock's TTL only if the stored lock value still matches this instance's lock_id.
+
+        Uses an atomic Redis Lua script (compare-and-expire) and returns True only when renewal
+        succeeds for the current owner.
+        """
         try:
-            # Use GETEX to atomically verify ownership and renew in a single operation
-            # This prevents race conditions where another replica could acquire the lock
-            # between our check and renewal
-            lock_value = self.redis.getex(self.lock_name, ex=self.timeout_secs)
-            if lock_value and lock_value == self.lock_id:
-                # We own the lock and it was renewed atomically
-                return True
-            else:
-                # We don't own this lock, cannot renew
-                return False
+            self.last_error = None
+            # Atomically renew only if this process still owns the lock.
+            renewed = self.redis.eval(
+                RENEW_LOCK_SCRIPT,
+                1,
+                self.lock_name,
+                self.lock_id,
+                str(self.timeout_secs),
+            )
+            return renewed == 1
         except Exception as e:
+            self.last_error = e
             print(f"Error renewing Redis lock: {e}")
             return False
 
     def release_lock(self):
+        """
+        Release this lock only if the current lock value still matches this instance's lock_id.
+
+        Uses an atomic Redis Lua script (compare-and-delete) to avoid races between GET and DEL.
+        """
         try:
-            lock_value = self.redis.get(self.lock_name)
-            if lock_value and lock_value == self.lock_id:
-                self.redis.delete(self.lock_name)
+            self.redis.eval(
+                RELEASE_LOCK_SCRIPT,
+                1,
+                self.lock_name,
+                self.lock_id,
+            )
         except Exception as e:
             print(f"Error releasing Redis lock: {e}")
 
