@@ -172,16 +172,6 @@ async def generate_title(
 
     prompt = f"{content}\n\nReturn ONLY the title as plain text, formatted as EMOJI + space + TITLE (e.g. 😄 Short Title)"
 
-    # Check if model is Gemini 2.5 Flash to disable thinking
-    # According to Google's official docs: https://ai.google.dev/gemini-api/docs/openai#thinking
-    # Gemini 2.5 Flash supports reasoning_effort="none" to disable thinking
-    is_gemini_2_5_flash = (
-        models[task_model_id]["owned_by"] != "ollama"
-        and "gemini" in task_model_id.lower()
-        and "2.5" in task_model_id
-        and "flash" in task_model_id.lower()
-    )
-
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": prompt}],
@@ -200,11 +190,6 @@ async def generate_title(
             "chat_id": form_data.get("chat_id", None),
         },
     }
-
-    # Disable thinking for Gemini 2.5 Flash to reduce latency
-    # Use reasoning_effort="none" (OpenAI compatibility parameter)
-    if is_gemini_2_5_flash:
-        payload["reasoning_effort"] = "none"
 
     try:
         response = await generate_chat_completion(request, form_data=payload, user=user)

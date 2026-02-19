@@ -151,18 +151,6 @@ Assistant: {filtered_result[:500]}...
 
 Respond with just the title, no quotes or formatting."""
 
-    # Get models to check for Gemini 2.5 Flash
-    models = request_data.app.state.MODELS
-
-    # Check if model is Gemini 2.5 Flash to disable thinking
-    is_gemini_2_5_flash = (
-        task_model_id in models
-        and models[task_model_id].get("owned_by") != "ollama"
-        and "gemini" in task_model_id.lower()
-        and "2.5" in task_model_id
-        and "flash" in task_model_id.lower()
-    )
-
     title_payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": title_prompt}],
@@ -175,11 +163,6 @@ Respond with just the title, no quotes or formatting."""
         ),
         "metadata": {"task": "title_generation", "chat_id": request.chat_id},
     }
-
-    # Disable thinking for Gemini 2.5 Flash to reduce latency
-    # Use reasoning_effort="none" (OpenAI compatibility parameter)
-    if is_gemini_2_5_flash:
-        title_payload["reasoning_effort"] = "none"
 
     title_res = await generate_chat_completion(
         request_data, form_data=title_payload, user=user
