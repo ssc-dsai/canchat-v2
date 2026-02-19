@@ -234,13 +234,16 @@ export const processResponseContent = (content: string) => {
 			}
 
 			const links: string[] = [];
-			const textWithLinkPlaceholders = segment.replace(/\[([^\]]*)\]\(([^)]*)\)/g, (_, text, url) => {
-				const escapedLinkText = escapeTildesOutsideUrls(text);
-				const link = `[${escapedLinkText}](${url})`;
-				const placeholder = `${LINK_PLACEHOLDER}${links.length}\u0000`;
-				links.push(link);
-				return placeholder;
-			});
+			const textWithLinkPlaceholders = segment.replace(
+				/\[([^\]]*)\]\(([^)]*)\)/g,
+				(_, text, url) => {
+					const escapedLinkText = escapeTildesOutsideUrls(text);
+					const link = `[${escapedLinkText}](${url})`;
+					const placeholder = `${LINK_PLACEHOLDER}${links.length}\u0000`;
+					links.push(link);
+					return placeholder;
+				}
+			);
 
 			return escapeTildesOutsideUrls(textWithLinkPlaceholders).replace(
 				/\u0000LINK_(\d+)\u0000/g,
