@@ -204,15 +204,50 @@ export const sanitizeResponseContent = (content: string): string => {
 };
 
 export const processResponseContent = (content: string) => {
-	// Escape tildes in markdown links to prevent strikethrough rendering
-	// Match markdown links: [text](url) where either text or url contains tildes
-	content = content.replace(/\[([^\]]*)\]\(([^)]*)\)/g, (match, text, url) => {
-		if (text.includes('~')) {
-			const escapedText = text.replace(/~/g, '\\~');
-			return `[${escapedText}](${url})`;
-		}
-		return match;
-	});
+	// Temporary store original URLs/links while escaping display text.
+	const URL_PLACEHOLDER = '\u0000URL_';
+	const LINK_PLACEHOLDER = '\u0000LINK_';
+
+	// Keep URL bytes untouched and only escape displayed text
+	const escapeTildesOutsideUrls = (text: string) => {
+		const urls: string[] = [];
+		const textWithPlaceholders = text.replace(
+			/https?:\/\/[^\s<>()]+(?:\([^\s<>()]*\)[^\s<>()]*)*/g,
+			(match) => {
+				const placeholder = `${URL_PLACEHOLDER}${urls.length}\u0000`;
+				urls.push(match);
+				return placeholder;
+			}
+		);
+
+		return textWithPlaceholders
+			.replace(/~/g, '\\~')
+			.replace(/\u0000URL_(\d+)\u0000/g, (_, idx) => urls[Number(idx)]);
+	};
+
+	// Ignore inline/fenced code completely to avoid mutating literal snippets
+	content = content
+		.split(/(```[\s\S]*?```|`[^`\n]*`)/g)
+		.map((segment) => {
+			if (!segment || segment.startsWith('`')) {
+				return segment;
+			}
+
+			const links: string[] = [];
+			const textWithLinkPlaceholders = segment.replace(/\[([^\]]*)\]\(([^)]*)\)/g, (_, text, url) => {
+				const escapedLinkText = escapeTildesOutsideUrls(text);
+				const link = `[${escapedLinkText}](${url})`;
+				const placeholder = `${LINK_PLACEHOLDER}${links.length}\u0000`;
+				links.push(link);
+				return placeholder;
+			});
+
+			return escapeTildesOutsideUrls(textWithLinkPlaceholders).replace(
+				/\u0000LINK_(\d+)\u0000/g,
+				(_, idx) => links[Number(idx)]
+			);
+		})
+		.join('');
 
 	return content.trim();
 };
