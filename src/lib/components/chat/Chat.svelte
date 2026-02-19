@@ -37,7 +37,8 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		suggestionCycle
+		suggestionCycle,
+		initNewChatAction
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -413,6 +414,9 @@
 	};
 
 	onMount(async () => {
+		// Register initNewChat callback for sidebar to use
+		initNewChatAction.set(() => initNewChat());
+
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
@@ -473,6 +477,7 @@
 
 	onDestroy(() => {
 		chatIdUnsubscriber?.();
+		initNewChatAction.set(null);
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
 	});

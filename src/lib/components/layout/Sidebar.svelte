@@ -22,7 +22,8 @@
 		config,
 		isApp,
 		ariaMessage,
-		suggestionCycle
+		suggestionCycle,
+		initNewChatAction
 	} from '$lib/stores';
 	import { onMount, tick, onDestroy } from 'svelte';
 
@@ -625,10 +626,13 @@
 					clearSelection();
 					await chatId.set('');
 					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
 					suggestionCycle.update((n) => n + 1);
-					setTimeout(() => {
-						newChatButton?.click();
+					setTimeout(async () => {
+						if ($initNewChatAction) {
+							await $initNewChatAction();
+						} else {
+							document.getElementById('new-chat-button')?.click();
+						}
 						if ($mobile) {
 							showSidebar.set(false);
 						}
