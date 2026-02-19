@@ -1,0 +1,75 @@
+name: SBOM Generate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+    contents: write
+
+jobs:
+  sbom-compare:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Fetch the previous commit for comparison
+          ref: ${{ github.head_ref }}  # For PRs, checkout the head branch
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22' # was 18
+
+      - name: Install Dependencies
+        run: |
+          npm install -g @cyclonedx/cdxgen
+          #npm install json-diff
+          #brew install cyclonedx/cyclonedx/cyclonedx-cli
+          wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
+          chmod 777 cyclonedx-linux-x64
+
+      - name: Generate Current SBOM
+        id: current-sbom
+        run: |
+          cdxgen -o sbom/sbom-current.json -p > sbom/sbom-current.txt
+          echo "current_sbom=sbom/sbom-current.json" >> $GITHUB_OUTPUT
+
+      - name: Generate Previous SBOM
+        id: previous-sbom
+        run: |
+          git checkout HEAD^
+          cdxgen -o sbom/sbom-previous.json -p > sbom/sbom-previous.txt
+          echo "previous_sbom=sbom/sbom-previous.json" >> $GITHUB_OUTPUT
+          git checkout -
+
+      - name: Compare SBOMs
+        id: compare-sboms
+        run: |
+          TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
+          COMPARISON_RESULT=$(./cyclonedx-linux-x64 diff ${{ steps.current-sbom.outputs.current_sbom }} ${{ steps.previous-sbom.outputs.previous_sbom }})
+          echo "### SBOM Comparison Report - $TIMESTAMP" >> sbom/sbom-comparison-history.md
+          echo "$COMPARISON_RESULT" >> sbom/sbom-comparison-history.md
+          echo "" >> sbom/sbom-comparison-history.md  # Add a newline for separation
+
+
+      - name: Create CSVs
+        id: convert-sboms
+        run: |
+          ./cyclonedx-linux-x64 convert --input-file sbom/sbom-current.json --output-file sbom/sbom-current.csv
+          ./cyclonedx-linux-x64 convert --input-file sbom/sbom-previous.json --output-file sbom/sbom-previous.csv
+
+      - name: Commit and Push Comparison History
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add sbom/*
+          git commit -m "Update SBOM comparison history [$(date +'%Y-%m-%d %H:%M:%S %Z')]" || echo "No changes to commit"
+          git push
+          
