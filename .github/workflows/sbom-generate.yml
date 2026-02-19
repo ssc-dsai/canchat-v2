@@ -4,9 +4,13 @@ on:
   pull_request:
     branches:
       - main
+      - dev
+      - chat-1551
   push:
     branches:
       - main
+      - dev
+      - chat-1551
 
 permissions:
     contents: write
