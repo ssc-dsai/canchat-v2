@@ -9,7 +9,7 @@
 ║                                             BOM summary                                              ║
 ╟──────────────────────────────────────────────────────────────────────────────────────────────────────╢
 ║                                                                                                      ║
-║ This Software Bill-of-Materials (SBOM) document was created on Thursday, February 19, 2026 with      ║
+║ This Software Bill-of-Materials (SBOM) document was created on Friday, February 20, 2026 with        ║
 ║ cdxgen. The data was captured during the build lifecycle phase. The document describes an            ║
 ║ application named 'open-webui'. There are 1437 components. 3 package type(s) and 55 purl namespaces  ║
 ║ are described in the document under components.                                                      ║
