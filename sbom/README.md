@@ -1,7 +1,6 @@
-# SOFTWARE USAGE RESTRICTIONS
-
 This folder exists for the storage of automatically generated SBOM files via Github actions.
 
+# SOFTWARE USAGE RESTRICTIONS
 
 ## Control:
 
