@@ -40,7 +40,7 @@ jobs:
           chmod 777 cyclonedx-linux-x64
 
       - name: Download CycloneDX SBOM Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: .sbom/
           name: CycloneDX SBOM Artefacts
@@ -82,7 +82,7 @@ jobs:
           ./cyclonedx-linux-x64 convert --input-file .sbom/previous.json --output-file .sbom/previous.csv
 
       - name: Upload CycloneDX SBOM Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           path: |
             .sbom/current.json
