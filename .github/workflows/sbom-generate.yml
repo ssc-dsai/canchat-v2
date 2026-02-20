@@ -54,11 +54,11 @@ jobs:
           echo "previous_sbom=.sbom/previous.json" >> $GITHUB_OUTPUT
           git checkout -
 
-      - name: CycloneDX SBOM comparison-history.md
-        uses: actions/download-artifact@v4
-        with:
-          name: CycloneDX SBOM comparison-history.md
-          path: .sbom/comparison-history.md
+#      - name: CycloneDX SBOM comparison-history.md
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: CycloneDX SBOM comparison-history.md
+#          path: .sbom/comparison-history.md
 
       - name: Compare SBOMs
         id: compare-sboms
