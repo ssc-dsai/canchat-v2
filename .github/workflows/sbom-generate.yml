@@ -79,6 +79,7 @@ jobs:
           echo "$COMPARISON_RESULT" >> .sbom/comparison.md
           echo "" >> .sbom/comparison.md  # Add a newline for separation
           cat .sbom/comparison.md >> .sbom/comparison-history.md # copy current differnces to the history version
+          cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v5
