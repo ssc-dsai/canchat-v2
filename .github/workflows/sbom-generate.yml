@@ -52,15 +52,15 @@ jobs:
       - name: Generate Current SBOM
         id: current-sbom
         run: |
-          cdxgen -o .sbom/current.json -p > .sbom/current.txt
-          echo "current_sbom=.sbom/current.json" >> $GITHUB_OUTPUT
+          cdxgen -o .sbom/current.cdx.json -p > .sbom/current.txt
+          echo "current_sbom=.sbom/current.cdx.json" >> $GITHUB_OUTPUT
 
       - name: Generate Previous SBOM
         id: previous-sbom
         run: |
           git checkout HEAD^
-          cdxgen -o .sbom/previous.json -p > .sbom/previous.txt
-          echo "previous_sbom=.sbom/previous.json" >> $GITHUB_OUTPUT
+          cdxgen -o .sbom/previous.cdx.json -p > .sbom/previous.txt
+          echo "previous_sbom=.sbom/previous.cdx.json" >> $GITHUB_OUTPUT
           git checkout -
 
       - name: Compare SBOMs
@@ -75,17 +75,17 @@ jobs:
       - name: Create CSVs
         id: convert-sboms
         run: |
-          ./cyclonedx-linux-x64 convert --input-file .sbom/current.json --output-file .sbom/current.csv
-          ./cyclonedx-linux-x64 convert --input-file .sbom/previous.json --output-file .sbom/previous.csv
+          ./cyclonedx-linux-x64 convert --input-file .sbom/current.cdx.json --output-file .sbom/current.csv
+          ./cyclonedx-linux-x64 convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.csv
 
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v5
         with:
           path: |
-            .sbom/current.json
+            .sbom/current.cdx.json
             .sbom/current.txt
             .sbom/current.csv
-            .sbom/previous.json
+            .sbom/previous.cdx.json
             .sbom/previous.txt
             .sbom/previous.csv
             .sbom/comparison-history.md
