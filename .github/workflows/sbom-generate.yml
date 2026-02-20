@@ -38,6 +38,7 @@ jobs:
           #brew install cyclonedx/cyclonedx/cyclonedx-cli
           wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           chmod 777 cyclonedx-linux-x64
+          mkdir .sbom
 
       - name: Download SBOM Artifacts from previous run
         uses: actions/download-artifact@v5
@@ -53,7 +54,6 @@ jobs:
       - name: Generate Current SBOM
         id: current-sbom
         run: |
-          mkdir .sbom
           cdxgen -o .sbom/current.json -p > .sbom/current.txt
           echo icurrent_sbom=.sbom/current.json" >> $GITHUB_OUTPUT
 
