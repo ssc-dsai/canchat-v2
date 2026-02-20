@@ -82,7 +82,7 @@ jobs:
           ./cyclonedx-linux-x64 convert --input-file .sbom/previous.json --output-file .sbom/previous.csv
 
       - name: Upload CycloneDX SBOM Artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v5
         with:
           path: |
             .sbom/current.json
