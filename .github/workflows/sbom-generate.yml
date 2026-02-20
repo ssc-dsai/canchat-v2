@@ -42,15 +42,17 @@ jobs:
       - name: Download SBOM Artifacts from previous run
         uses: actions/download-artifact@v5
         with:
-          path: .sbom/*
-          name: SBOM Artefacts
+          path: .sbom/
+          merge-multiple: true
+          name: SBOM Artifacts
+          run: ls -R && ls -R .sbom
 
       - name: Generate Current SBOM
         id: current-sbom
         run: |
           mkdir .sbom
           cdxgen -o .sbom/current.json -p > .sbom/current.txt
-          echo "current_sbom=.sbom/current.json" >> $GITHUB_OUTPUT
+          echo icurrent_sbom=.sbom/current.json" >> $GITHUB_OUTPUT
 
       - name: Generate Previous SBOM
         id: previous-sbom
@@ -86,4 +88,4 @@ jobs:
             .sbom/previous.txt
             .sbom/previous.csv
             .sbom/comparison-history.md
-          name: SBOM Artefacts
+          name: SBOM Artifacts
