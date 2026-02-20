@@ -37,7 +37,8 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		suggestionCycle
+		suggestionCycle,
+		initNewChatAction
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -101,31 +102,66 @@
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
-	let selectedToolIds: string[] = [];
-	let imageGenerationEnabled = false;
-	let webSearchEnabled = false;
-	let wikiGroundingEnabled = false;
-	let wikiGroundingMode = 'off'; // 'off', 'on'
-
 	let chat = null;
 	let tags = [];
-
-	let history = {
-		messages: {},
-		currentId: null
-	};
-
 	let taskId = null;
 
-	// Chat Input
-	let prompt = '';
-	let chatFiles = [];
-	let files = [];
-	let params = {};
+	// Default transient state values
+	const TRANSIENT_DEFAULTS = {
+		prompt: '',
+		files: [],
+		selectedToolIds: [],
+		imageGenerationEnabled: false,
+		webSearchEnabled: false,
+		wikiGroundingEnabled: false,
+		wikiGroundingMode: 'off',
+		history: { messages: {}, currentId: null },
+		chatFiles: [],
+		params: {}
+	};
+
+	// Declare chat Input and transient state variables cleanly
+	let prompt = TRANSIENT_DEFAULTS.prompt;
+	let files = TRANSIENT_DEFAULTS.files;
+	let selectedToolIds: string[] = [];
+	let imageGenerationEnabled = TRANSIENT_DEFAULTS.imageGenerationEnabled;
+	let webSearchEnabled = TRANSIENT_DEFAULTS.webSearchEnabled;
+	let wikiGroundingEnabled = TRANSIENT_DEFAULTS.wikiGroundingEnabled;
+	let wikiGroundingMode = TRANSIENT_DEFAULTS.wikiGroundingMode;
+	let history = structuredClone(TRANSIENT_DEFAULTS.history);
+	let chatFiles = TRANSIENT_DEFAULTS.chatFiles;
+	let params = TRANSIENT_DEFAULTS.params;
+
+	// Chat Input Handler for draft saving
+	const handleInputChange = (input) => {
+		if ($chatId) {
+			if (input.prompt) {
+				localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
+			} else {
+				localStorage.removeItem(`chat-input-${$chatId}`);
+			}
+		}
+	};
+
+	const resetTransientChatInputState = () => {
+		prompt = TRANSIENT_DEFAULTS.prompt;
+		files = [];
+		selectedToolIds = [];
+		imageGenerationEnabled = TRANSIENT_DEFAULTS.imageGenerationEnabled;
+		webSearchEnabled = TRANSIENT_DEFAULTS.webSearchEnabled;
+		wikiGroundingEnabled = TRANSIENT_DEFAULTS.wikiGroundingEnabled;
+		wikiGroundingMode = TRANSIENT_DEFAULTS.wikiGroundingMode;
+		history = structuredClone(TRANSIENT_DEFAULTS.history);
+		chatFiles = [];
+		params = {};
+	};
 
 	$: if (chatIdProp) {
 		(async () => {
-			// First, try to restore from localStorage before resetting
+			// Reset all transient state first
+			resetTransientChatInputState();
+
+			// Restore from localStorage if available
 			let storedInput = null;
 			const storedData = localStorage.getItem(`chat-input-${chatIdProp}`);
 			if (storedData) {
@@ -134,14 +170,17 @@
 				} catch (e) {}
 			}
 
-			// Reset states, but use stored values if available
-			prompt = storedInput?.prompt || '';
-			files = storedInput?.files || [];
-			selectedToolIds = storedInput?.selectedToolIds || [];
-			webSearchEnabled = storedInput?.webSearchEnabled || false;
-			wikiGroundingEnabled = storedInput?.wikiGroundingEnabled || false;
-			wikiGroundingMode = storedInput?.wikiGroundingEnabled ? 'on' : 'off';
-			imageGenerationEnabled = storedInput?.imageGenerationEnabled || false;
+			// Override with stored values if available
+			if (storedInput?.prompt) prompt = storedInput.prompt;
+			if (storedInput?.files) files = storedInput.files;
+			if (storedInput?.selectedToolIds) selectedToolIds = storedInput.selectedToolIds;
+			if (storedInput?.webSearchEnabled !== undefined)
+				webSearchEnabled = storedInput.webSearchEnabled;
+			if (storedInput?.wikiGroundingEnabled !== undefined)
+				wikiGroundingEnabled = storedInput.wikiGroundingEnabled;
+			if (storedInput?.imageGenerationEnabled !== undefined)
+				imageGenerationEnabled = storedInput.imageGenerationEnabled;
+			if (storedInput?.wikiGroundingEnabled) wikiGroundingMode = 'on';
 
 			loaded = false;
 
@@ -375,6 +414,9 @@
 	};
 
 	onMount(async () => {
+		// Register initNewChat callback for sidebar to use
+		initNewChatAction.set(() => initNewChat());
+
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
@@ -403,12 +445,7 @@
 					imageGenerationEnabled = input.imageGenerationEnabled;
 				}
 			} catch (e) {
-				prompt = '';
-				files = [];
-				selectedToolIds = [];
-				webSearchEnabled = false;
-				wikiGroundingEnabled = false;
-				imageGenerationEnabled = false;
+				resetTransientChatInputState();
 			}
 		}
 
@@ -440,6 +477,7 @@
 
 	onDestroy(() => {
 		chatIdUnsubscriber?.();
+		initNewChatAction.set(null);
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
 	});
@@ -598,6 +636,18 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		// Clear transient chat/input state immediately to avoid prompt carryover during route transitions
+		resetTransientChatInputState();
+
+		//ensures the url is reset to the root
+		if (chatIdProp || $chatId) {
+			if ($chatId) {
+				await chatId.set('');
+			}
+			await goto('/');
+			return;
+		}
+
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
 		} else if ($page.url.searchParams.get('model')) {
@@ -655,16 +705,10 @@
 
 		autoScroll = true;
 
-		await chatId.set('');
+		if ($chatId) {
+			await chatId.set('');
+		}
 		await chatTitle.set('');
-
-		history = {
-			messages: {},
-			currentId: null
-		};
-
-		chatFiles = [];
-		params = {};
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
@@ -717,7 +761,6 @@
 		} else {
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
-		suggestionCycle.update((n) => n + 1);
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
@@ -1389,8 +1432,9 @@
 					}
 					responseMessage.userContext = userContext;
 
-					// Check if user has selected ANY tools for this chat
-					const hasSelectedTools = selectedToolIds.length > 0;
+					// Web search/wiki grounding are exclusive with tool execution
+					const hasSelectedTools =
+						selectedToolIds.length > 0 && !webSearchEnabled && !wikiGroundingEnabled;
 
 					if (hasSelectedTools) {
 						// Use CrewAI when user has selected any tools
@@ -1639,7 +1683,10 @@
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
-				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+				tool_ids:
+					selectedToolIds.length > 0 && !webSearchEnabled && !wikiGroundingEnabled
+						? selectedToolIds
+						: undefined,
 				features: {
 					image_generation: imageGenerationEnabled,
 					web_search: webSearchEnabled,
@@ -1702,19 +1749,19 @@
 
 		console.error(innerError);
 		if ('detail' in innerError) {
-			toast.error(innerError.detail);
-			errorMessage = innerError.detail;
+			errorMessage = $i18n.t(String(innerError.detail));
+			toast.error(errorMessage);
 		} else if ('error' in innerError) {
 			if ('message' in innerError.error) {
-				toast.error(innerError.error.message);
-				errorMessage = innerError.error.message;
+				errorMessage = $i18n.t(String(innerError.error.message));
+				toast.error(errorMessage);
 			} else {
-				toast.error(innerError.error);
-				errorMessage = innerError.error;
+				errorMessage = $i18n.t(String(innerError.error));
+				toast.error(errorMessage);
 			}
 		} else if ('message' in innerError) {
-			toast.error(innerError.message);
-			errorMessage = innerError.message;
+			errorMessage = $i18n.t(String(innerError.message));
+			toast.error(errorMessage);
 		}
 
 		responseMessage.error = {
@@ -2035,13 +2082,7 @@
 								bind:atSelectedModel
 								{stopResponse}
 								{createMessagePair}
-								onChange={(input) => {
-									if (input.prompt) {
-										localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
-									} else {
-										localStorage.removeItem(`chat-input-${$chatId}`);
-									}
-								}}
+								onChange={handleInputChange}
 								on:upload={async (e) => {
 									const { type, data } = e.detail;
 
@@ -2085,6 +2126,7 @@
 								bind:wikiGroundingEnabled
 								bind:wikiGroundingMode
 								bind:atSelectedModel
+								onChange={handleInputChange}
 								{stopResponse}
 								{createMessagePair}
 								on:upload={async (e) => {

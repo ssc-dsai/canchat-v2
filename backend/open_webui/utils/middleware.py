@@ -51,6 +51,8 @@ from open_webui.utils.task import (
     get_task_model_id,
     rag_template,
     tools_function_calling_generation_template,
+    extract_title_from_response,
+    truncate_title_by_chars,
 )
 
 from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
@@ -98,6 +100,23 @@ def truncate_to_token_limit(text: str, max_tokens: int, encoding_name: str = "cl
     return enc.decode(tokens[:max_tokens])
 
 
+def sanitize_tool_ids_for_features(
+    tool_ids: Optional[list], features: Optional[dict]
+) -> Optional[list]:
+    """
+    Guardrail: web search or wiki grounding must not run with other tool calls.
+    Ignore tool_ids when either feature is active.
+    """
+    if not tool_ids:
+        return tool_ids
+
+    if not features:
+        return tool_ids
+
+    if features.get("web_search") or features.get("wiki_grounding"):
+        return None
+
+    return tool_ids
 
 
 def fetch_wikipedia_title_and_excerpt(url: str) -> tuple[str, str]:
@@ -658,7 +677,7 @@ async def chat_web_search_handler(
                 },
             }
         )
-        return
+        return form_data
 
     all_results = []
 
@@ -1373,6 +1392,16 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         form_data["files"] = files
 
     features = form_data.pop("features", None)
+    # Sanitize tool_ids to ensure web_search/wiki_grounding do not run with tool calls
+    original_tool_ids = form_data.get("tool_ids")
+    form_data["tool_ids"] = sanitize_tool_ids_for_features(original_tool_ids, features)
+
+    if original_tool_ids and not form_data.get("tool_ids"):
+        log.info(
+            "Ignoring tool_ids because exclusive feature mode is active "
+            "(web_search/wiki_grounding)."
+        )
+
     if features:
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
@@ -1607,20 +1636,14 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            if len(res.get("choices", [])) == 1:
-                                title = (
-                                    res.get("choices", [])[0]
-                                    .get("message", {})
-                                    .get(
-                                        "content",
-                                        message.get("content", "New Chat"),
-                                    )
-                                ).strip()
-                            else:
-                                title = None
+                            title = extract_title_from_response(res)
 
                             if not title:
+                                # Fallback: use first message or default
                                 title = messages[0].get("content", "New Chat")
+                            else:
+                                # Truncate title to reasonable length (max 50 characters)
+                                title = truncate_title_by_chars(title, max_chars=50)
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
