@@ -1867,16 +1867,87 @@ WIKIPEDIA_GROUNDING_MAX_CONCURRENT = PersistentConfig(
     int(os.getenv("WIKIPEDIA_GROUNDING_MAX_CONCURRENT", "5")),
 )
 
+def _validate_fallback_max_tokens(value: int, default: int = 16000) -> int:
+    """Validate RAG_CONTEXT_FALLBACK_MAX_TOKENS is a positive integer."""
+    try:
+        value = int(value)
+        if value < 1:
+            raise ValueError
+        return value
+    except (TypeError, ValueError):
+        log.warning(
+            f"Invalid RAG_CONTEXT_FALLBACK_MAX_TOKENS='{value}'. "
+            f"Must be a positive integer. Falling back to {default}."
+        )
+        return default
+
+
+def _validate_token_limit_percentage(value: str, default: float = 0.5) -> float:
+    """Validate RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE is a float in (0, 1]."""
+    try:
+        fval = float(value)
+        if fval <= 0 or fval > 1:
+            raise ValueError
+        return fval
+    except (TypeError, ValueError):
+        log.warning(
+            f"Invalid RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE='{value}'. "
+            f"Must be a float in the range (0, 1]. Falling back to {default}."
+        )
+        return default
+
+
+def _validate_model_context_lengths(
+    value: dict, default: dict | None = None
+) -> dict:
+    """Validate MODEL_CONTEXT_LENGTHS is a dict of {str: positive int}."""
+    if default is None:
+        default = _DEFAULT_MODEL_CONTEXT_LENGTHS
+    if not isinstance(value, dict):
+        log.warning(
+            f"Invalid MODEL_CONTEXT_LENGTHS: expected a JSON object, "
+            f"got {type(value).__name__}. Falling back to defaults."
+        )
+        return default
+    validated: dict = {}
+    for key, ctx_len in value.items():
+        if not isinstance(key, str):
+            log.warning(
+                f"Invalid key in MODEL_CONTEXT_LENGTHS: '{key}' is not a string. Skipping."
+            )
+            continue
+        try:
+            ctx_len = int(ctx_len)
+            if ctx_len < 1:
+                raise ValueError
+            validated[key] = ctx_len
+        except (TypeError, ValueError):
+            log.warning(
+                f"Invalid context length for model '{key}': '{ctx_len}'. "
+                f"Must be a positive integer. Skipping."
+            )
+    if not validated:
+        log.warning(
+            "MODEL_CONTEXT_LENGTHS produced no valid entries. Falling back to defaults."
+        )
+        return default
+    return validated
+
+
 RAG_CONTEXT_FALLBACK_MAX_TOKENS = PersistentConfig(
     "RAG_CONTEXT_FALLBACK_MAX_TOKENS",
     "rag.context.fallback_max_tokens",
-    int(os.getenv("RAG_CONTEXT_FALLBACK_MAX_TOKENS", "16000")),
+    _validate_fallback_max_tokens(
+        os.getenv("RAG_CONTEXT_FALLBACK_MAX_TOKENS", "16000")
+    ),
 )
 
 RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE = PersistentConfig(
     "RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE",
     "rag.context_token_limit_percentage",
-    os.environ.get("RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE", "0.5"),
+    _validate_token_limit_percentage(
+        os.environ.get("RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE", "0.5")
+    ),
 )
 
 _DEFAULT_MODEL_CONTEXT_LENGTHS = {
@@ -1913,8 +1984,12 @@ _DEFAULT_MODEL_CONTEXT_LENGTHS = {
 MODEL_CONTEXT_LENGTHS = PersistentConfig(
     "MODEL_CONTEXT_LENGTHS",
     "models.context_lengths",
-    json.loads(
-        os.getenv("MODEL_CONTEXT_LENGTHS", json.dumps(_DEFAULT_MODEL_CONTEXT_LENGTHS))
+    _validate_model_context_lengths(
+        json.loads(
+            os.getenv(
+                "MODEL_CONTEXT_LENGTHS", json.dumps(_DEFAULT_MODEL_CONTEXT_LENGTHS)
+            )
+        )
     ),
 )
 
