@@ -41,7 +41,8 @@ jobs:
           chmod 777 cyclonedx-linux-x64
           mkdir .sbom
 
-      - name: Download SBOM Artifacts from previous run
+      #  doesn't seem to work
+      - name: Download SBOM Artifacts from previous execution
         uses: actions/download-artifact@v5
         continue-on-error: true
         with:
@@ -63,20 +64,21 @@ jobs:
           echo "previous_sbom=.sbom/previous.cdx.json" >> $GITHUB_OUTPUT
           git checkout -
 
-      - name: Compare SBOMs
-        id: compare-sboms
-        run: |
-          TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
-          COMPARISON_RESULT=$(./cyclonedx-linux-x64 diff ${{ steps.current-sbom.outputs.current_sbom }} ${{ steps.previous-sbom.outputs.previous_sbom }})
-          echo "### SBOM Comparison Report - $TIMESTAMP" >> .sbom/comparison-history.md
-          echo "$COMPARISON_RESULT" >> .sbom/comparison-history.md
-          echo "" >> .sbom/comparison-history.md  # Add a newline for separation
-
       - name: Create CSVs
         id: convert-sboms
         run: |
           ./cyclonedx-linux-x64 convert --input-file .sbom/current.cdx.json --output-file .sbom/current.csv
           ./cyclonedx-linux-x64 convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.csv
+
+      - name: Compare SBOMs
+        id: compare-sboms
+        run: |
+          TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
+          COMPARISON_RESULT=$(./cyclonedx-linux-x64 diff ${{ steps.current-sbom.outputs.current_sbom }} ${{ steps.previous-sbom.outputs.previous_sbom }})
+          echo "### SBOM Comparison Report - $TIMESTAMP" > .sbom/comparison.md
+          echo "$COMPARISON_RESULT" >> .sbom/comparison.md
+          echo "" >> .sbom/comparison.md  # Add a newline for separation
+          cat .sbom/comparison.md >> .sbom/comparison-history.md # copy current differnces to the history version
 
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v5
@@ -88,9 +90,6 @@ jobs:
             .sbom/previous.cdx.json
             .sbom/previous.txt
             .sbom/previous.csv
+            .sbom/comparison.md
             .sbom/comparison-history.md
           name: SBOM Artifacts
-
-      - name: Create results summary
-        run: cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
-        
