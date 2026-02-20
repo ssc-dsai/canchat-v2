@@ -39,6 +39,12 @@ jobs:
           wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           chmod 777 cyclonedx-linux-x64
 
+      - name: Download CycloneDX SBOM Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: .sbom/
+          name: CycloneDX SBOM Artefacts
+
       - name: Generate Current SBOM
         id: current-sbom
         run: |
@@ -75,7 +81,7 @@ jobs:
           ./cyclonedx-linux-x64 convert --input-file .sbom/current.json --output-file .sbom/current.csv
           ./cyclonedx-linux-x64 convert --input-file .sbom/previous.json --output-file .sbom/previous.csv
 
-      - name: CycloneDX SBOM Artifacts
+      - name: Upload CycloneDX SBOM Artifacts
         uses: actions/upload-artifact@v4
         with:
           path: |
