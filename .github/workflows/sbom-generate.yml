@@ -1,4 +1,5 @@
 name: SBOM Generate
+# test comment
 
 on:
   pull_request:
