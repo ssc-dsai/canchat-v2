@@ -1867,6 +1867,7 @@ WIKIPEDIA_GROUNDING_MAX_CONCURRENT = PersistentConfig(
     int(os.getenv("WIKIPEDIA_GROUNDING_MAX_CONCURRENT", "5")),
 )
 
+
 def _validate_fallback_max_tokens(value: int, default: int = 16000) -> int:
     """Validate RAG_CONTEXT_FALLBACK_MAX_TOKENS is a positive integer."""
     try:
@@ -1897,9 +1898,7 @@ def _validate_token_limit_percentage(value: str, default: float = 0.5) -> float:
         return default
 
 
-def _validate_model_context_lengths(
-    value: dict, default: dict | None = None
-) -> dict:
+def _validate_model_context_lengths(value: dict, default: dict | None = None) -> dict:
     """Validate MODEL_CONTEXT_LENGTHS is a dict of {str: positive int}."""
     if default is None:
         default = _DEFAULT_MODEL_CONTEXT_LENGTHS
