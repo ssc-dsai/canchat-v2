@@ -89,3 +89,7 @@ jobs:
             .sbom/previous.csv
             .sbom/comparison-history.md
           name: SBOM Artifacts
+
+      - name: Create results summary
+        run: cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
+        
