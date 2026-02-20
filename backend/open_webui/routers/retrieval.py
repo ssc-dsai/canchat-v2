@@ -2977,9 +2977,7 @@ async def cleanup_orphaned_files(
                             cleanup_stats["collections_cleaned"] += 1
                             log.debug(f"Deleted vector collection: {collection_name}")
                     except Exception as e:
-                        error_msg = (
-                            f"Could not delete vector collection {collection_name} for file {file_id}: {e}"
-                        )
+                        error_msg = f"Could not delete vector collection {collection_name} for file {file_id}: {e}"
                         log.warning(error_msg)
                         cleanup_stats["errors"].append(error_msg)
 
