@@ -1,6 +1,6 @@
 # SOFTWARE USAGE RESTRICTIONS
 
-This folder is for the storage of automatically generated SBOM files.
+This folder exists for the storage of automatically generated SBOM files via Github actions.
 
 
 ## Control:
@@ -25,6 +25,5 @@ Enhancement Supplemental Guidance: Open source software refers to software that 
 
 ## References:
 
-CSE ITSB-95 Application Whitelisting Explained - Guidance for the Government of Canada [Reference 65].
-
-CSE ITSB-89 Version 3 Top 10 IT Security Actions to Protect Government of Canada Internet-Connected Networks and Information [Reference 66]
+ITSG-33 Security Control Catalogue, item CM-10
+https://www.cyber.gc.ca/en/guidance/annex-3a-security-control-catalogue-itsg-33
