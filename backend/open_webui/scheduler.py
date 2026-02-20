@@ -81,7 +81,7 @@ async def automated_chat_cleanup():
                 timeout_secs=CHAT_CLEANUP_LOCK_TIMEOUT,
             )
 
-            if not lock.acquire_lock():
+            if not await lock.acquire_lock():
                 if lock.last_error:
                     log.error(
                         f"Skipping automated chat cleanup: lock acquisition failed due to Redis error: {lock.last_error}"
@@ -153,7 +153,7 @@ async def automated_chat_cleanup():
 
         # Always release the lock
         if lock and lock.lock_obtained:
-            released = lock.release_lock()
+            released = await lock.release_lock()
             if released:
                 log.info("Released chat cleanup lock")
             else:

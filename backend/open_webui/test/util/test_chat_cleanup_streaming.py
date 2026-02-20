@@ -243,11 +243,11 @@ def test_admin_cleanup_endpoint_requires_distributed_lock(monkeypatch):
             self.lock_obtained = False
             self.last_error = RuntimeError("redis unavailable")
 
-        def acquire_lock(self):
+        async def acquire_lock(self):
             return False
 
-        def release_lock(self):
-            pass
+        async def release_lock(self):
+            return False
 
     monkeypatch.setattr("open_webui.env.WEBSOCKET_MANAGER", "redis")
     monkeypatch.setattr("open_webui.env.WEBSOCKET_REDIS_URL", "redis://test")
@@ -304,11 +304,11 @@ def test_admin_cleanup_endpoint_returns_conflict_when_lock_already_held(monkeypa
             self.lock_obtained = False
             self.last_error = None
 
-        def acquire_lock(self):
+        async def acquire_lock(self):
             return False
 
-        def release_lock(self):
-            pass
+        async def release_lock(self):
+            return False
 
     monkeypatch.setattr("open_webui.env.WEBSOCKET_MANAGER", "redis")
     monkeypatch.setattr("open_webui.env.WEBSOCKET_REDIS_URL", "redis://test")

@@ -2950,14 +2950,7 @@ async def cleanup_orphaned_files(
             if file_id not in exclude_from_chats:
                 file = Files.get_file_by_id(file_id)
                 if file:
-                    # Clean up vector collection
-                    collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
-                    if await VECTOR_DB_CLIENT.has_collection(collection_name):
-                        await VECTOR_DB_CLIENT.delete_collection(collection_name)
-                        cleanup_stats["collections_cleaned"] += 1
-                        log.debug(f"Deleted vector collection: {collection_name}")
-
-                    # Delete physical file
+                    # Delete physical file first. If this fails, keep vector/db state untouched.
                     storage_delete_succeeded = True
                     if file.path:
                         try:
@@ -2969,15 +2962,31 @@ async def cleanup_orphaned_files(
                                 f"Could not delete physical file {file.path}: {e}"
                             )
 
-                    # Delete DB row only when storage cleanup succeeded (or there is no physical file).
-                    if storage_delete_succeeded:
-                        Files.delete_file_by_id(file_id)
-                        cleanup_stats["files_cleaned"] += 1
-                        log.debug(f"Deleted file record: {file_id}")
-                    else:
+                    if not storage_delete_succeeded:
                         cleanup_stats["errors"].append(
                             f"Skipped file DB deletion for {file_id} due to storage cleanup failure."
                         )
+                        continue
+
+                    # Clean up vector collection after storage cleanup.
+                    # Vector cleanup failures should not block DB deletion of already-removed files.
+                    collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
+                    try:
+                        if await VECTOR_DB_CLIENT.has_collection(collection_name):
+                            await VECTOR_DB_CLIENT.delete_collection(collection_name)
+                            cleanup_stats["collections_cleaned"] += 1
+                            log.debug(f"Deleted vector collection: {collection_name}")
+                    except Exception as e:
+                        error_msg = (
+                            f"Could not delete vector collection {collection_name} for file {file_id}: {e}"
+                        )
+                        log.warning(error_msg)
+                        cleanup_stats["errors"].append(error_msg)
+
+                    # Delete DB record after storage cleanup regardless of vector cleanup outcome.
+                    Files.delete_file_by_id(file_id)
+                    cleanup_stats["files_cleaned"] += 1
+                    log.debug(f"Deleted file record: {file_id}")
             else:
                 log.debug(f"File {file_id} still referenced by other chats, preserving")
 
@@ -4167,7 +4176,7 @@ async def api_cleanup_expired_chats(
                 timeout_secs=CHAT_CLEANUP_LOCK_TIMEOUT,
             )
 
-            if not lock.acquire_lock():
+            if not await lock.acquire_lock():
                 if lock.last_error:
                     raise HTTPException(
                         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -4242,7 +4251,7 @@ async def api_cleanup_expired_chats(
                 pass
 
         if lock and lock.lock_obtained:
-            released = lock.release_lock()
+            released = await lock.release_lock()
             if not released:
                 log.warning("Could not confirm admin cleanup lock release")
 

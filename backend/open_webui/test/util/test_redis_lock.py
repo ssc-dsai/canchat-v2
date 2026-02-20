@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import types
 
@@ -13,13 +14,13 @@ class FakeRedis:
         self.eval_calls = []
         self.delete_called = False
 
-    def set(self, *args, **kwargs):
+    async def set(self, *args, **kwargs):
         return True
 
-    def get(self, key):
+    async def get(self, key):
         return self.current_value
 
-    def eval(self, script, numkeys, key, lock_id, timeout_secs=None):
+    async def eval(self, script, numkeys, key, lock_id, timeout_secs=None):
         self.eval_calls.append(script)
         if "EXPIRE" in script:
             if self.current_value == lock_id:
@@ -35,7 +36,7 @@ class FakeRedis:
 
         return 0
 
-    def delete(self, key):
+    async def delete(self, key):
         self.delete_called = True
         return 1
 
@@ -57,7 +58,7 @@ def test_renew_lock_does_not_extend_ttl_for_foreign_owner(monkeypatch):
     lock = RedisLock("redis://test", "chat_cleanup_job", 1800)
     lock.lock_id = "this-instance-lock-id"
 
-    renewed = lock.renew_lock()
+    renewed = asyncio.run(lock.renew_lock())
 
     assert renewed is False
     assert fake_redis.ttl_was_extended is False
@@ -78,7 +79,7 @@ def test_release_lock_uses_atomic_compare_and_delete(monkeypatch):
 
     lock = RedisLock("redis://test", "chat_cleanup_job", 1800)
     lock.lock_id = "this-instance-lock-id"
-    released = lock.release_lock()
+    released = asyncio.run(lock.release_lock())
 
     assert released is True
     assert any("DEL" in script for script in fake_redis.eval_calls)

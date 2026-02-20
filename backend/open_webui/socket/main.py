@@ -49,6 +49,12 @@ else:
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
 
+
+async def _lock_noop():
+    """Fallback no-op lock operation."""
+    return True
+
+
 # Dictionary to maintain the user pool
 
 if WEBSOCKET_MANAGER == "redis":
@@ -76,12 +82,12 @@ if WEBSOCKET_MANAGER == "redis":
         SESSION_POOL = {}
         USER_POOL = {}
         USAGE_POOL = {}
-        acquire_func = release_func = renew_func = lambda: True
+        acquire_func = release_func = renew_func = _lock_noop
 else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
-    acquire_func = release_func = renew_func = lambda: True
+    acquire_func = release_func = renew_func = _lock_noop
 
 
 async def periodic_usage_pool_cleanup():
@@ -90,7 +96,7 @@ async def periodic_usage_pool_cleanup():
     This task should not cause application shutdown if it fails.
     """
     try:
-        if not acquire_func():
+        if not await acquire_func():
             log.debug("Usage pool cleanup lock already exists.  Not running it.")
             return
 
@@ -99,7 +105,7 @@ async def periodic_usage_pool_cleanup():
         while True:
             try:
                 # Check if we can renew the lock
-                if not renew_func():
+                if not await renew_func():
                     log.warning(
                         "Unable to renew cleanup lock. Another instance may have taken over."
                     )
@@ -149,7 +155,7 @@ async def periodic_usage_pool_cleanup():
         log.error(f"Fatal error in periodic_usage_pool_cleanup: {e}")
     finally:
         try:
-            release_func()
+            await release_func()
             log.debug("Released usage pool cleanup lock")
         except Exception as e:
             log.error(f"Error releasing cleanup lock:  {e}")

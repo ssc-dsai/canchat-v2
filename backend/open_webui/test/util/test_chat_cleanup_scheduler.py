@@ -25,13 +25,14 @@ class FakeLock:
         self.release_called = False
         self.last_error = None
 
-    def acquire_lock(self):
+    async def acquire_lock(self):
         self.last_error = self.acquire_error
         self.lock_obtained = self.acquire_result
         return self.acquire_result
 
-    def release_lock(self):
+    async def release_lock(self):
         self.release_called = True
+        return True
 
 
 async def _no_op_lock_renewal(*args, **kwargs):

@@ -1,6 +1,8 @@
 import asyncio
 import json
+import logging
 import redis.asyncio as redis
+import redis as redis_sync
 import uuid
 
 log = logging.getLogger(__name__)
@@ -46,7 +48,7 @@ async def renew_lock_periodically(
         while True:
             await asyncio.sleep(renewal_interval_secs)
             if lock and lock.lock_obtained:
-                renewed = lock.renew_lock()
+                renewed = await lock.renew_lock()
                 if renewed:
                     log.debug(f"Renewed {lock_name}")
                 else:
@@ -76,12 +78,12 @@ class RedisLock:
         self.last_error = None
         self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
 
-    def acquire_lock(self):
+    async def acquire_lock(self):
         """Acquire lock key with NX semantics and TTL; returns True on success."""
         try:
             self.last_error = None
             # nx=True will only set this key if it _hasn't_ already been set
-            self.lock_obtained = self.redis.set(
+            self.lock_obtained = await self.redis.set(
                 self.lock_name, self.lock_id, nx=True, ex=self.timeout_secs
             )
             return self.lock_obtained
@@ -90,7 +92,7 @@ class RedisLock:
             print(f"Error acquiring Redis lock: {e}")
             return False
 
-    def renew_lock(self):
+    async def renew_lock(self):
         """
         Renew this lock's TTL only if the stored lock value still matches this instance's lock_id.
 
@@ -100,7 +102,7 @@ class RedisLock:
         try:
             self.last_error = None
             # Atomically renew only if this process still owns the lock.
-            renewed = self.redis.eval(
+            renewed = await self.redis.eval(
                 RENEW_LOCK_SCRIPT,
                 1,
                 self.lock_name,
@@ -113,7 +115,7 @@ class RedisLock:
             print(f"Error renewing Redis lock: {e}")
             return False
 
-    def release_lock(self):
+    async def release_lock(self):
         """
         Release this lock only if the current lock value still matches this instance's lock_id.
 
@@ -121,7 +123,7 @@ class RedisLock:
         Returns True when the lock key was deleted by this owner, False otherwise.
         """
         try:
-            released = self.redis.eval(
+            released = await self.redis.eval(
                 RELEASE_LOCK_SCRIPT,
                 1,
                 self.lock_name,
@@ -144,11 +146,13 @@ class RedisLock:
 class RedisDict:
     def __init__(self, name, redis_url):
         self.name = name
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        # Keep RedisDict synchronous because socket/main uses dict-like sync access.
+        # This will be refactored in another PR to centralize Redis locking mechanism.
+        self.redis = redis_sync.Redis.from_url(redis_url, decode_responses=True)
 
-    async def __setitem__(self, key, value):
+    def __setitem__(self, key, value):
         serialized_value = json.dumps(value)
-        await self.redis.hset(self.name, key, serialized_value)
+        self.redis.hset(self.name, key, serialized_value)
 
     def __getitem__(self, key):
         value = self.redis.hget(self.name, key)
