@@ -41,14 +41,22 @@ jobs:
           chmod 777 cyclonedx-linux-x64
           mkdir .sbom
 
-      #  doesn't seem to work
+      - name: Get Previous Run ID
+        id: get-run-id
+        run: |
+         RUN_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?branch=${{ github.ref_name }}" \
+            | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
+          echo "::set-output name=run_id::$RUN_ID"
+
       - name: Download SBOM Artifacts from previous execution
         uses: actions/download-artifact@v5
         continue-on-error: true
         with:
           path: .sbom
-          merge-multiple: true
           name: SBOM Artifacts
+          run_id: ${{ steps.get-run-id.outputs.run_id }}
+          merge-multiple: true
 
       - name: Generate Current SBOM
         id: current-sbom
@@ -78,7 +86,7 @@ jobs:
           echo "### SBOM Comparison Report - $TIMESTAMP" > .sbom/comparison.md
           echo "$COMPARISON_RESULT" >> .sbom/comparison.md
           echo "" >> .sbom/comparison.md  # Add a newline for separation
-          cat .sbom/comparison.md >> .sbom/comparison-history.md # copy current differnces to the history version
+          cat .sbom/comparison.md >> .sbom/comparison-history.md # copy differnces to the historic version
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
       - name: Upload SBOM Artifacts
