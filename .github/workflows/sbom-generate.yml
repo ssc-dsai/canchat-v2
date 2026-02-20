@@ -50,7 +50,7 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/actions/runs?branch=${{ github.ref_name }}" \
             | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
           echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-          echo "::set-output name=run_id::$RUN_ID"
+#          echo "::set-output name=run_id::$RUN_ID"
 
       - name: Debug Run ID
         run: |
