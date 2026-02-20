@@ -41,6 +41,7 @@ jobs:
           wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           chmod 777 cyclonedx-linux-x64
           mkdir .sbom
+          ls -R .sbom
 
       - name: Get Previous Run ID
         id: get-run-id
@@ -48,10 +49,12 @@ jobs:
          RUN_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs?branch=${{ github.ref_name }}" \
             | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
           echo "::set-output name=run_id::$RUN_ID"
 
-      - name: show files before
-        run: ls -R .sbom
+      - name: Debug Run ID
+        run: |
+          echo "Attempting to download artifact from run ID: ${{ steps.get-run-id.outputs.run_id }}"
 
       - name: Download SBOM Artifacts from previous execution
         uses: actions/download-artifact@v5
@@ -104,6 +107,7 @@ jobs:
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v5
         with:
+          name: SBOM-Artifacts
           path: |
             .sbom/current.cdx.json
             .sbom/current.txt
@@ -113,4 +117,3 @@ jobs:
             .sbom/previous.csv
             .sbom/comparison.md
             .sbom/comparison-history.md
-          name: SBOM-Artifacts
