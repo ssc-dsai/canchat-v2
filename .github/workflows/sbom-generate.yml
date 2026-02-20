@@ -44,18 +44,15 @@ jobs:
         uses: actions/download-artifact@v5
         continue-on-error: true
         with:
-          path: .sbom/
+          path: .sbom
           merge-multiple: true
           name: SBOM Artifacts
-          run: |
-            ls -R
-            ls -R .sbom
 
       - name: Generate Current SBOM
         id: current-sbom
         run: |
           cdxgen -o .sbom/current.json -p > .sbom/current.txt
-          echo icurrent_sbom=.sbom/current.json" >> $GITHUB_OUTPUT
+          echo "current_sbom=.sbom/current.json" >> $GITHUB_OUTPUT
 
       - name: Generate Previous SBOM
         id: previous-sbom
