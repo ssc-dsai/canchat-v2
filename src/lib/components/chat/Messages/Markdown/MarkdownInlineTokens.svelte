@@ -64,14 +64,14 @@
 		>
 	{:else if token.type === 'br'}
 		<br />
-		{:else if token.type === 'del'}
-			{#if /^~(?!~)[\s\S]*~$/.test(token.raw)}
-				{token.raw}
-			{:else}
-				<del>
-					<svelte:self id={`${id}-del`} tokens={token.tokens} {onSourceClick} />
-				</del>
-			{/if}
+	{:else if token.type === 'del'}
+		{#if /^~(?!~)[\s\S]*~$/.test(token.raw)}
+			{token.raw}
+		{:else}
+			<del>
+				<svelte:self id={`${id}-del`} tokens={token.tokens} {onSourceClick} />
+			</del>
+		{/if}
 	{:else if token.type === 'inlineKatex'}
 		{#if token.text}
 			<KatexRenderer content={token.text} displayMode={false} />
