@@ -39,11 +39,11 @@ jobs:
           wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           chmod 777 cyclonedx-linux-x64
 
-      - name: Download CycloneDX SBOM Artifacts
+      - name: Download SBOM Artifacts from previous run
         uses: actions/download-artifact@v5
         with:
-          path: .sbom/
-          name: CycloneDX SBOM Artefacts
+          path: .sbom/*
+          name: SBOM Artefacts
 
       - name: Generate Current SBOM
         id: current-sbom
@@ -60,12 +60,6 @@ jobs:
           echo "previous_sbom=.sbom/previous.json" >> $GITHUB_OUTPUT
           git checkout -
 
-#      - name: CycloneDX SBOM comparison-history.md
-#        uses: actions/download-artifact@v5
-#        with:
-#          name: CycloneDX SBOM comparison-history.md
-#          path: .sbom/comparison-history.md
-
       - name: Compare SBOMs
         id: compare-sboms
         run: |
@@ -81,7 +75,7 @@ jobs:
           ./cyclonedx-linux-x64 convert --input-file .sbom/current.json --output-file .sbom/current.csv
           ./cyclonedx-linux-x64 convert --input-file .sbom/previous.json --output-file .sbom/previous.csv
 
-      - name: Upload CycloneDX SBOM Artifacts
+      - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v5
         with:
           path: |
@@ -92,13 +86,4 @@ jobs:
             .sbom/previous.txt
             .sbom/previous.csv
             .sbom/comparison-history.md
-          name: CycloneDX SBOM Artefacts
-          
-# old
-#      - name: Commit and Push Comparison History
-#        run: |
-#          git config --global user.name "GitHub Actions"
-#          git config --global user.email "actions@gitxtthub.com"
-#          git add sbom/*
-#          git commit -m "Update SBOM comparison history [$(date +'%Y-%m-%d %H:%M:%S %Z')]" || echo "No changes to commit"
-#          git push
+          name: SBOM Artefacts
