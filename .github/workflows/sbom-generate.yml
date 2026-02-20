@@ -54,7 +54,7 @@ jobs:
         continue-on-error: true
         with:
           path: .sbom
-          name: SBOM Artifacts
+          name: SBOM-Artifacts
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           merge-multiple: true
 
@@ -101,4 +101,4 @@ jobs:
             .sbom/previous.csv
             .sbom/comparison.md
             .sbom/comparison-history.md
-          name: SBOM Artifacts
+          name: SBOM-Artifacts
