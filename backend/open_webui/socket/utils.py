@@ -119,16 +119,27 @@ class RedisLock:
         Release this lock only if the current lock value still matches this instance's lock_id.
 
         Uses an atomic Redis Lua script (compare-and-delete) to avoid races between GET and DEL.
+        Returns True when the lock key was deleted by this owner, False otherwise.
         """
         try:
-            self.redis.eval(
+            released = self.redis.eval(
                 RELEASE_LOCK_SCRIPT,
                 1,
                 self.lock_name,
                 self.lock_id,
             )
+            if released == 1:
+                self.lock_obtained = False
+                return True
+
+            log.warning(
+                "Redis lock release was not applied (lock already expired or ownership changed): %s",
+                self.lock_name,
+            )
+            return False
         except Exception as e:
             print(f"Error releasing Redis lock: {e}")
+            return False
 
 
 class RedisDict:

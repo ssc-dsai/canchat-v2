@@ -2915,26 +2915,33 @@ async def cleanup_orphaned_files(
                 file = Files.get_file_by_id(file_id)
                 if file:
                     # Clean up vector collection
-                    collection_name = f"file-{file_id}"
+                    collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
                     if await VECTOR_DB_CLIENT.has_collection(collection_name):
                         await VECTOR_DB_CLIENT.delete_collection(collection_name)
                         cleanup_stats["collections_cleaned"] += 1
                         log.debug(f"Deleted vector collection: {collection_name}")
 
                     # Delete physical file
+                    storage_delete_succeeded = True
                     if file.path:
                         try:
-                            Storage.delete_file(file.path)
+                            await asyncio.to_thread(Storage.delete_file, file.path)
                             log.debug(f"Deleted physical file: {file.path}")
                         except Exception as e:
+                            storage_delete_succeeded = False
                             log.warning(
                                 f"Could not delete physical file {file.path}: {e}"
                             )
 
-                    # Delete from database
-                    Files.delete_file_by_id(file_id)
-                    cleanup_stats["files_cleaned"] += 1
-                    log.debug(f"Deleted file record: {file_id}")
+                    # Delete DB row only when storage cleanup succeeded (or there is no physical file).
+                    if storage_delete_succeeded:
+                        Files.delete_file_by_id(file_id)
+                        cleanup_stats["files_cleaned"] += 1
+                        log.debug(f"Deleted file record: {file_id}")
+                    else:
+                        cleanup_stats["errors"].append(
+                            f"Skipped file DB deletion for {file_id} due to storage cleanup failure."
+                        )
             else:
                 log.debug(f"File {file_id} still referenced by other chats, preserving")
 
@@ -4026,6 +4033,7 @@ async def cleanup_expired_chats_streaming(
             del chat_batch
             del chat_ids_to_delete
             del file_ids_to_cleanup
+            del batch_file_ref_counts
 
             # If we got fewer chats than batch size, we're done
             if batch_size_actual < BATCH_SIZE:
@@ -4198,7 +4206,9 @@ async def api_cleanup_expired_chats(
                 pass
 
         if lock and lock.lock_obtained:
-            lock.release_lock()
+            released = lock.release_lock()
+            if not released:
+                log.warning("Could not confirm admin cleanup lock release")
 
 
 @router.get("/monitoring/wikipedia-grounding/queue-status")

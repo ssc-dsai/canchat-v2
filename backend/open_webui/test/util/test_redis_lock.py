@@ -78,7 +78,8 @@ def test_release_lock_uses_atomic_compare_and_delete(monkeypatch):
 
     lock = RedisLock("redis://test", "chat_cleanup_job", 1800)
     lock.lock_id = "this-instance-lock-id"
-    lock.release_lock()
+    released = lock.release_lock()
 
+    assert released is True
     assert any("DEL" in script for script in fake_redis.eval_calls)
     assert fake_redis.delete_called is False

@@ -153,8 +153,11 @@ async def automated_chat_cleanup():
 
         # Always release the lock
         if lock and lock.lock_obtained:
-            lock.release_lock()
-            log.info("Released chat cleanup lock")
+            released = lock.release_lock()
+            if released:
+                log.info("Released chat cleanup lock")
+            else:
+                log.warning("Could not confirm chat cleanup lock release")
 
 
 def update_cleanup_schedule():
