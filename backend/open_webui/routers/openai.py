@@ -418,16 +418,34 @@ async def get_all_models(request: Request) -> dict[str, list]:
                     model.get(field) or openai_data.get(field) or model_info.get(field)
                 )
                 if value is not None:
-                    model["context_length"] = int(value)
+                    try:
+                        model["context_length"] = int(value)
+                    except (ValueError, TypeError):
+                        log.warning(
+                            f"Invalid context length value '{value}' for field '{field}' in model '{model.get('id', 'unknown')}'"
+                        )
+                        continue
                     break
 
         # Fallback: look up well-known model context lengths (longest prefix wins)
         if "context_length" not in model:
-            model_id_lower = model["id"].lower()
-            for prefix in sorted(MODEL_CONTEXT_LENGTHS.value, key=len, reverse=True):
-                if model_id_lower.startswith(prefix.lower()):
-                    model["context_length"] = int(MODEL_CONTEXT_LENGTHS.value[prefix])
-                    break
+            try:
+                context_lengths = MODEL_CONTEXT_LENGTHS.value
+                if context_lengths and isinstance(context_lengths, dict):
+                    model_id_lower = model.get("id", "").lower()
+                    for prefix in sorted(context_lengths, key=len, reverse=True):
+                        if model_id_lower.startswith(prefix.lower()):
+                            try:
+                                model["context_length"] = int(context_lengths[prefix])
+                            except (ValueError, TypeError):
+                                log.warning(
+                                    f"Invalid context length value '{context_lengths[prefix]}' for prefix '{prefix}'"
+                                )
+                            break
+            except Exception as e:
+                log.warning(
+                    f"Failed to look up context length for model '{model.get('id', 'unknown')}': {e}"
+                )
 
     request.app.state.OPENAI_MODELS = {model["id"]: model for model in models["data"]}
     return models
