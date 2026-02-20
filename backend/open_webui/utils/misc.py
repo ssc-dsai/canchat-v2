@@ -315,7 +315,7 @@ def parse_ollama_modelfile(model_text):
         "mirostat": int,
         "mirostat_eta": float,
         "mirostat_tau": float,
-        "num_ctx": int,
+        "num_ctx": int,  # Kept for Modelfile parsing; user UI control removed
         "repeat_last_n": int,
         "repeat_penalty": float,
         "temperature": float,
