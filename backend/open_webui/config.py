@@ -1867,6 +1867,131 @@ WIKIPEDIA_GROUNDING_MAX_CONCURRENT = PersistentConfig(
     int(os.getenv("WIKIPEDIA_GROUNDING_MAX_CONCURRENT", "5")),
 )
 
+
+def _validate_fallback_max_tokens(value: int, default: int = 16000) -> int:
+    """Validate RAG_CONTEXT_FALLBACK_MAX_TOKENS is a positive integer."""
+    try:
+        value = int(value)
+        if value < 1:
+            raise ValueError
+        return value
+    except (TypeError, ValueError):
+        log.warning(
+            f"Invalid RAG_CONTEXT_FALLBACK_MAX_TOKENS='{value}'. "
+            f"Must be a positive integer. Falling back to {default}."
+        )
+        return default
+
+
+def _validate_token_limit_percentage(value: str, default: float = 0.5) -> float:
+    """Validate RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE is a float in (0, 1]."""
+    try:
+        fval = float(value)
+        if fval <= 0 or fval > 1:
+            raise ValueError
+        return fval
+    except (TypeError, ValueError):
+        log.warning(
+            f"Invalid RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE='{value}'. "
+            f"Must be a float in the range (0, 1]. Falling back to {default}."
+        )
+        return default
+
+
+def _validate_model_context_lengths(value: dict, default: dict | None = None) -> dict:
+    """Validate MODEL_CONTEXT_LENGTHS is a dict of {str: positive int}."""
+    if default is None:
+        default = _DEFAULT_MODEL_CONTEXT_LENGTHS
+    if not isinstance(value, dict):
+        log.warning(
+            f"Invalid MODEL_CONTEXT_LENGTHS: expected a JSON object, "
+            f"got {type(value).__name__}. Falling back to defaults."
+        )
+        return default
+    validated: dict = {}
+    for key, ctx_len in value.items():
+        if not isinstance(key, str):
+            log.warning(
+                f"Invalid key in MODEL_CONTEXT_LENGTHS: '{key}' is not a string. Skipping."
+            )
+            continue
+        try:
+            ctx_len = int(ctx_len)
+            if ctx_len < 1:
+                raise ValueError
+            validated[key] = ctx_len
+        except (TypeError, ValueError):
+            log.warning(
+                f"Invalid context length for model '{key}': '{ctx_len}'. "
+                f"Must be a positive integer. Skipping."
+            )
+    if not validated:
+        log.warning(
+            "MODEL_CONTEXT_LENGTHS produced no valid entries. Falling back to defaults."
+        )
+        return default
+    return validated
+
+
+RAG_CONTEXT_FALLBACK_MAX_TOKENS = PersistentConfig(
+    "RAG_CONTEXT_FALLBACK_MAX_TOKENS",
+    "rag.context.fallback_max_tokens",
+    _validate_fallback_max_tokens(
+        os.getenv("RAG_CONTEXT_FALLBACK_MAX_TOKENS", "16000")
+    ),
+)
+
+RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE = PersistentConfig(
+    "RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE",
+    "rag.context_token_limit_percentage",
+    _validate_token_limit_percentage(
+        os.environ.get("RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE", "0.5")
+    ),
+)
+
+_DEFAULT_MODEL_CONTEXT_LENGTHS = {
+    # GPT-5
+    "gpt-5": 1047576,
+    # GPT-4.1 family
+    "gpt-4.1-nano": 1047576,
+    "gpt-4.1-mini": 1047576,
+    "gpt-4.1": 1047576,
+    # GPT-4o family
+    "gpt-4o-mini": 128000,
+    "gpt-4o": 128000,
+    "chatgpt-4o": 128000,
+    # o-series reasoning models
+    "o3-mini": 200000,
+    "o3-pro": 200000,
+    "o3": 200000,
+    "o4-mini": 200000,
+    "o1-mini": 128000,
+    "o1-pro": 200000,
+    "o1": 200000,
+    # Google Gemini
+    "gemini-2.5-flash": 1048576,
+    "gemini-2.5-pro": 1048576,
+    "gemini-2.0-flash": 1048576,
+    "gemini-1.5-pro": 2097152,
+    "gemini-1.5-flash": 1048576,
+    # Cohere
+    "command-a": 256000,
+    "command-r-plus": 128000,
+    "command-r": 128000,
+}
+
+MODEL_CONTEXT_LENGTHS = PersistentConfig(
+    "MODEL_CONTEXT_LENGTHS",
+    "models.context_lengths",
+    _validate_model_context_lengths(
+        json.loads(
+            os.getenv(
+                "MODEL_CONTEXT_LENGTHS", json.dumps(_DEFAULT_MODEL_CONTEXT_LENGTHS)
+            )
+        )
+    ),
+)
+
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
 RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
