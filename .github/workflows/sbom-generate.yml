@@ -41,11 +41,14 @@ jobs:
 
       - name: Download SBOM Artifacts from previous run
         uses: actions/download-artifact@v5
+        continue-on-error: true
         with:
           path: .sbom/
           merge-multiple: true
           name: SBOM Artifacts
-          run: ls -R && ls -R .sbom
+          run: |
+            ls -R
+            ls -R .sbom
 
       - name: Generate Current SBOM
         id: current-sbom
