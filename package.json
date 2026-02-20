@@ -36,7 +36,6 @@
 		"pyodide:fetch": "node scripts/prepare-pyodide.js"
 	},
 	"devDependencies": {
-		"dummy-package": "0.0.1",                                  # DH test
 		"@istanbuljs/nyc-config-typescript": "^1.0.2",
 		"@playwright/test": "^1.56.1",
 		"@sveltejs/adapter-auto": "3.2.2",
