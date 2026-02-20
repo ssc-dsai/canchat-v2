@@ -58,6 +58,7 @@ jobs:
           path: .sbom
           name: SBOM-Artifacts
           run-id: ${{ steps.get-run-id.outputs.run_id }}
+          github-token:  ${{ secrets.GITHUB_TOKEN}} # Use a custom ie: MY_PAT_TOKEN for cross-repo and cross-run access
           merge-multiple: true
 
       - name: show files after download
