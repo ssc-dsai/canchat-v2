@@ -62,7 +62,7 @@ jobs:
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           merge-multiple: true
 
-      - name: show files after
+      - name: show files after download
         run: ls -R .sbom
 
       - name: Generate Current SBOM
@@ -97,6 +97,9 @@ jobs:
           # append comparison file to history file and cat new history to github summary
           cat .sbom/comparison.md >> .sbom/comparison-history.md # copy differnces to the historic version
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
+
+      - name: show files after changes
+        run: ls -R .sbom
 
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v5
