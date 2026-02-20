@@ -42,15 +42,16 @@ jobs:
       - name: Generate Current SBOM
         id: current-sbom
         run: |
-          cdxgen -o .sbom/sbom-current.json -p > .sbom/sbom-current.txt
-          echo "current_sbom=.sbom/sbom-current.json" >> $GITHUB_OUTPUT
+          mkdir .sbom
+          cdxgen -o .sbom/current.json -p > .sbom/current.txt
+          echo "current_sbom=.sbom/current.json" >> $GITHUB_OUTPUT
 
       - name: Generate Previous SBOM
         id: previous-sbom
         run: |
           git checkout HEAD^
-          cdxgen -o .sbom/sbom-previous.json -p > .sbom/sbom-previous.txt
-          echo "previous_sbom=.sbom/sbom-previous.json" >> $GITHUB_OUTPUT
+          cdxgen -o .sbom/previous.json -p > .sbom/previous.txt
+          echo "previous_sbom=.sbom/previous.json" >> $GITHUB_OUTPUT
           git checkout -
 
       - name: Compare SBOMs
@@ -58,20 +59,27 @@ jobs:
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           COMPARISON_RESULT=$(./cyclonedx-linux-x64 diff ${{ steps.current-sbom.outputs.current_sbom }} ${{ steps.previous-sbom.outputs.previous_sbom }})
-          echo "### SBOM Comparison Report - $TIMESTAMP" >> .sbom/sbom-comparison-history.md
-          echo "$COMPARISON_RESULT" >> .sbom/sbom-comparison-history.md
-          echo "" >> .sbom/sbom-comparison-history.md  # Add a newline for separation
+          echo "### SBOM Comparison Report - $TIMESTAMP" >> .sbom/comparison-history.md
+          echo "$COMPARISON_RESULT" >> .sbom/comparison-history.md
+          echo "" >> .sbom/comparison-history.md  # Add a newline for separation
 
       - name: Create CSVs
         id: convert-sboms
         run: |
-          ./cyclonedx-linux-x64 convert --input-file .sbom/sbom-current.json --output-file .sbom/sbom-current.csv
-          ./cyclonedx-linux-x64 convert --input-file .sbom/sbom-previous.json --output-file .sbom/sbom-previous.csv
+          ./cyclonedx-linux-x64 convert --input-file .sbom/current.json --output-file .sbom/current.csv
+          ./cyclonedx-linux-x64 convert --input-file .sbom/previous.json --output-file .sbom/previous.csv
 
       - name: SBOM Artefacts
         uses: actions/upload-artifact@v4
         with:
-          path: sbom/*
+          path: |
+            .sbom/current.txt
+            .sbom/current.csv
+            .sbom/current.json
+            .sbom/previous.txt
+            .sbom/previous.csv
+            .sbom/previous.json
+            .sbom/comparison-history.md
           retention-days: 90
 
 # old
