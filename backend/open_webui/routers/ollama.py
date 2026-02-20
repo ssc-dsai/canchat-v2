@@ -90,9 +90,7 @@ async def send_post_request_json(url, payload, key=None):
                 json=payload,
                 headers={
                     "Content-Type": "application/json",
-                    **({
-                        "Authorization": f"Bearer {key}"
-                    } if key else {}),
+                    **({"Authorization": f"Bearer {key}"} if key else {}),
                 },
             ) as response:
                 return await response.json()
@@ -367,9 +365,7 @@ async def get_all_models(request: Request):
         async def _fetch_model_context_length(model):
             url_idx = model["urls"][0]
             url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-            key = get_api_key(
-                url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS
-            )
+            key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
             show_resp = await send_post_request_json(
                 f"{url}/api/show", {"name": model["model"]}, key
             )

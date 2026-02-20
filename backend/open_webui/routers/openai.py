@@ -409,15 +409,13 @@ async def get_all_models(request: Request) -> dict[str, list]:
 
             # Check top-level, openai sub-dict, and LiteLLM's model_info
             for field in (
-                "context_length",    # Generic / some proxies
-                "context_window",    # OpenRouter
-                "max_model_len",     # vLLM
+                "context_length",  # Generic / some proxies
+                "context_window",  # OpenRouter
+                "max_model_len",  # vLLM
                 "max_input_tokens",  # LiteLLM (in model_info)
             ):
                 value = (
-                    model.get(field)
-                    or openai_data.get(field)
-                    or model_info.get(field)
+                    model.get(field) or openai_data.get(field) or model_info.get(field)
                 )
                 if value is not None:
                     model["context_length"] = int(value)

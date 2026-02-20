@@ -164,7 +164,11 @@ async def get_all_models(request):
                     "info": custom_model.model_dump(),
                     "preset": True,
                     **({"pipe": pipe} if pipe is not None else {}),
-                    **({"context_length": context_length} if context_length is not None else {}),
+                    **(
+                        {"context_length": context_length}
+                        if context_length is not None
+                        else {}
+                    ),
                     "action_ids": action_ids,
                 }
             )

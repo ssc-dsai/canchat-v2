@@ -1913,7 +1913,9 @@ _DEFAULT_MODEL_CONTEXT_LENGTHS = {
 MODEL_CONTEXT_LENGTHS = PersistentConfig(
     "MODEL_CONTEXT_LENGTHS",
     "models.context_lengths",
-    json.loads(os.getenv("MODEL_CONTEXT_LENGTHS", json.dumps(_DEFAULT_MODEL_CONTEXT_LENGTHS))),
+    json.loads(
+        os.getenv("MODEL_CONTEXT_LENGTHS", json.dumps(_DEFAULT_MODEL_CONTEXT_LENGTHS))
+    ),
 )
 
 # You can provide a list of your own websites to filter after performing a web search.

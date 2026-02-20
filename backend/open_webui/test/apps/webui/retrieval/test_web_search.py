@@ -23,7 +23,9 @@ class TestEstimateTokenCount:
 
     def test_longer_text_has_more_tokens(self):
         short = estimate_token_count("Hello")
-        long = estimate_token_count("Hello world, this is a much longer sentence with many more words in it.")
+        long = estimate_token_count(
+            "Hello world, this is a much longer sentence with many more words in it."
+        )
         assert long > short
 
     def test_whitespace_only(self):
@@ -52,6 +54,7 @@ class TestEstimateTokenCount:
         large_text = "word " * 10000
         count = estimate_token_count(large_text)
         assert count > 1000
+
 
 class TestTruncateToTokenLimit:
     def test_empty_string_returns_empty(self):
@@ -104,6 +107,7 @@ class TestTruncateToTokenLimit:
         result_explicit = truncate_to_token_limit(text, 10, "cl100k_base")
         assert result_default == result_explicit
 
+
 class TestRAGContextTruncation:
     """
     Tests simulating the truncation logic from process_chat_payload
@@ -116,13 +120,16 @@ class TestRAGContextTruncation:
         for i in range(num_sources):
             content = f"Document {i} content. " * (content_size // 20)
             context_parts.append(
-                f'<source><source_id>web_search_{i}</source_id>'
-                f'<source_context>{content}</source_context></source>'
+                f"<source><source_id>web_search_{i}</source_id>"
+                f"<source_context>{content}</source_context></source>"
             )
         return "\n".join(context_parts)
 
     def _simulate_truncation(
-        self, context_string: str, max_context_tokens: int, encoding_name: str = "cl100k_base"
+        self,
+        context_string: str,
+        max_context_tokens: int,
+        encoding_name: str = "cl100k_base",
     ) -> str:
         """
         Simulate the truncation logic from process_chat_payload.
@@ -133,9 +140,7 @@ class TestRAGContextTruncation:
         if estimated_tokens <= max_context_tokens:
             return context_string
 
-        truncation_notice = (
-            f"\n[RAG context truncated from {estimated_tokens} to ~{max_context_tokens} tokens]"
-        )
+        truncation_notice = f"\n[RAG context truncated from {estimated_tokens} to ~{max_context_tokens} tokens]"
         notice_tokens = estimate_token_count(truncation_notice, encoding_name)
         target_tokens = max_context_tokens - notice_tokens
 
@@ -202,8 +207,8 @@ class TestRAGContextTruncation:
         """A single enormous web search document should be truncated."""
         huge_content = "This is a very long web search result. " * 5000
         context = (
-            f'<source><source_id>web_search_0</source_id>'
-            f'<source_context>{huge_content}</source_context></source>'
+            f"<source><source_id>web_search_0</source_id>"
+            f"<source_context>{huge_content}</source_context></source>"
         )
         max_tokens = 500
 
@@ -236,8 +241,8 @@ class TestRAGContextTruncation:
             url = f"https://example.com/page-{i}"
             content = f"Web search result {i}. " * 20
             context_parts.append(
-                f'<source><source_id>{url}</source_id>'
-                f'<source_context>{content}</source_context></source>'
+                f"<source><source_id>{url}</source_id>"
+                f"<source_context>{content}</source_context></source>"
             )
         context = "\n".join(context_parts)
         max_tokens = 400
@@ -348,8 +353,8 @@ class TestRAGContextTruncation:
                 f"prospects. Each page provides unique insights and data points. "
             ) * 20  # ~100 words * 20 = ~2000 words per page
             sources.append(
-                f'<source><source_id>https://example.com/result-{i}</source_id>'
-                f'<source_context>{page_content}</source_context></source>'
+                f"<source><source_id>https://example.com/result-{i}</source_id>"
+                f"<source_context>{page_content}</source_context></source>"
             )
         context = "\n".join(sources)
 
@@ -391,8 +396,8 @@ class TestRAGContextTruncation:
                 f"é, è, ê, ë, à, â, ù, û, ç, ô, î. Cette page traite du sujet en détail. "
             ) * 50
             context_parts.append(
-                f'<source><source_id>https://fr.wikipedia.org/wiki/Page_{i}</source_id>'
-                f'<source_context>{content}</source_context></source>'
+                f"<source><source_id>https://fr.wikipedia.org/wiki/Page_{i}</source_id>"
+                f"<source_context>{content}</source_context></source>"
             )
         context = "\n".join(context_parts)
         max_tokens = 400
