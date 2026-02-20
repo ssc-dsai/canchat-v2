@@ -18,7 +18,7 @@ permissions:
     contents: write
 
 jobs:
-  sbom-compare:
+  sbom-generate-and-compare:
     runs-on: ubuntu-latest
 
     steps:
@@ -84,9 +84,11 @@ jobs:
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           COMPARISON_RESULT=$(./cyclonedx-linux-x64 diff ${{ steps.current-sbom.outputs.current_sbom }} ${{ steps.previous-sbom.outputs.previous_sbom }})
+          # new comparison file
           echo "### SBOM Comparison Report - $TIMESTAMP" > .sbom/comparison.md
           echo "$COMPARISON_RESULT" >> .sbom/comparison.md
           echo "" >> .sbom/comparison.md  # Add a newline for separation
+          # append comparison file to history file and cat new history to github summary
           cat .sbom/comparison.md >> .sbom/comparison-history.md # copy differnces to the historic version
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
