@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.12.3] - 2026-02-18
+
+### Fixed
+
+- **🔧 Ollama Model Addition**: Fixed a crash when an admin user attempts to add a new Ollama model.
+- **🔄 Model Deletion Refresh**: Refetch models after deleting to ensure the list stays up to date.
+- **🏷️ Save as Copy Label**: Updated "Save as Copy" button label translation to match casing for consistency.
+- **🔧 MCP Function Call**: Fixed MCP missing function call to allow for iteration.
+- **🌐 Web Search NoneType Error**: Fixed web search NoneType return error.
+- **⏳ Web Search Timeout**: Fixed timeout issues on web search.
+- **🛠️ Menu Tools Selection**: Fixed menu tools selection by adding sanitization, guardrails, and translation to the input.
+
+## [0.5.7-ccv2-1.12.2] - 2026-02-06
+
+### Fixed
+
+- **🔧 Navigation Bar Issue**: Fixed inconsistency on new chat in navbar.
+
 ## [0.5.7-ccv2-1.12.1] - 2026-02-05
 
 ### Fixed

@@ -93,7 +93,7 @@
 						<button
 							id="new-chat-button"
 							class="flex m-auto self-center cursor-pointer p-2 rounded-xl text-gray-900 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-850 transition"
-							on:click={initNewChat()}
+							on:click={() => initNewChat()}
 							aria-label={$i18n.t('New Chat')}
 						>
 							<PencilSquare className="size-5" strokeWidth="2" />
