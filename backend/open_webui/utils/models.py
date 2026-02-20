@@ -43,7 +43,11 @@ async def get_all_base_models(request: Request):
                 "id": model["model"],
                 "name": model["name"],
                 "object": "model",
-                "context_length": model["context_length"],
+                **(
+                    {"context_length": model["context_length"]}
+                    if "context_length" in model
+                    else {}
+                ),
                 "created": int(time.time()),
                 "owned_by": "ollama",
                 "ollama": model,
