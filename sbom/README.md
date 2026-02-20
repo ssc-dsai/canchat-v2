@@ -2,7 +2,7 @@ This folder exists for the storage of automatically generated SBOM files via Git
 
 # Software Bill of Materials (SBOM)
 
-## ITSG-33 CM-10: OFTWARE USAGE RESTRICTIONS
+## ITSG-33 CM-10: SOFTWARE USAGE RESTRICTIONS
 
 ### Control:
 
