@@ -54,6 +54,11 @@ jobs:
           echo "previous_sbom=.sbom/previous.json" >> $GITHUB_OUTPUT
           git checkout -
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: CycloneDX SBOM comparison-history.md
+          path: .sbom/comparison-history.md
+
       - name: Compare SBOMs
         id: compare-sboms
         run: |
@@ -69,18 +74,34 @@ jobs:
           ./cyclonedx-linux-x64 convert --input-file .sbom/current.json --output-file .sbom/current.csv
           ./cyclonedx-linux-x64 convert --input-file .sbom/previous.json --output-file .sbom/previous.csv
 
-      - name: SBOM Artefacts
+      - name: CycloneDX SBOM current.json
         uses: actions/upload-artifact@v4
         with:
-          path: |
-            .sbom/current.txt
-            .sbom/current.csv
-            .sbom/current.json
-            .sbom/previous.txt
-            .sbom/previous.csv
-            .sbom/previous.json
-            .sbom/comparison-history.md
-          retention-days: 90
+          path: .sbom/current.json
+      - name: CycloneDX SBOM previous.json
+        uses: actions/upload-artifact@v4
+        with:
+          path: .sbom/previous.json
+      - name: CycloneDX SBOM printout current.txt
+        uses: actions/upload-artifact@v4
+        with:
+          path: .sbom/current.txt
+      - name: CycloneDX SBOM printout previous.txt
+        uses: actions/upload-artifact@v4
+        with:
+          path: .sbom/previous.txt
+      - name: CycloneDX SBOM table current.csv
+        uses: actions/upload-artifact@v4
+        with:
+          path: .sbom/current.csv
+      - name: CycloneDX SBOM table previous.txt
+        uses: actions/upload-artifact@v4
+        with:
+          path: .sbom/previous.csv
+      - name: CycloneDX SBOM comparison-history.md
+        uses: actions/upload-artifact@v4
+        with:
+          path: .sbom/comparison-history.md
 
 # old
 #      - name: Commit and Push Comparison History
