@@ -3,6 +3,7 @@ import logging
 import sys
 import requests
 import re
+import tiktoken
 
 import asyncio
 from typing import Optional
@@ -65,7 +66,7 @@ from open_webui.utils.plugin import load_function_module_by_id
 
 from open_webui.tasks import create_task
 
-from open_webui.config import DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
+from open_webui.config import DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE, RAG_CONTEXT_FALLBACK_MAX_TOKENS, RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE, TIKTOKEN_ENCODING_NAME
 from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
@@ -78,23 +79,25 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-def estimate_token_count(text: str) -> int:
-    """
-    Estimate the number of tokens in a text string for web search/RAG context.
-    Uses a simple heuristic: ~4 characters per token on average.
-    This is a conservative estimate that works well for most languages.
-
-    Args:
-        text: The text to estimate tokens for
-
-    Returns:
-        Estimated token count
-    """
+def estimate_token_count(text: str, encoding_name: str = "cl100k_base") -> int:
+    """Estimate the number of tokens in a text string using tiktoken."""
     if not text:
         return 0
-    # Conservative estimate: 4 characters per token
-    # This accounts for English (~4.5 chars/token) and other languages
-    return max(1, len(text) // 4)
+    enc = tiktoken.get_encoding(encoding_name)
+    return len(enc.encode(text))
+
+
+def truncate_to_token_limit(text: str, max_tokens: int, encoding_name: str = "cl100k_base") -> str:
+    """Truncate text to fit within a token limit using tiktoken."""
+    if not text or max_tokens <= 0:
+        return ""
+    enc = tiktoken.get_encoding(encoding_name)
+    tokens = enc.encode(text)
+    if len(tokens) <= max_tokens:
+        return text
+    return enc.decode(tokens[:max_tokens])
+
+
 
 
 def fetch_wikipedia_title_and_excerpt(url: str) -> tuple[str, str]:
@@ -1446,45 +1449,64 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         log.debug(f"Generated context string length: {len(context_string)}")
         log.debug(
             f"Context string preview: {context_string[:500]}..."
-        )  # Log first 500 chars
+        )
 
         # Truncate context if it exceeds token limit to prevent blowing context window
-        try:
-            from open_webui.config import RAG_CONTEXT_MAX_TOKENS
+        fallback_max_tokens = RAG_CONTEXT_FALLBACK_MAX_TOKENS.value
+        encoding_name = TIKTOKEN_ENCODING_NAME.value
+        context_limit_pct = float(RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE.value)
 
-            max_context_tokens = RAG_CONTEXT_MAX_TOKENS.value
-        except (ImportError, AttributeError):
-            max_context_tokens = 4000  # Fallback default
+        # Dynamically determine the effective limit based on model context window
+        model_context_length = model.get("context_length", 0)
+        log.debug(f"[MODEL INFO]: model_id={model.get('id')}, context_length={model_context_length}")
 
-        estimated_tokens = estimate_token_count(context_string)
-
-        if estimated_tokens > max_context_tokens:
-            log.warning(
-                f"🚨 RAG context exceeds token limit: {estimated_tokens} > {max_context_tokens} tokens. Truncating..."
+        if model_context_length and model_context_length > 0:
+            # Use the configured percentage of the model's context window for RAG context
+            max_context_tokens = int(model_context_length * context_limit_pct)
+            log.debug(
+                f"Model context: {model_context_length} tokens, "
+                f"{context_limit_pct*100:.0f}% = {max_context_tokens} tokens"
+            )
+        else:
+            # No model context_length available, fall back to admin-configured limit
+            max_context_tokens = fallback_max_tokens
+            log.debug(
+                f"Model context window unknown, using fallback limit: {max_context_tokens} tokens"
             )
 
-            # Truncate context_string and add notice
-            truncation_notice = f"\n\n⚠️ NOTE: Context truncated to fit within {max_context_tokens} token limit ({estimated_tokens} tokens truncated).\n\n"
+        estimated_tokens = estimate_token_count(context_string, encoding_name)
 
-            # Reserve space for the truncation notice
-            notice_tokens = estimate_token_count(truncation_notice)
-            available_chars = (max_context_tokens - notice_tokens) * 4
+        if estimated_tokens > max_context_tokens:
 
-            # Try to truncate at a source boundary for cleaner cuts
-            truncated_context = context_string[:available_chars]
+            # Calculate available character budget for truncation
+            truncation_notice = (
+                f"\n[RAG context truncated from {estimated_tokens} to ~{max_context_tokens} tokens]"
+            )
+            notice_tokens = estimate_token_count(truncation_notice, encoding_name)
+            target_tokens = max_context_tokens - notice_tokens
 
-            # Find the last complete </source> tag before truncation point
+            # Use tiktoken to truncate precisely at the token boundary
+            truncated_context = truncate_to_token_limit(
+                context_string, target_tokens, encoding_name
+            )
+
+            # Try to truncate at the last complete </source> tag for clean XML
             last_source_end = truncated_context.rfind("</source>")
             if last_source_end > 0:
-                truncated_context = truncated_context[
-                    : last_source_end + 9
-                ]  # +9 for </source>
+                truncated_context = truncated_context[:last_source_end + len("</source>")]
 
-            context_string = truncation_notice + truncated_context
+            context_string = truncated_context + truncation_notice
 
-            final_tokens = estimate_token_count(context_string)
-            log.info(
-                f"📉 Truncated RAG context: {estimated_tokens} → {final_tokens} tokens"
+            # Notify the client that the context was truncated
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "rag_context_truncated",
+                        "description": "Some search results were trimmed to fit the model's limit.",
+                        "done": True,
+                    },
+                }
             )
 
         if (

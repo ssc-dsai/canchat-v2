@@ -18,6 +18,7 @@ from starlette.background import BackgroundTask
 from open_webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
+    MODEL_CONTEXT_LENGTHS,
 )
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -351,7 +352,6 @@ async def get_filtered_models(models, user):
 
 @cached(ttl=3)
 async def get_all_models(request: Request) -> dict[str, list]:
-    log.info("get_all_models()")
 
     if not request.app.state.config.ENABLE_OPENAI_API:
         return {"data": []}
@@ -401,6 +401,35 @@ async def get_all_models(request: Request) -> dict[str, list]:
 
     models = {"data": merge_models_lists(map(extract_data, responses))}
     log.debug(f"models: {models}")
+
+    for model in models["data"]:
+        if "context_length" not in model:
+            openai_data = model.get("openai", {})
+            model_info = openai_data.get("model_info", {})
+
+            # Check top-level, openai sub-dict, and LiteLLM's model_info
+            for field in (
+                "context_length",    # Generic / some proxies
+                "context_window",    # OpenRouter
+                "max_model_len",     # vLLM
+                "max_input_tokens",  # LiteLLM (in model_info)
+            ):
+                value = (
+                    model.get(field)
+                    or openai_data.get(field)
+                    or model_info.get(field)
+                )
+                if value is not None:
+                    model["context_length"] = int(value)
+                    break
+
+        # Fallback: look up well-known model context lengths (longest prefix wins)
+        if "context_length" not in model:
+            model_id_lower = model["id"].lower()
+            for prefix in sorted(MODEL_CONTEXT_LENGTHS.value, key=len, reverse=True):
+                if model_id_lower.startswith(prefix.lower()):
+                    model["context_length"] = int(MODEL_CONTEXT_LENGTHS.value[prefix])
+                    break
 
     request.app.state.OPENAI_MODELS = {model["id"]: model for model in models["data"]}
     return models

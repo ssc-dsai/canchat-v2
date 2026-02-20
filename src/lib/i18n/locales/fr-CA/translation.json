@@ -1187,6 +1187,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Inscrivez-vous à {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Connexion à {{WEBUI_NAME}}",
 	"sk-1234": "sk-1234",
+	"Some search results were trimmed to fit the model's limit.": "Certains résultats de recherche ont été raccourcis pour respecter les limites du modèle.",
 	"Source": "Source",
 	"Speech Playback Speed": "Vitesse de lecture vocale",
 	"Speech recognition error: {{error}}": "Erreur de reconnaissance vocale : {{error}}",

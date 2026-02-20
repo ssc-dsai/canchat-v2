@@ -80,6 +80,40 @@ async def send_get_request(url, key=None):
         return None
 
 
+async def send_post_request_json(url, payload, key=None):
+    """Send a POST request and return the JSON response (non-streaming)."""
+    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            async with session.post(
+                url,
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    **({
+                        "Authorization": f"Bearer {key}"
+                    } if key else {}),
+                },
+            ) as response:
+                return await response.json()
+    except Exception as e:
+        log.error(f"Connection error: {e}")
+        return None
+
+
+def extract_context_length(show_response: dict) -> Optional[int]:
+    """Extract context length from an Ollama /api/show response."""
+    if not show_response:
+        return None
+
+    model_info = show_response.get("model_info", {})
+    for key, value in model_info.items():
+        if key.endswith(".context_length"):
+            return int(value)
+
+    return None
+
+
 async def cleanup_response(
     response: Optional[aiohttp.ClientResponse],
     session: Optional[aiohttp.ClientSession],
@@ -328,6 +362,24 @@ async def get_all_models(request: Request):
                 )
             )
         }
+
+        # Fetch context length for each model via /api/show
+        async def _fetch_model_context_length(model):
+            url_idx = model["urls"][0]
+            url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+            key = get_api_key(
+                url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS
+            )
+            show_resp = await send_post_request_json(
+                f"{url}/api/show", {"name": model["model"]}, key
+            )
+            ctx = extract_context_length(show_resp)
+            if ctx is not None:
+                model["context_length"] = ctx
+
+        await asyncio.gather(
+            *[_fetch_model_context_length(m) for m in models["models"]]
+        )
 
     else:
         models = {"models": []}

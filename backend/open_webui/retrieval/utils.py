@@ -513,26 +513,9 @@ async def get_sources_from_files(
         try:
             if "documents" in context:
                 if "metadatas" in context:
-                    # Truncate each document to prevent 413 Request Entity Too Large
-                    # Web search results can be massive HTML pages
-                    from open_webui.config import RAG_WEB_SEARCH_MAX_DOC_CHARS
-
-                    max_doc_chars = RAG_WEB_SEARCH_MAX_DOC_CHARS.value
-                    truncated_docs = []
-                    for doc in context["documents"][0]:
-                        if len(doc) > max_doc_chars:
-                            truncated_docs.append(
-                                doc[:max_doc_chars] + "... [content truncated]"
-                            )
-                            log.info(
-                                f"Truncated document from {len(doc)} to {max_doc_chars} chars"
-                            )
-                        else:
-                            truncated_docs.append(doc)
-
                     source = {
                         "source": context["file"],
-                        "document": truncated_docs,
+                        "document": context["documents"][0],
                         "metadata": context["metadatas"][0],
                     }
                     if "distances" in context and context["distances"]:

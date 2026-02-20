@@ -1867,13 +1867,53 @@ WIKIPEDIA_GROUNDING_MAX_CONCURRENT = PersistentConfig(
     int(os.getenv("WIKIPEDIA_GROUNDING_MAX_CONCURRENT", "5")),
 )
 
-# Maximum tokens for RAG/web search context to prevent exceeding model context windows
-# Default: 4000 tokens (~16000 characters) - conservative limit that works for most models
-# This prevents web search/RAG results from consuming too much of the context window
-RAG_CONTEXT_MAX_TOKENS = PersistentConfig(
-    "RAG_CONTEXT_MAX_TOKENS",
-    "rag.context.max_tokens",
-    int(os.getenv("RAG_CONTEXT_MAX_TOKENS", "4000")),
+RAG_CONTEXT_FALLBACK_MAX_TOKENS = PersistentConfig(
+    "RAG_CONTEXT_FALLBACK_MAX_TOKENS",
+    "rag.context.fallback_max_tokens",
+    int(os.getenv("RAG_CONTEXT_FALLBACK_MAX_TOKENS", "16000")),
+)
+
+RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE = PersistentConfig(
+    "RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE",
+    "rag.context_token_limit_percentage",
+    os.environ.get("RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE", "0.5"),
+)
+
+_DEFAULT_MODEL_CONTEXT_LENGTHS = {
+    # GPT-5
+    "gpt-5": 1047576,
+    # GPT-4.1 family
+    "gpt-4.1-nano": 1047576,
+    "gpt-4.1-mini": 1047576,
+    "gpt-4.1": 1047576,
+    # GPT-4o family
+    "gpt-4o-mini": 128000,
+    "gpt-4o": 128000,
+    "chatgpt-4o": 128000,
+    # o-series reasoning models
+    "o3-mini": 200000,
+    "o3-pro": 200000,
+    "o3": 200000,
+    "o4-mini": 200000,
+    "o1-mini": 128000,
+    "o1-pro": 200000,
+    "o1": 200000,
+    # Google Gemini
+    "gemini-2.5-flash": 1048576,
+    "gemini-2.5-pro": 1048576,
+    "gemini-2.0-flash": 1048576,
+    "gemini-1.5-pro": 2097152,
+    "gemini-1.5-flash": 1048576,
+    # Cohere
+    "command-a": 256000,
+    "command-r-plus": 128000,
+    "command-r": 128000,
+}
+
+MODEL_CONTEXT_LENGTHS = PersistentConfig(
+    "MODEL_CONTEXT_LENGTHS",
+    "models.context_lengths",
+    json.loads(os.getenv("MODEL_CONTEXT_LENGTHS", json.dumps(_DEFAULT_MODEL_CONTEXT_LENGTHS))),
 )
 
 # You can provide a list of your own websites to filter after performing a web search.
@@ -1998,14 +2038,6 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
     "rag.web.search.concurrent_requests",
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
-)
-
-# Maximum characters per document to prevent 413 Request Entity Too Large
-# Web search results can be massive HTML pages. Default: 8000 chars (~2000 tokens)
-RAG_WEB_SEARCH_MAX_DOC_CHARS = PersistentConfig(
-    "RAG_WEB_SEARCH_MAX_DOC_CHARS",
-    "rag.web.search.max_doc_chars",
-    int(os.getenv("RAG_WEB_SEARCH_MAX_DOC_CHARS", "8000")),
 )
 
 RAG_WEB_LOADER_ENGINE = PersistentConfig(

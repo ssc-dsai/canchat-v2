@@ -1187,6 +1187,7 @@
 	"Sign up to {{WEBUI_NAME}}": "",
 	"Signing in to {{WEBUI_NAME}}": "",
 	"sk-1234": "",
+	"Some search results were trimmed to fit the model's limit.": "",
 	"Source": "",
 	"Speech Playback Speed": "",
 	"Speech recognition error: {{error}}": "",
