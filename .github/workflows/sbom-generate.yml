@@ -58,6 +58,8 @@ jobs:
         with:
           name: CycloneDX SBOM comparison-history.md
           path: .sbom/comparison-history.md
+          continueOnError: true
+
 
       - name: Compare SBOMs
         id: compare-sboms
