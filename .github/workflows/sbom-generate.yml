@@ -79,36 +79,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: .sbom/current.json
-      - name: CycloneDX SBOM previous.json
-        uses: actions/upload-artifact@v4
-        with:
-          path: .sbom/previous.json
-      - name: CycloneDX SBOM printout current.txt
-        uses: actions/upload-artifact@v4
-        with:
-          path: .sbom/current.txt
-      - name: CycloneDX SBOM printout previous.txt
-        uses: actions/upload-artifact@v4
-        with:
-          path: .sbom/previous.txt
-      - name: CycloneDX SBOM table current.csv
-        uses: actions/upload-artifact@v4
-        with:
-          path: .sbom/current.csv
-      - name: CycloneDX SBOM table previous.txt
-        uses: actions/upload-artifact@v4
-        with:
-          path: .sbom/previous.csv
-      - name: CycloneDX SBOM comparison-history.md
-        uses: actions/upload-artifact@v4
-        with:
-          path: .sbom/comparison-history.md
+          name: CycloneDX SBOM current.json
 
 # old
 #      - name: Commit and Push Comparison History
 #        run: |
 #          git config --global user.name "GitHub Actions"
-#          git config --global user.email "actions@github.com"
+#          git config --global user.email "actions@gitxtthub.com"
 #          git add sbom/*
 #          git commit -m "Update SBOM comparison history [$(date +'%Y-%m-%d %H:%M:%S %Z')]" || echo "No changes to commit"
 #          git push
