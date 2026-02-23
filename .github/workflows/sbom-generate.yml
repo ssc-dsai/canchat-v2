@@ -65,7 +65,9 @@ jobs:
 
       - name: Generate Current SBOM SPDX format
         id: current-sbom-spdx
-        run: curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
+        run: |
+          if test -e .sbom/current.spdx.json; then cp -f .sbom/current.spdx.json .sbom/previous.spdx.json; fi
+          curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
         
       - name: Generate Current SBOM CDX format
         id: current-sbom-cdx
