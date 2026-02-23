@@ -70,6 +70,7 @@ jobs:
         id: current-sbom-spdx
         run: |
           if test -e .sbom/current.spdx.json; then cp -f .sbom/current.spdx.json .sbom/previous.spdx.json; fi
+          if test -e .sbom/current.spdx.csv; then cp -f .sbom/current.spdx.csv .sbom/previous.spdx.csv; fi
           curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
         
       - name: Generate Current SBOM CDX format
@@ -94,6 +95,7 @@ jobs:
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
           ./cyclonedx convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.cdx.csv
           ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
+          # downloaded as artifact
           ./cyclonedx convert --input-file .sbom/previous.spdx.json --output-file .sbom/previous.spdx.csv
 
       - name: Compare SBOMs
