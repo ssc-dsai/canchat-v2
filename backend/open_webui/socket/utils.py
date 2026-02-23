@@ -89,7 +89,7 @@ class RedisLock:
             return self.lock_obtained
         except Exception as e:
             self.last_error = e
-            print(f"Error acquiring Redis lock: {e}")
+            log.error(f"Error acquiring Redis lock: {e}")
             return False
 
     async def renew_lock(self):
@@ -112,7 +112,7 @@ class RedisLock:
             return renewed == 1
         except Exception as e:
             self.last_error = e
-            print(f"Error renewing Redis lock: {e}")
+            log.error(f"Error renewing Redis lock: {e}")
             return False
 
     async def release_lock(self):
@@ -139,8 +139,10 @@ class RedisLock:
             )
             return False
         except Exception as e:
-            print(f"Error releasing Redis lock: {e}")
+            log.error(f"Error releasing Redis lock: {e}")
             return False
+        finally:
+            self.lock_obtained = False
 
 
 class RedisDict:
