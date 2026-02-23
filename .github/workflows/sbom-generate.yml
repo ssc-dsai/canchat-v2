@@ -43,15 +43,18 @@ jobs:
           
       - name: Install Dependencies
         run: |
+          # cdxgen
           npm install -g @cyclonedx/cdxgen
+          # cycloneDX
           #brew install cyclonedx/cyclonedx/cyclonedx-cli
           #error no brew
           wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           chmod 777 cyclonedx
+          # sbom-to-excel
           git clone https://github.com/jacobbarkai/sbom-to-excel.git
           pip install -r sbom-to-excel/requirements.txt
+          # initialize folder
           mkdir .sbom
-          ls -R .sbom
 
       - name: Get Previous Run ID
         id: get-run-id
@@ -74,18 +77,12 @@ jobs:
           merge-multiple: true
 
       - name: show files after download
-        continue-on-error: false
         run: ls -R .sbom
 
-      - name: Generate Current SBOM SPDX format
+      - name: Download from Github current SBOM in SPDX JSON format and make pretty
         id: current-sbom-spdx
-        run: |
-          # skipping the SPDX comparison - using CDX - the artifact will simply be overwritten
-          ## if test -e .sbom/current.spdx.json; then cp -f .sbom/current.spdx.json .sbom/previous.spdx.json; fi
-          # skip CSV in SPDX format - stick with CDX version only
-          ## if test -e .sbom/current.spdx.csv; then cp -f .sbom/current.spdx.csv .sbom/previous.spdx.csv; fi
-          curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
-        
+        run: curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
+          
       - name: Generate Current SBOM CDX format
         id: current-sbom-cdx
         run: |
@@ -102,21 +99,19 @@ jobs:
           echo "previous_sbom=.sbom/previous.cdx.json" >> $GITHUB_OUTPUT
           git checkout -
 
-      - name: convert SPDX SBOM to EXCEL
+      - name: convert all SBOM to EXCEL
         id: convert-sbom-to-excel
         run: |
-          python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -v -f cyclonedx -o .sbom/current.cdx.xlsx
-          python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -v -f spdx -o .sbom/current.spdx.xlsx
-        
+          python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json  -v -f cyclonedx -o .sbom/current.cdx.xlsx
+          python sbom-to-excel/sbom_to_excel.py .sbom/previous.cdx.json  -v -f cyclonedx -o .sbom/previous.cdx.xlsx
+          python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -v -f spdx      -o .sbom/current.spdx.xlsx
+      
       - name: Create CSVs
         id: convert-sboms
         run: |
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
           ./cyclonedx convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.cdx.csv
-          # skip - conversion didn't include license - stick with CDX version and try again some other time
-          # ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv --input-format spdxjson
-          ## already downloaded as artifact (copied above instead of converting)
-          ## ./cyclonedx convert --input-file .sbom/previous.spdx.json --output-file .sbom/previous.spdx.csv
+          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv --input-format spdxjson
 
       - name: Compare SBOMs
         id: compare-sboms
