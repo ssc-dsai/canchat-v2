@@ -48,6 +48,8 @@ jobs:
           #error no brew
           wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           chmod 777 cyclonedx
+          git clone https://github.com/jacobbarkai/sbom-to-excel.git
+          pip install -r sbom-to-excel/requirements.txt
           mkdir .sbom
           ls -R .sbom
 
