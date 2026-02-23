@@ -378,7 +378,7 @@ ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
 
-WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
+WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "redis")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
 
