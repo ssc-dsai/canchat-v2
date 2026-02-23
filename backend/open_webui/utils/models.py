@@ -43,6 +43,11 @@ async def get_all_base_models(request: Request):
                 "id": model["model"],
                 "name": model["name"],
                 "object": "model",
+                **(
+                    {"context_length": model["context_length"]}
+                    if "context_length" in model
+                    else {}
+                ),
                 "created": int(time.time()),
                 "owned_by": "ollama",
                 "ollama": model,
@@ -133,6 +138,7 @@ async def get_all_models(request):
         ):
             owned_by = "openai"
             pipe = None
+            context_length = None
             action_ids = []
 
             for model in models:
@@ -143,6 +149,8 @@ async def get_all_models(request):
                     owned_by = model["owned_by"]
                     if "pipe" in model:
                         pipe = model["pipe"]
+                    if "context_length" in model:
+                        context_length = model["context_length"]
                     break
 
             if custom_model.meta:
@@ -160,6 +168,11 @@ async def get_all_models(request):
                     "info": custom_model.model_dump(),
                     "preset": True,
                     **({"pipe": pipe} if pipe is not None else {}),
+                    **(
+                        {"context_length": context_length}
+                        if context_length is not None
+                        else {}
+                    ),
                     "action_ids": action_ids,
                 }
             )
