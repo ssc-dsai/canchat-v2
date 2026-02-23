@@ -606,56 +606,73 @@
 								...(message?.status ? [message?.status] : [])
 							]}
 							{@const status = statusHistory.at(-1)}
-							{@const latestWebSearchQuery =
-								[...statusHistory]
-									.reverse()
-									.find((entry) => entry?.action === 'web_search' && entry?.query)?.query ?? ''}
-							{@const effectiveWebSearchQuery =
-								status?.action === 'web_search'
-									? status?.query || latestWebSearchQuery
-									: status?.query}
-							{#if !status?.hidden}
-								<div class="status-description flex items-center gap-2 py-0.5">
-									{#if status?.done === false}
-										<div class="">
-											<Spinner className="size-4" />
-										</div>
-									{/if}
+								{@const latestWebSearchQuery =
+									[...statusHistory]
+										.reverse()
+										.find((entry) => entry?.action === 'web_search' && entry?.query)?.query ?? ''}
+								{@const latestWebSearchStatus =
+									[...statusHistory]
+										.reverse()
+										.find((entry) => entry?.action === 'web_search' && entry?.urls)}
+								{@const webSearchStatus =
+									status?.action === 'web_search' && status?.urls ? status : latestWebSearchStatus}
+								{@const shouldRenderWebSearchStatus = Boolean(
+									webSearchStatus &&
+										(status?.action === 'web_search' || status?.action === 'rag_context_truncated')
+								)}
+								{@const effectiveWebSearchQuery =
+									webSearchStatus?.query || latestWebSearchQuery}
+								{@const hasRagContextTruncatedStatus = statusHistory.some(
+									(entry) => entry?.action === 'rag_context_truncated'
+								)}
+								{#if !status?.hidden}
+									<div class="status-description flex items-center gap-2 py-0.5">
+										{#if status?.done === false}
+											<div class="">
+												<Spinner className="size-4" />
+											</div>
+										{/if}
 
-									{#if status?.action === 'web_search' && status?.urls}
-										<WebSearchResults status={{ ...status, query: effectiveWebSearchQuery }}>
-											<div class="flex flex-col justify-center -space-y-0.5">
-												<div
-													class="{status?.done === false
-														? 'shimmer'
-														: ''} text-base line-clamp-1 text-wrap"
-												>
+										{#if shouldRenderWebSearchStatus}
+											<WebSearchResults status={{ ...webSearchStatus, query: effectiveWebSearchQuery }}>
+												<div class="flex flex-col justify-center -space-y-0.5">
+													<div
+														class="{webSearchStatus?.done === false
+															? 'shimmer'
+															: ''} text-base line-clamp-1 text-wrap"
+													>
 													<!-- $i18n.t("Generating search query") -->
 													<!-- $i18n.t("No search query generated") -->
 													<!-- $i18n.t('Error searching "{{searchQuery}}"') -->
 													<!-- $i18n.t('No search results found for "{{searchQuery}}"') -->
 													<!-- $i18n.t('Searched {{count}} sites') -->
 													<!-- $i18n.t('Searched {{count}} sites for "{{searchQuery}}"') -->
-													{#if status?.description.includes('{{count}}') && status?.description.includes('{{searchQuery}}')}
-														{$i18n.t(status?.description, {
-															count: status?.urls.length,
-															searchQuery: effectiveWebSearchQuery
-														})}
-													{:else if status?.description.includes('{{count}}')}
-														{$i18n.t(status?.description, {
-															count: status?.urls.length
-														})}
-													{:else if status?.description === 'No search query generated'}
-														{$i18n.t('No search query generated')}
-													{:else if status?.description === 'Generating search query'}
-														{$i18n.t('Generating search query')}
-													{:else}
-														{status?.description}
+														{#if webSearchStatus?.description.includes('{{count}}') &&
+														webSearchStatus?.description.includes('{{searchQuery}}')}
+															{$i18n.t(webSearchStatus?.description, {
+																count: webSearchStatus?.urls.length,
+																searchQuery: effectiveWebSearchQuery
+															})}
+														{:else if webSearchStatus?.description.includes('{{count}}')}
+															{$i18n.t(webSearchStatus?.description, {
+																count: webSearchStatus?.urls.length
+															})}
+														{:else if webSearchStatus?.description === 'No search query generated'}
+															{$i18n.t('No search query generated')}
+														{:else if webSearchStatus?.description === 'Generating search query'}
+															{$i18n.t('Generating search query')}
+														{:else}
+															{webSearchStatus?.description}
+														{/if}
+													</div>
+													{#if hasRagContextTruncatedStatus}
+														<div class="text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
+															{$i18n.t("Some search results were trimmed to fit the model's limit.")}
+														</div>
 													{/if}
 												</div>
-											</div>
-										</WebSearchResults>
-									{:else if status?.action === 'rag_context_truncated'}
+											</WebSearchResults>
+										{:else if status?.action === 'rag_context_truncated'}
 										<div class="flex flex-col justify-center -space-y-0.5">
 											<div
 												class="text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
