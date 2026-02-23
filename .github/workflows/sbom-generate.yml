@@ -35,10 +35,9 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install -g @cyclonedx/cdxgen
-          #npm install json-diff
-          #brew install cyclonedx/cyclonedx/cyclonedx-cli
-          wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
-          chmod 777 cyclonedx-linux-x64
+          brew install cyclonedx/cyclonedx/cyclonedx-cli
+          #wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
+          #chmod 777 cyclonedx-linux-x64
           mkdir .sbom
           ls -R .sbom
 
