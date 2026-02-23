@@ -69,9 +69,10 @@ jobs:
       - name: Generate Current SBOM SPDX format
         id: current-sbom-spdx
         run: |
-          if test -e .sbom/current.spdx.json; then cp -f .sbom/current.spdx.json .sbom/previous.spdx.json; fi
+          # skipping the SPDX comparison - using CDX - the artifact will simply be overwritten
+          ## if test -e .sbom/current.spdx.json; then cp -f .sbom/current.spdx.json .sbom/previous.spdx.json; fi
           # skip CSV in SPDX format - stick with CDX version only
-          # if test -e .sbom/current.spdx.csv; then cp -f .sbom/current.spdx.csv .sbom/previous.spdx.csv; fi
+          ## if test -e .sbom/current.spdx.csv; then cp -f .sbom/current.spdx.csv .sbom/previous.spdx.csv; fi
           curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
         
       - name: Generate Current SBOM CDX format
@@ -119,17 +120,13 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: SBOM-Artifacts
-          path: .sbom/
-        #  |
-        #    .sbom/comparison.md
-        #    .sbom/comparison-history.md
-        #    .sbom/current.cdx.csv
-        #    .sbom/current.cdx.json
-        #    .sbom/current.spdx.csv
-        #    .sbom/current.spdx.json
-        #    .sbom/current.txt
-        #    .sbom/previous.cdx.csv
-        #    .sbom/previous.cdx.json
-        #    .sbom/previous.spdx.csv
-        #    .sbom/previous.spdx.json
-        #    .sbom/previous.txt
+          path: |
+            .sbom/comparison.md
+            .sbom/comparison-history.md
+            .sbom/current.cdx.csv
+            .sbom/current.cdx.json
+            .sbom/current.spdx.json
+            .sbom/current.txt
+            .sbom/previous.cdx.csv
+            .sbom/previous.cdx.json
+            .sbom/previous.txt
