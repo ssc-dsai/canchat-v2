@@ -104,7 +104,7 @@ jobs:
 
       - name: convert SPDX SBOM to EXCEL
         id: convert-sbom-to-excel
-        run: python sbom-to-excel/sbom-to-excel.py .sbom/current.spdx.json -f spdx -o .sbom/current.spdx.xlsx
+        run: python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -f spdx -o .sbom/current.spdx.xlsx
         
       - name: Create CSVs
         id: convert-sboms
