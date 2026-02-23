@@ -601,40 +601,34 @@
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
-							<!-- Use template-local @const values to avoid repeating long status expressions -->
 							{@const statusHistory = message?.statusHistory ?? [
 								...(message?.status ? [message?.status] : [])
 							]}
 							{@const status = statusHistory.at(-1)}
-							{@const latestWebSearchQuery =
-								[...statusHistory]
-									.reverse()
-									.find((entry) => entry?.action === 'web_search' && entry?.query)?.query ?? ''}
-							{@const latestWebSearchStatus = [...statusHistory]
-								.reverse()
-								.find((entry) => entry?.action === 'web_search' && entry?.urls)}
-							{@const webSearchStatus =
-								status?.action === 'web_search' && status?.urls ? status : latestWebSearchStatus}
-							{@const shouldRenderWebSearchStatus = Boolean(
-								webSearchStatus &&
-								(status?.action === 'web_search' || status?.action === 'rag_context_truncated')
-							)}
-							{@const effectiveWebSearchQuery = webSearchStatus?.query || latestWebSearchQuery}
 							{@const hasRagContextTruncatedStatus = statusHistory.some(
 								(entry) => entry?.action === 'rag_context_truncated'
 							)}
-							{#if !status?.hidden}
+							{@const latestWebSearchStatus = [...statusHistory]
+								.reverse()
+								.find((entry) => entry?.action === 'web_search' && entry?.urls)}
+							{@const shouldRenderRagFallbackWebSearchStatus = Boolean(
+								latestWebSearchStatus &&
+								hasRagContextTruncatedStatus &&
+								(status?.hidden || status?.action === 'rag_context_truncated')
+							)}
+							{#if !status?.hidden || shouldRenderRagFallbackWebSearchStatus}
 								<div class="status-description flex items-center gap-2 py-0.5">
-									{#if status?.done === false}
+									{#if !status?.hidden && status?.done === false}
 										<div class="">
 											<Spinner className="size-4" />
 										</div>
 									{/if}
 
-									{#if shouldRenderWebSearchStatus}
-										<WebSearchResults
-											status={{ ...webSearchStatus, query: effectiveWebSearchQuery }}
-										>
+									{#if shouldRenderRagFallbackWebSearchStatus || (status?.action === 'web_search' && status?.urls)}
+										{@const webSearchStatus = shouldRenderRagFallbackWebSearchStatus
+											? latestWebSearchStatus
+											: status}
+										<WebSearchResults status={webSearchStatus}>
 											<div class="flex flex-col justify-center -space-y-0.5">
 												<div
 													class="{webSearchStatus?.done === false
@@ -650,7 +644,7 @@
 													{#if webSearchStatus?.description.includes('{{count}}') && webSearchStatus?.description.includes('{{searchQuery}}')}
 														{$i18n.t(webSearchStatus?.description, {
 															count: webSearchStatus?.urls.length,
-															searchQuery: effectiveWebSearchQuery
+															searchQuery: webSearchStatus?.query
 														})}
 													{:else if webSearchStatus?.description.includes('{{count}}')}
 														{$i18n.t(webSearchStatus?.description, {
@@ -743,10 +737,7 @@
 												<!-- $i18n.t(`Searching "{{searchQuery}}"`) -->
 												{#if status?.description.includes('{{searchQuery}}')}
 													{$i18n.t(status?.description, {
-														searchQuery:
-															status?.action === 'web_search'
-																? effectiveWebSearchQuery
-																: status?.query
+														searchQuery: status?.query
 													})}
 												{:else if status?.description === 'No search query generated'}
 													{$i18n.t('No search query generated')}
