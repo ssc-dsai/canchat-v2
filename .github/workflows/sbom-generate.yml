@@ -75,6 +75,7 @@ jobs:
           cdxgen -o .sbom/compact.current.cdx.json -p > .sbom/current.txt
           cat .sbom/compact.current.cdx.json | jq > .sbom/current.cdx.json
           echo "current_sbom=.sbom/current.cdx.json" >> $GITHUB_OUTPUT
+          cat .sbom/current.txt >> $GITHUB_STEP_SUMMARY
 
       - name: Generate Previous SBOM CDX format
         id: previous-sbom-cdx
