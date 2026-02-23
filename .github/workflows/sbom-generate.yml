@@ -104,7 +104,9 @@ jobs:
 
       - name: convert SPDX SBOM to EXCEL
         id: convert-sbom-to-excel
-        run: python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -f spdx -o .sbom/current.spdx.xlsx
+        run: |
+          python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -v -f cyclonedx -o .sbom/current.cdx.xlsx
+          python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -v -f spdx -o .sbom/current.spdx.xlsx
         
       - name: Create CSVs
         id: convert-sboms
@@ -139,6 +141,7 @@ jobs:
             .sbom/comparison.md
             .sbom/comparison-history.md
             .sbom/current.cdx.csv
+            .sbom/current.cdx.xlsx
             .sbom/current.cdx.json
             .sbom/current.spdx.xlsx
             .sbom/current.spdx.json
