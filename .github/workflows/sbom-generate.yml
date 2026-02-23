@@ -30,8 +30,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22' # was 18
-
+          node-version: '24'
+          
       - name: Install Dependencies
         run: |
           npm install -g @cyclonedx/cdxgen
@@ -61,7 +61,7 @@ jobs:
       - name: Download SBOM Artifacts from previous execution
         id: download-artifacts
         if: steps.check_artifact.outputs.exists == 'true'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         # if doesn't exist continue or if this fails may need to check if exists in advance
         continue-on-error: true
         with:
@@ -118,7 +118,7 @@ jobs:
         run: ls -R .sbom
 
       - name: Upload SBOM Artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: SBOM-Artifacts
           path: |
