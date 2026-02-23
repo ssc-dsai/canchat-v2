@@ -100,12 +100,19 @@ jobs:
           git checkout -
 
       - name: convert all SBOM to EXCEL
-        id: convert-sbom-to-excel
+        id: convert-current-cdx-to-excel
         continue-on-error: true
-        run: |
-          python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json  -v -f cyclonedx -o .sbom/current.cdx.xlsx
-          python sbom-to-excel/sbom_to_excel.py .sbom/previous.cdx.json  -v -f cyclonedx -o .sbom/previous.cdx.xlsx
-          python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -v -f spdx      -o .sbom/current.spdx.xlsx
+        run: python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
+
+      - name: convert all SBOM to EXCEL
+        id: convert-previous-cdx-to-excel
+        continue-on-error: true
+        run: python sbom-to-excel/sbom_to_excel.py .sbom/previous.cdx.json -o .sbom/previous.cdx.xlsx
+
+      - name: convert all SBOM to EXCEL
+        id: convert-current-spdx-to-excel
+        continue-on-error: true
+        run: python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
       
       - name: Create CSVs
         id: convert-sboms
