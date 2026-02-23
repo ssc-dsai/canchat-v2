@@ -35,12 +35,10 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install -g @cyclonedx/cdxgen
-          npm install -g @cyclonedx/cyclonedx-npm
           #brew install cyclonedx/cyclonedx/cyclonedx-cli
           #error no brew
-          #wget -O cdxgen https://github.com/cdxgen/cdxgen/releases/download/v12.1.0/cdxgen-linux-amd64
-          #wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
-          #chmod 777 cyclonedx
+          wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
+          chmod 777 cyclonedx
           mkdir .sbom
           ls -R .sbom
 
