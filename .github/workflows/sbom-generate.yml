@@ -35,9 +35,12 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install -g @cyclonedx/cdxgen
+          npm install -g @cyclonedx/cyclonedx-npm
           #brew install cyclonedx/cyclonedx/cyclonedx-cli
-          #wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
-          #chmod 777 cyclonedx-linux-x64
+          #error no brew
+          #wget -O cdxgen https://github.com/cdxgen/cdxgen/releases/download/v12.1.0/cdxgen-linux-amd64
+          #wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
+          #chmod 777 cyclonedx
           mkdir .sbom
           ls -R .sbom
 
@@ -62,6 +65,7 @@ jobs:
           merge-multiple: true
 
       - name: show files after download
+        continue-on-error: false
         run: ls -R .sbom
 
       - name: Generate Current SBOM SPDX format
@@ -89,9 +93,8 @@ jobs:
       - name: Create CSVs
         id: convert-sboms
         run: |
-          docker run cyclonedx/cyclonedx-cli convert --input-file .sbom/current.cdx.json --output-file .sbom/current.csv
-          docker run cyclonedx/cyclonedx-cli convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.csv
-          # old, ./cyclonedx-linux-x64 convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.csv
+          cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.csv
+          cyclonedx convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.csv
 
       - name: Compare SBOMs
         id: compare-sboms
@@ -99,7 +102,7 @@ jobs:
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           # new comparison file
           echo "### SBOM Comparison Report - $TIMESTAMP" > .sbom/comparison.md
-          docker run cyclonedx/cyclonedx-cli diff .sbom/previous.cdx.json .sbom/current.cdx.json --component-versions --output-format text >> .sbom/comparison.md
+          cyclonedx diff .sbom/previous.cdx.json .sbom/current.cdx.json --component-versions --output-format text >> .sbom/comparison.md
           echo "" >> .sbom/comparison.md  # Add a newline for separation
           # append comparison file to history file and cat new history to github summary
           cat .sbom/comparison.md >> .sbom/comparison-history.md # copy differnces to the historic version
