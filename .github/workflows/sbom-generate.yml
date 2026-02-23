@@ -115,6 +115,7 @@ jobs:
             .sbom/current.cdx.json
             .sbom/current.txt
             .sbom/current.csv
+            .sbom/previous.spdx.json
             .sbom/previous.cdx.json
             .sbom/previous.txt
             .sbom/previous.csv
