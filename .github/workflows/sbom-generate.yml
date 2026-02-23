@@ -101,6 +101,7 @@ jobs:
 
       - name: convert all SBOM to EXCEL
         id: convert-sbom-to-excel
+        continue-on-error: true
         run: |
           python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json  -v -f cyclonedx -o .sbom/current.cdx.xlsx
           python sbom-to-excel/sbom_to_excel.py .sbom/previous.cdx.json  -v -f cyclonedx -o .sbom/previous.cdx.xlsx
