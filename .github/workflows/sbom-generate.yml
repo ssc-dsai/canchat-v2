@@ -64,14 +64,18 @@ jobs:
       - name: show files after download
         run: ls -R .sbom
 
-      - name: Generate Current SBOM
-        id: current-sbom
+      - name: Generate Current SBOM SPDX format
+        id: current-sbom-spdx
+        run: curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom > .sbom/current.spdx.json
+        
+      - name: Generate Current SBOM CDX format
+        id: current-sbom-cdx
         run: |
           cdxgen -o .sbom/current.cdx.json -p > .sbom/current.txt
           echo "current_sbom=.sbom/current.cdx.json" >> $GITHUB_OUTPUT
 
-      - name: Generate Previous SBOM
-        id: previous-sbom
+      - name: Generate Previous SBOM CDX format
+        id: previous-sbom-cdx
         run: |
           git checkout HEAD^
           cdxgen -o .sbom/previous.cdx.json -p > .sbom/previous.txt
@@ -104,6 +108,7 @@ jobs:
         with:
           name: SBOM-Artifacts
           path: |
+            .sbom/current.spdx.json
             .sbom/current.cdx.json
             .sbom/current.txt
             .sbom/current.csv
