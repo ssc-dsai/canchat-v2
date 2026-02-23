@@ -90,7 +90,7 @@ jobs:
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           # new comparison file
           echo "### SBOM Comparison Report - $TIMESTAMP" > .sbom/comparison.md
-          ./cyclonedx-linux-x64 diff .sbom/current.cdx.json .sbom/previous.cdx.json --output-format text >> .sbom/comparison.md
+          ./cyclonedx-linux-x64 diff .sbom/previous.cdx.json .sbom/current.cdx.json --component-verisons --output-format text >> .sbom/comparison.md
           echo "" >> .sbom/comparison.md  # Add a newline for separation
           # append comparison file to history file and cat new history to github summary
           cat .sbom/comparison.md >> .sbom/comparison-history.md # copy differnces to the historic version
