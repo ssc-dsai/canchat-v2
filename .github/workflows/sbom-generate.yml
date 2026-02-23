@@ -54,9 +54,13 @@ jobs:
         id: check_artifact
         uses: softwareforgood/check-artifact-v4-existence@v0
         with:
+          path: .sbom
           name: SBOM-Artifacts
+          run-id: ${{ steps.get-run-id.outputs.run_id }}
+          github-token:  ${{ secrets.GITHUB_TOKEN}} # Use a custom ie: MY_PAT_TOKEN for cross-repo and cross-run access
 
       - name: Download SBOM Artifacts from previous execution
+        id: download-artifacts
         if: steps.check_artifact.outputs.exists == 'true'
         uses: actions/download-artifact@v5
         continue-on-error: true
