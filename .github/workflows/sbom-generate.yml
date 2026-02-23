@@ -50,7 +50,14 @@ jobs:
             | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
+      - name: Check if previous artifact exists
+        id: check_artifact
+        uses: softwareforgood/check-artifact-v4-existence@v0
+        with:
+          name: SBOM-Artifacts
+
       - name: Download SBOM Artifacts from previous execution
+        if: steps.check_artifact.outputs.exists == 'true'
         uses: actions/download-artifact@v5
         continue-on-error: true
         with:
