@@ -71,14 +71,16 @@ jobs:
       - name: Generate Current SBOM CDX format
         id: current-sbom-cdx
         run: |
-          cdxgen -o .sbom/current.cdx.json -p | jq > .sbom/current.txt
+          cdxgen -o .sbom/compact.current.cdx.json -p > .sbom/current.txt
+          cat .sbom/compact.current.cdx.json | jq > .sbom/current.cdx.json
           echo "current_sbom=.sbom/current.cdx.json" >> $GITHUB_OUTPUT
 
       - name: Generate Previous SBOM CDX format
         id: previous-sbom-cdx
         run: |
           git checkout HEAD^
-          cdxgen -o .sbom/previous.cdx.json -p | jq > .sbom/previous.txt
+          cdxgen -o .sbom/compact.previous.cdx.json -p > .sbom/previous.txt
+          cat .sbom/compact.previous.cdx.json | jq > .sbom/previous.cdx.json
           echo "previous_sbom=.sbom/previous.cdx.json" >> $GITHUB_OUTPUT
           git checkout -
 
