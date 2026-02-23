@@ -95,8 +95,8 @@ jobs:
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
           ./cyclonedx convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.cdx.csv
           ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
-          # downloaded as artifact
-          ./cyclonedx convert --input-file .sbom/previous.spdx.json --output-file .sbom/previous.spdx.csv
+          # already downloaded as artifact (copied above instead of converting)
+          # ./cyclonedx convert --input-file .sbom/previous.spdx.json --output-file .sbom/previous.spdx.csv
 
       - name: Compare SBOMs
         id: compare-sboms
