@@ -54,21 +54,21 @@ jobs:
         id: check_artifact
         uses: softwareforgood/check-artifact-v4-existence@v0
         with:
-          path: .sbom
           name: SBOM-Artifacts
           run-id: ${{ steps.get-run-id.outputs.run_id }}
-          github-token:  ${{ secrets.GITHUB_TOKEN}} # Use a custom ie: MY_PAT_TOKEN for cross-repo and cross-run access
+          github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
 
       - name: Download SBOM Artifacts from previous execution
         id: download-artifacts
         if: steps.check_artifact.outputs.exists == 'true'
         uses: actions/download-artifact@v5
+        # if doesn't exist continue or if this fails may need to check if exists in advance
         continue-on-error: true
         with:
           path: .sbom
           name: SBOM-Artifacts
           run-id: ${{ steps.get-run-id.outputs.run_id }}
-          github-token:  ${{ secrets.GITHUB_TOKEN}} # Use a custom ie: MY_PAT_TOKEN for cross-repo and cross-run access
+          github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
           merge-multiple: true
 
       - name: show files after download
@@ -86,7 +86,6 @@ jobs:
           cdxgen -o .sbom/compact.current.cdx.json -p > .sbom/current.txt
           cat .sbom/compact.current.cdx.json | jq > .sbom/current.cdx.json
           echo "current_sbom=.sbom/current.cdx.json" >> $GITHUB_OUTPUT
-          cat .sbom/current.txt >> $GITHUB_STEP_SUMMARY
 
       - name: Generate Previous SBOM CDX format
         id: previous-sbom-cdx
