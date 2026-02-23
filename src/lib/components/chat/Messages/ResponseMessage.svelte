@@ -601,9 +601,19 @@
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
-							{@const status = (
-								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
-							).at(-1)}
+							<!-- Use template-local @const values to avoid repeating long status expressions -->
+							{@const statusHistory = message?.statusHistory ?? [
+								...(message?.status ? [message?.status] : [])
+							]}
+							{@const status = statusHistory.at(-1)}
+							{@const latestWebSearchQuery =
+								[...statusHistory]
+									.reverse()
+									.find((entry) => entry?.action === 'web_search' && entry?.query)?.query ?? ''}
+							{@const effectiveWebSearchQuery =
+								status?.action === 'web_search'
+									? status?.query || latestWebSearchQuery
+									: status?.query}
 							{#if !status?.hidden}
 								<div class="status-description flex items-center gap-2 py-0.5">
 									{#if status?.done === false}
@@ -613,7 +623,7 @@
 									{/if}
 
 									{#if status?.action === 'web_search' && status?.urls}
-										<WebSearchResults {status}>
+										<WebSearchResults status={{ ...status, query: effectiveWebSearchQuery }}>
 											<div class="flex flex-col justify-center -space-y-0.5">
 												<div
 													class="{status?.done === false
@@ -622,9 +632,16 @@
 												>
 													<!-- $i18n.t("Generating search query") -->
 													<!-- $i18n.t("No search query generated") -->
-
+													<!-- $i18n.t('Error searching "{{searchQuery}}"') -->
+													<!-- $i18n.t('No search results found for "{{searchQuery}}"') -->
 													<!-- $i18n.t('Searched {{count}} sites') -->
-													{#if status?.description.includes('{{count}}')}
+													<!-- $i18n.t('Searched {{count}} sites for "{{searchQuery}}"') -->
+													{#if status?.description.includes('{{count}}') && status?.description.includes('{{searchQuery}}')}
+														{$i18n.t(status?.description, {
+															count: status?.urls.length,
+															searchQuery: effectiveWebSearchQuery
+														})}
+													{:else if status?.description.includes('{{count}}')}
 														{$i18n.t(status?.description, {
 															count: status?.urls.length
 														})}
@@ -700,7 +717,10 @@
 												<!-- $i18n.t(`Searching "{{searchQuery}}"`) -->
 												{#if status?.description.includes('{{searchQuery}}')}
 													{$i18n.t(status?.description, {
-														searchQuery: status?.query
+														searchQuery:
+															status?.action === 'web_search'
+																? effectiveWebSearchQuery
+																: status?.query
 													})}
 												{:else if status?.description === 'No search query generated'}
 													{$i18n.t('No search query generated')}
