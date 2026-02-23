@@ -1986,7 +1986,11 @@
 		? '  md:max-w-[calc(100%-260px)]'
 		: ' '} w-full max-w-full flex flex-col"
 	id="chat-container"
+	role="main"
 >
+	<h1 class="sr-only">
+		{$chatTitle ? `${$i18n.t('Chat')}: ${$chatTitle}` : $i18n.t('Chat')}
+	</h1>
 	{#if !chatIdProp || (loaded && chatIdProp)}
 		<Navbar
 			bind:this={navbarElement}
