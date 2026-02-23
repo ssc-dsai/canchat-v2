@@ -119,7 +119,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: SBOM-Artifacts
-          path: .sbom/*
+          path: .sbom/
         #  |
         #    .sbom/comparison.md
         #    .sbom/comparison-history.md
