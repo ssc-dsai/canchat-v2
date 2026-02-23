@@ -91,8 +91,10 @@ jobs:
       - name: Create CSVs
         id: convert-sboms
         run: |
-          ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.csv
-          ./cyclonedx convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.csv
+          ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
+          ./cyclonedx convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.cdx.csv
+          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
+          ./cyclonedx convert --input-file .sbom/previous.spdx.json --output-file .sbom/previous.spdx.csv
 
       - name: Compare SBOMs
         id: compare-sboms
@@ -113,14 +115,5 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: SBOM-Artifacts
-          path: |
-            .sbom/current.spdx.json
-            .sbom/current.cdx.json
-            .sbom/current.txt
-            .sbom/current.csv
-            .sbom/previous.spdx.json
-            .sbom/previous.cdx.json
-            .sbom/previous.txt
-            .sbom/previous.csv
-            .sbom/comparison.md
-            .sbom/comparison-history.md
+          path: .sbom/*
+          
