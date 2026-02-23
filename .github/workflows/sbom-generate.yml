@@ -115,5 +115,16 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: SBOM-Artifacts
-          path: .sbom/*
-          
+          path: |
+            .sbom/comparison.md
+            .sbom/comparison-history.md
+            .sbom/current.cdx.csv
+            .sbom/current.cdx.json
+            .sbom/current.spdx.csv
+            .sbom/current.spdx.json
+            .sbom/current.txt
+            .sbom/previous.cdx.csv
+            .sbom/previous.cdx.json
+            .sbom/previous.spdx.csv
+            .sbom/previous.spdx.json
+            .sbom/previous.txt
