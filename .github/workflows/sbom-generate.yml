@@ -102,6 +102,10 @@ jobs:
           echo "previous_sbom=.sbom/previous.cdx.json" >> $GITHUB_OUTPUT
           git checkout -
 
+      - name: convert SPDX SBOM to EXCEL
+        id: convert-sbom-to-excel
+        run: python sbom-to-excel/sbom-to-excel.py .sbom/current.spdx.json -f spdx -o .sbom/current.spdx.xlsx
+        
       - name: Create CSVs
         id: convert-sboms
         run: |
@@ -136,6 +140,7 @@ jobs:
             .sbom/comparison-history.md
             .sbom/current.cdx.csv
             .sbom/current.cdx.json
+            .sbom/current.spdx.xlsx
             .sbom/current.spdx.json
             .sbom/current.txt
             .sbom/previous.cdx.csv
