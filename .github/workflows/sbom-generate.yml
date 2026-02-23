@@ -35,7 +35,7 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install -g @cyclonedx/cdxgen
-          brew install cyclonedx/cyclonedx/cyclonedx-cli
+          #brew install cyclonedx/cyclonedx/cyclonedx-cli
           #wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           #chmod 777 cyclonedx-linux-x64
           mkdir .sbom
@@ -89,8 +89,9 @@ jobs:
       - name: Create CSVs
         id: convert-sboms
         run: |
-          ./cyclonedx-linux-x64 convert --input-file .sbom/current.cdx.json --output-file .sbom/current.csv
-          ./cyclonedx-linux-x64 convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.csv
+          docker run cyclonedx/cyclonedx-cli convert --input-file .sbom/current.cdx.json --output-file .sbom/current.csv
+          docker run cyclonedx/cyclonedx-cli convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.csv
+          # old, ./cyclonedx-linux-x64 convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.csv
 
       - name: Compare SBOMs
         id: compare-sboms
@@ -98,7 +99,7 @@ jobs:
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           # new comparison file
           echo "### SBOM Comparison Report - $TIMESTAMP" > .sbom/comparison.md
-          ./cyclonedx-linux-x64 diff .sbom/previous.cdx.json .sbom/current.cdx.json --component-versions --output-format text >> .sbom/comparison.md
+          docker run cyclonedx/cyclonedx-cli diff .sbom/previous.cdx.json .sbom/current.cdx.json --component-versions --output-format text >> .sbom/comparison.md
           echo "" >> .sbom/comparison.md  # Add a newline for separation
           # append comparison file to history file and cat new history to github summary
           cat .sbom/comparison.md >> .sbom/comparison-history.md # copy differnces to the historic version
