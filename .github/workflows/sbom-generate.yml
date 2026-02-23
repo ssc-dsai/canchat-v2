@@ -1,4 +1,13 @@
 name: SBOM Generate
+# target steps:
+# download current sbom (from github) - SPDX format - (timestamp/maybe PR)
+# compare - output SBOM containing only the changed entries
+# create excel from the comparison file
+
+# Steps: Safe a copy of the current SMOB file and date to last PR number, run CI checks, then Copy the newly generate SBOM.
+# Then run a JSON file compare of the last current som against the newly create SBOM. Crfeate two files, 
+# a diff file and latest SBONM in excel format
+
 
 on:
   pull_request:
