@@ -1,7 +1,6 @@
+from open_webui.env import DATABASE_SCHEMA
 from sqlalchemy import MetaData
 from sqlalchemy.ext.declarative import declarative_base
-
-from open_webui.env import DATABASE_SCHEMA
 
 """
 Defines the Base of all of the models used in the Database.

@@ -1,11 +1,11 @@
 import logging
 import time
 
-from open_webui.internal.db import get_async_db
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.base import Base
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, delete, select, String, Text, JSON
+from sqlalchemy import JSON, BigInteger, String, Text, delete, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 log = logging.getLogger(__name__)
@@ -99,10 +99,16 @@ class FileForm(BaseModel):
 
 
 class FilesTable:
+
+    __db: AsyncDatabaseConnector
+
+    def __init__(self, db_connector: AsyncDatabaseConnector) -> None:
+        self.__db = db_connector
+
     async def insert_new_file(
         self, user_id: str, form_data: FileForm
     ) -> FileModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             file = FileModel(
                 **{
                     **form_data.model_dump(),
@@ -126,7 +132,7 @@ class FilesTable:
                 return None
 
     async def get_file_by_id(self, id: str) -> FileModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 file = await db.get(File, id)
                 return FileModel.model_validate(file)
@@ -134,7 +140,7 @@ class FilesTable:
                 return None
 
     async def get_file_metadata_by_id(self, id: str) -> FileMetadataResponse | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 file = await db.get(File, id)
                 if file:
@@ -149,12 +155,12 @@ class FilesTable:
                 return None
 
     async def get_files(self) -> list[FileModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             files = await db.scalars(select(File))
             return [FileModel.model_validate(file) for file in files.all()]
 
     async def get_files_by_ids(self, ids: list[str]) -> list[FileModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             files = await db.scalars(
                 select(File).where(File.id.in_(ids)).order_by(File.updated_at.desc())
             )
@@ -163,7 +169,7 @@ class FilesTable:
     async def get_file_metadatas_by_ids(
         self, ids: list[str]
     ) -> list[FileMetadataResponse]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             query = (
                 select(File.id, File.meta, File.created_at, File.updated_at)
                 .where(File.id.in_(ids))
@@ -182,12 +188,12 @@ class FilesTable:
             ]
 
     async def get_files_by_user_id(self, user_id: str) -> list[FileModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             files = await db.scalars(select(File).where(File.user_id == user_id))
             return [FileModel.model_validate(file) for file in files.all()]
 
     async def update_file_hash_by_id(self, id: str, hash: str) -> FileModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 file = await db.scalar(select(File).where(File.id == id))
 
@@ -201,7 +207,7 @@ class FilesTable:
                 return None
 
     async def update_file_data_by_id(self, id: str, data: dict) -> FileModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 file = await db.scalar(select(File).where(File.id == id))
 
@@ -215,7 +221,7 @@ class FilesTable:
                 return None
 
     async def update_file_metadata_by_id(self, id: str, meta: dict) -> FileModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 file = await db.scalar(select(File).where(File.id == id))
 
@@ -229,7 +235,7 @@ class FilesTable:
                 return None
 
     async def delete_file_by_id(self, id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 _ = await db.execute(delete(File).where(File.id == id))
                 await db.commit()
@@ -239,13 +245,10 @@ class FilesTable:
                 return False
 
     async def delete_all_files(self) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 _ = await db.scalar(delete(File))
                 await db.commit()
                 return True
             except Exception:
                 return False
-
-
-Files = FilesTable()

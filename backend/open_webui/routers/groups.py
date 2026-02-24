@@ -1,13 +1,11 @@
-from open_webui.models.users import Users
-from open_webui.models.groups import (
-    Groups,
-    GroupForm,
-    GroupUpdateForm,
-    GroupResponse,
-)
-
-from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, status
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.models.db_services import GROUPS, USERS
+from open_webui.models.groups import (
+    GroupForm,
+    GroupResponse,
+    GroupUpdateForm,
+)
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()
@@ -21,9 +19,9 @@ router = APIRouter()
 @router.get("/", response_model=list[GroupResponse])
 async def get_groups(user=Depends(get_verified_user)):
     if user.role == "admin":
-        return await Groups.get_groups()
+        return await GROUPS.get_groups()
     else:
-        return await Groups.get_groups_by_member_id(user.id)
+        return await GROUPS.get_groups_by_member_id(user.id)
 
 
 ############################
@@ -34,7 +32,7 @@ async def get_groups(user=Depends(get_verified_user)):
 @router.post("/create", response_model=GroupResponse | None)
 async def create_new_function(form_data: GroupForm, user=Depends(get_admin_user)):
     try:
-        group = await Groups.insert_new_group(user.id, form_data)
+        group = await GROUPS.insert_new_group(user.id, form_data)
         if group:
             return group
         else:
@@ -57,7 +55,7 @@ async def create_new_function(form_data: GroupForm, user=Depends(get_admin_user)
 
 @router.get("/id/{id}", response_model=GroupResponse | None)
 async def get_group_by_id(id: str, user=Depends(get_admin_user)):
-    group = await Groups.get_group_by_id(id)
+    group = await GROUPS.get_group_by_id(id)
     if group:
         return group
     else:
@@ -78,13 +76,13 @@ async def update_group_by_id(
 ):
     try:
         if form_data.user_ids:
-            form_data.user_ids = await Users.get_valid_user_ids(form_data.user_ids)
+            form_data.user_ids = await USERS.get_valid_user_ids(form_data.user_ids)
 
         # Get the current group state before update to compare domain changes
-        current_group = await Groups.get_group_by_id(id)
+        current_group = await GROUPS.get_group_by_id(id)
 
         # Update the group
-        group = await Groups.update_group_by_id(id, form_data)
+        group = await GROUPS.update_group_by_id(id, form_data)
 
         if group:
             return group
@@ -110,7 +108,7 @@ async def update_group_by_id(
 async def get_available_domains(user=Depends(get_admin_user)):
     """Get all unique domains from existing users in the database"""
     try:
-        domains = await Users.get_user_domains()
+        domains = await USERS.get_user_domains()
         return sorted(domains)  # Return sorted list of domains
     except Exception as e:
         print(f"Error getting domains: {e}")
@@ -128,8 +126,8 @@ async def get_available_domains(user=Depends(get_admin_user)):
 @router.delete("/id/{id}/delete", response_model=bool)
 async def delete_group_by_id(id: str, user=Depends(get_admin_user)):
     try:
-        result = await Groups.delete_group_by_id(id)
-        if result:
+
+        if result := await GROUPS.delete_group_by_id(id):
             return result
         else:
             raise HTTPException(

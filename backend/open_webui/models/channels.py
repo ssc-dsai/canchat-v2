@@ -1,12 +1,10 @@
 import time
 import uuid
 
-from open_webui.internal.db import get_async_db
+from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.base import Base
-from open_webui.utils.access_control import has_access
-
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, delete, select, Text, JSON
+from sqlalchemy import JSON, BigInteger, Text, delete, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 ####################
@@ -64,10 +62,16 @@ class ChannelForm(BaseModel):
 
 
 class ChannelTable:
+
+    __db: AsyncDatabaseConnector
+
+    def __init__(self, db_connector: AsyncDatabaseConnector) -> None:
+        self.__db = db_connector
+
     async def insert_new_channel(
         self, type: str | None, form_data: ChannelForm, user_id: str
     ) -> ChannelModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             channel = ChannelModel(
                 **{
                     **form_data.model_dump(),
@@ -87,13 +91,15 @@ class ChannelTable:
             return channel
 
     async def get_channels(self) -> list[ChannelModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             channels = await db.scalars(select(Channel))
             return [ChannelModel.model_validate(channel) for channel in channels.all()]
 
     async def get_channels_by_user_id(
         self, user_id: str, permission: str = "read"
     ) -> list[ChannelModel]:
+        from open_webui.utils.access_control import has_access
+
         channels = await self.get_channels()
         return [
             channel
@@ -103,14 +109,14 @@ class ChannelTable:
         ]
 
     async def get_channel_by_id(self, id: str) -> ChannelModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             channel = await db.scalar(select(Channel).where(Channel.id == id))
             return ChannelModel.model_validate(channel) if channel else None
 
     async def update_channel_by_id(
         self, id: str, form_data: ChannelForm
     ) -> ChannelModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             channel = await db.scalar(select(Channel).where(Channel.id == id))
             if not channel:
                 return None
@@ -125,10 +131,7 @@ class ChannelTable:
             return ChannelModel.model_validate(channel) if channel else None
 
     async def delete_channel_by_id(self, id: str):
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             _ = await db.execute(delete(Channel).where(Channel.id == id))
             await db.commit()
             return True
-
-
-Channels = ChannelTable()

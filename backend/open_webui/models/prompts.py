@@ -2,22 +2,20 @@ import logging
 import time
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.internal.db import get_async_db
+from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.base import Base
-from open_webui.models.users import Users, UserResponse
-from open_webui.utils.access_control import has_access
-
+from open_webui.models.users import User, UserModel, UserResponse, UsersTable
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
+    JSON,
     BigInteger,
+    String,
+    Text,
     cast,
     delete,
     func,
-    JSON,
     or_,
     select,
-    String,
-    Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -86,6 +84,15 @@ class PromptForm(BaseModel):
 
 
 class PromptsTable:
+    __db: AsyncDatabaseConnector
+    __users: UsersTable
+
+    def __init__(
+        self, db_connector: AsyncDatabaseConnector, users_table: UsersTable
+    ) -> None:
+        self.__db = db_connector
+        self.__users = users_table
+
     async def insert_new_prompt(
         self, user_id: str, form_data: PromptForm
     ) -> PromptModel | None:
@@ -98,7 +105,7 @@ class PromptsTable:
         )
 
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 result = Prompt(**prompt.model_dump())
                 db.add(result)
                 await db.commit()
@@ -112,7 +119,7 @@ class PromptsTable:
 
     async def get_prompt_by_command(self, command: str) -> PromptModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 prompt = await db.scalar(
                     select(Prompt).where(Prompt.command == command)
                 )
@@ -121,10 +128,7 @@ class PromptsTable:
             return None
 
     async def get_prompts(self) -> list[PromptUserResponse]:
-        async with get_async_db() as db:
-            # Import User model to do the join
-            from open_webui.models.users import User
-
+        async with self.__db.get_async_db() as db:
             # Single query with JOIN to avoid N+1 problem and nested connections
             query = (
                 select(Prompt, User)
@@ -139,8 +143,6 @@ class PromptsTable:
                 for prompt, user in results.all():
                     user_data = None
                     if user:
-                        from open_webui.models.users import UserModel
-
                         user_data = UserModel.model_validate(user).model_dump()
 
                     prompts.append(
@@ -161,7 +163,7 @@ class PromptsTable:
         self, page: int = 1, limit: int = 20, search: str | None = None
     ) -> list[PromptModel]:
         """Get paginated prompts with optional search"""
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             query = select(Prompt).order_by(Prompt.timestamp.desc())
 
             # Apply search filter if provided
@@ -183,7 +185,7 @@ class PromptsTable:
         self, page: int = 1, limit: int = 20, search: str | None = None
     ) -> list[PromptUserResponse]:
         """Get paginated prompts with user info and optional search"""
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             # Import User model for the join
             from open_webui.models.users import User
 
@@ -228,7 +230,7 @@ class PromptsTable:
 
     async def get_prompts_count(self, search: str | None = None) -> int:
         """Get total count of prompts with optional search filter"""
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             query = select(func.count()).select_from(Prompt)
 
             # Apply search filter if provided
@@ -250,7 +252,7 @@ class PromptsTable:
         search: str | None = None,
     ) -> list[PromptModel]:
         """Get paginated prompts by user - users only see their own prompts"""
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             query = select(Prompt).order_by(Prompt.timestamp.desc())
 
             # Users only see their own prompts
@@ -280,7 +282,7 @@ class PromptsTable:
     ) -> list[PromptUserResponse]:
         """Get paginated prompts by user with user info - users only see their own prompts"""
         # Use JOIN query to avoid N+1 problem
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             from open_webui.models.users import User, UserModel
 
             # Single query with JOIN
@@ -327,7 +329,7 @@ class PromptsTable:
         self, user_id: str, search: str | None = None
     ) -> int:
         """Get count of prompts for user - users only see their own prompts"""
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             query = select(func.count()).select_from(Prompt)
 
             # Users only see their own prompts
@@ -346,7 +348,7 @@ class PromptsTable:
 
     async def get_prompts_by_user_id(self, user_id: str) -> list[PromptUserResponse]:
         """Get prompts for user - users only see their own prompts"""
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             # Import User model to do the join
             from open_webui.models.users import User
 
@@ -383,7 +385,7 @@ class PromptsTable:
         self, command: str, form_data: PromptForm
     ) -> PromptModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 if prompt := await db.scalar(
                     select(Prompt).where(Prompt.command == command)
                 ):
@@ -399,7 +401,7 @@ class PromptsTable:
 
     async def delete_prompt_by_command(self, command: str) -> bool:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 _ = await db.execute(delete(Prompt).where(Prompt.command == command))
                 await db.commit()
 
@@ -417,7 +419,9 @@ class PromptsTable:
         It uses SQL OR conditions to filter for public prompts and user's own prompts,
         then only checks access control for the remaining subset.
         """
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
+            from open_webui.utils.access_control import has_access
+
             # Database-agnostic condition using SQLAlchemy cast for PostgreSQL compatibility
             public_prompt_condition = or_(
                 Prompt.access_control.is_(None),
@@ -480,7 +484,7 @@ class PromptsTable:
         # Add user info
         prompts_with_users: list[PromptUserResponse] = []
         for prompt in prompts:
-            user = await Users.get_user_by_id(prompt.user_id)
+            user = await self.__users.get_user_by_id(prompt.user_id)
             prompts_with_users.append(
                 PromptUserResponse.model_validate(
                     {
@@ -496,7 +500,9 @@ class PromptsTable:
         self, user_id: str, search: str | None = None
     ) -> int:
         """Get count of prompts the user has access to"""
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
+            from open_webui.utils.access_control import has_access
+
             # Database-agnostic condition using SQLAlchemy cast for PostgreSQL compatibility
             public_prompt_condition = or_(
                 Prompt.access_control.is_(None),
@@ -541,6 +547,3 @@ class PromptsTable:
                     accessible_count += 1
 
             return accessible_count
-
-
-Prompts = PromptsTable()

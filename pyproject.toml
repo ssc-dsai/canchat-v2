@@ -70,3 +70,20 @@ ignore-words-list = 'ans'
 pythonpath = ["backend","backend/open_webui"]
 # Define the directory where pytest should look for tests
 testpaths = ["backend/open_webui/test"]
+
+[tool.ruff.lint]
+ignore = ["E501"]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]

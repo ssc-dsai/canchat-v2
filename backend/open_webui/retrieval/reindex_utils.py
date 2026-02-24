@@ -4,21 +4,21 @@ Separated to reduce cyclomatic complexity and provide cleaner interfaces.
 """
 
 import logging
-from typing import Optional, Dict, Any
-from open_webui.models.files import Files
-from open_webui.models.users import Users
+from typing import Any
+
 from open_webui.constants import VECTOR_COLLECTION_PREFIXES
+from open_webui.models.db_services import FILES, USERS
 
 log = logging.getLogger(__name__)
 
 
 async def get_file_and_user_for_reindex(file_id: str):
     """Get file and user objects needed for re-indexing."""
-    file = await Files.get_file_by_id(file_id)
+    file = await FILES.get_file_by_id(file_id)
     if not file:
         return None, None
 
-    user = await Users.get_user_by_id(file.user_id) if file.user_id else None
+    user = await USERS.get_user_by_id(file.user_id) if file.user_id else None
     return file, user
 
 
@@ -27,7 +27,7 @@ def collection_not_found_error(error_str: str) -> bool:
     return "doesn't exist" in error_str or "not found" in error_str.lower()
 
 
-def extract_file_id_from_collection(collection_name: str) -> Optional[str]:
+def extract_file_id_from_collection(collection_name: str) -> str | None:
     """Extract file ID from collection name if it's a file collection."""
     if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE):
         return collection_name.replace(VECTOR_COLLECTION_PREFIXES.FILE, "")
@@ -36,7 +36,7 @@ def extract_file_id_from_collection(collection_name: str) -> Optional[str]:
 
 async def attempt_reindex_and_retry(
     collection_name: str, k: int, query_embedding, file_id: str
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any | None]:
     """
     Attempt to re-index a file and retry the query.
     Returns the query result if successful, None otherwise.
@@ -94,7 +94,7 @@ async def attempt_reindex_and_retry(
 
 async def handle_collection_query_with_reindex(
     collection_name: str, k: int, query_embedding
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any | None]:
     """
     Handle querying a collection with automatic re-indexing on collection not found errors.
     This is the main interface that replaces the complex inline logic.

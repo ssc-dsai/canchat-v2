@@ -1,30 +1,21 @@
-import logging
-import sys
 import inspect
 import json
-
-from pydantic import BaseModel
+import logging
+import sys
 from typing import AsyncGenerator, Generator, Iterator
+
 from fastapi import (
     Request,
 )
+from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
-
+from open_webui.env import GLOBAL_LOG_LEVEL, SRC_LOG_LEVELS
+from open_webui.models.db_services import FUNCTIONS, MODELS
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
-
-
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-
-from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.tools import get_tools_async
-
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
-
 from open_webui.utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
@@ -33,6 +24,8 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
+from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.tools import get_tools_async
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -48,13 +41,13 @@ async def get_function_module_by_id(request: Request, pipe_id: str):
         function_module = request.app.state.FUNCTIONS[pipe_id]
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-        valves = await Functions.get_function_valves_by_id(pipe_id)
+        valves = await FUNCTIONS.get_function_valves_by_id(pipe_id)
         function_module.valves = function_module.Valves(**(valves if valves else {}))
     return function_module
 
 
 async def get_function_models(request):
-    pipes = await Functions.get_functions_by_type("pipe", active_only=True)
+    pipes = await FUNCTIONS.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
     for pipe in pipes:
@@ -173,7 +166,7 @@ async def generate_function_chat_completion(
         }
 
         if "__user__" in params and hasattr(function_module, "UserValves"):
-            user_valves = await Functions.get_user_valves_by_id_and_user_id(
+            user_valves = await FUNCTIONS.get_user_valves_by_id_and_user_id(
                 pipe_id, user.id
             )
             try:
@@ -185,7 +178,7 @@ async def generate_function_chat_completion(
         return params
 
     model_id = form_data.get("model")
-    model_info = await Models.get_model_by_id(model_id)
+    model_info = await MODELS.get_model_by_id(model_id)
 
     metadata = form_data.pop("metadata", {})
 
