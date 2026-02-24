@@ -188,7 +188,9 @@ async def test_local_mode_acquires_without_redis_init(monkeypatch):
     """When USE_REDIS_LOCKS is false, lock acquisition should work without Redis initialization."""
     monkeypatch.setattr(locks_module, "USE_REDIS_LOCKS", False)
     manager = get_collection_lock_manager()
-    manager._init_redis_client = AsyncMock(side_effect=RuntimeError("should not be called"))
+    manager._init_redis_client = AsyncMock(
+        side_effect=RuntimeError("should not be called")
+    )
 
     async with manager.acquire_lock("local-mode-collection") as lock:
         assert manager.use_redis_locks is False
