@@ -128,10 +128,10 @@ jobs:
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           # new comparison file
-          echo "### SBOM Comparison Report - $TIMESTAMP" > .sbom/comparison.md
-          # switch from cyclone to sbomdiff
+          echo "## SBOM Comparison Report - $TIMESTAMP" > .sbom/comparison.md
+          # switch to sbomdiff from cyclonedx diff
           # ./cyclonedx diff .sbom/previous.cdx.json .sbom/current.cdx.json --component-versions --output-format text >> .sbom/comparison.md
-          sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json >> .sbom/comparison.md
+          sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --format text >> .sbom/comparison.md
           echo "" >> .sbom/comparison.md  # Add a newline for separation
           # append comparison file to history file and cat new history to github summary
           cat .sbom/comparison.md >> .sbom/comparison-history.md # copy differnces to the historic version
