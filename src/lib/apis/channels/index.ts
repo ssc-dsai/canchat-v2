@@ -1,6 +1,4 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { WEBUI_API_BASE_PATH } from '$lib/constants';
-import { t } from 'i18next';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 type ChannelForm = {
 	name: string;
@@ -12,12 +10,18 @@ type ChannelForm = {
 export const createNewChannel = async (token: string = '', channel: ChannelForm) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/create`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/create`, {
 		method: 'POST',
-		data: { ...channel }
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ ...channel })
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -38,11 +42,17 @@ export const createNewChannel = async (token: string = '', channel: ChannelForm)
 export const getChannels = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -63,11 +73,17 @@ export const getChannels = async (token: string = '') => {
 export const getChannelById = async (token: string = '', channel_id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/${channel_id}`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -92,12 +108,18 @@ export const updateChannelById = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update`, {
 		method: 'POST',
-		data: { ...channel }
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ ...channel })
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -118,11 +140,17 @@ export const updateChannelById = async (
 export const deleteChannelById = async (token: string = '', channel_id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/delete`, {
-		method: 'DELETE'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/delete`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -148,14 +176,20 @@ export const getChannelMessages = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages?skip=${skip}&limit=${limit}`,
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages?skip=${skip}&limit=${limit}`,
 		{
-			method: 'GET'
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
 	)
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -182,14 +216,20 @@ export const getChannelThreadMessages = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/thread?skip=${skip}&limit=${limit}`,
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/thread?skip=${skip}&limit=${limit}`,
 		{
-			method: 'GET'
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
 	)
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -217,12 +257,18 @@ type MessageForm = {
 export const sendMessage = async (token: string = '', channel_id: string, message: MessageForm) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/post`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/post`, {
 		method: 'POST',
-		data: { ...message }
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ ...message })
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -248,15 +294,21 @@ export const updateMessage = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/update`,
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/update`,
 		{
 			method: 'POST',
-			data: { ...message }
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({ ...message })
 		}
 	)
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -282,15 +334,21 @@ export const addReaction = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/reactions/add`,
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/reactions/add`,
 		{
 			method: 'POST',
-			data: { name }
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({ name })
 		}
 	)
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -316,15 +374,21 @@ export const removeReaction = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/reactions/remove`,
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/reactions/remove`,
 		{
 			method: 'POST',
-			data: { name }
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({ name })
 		}
 	)
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;
@@ -345,14 +409,20 @@ export const removeReaction = async (
 export const deleteMessage = async (token: string = '', channel_id: string, message_id: string) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${WEBUI_API_BASE_PATH}/channels/${channel_id}/messages/${message_id}/delete`,
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/delete`,
 		{
-			method: 'DELETE'
+			method: 'DELETE',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
 	)
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.then((json) => {
 			return json;

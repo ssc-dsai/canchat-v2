@@ -295,6 +295,8 @@ from open_webui.env import (
 )
 
 from open_webui.custom_logging import LoggingMiddleware, reconfigure_access_log
+from open_webui.session.session_service import setup_session_service
+from open_webui.session.middleware import UserSessionMiddleware
 
 from open_webui.utils.models import (
     get_all_models,
@@ -389,6 +391,9 @@ async def lifespan(app: FastAPI):
 
     if RESET_CONFIG_ON_START:
         reset_config()
+
+    # Setup the session service.
+    await setup_session_service()
 
     # Initialize metrics service
     try:
@@ -946,6 +951,7 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
 
 # Add the middleware to the app
+app.add_middleware(UserSessionMiddleware)
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 

@@ -1,5 +1,8 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { MCP_API_BASE_PATH } from '$lib/constants';
+import { MCP_API_BASE_URL } from '$lib/constants';
+import i18next from 'i18next';
+
+const getFetchErrorMessage = (err: any) =>
+	err?.message === 'Failed to fetch' ? i18next.t('Failed to fetch') : err?.message;
 
 export const verifyMCPConnection = async (
 	token: string = '',
@@ -8,18 +11,24 @@ export const verifyMCPConnection = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/verify`, {
+	const res = await fetch(`${MCP_API_BASE_URL}/verify`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
 			url,
 			key
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('MCP connection check failed. Please try again.')}`;
 			return null;
 		});
 
@@ -33,14 +42,20 @@ export const verifyMCPConnection = async (
 export const getMCPConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/config`, {
-		method: 'GET'
+	const res = await fetch(`${MCP_API_BASE_URL}/config`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load MCP configuration. Please try again.')}`;
 			return [];
 		});
 
@@ -54,15 +69,21 @@ export const getMCPConfig = async (token: string = '') => {
 export const updateMCPConfig = async (token: string = '', config: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/config/update`, {
+	const res = await fetch(`${MCP_API_BASE_URL}/config/update`, {
 		method: 'POST',
-		data: config
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(config)
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to update MCP configuration. Please try again.')}`;
 			return [];
 		});
 
@@ -76,14 +97,20 @@ export const updateMCPConfig = async (token: string = '', config: object) => {
 export const getMCPURLs = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/urls`, {
-		method: 'GET'
+	const res = await fetch(`${MCP_API_BASE_URL}/urls`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load MCP server URLs. Please try again.')}`;
 			return [];
 		});
 
@@ -97,17 +124,23 @@ export const getMCPURLs = async (token: string = '') => {
 export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/urls/update`, {
+	const res = await fetch(`${MCP_API_BASE_URL}/urls/update`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
 			urls
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to update MCP server URLs. Please try again.')}`;
 			return [];
 		});
 
@@ -121,14 +154,20 @@ export const updateMCPURLs = async (token: string = '', urls: string[]) => {
 export const getMCPTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/tools`, {
-		method: 'GET'
+	const res = await fetch(`${MCP_API_BASE_URL}/tools`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load MCP tools. Please try again.')}`;
 			return [];
 		});
 
@@ -146,18 +185,24 @@ export const callMCPTool = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/tools/call`, {
+	const res = await fetch(`${MCP_API_BASE_URL}/tools/call`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
 			tool_name,
 			parameters
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('MCP tool call failed. Please try again.')}`;
 			return null;
 		});
 
@@ -171,14 +216,20 @@ export const callMCPTool = async (
 export const getBuiltinServers = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/builtin`, {
-		method: 'GET'
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/builtin`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load built-in MCP servers. Please try again.')}`;
 			return { servers: [] };
 		});
 
@@ -192,14 +243,20 @@ export const getBuiltinServers = async (token: string = '') => {
 export const restartBuiltinServer = async (token: string = '', serverName: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/builtin/${serverName}/restart`, {
-		method: 'POST'
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/builtin/${serverName}/restart`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to restart built-in MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -215,14 +272,20 @@ export const restartBuiltinServer = async (token: string = '', serverName: strin
 export const getExternalServers = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external`, {
-		method: 'GET'
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/external`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load external MCP servers. Please try again.')}`;
 			return { servers: [] };
 		});
 
@@ -236,15 +299,21 @@ export const getExternalServers = async (token: string = '') => {
 export const createExternalServer = async (token: string = '', serverData: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external`, {
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/external`, {
 		method: 'POST',
-		data: serverData
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(serverData)
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to create external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -258,14 +327,20 @@ export const createExternalServer = async (token: string = '', serverData: objec
 export const getExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
-		method: 'GET'
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -283,15 +358,21 @@ export const updateExternalServer = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
 		method: 'PUT',
-		data: serverData
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(serverData)
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to update external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -305,14 +386,20 @@ export const updateExternalServer = async (
 export const deleteExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}`, {
-		method: 'DELETE'
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to delete external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -326,14 +413,20 @@ export const deleteExternalServer = async (token: string = '', serverId: string 
 export const startExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}/start`, {
-		method: 'POST'
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}/start`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to start external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -347,14 +440,20 @@ export const startExternalServer = async (token: string = '', serverId: string =
 export const stopExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}/stop`, {
-		method: 'POST'
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}/stop`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to stop external MCP server. Please try again.')}`;
 			return null;
 		});
 
@@ -368,14 +467,20 @@ export const stopExternalServer = async (token: string = '', serverId: string = 
 export const restartExternalServer = async (token: string = '', serverId: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${MCP_API_BASE_PATH}/servers/external/${serverId}/restart`, {
-		method: 'POST'
+	const res = await fetch(`${MCP_API_BASE_URL}/servers/external/${serverId}/restart`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to restart external MCP server. Please try again.')}`;
 			return null;
 		});
 

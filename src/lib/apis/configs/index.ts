@@ -1,18 +1,22 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { WEBUI_API_BASE_PATH } from '$lib/constants';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 import type { Banner } from '$lib/types';
 
 export const importConfig = async (token: string, config) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/import`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/import`, {
 		method: 'POST',
-		data: {
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			config: config
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -30,11 +34,16 @@ export const importConfig = async (token: string, config) => {
 export const exportConfig = async (token: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/export`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/export`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -52,11 +61,16 @@ export const exportConfig = async (token: string) => {
 export const getModelsConfig = async (token: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/models`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -74,14 +88,19 @@ export const getModelsConfig = async (token: string) => {
 export const setModelsConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/models`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models`, {
 		method: 'POST',
-		data: {
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			...config
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -99,14 +118,19 @@ export const setModelsConfig = async (token: string, config: object) => {
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/suggestions`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/suggestions`, {
 		method: 'POST',
-		data: {
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			suggestions: promptSuggestions
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -124,11 +148,16 @@ export const setDefaultPromptSuggestions = async (token: string, promptSuggestio
 export const getBanners = async (token: string): Promise<Banner[]> => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/banners`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/banners`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -146,14 +175,19 @@ export const getBanners = async (token: string): Promise<Banner[]> => {
 export const setBanners = async (token: string, banners: Banner[]) => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/banners`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/banners`, {
 		method: 'POST',
-		data: {
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			banners: banners
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -179,11 +213,16 @@ export interface ChatLifetimeConfig {
 export const getChatLifetimeConfig = async (token: string): Promise<ChatLifetimeConfig> => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/chat-lifetime`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/chat-lifetime`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data as ChatLifetimeConfig;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -204,12 +243,17 @@ export const updateChatLifetimeConfig = async (
 ): Promise<ChatLifetimeConfig> => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/chat-lifetime`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/chat-lifetime`, {
 		method: 'POST',
-		data: config
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
 	})
 		.then(async (res) => {
-			res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -235,19 +279,31 @@ export const triggerChatCleanup = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${WEBUI_API_BASE_PATH}/retrieval/maintenance/cleanup/expired-chats`,
-		{
-			method: 'POST',
-			params: {
-				max_age_days: options?.max_age_days,
-				preserve_pinned: options?.preserve_pinned,
-				preserve_archived: options?.preserve_archived
-			}
+	const queryParams = new URLSearchParams();
+	if (options?.max_age_days !== undefined) {
+		queryParams.append('max_age_days', options.max_age_days.toString());
+	}
+	if (options?.preserve_pinned !== undefined) {
+		queryParams.append('preserve_pinned', options.preserve_pinned.toString());
+	}
+	if (options?.preserve_archived !== undefined) {
+		queryParams.append('preserve_archived', options.preserve_archived.toString());
+	}
+
+	const url = `${WEBUI_API_BASE_URL}/retrieval/maintenance/cleanup/expired-chats${
+		queryParams.toString() ? `?${queryParams.toString()}` : ''
+	}`;
+
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
 		}
-	)
+	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -273,20 +329,34 @@ export const triggerComprehensiveCleanup = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${WEBUI_API_BASE_PATH}/retrieval/maintenance/cleanup/comprehensive`,
-		{
-			method: 'POST',
-			params: {
-				max_age_days: options?.max_age_days,
-				include_chat_cleanup: options?.include_chat_cleanup,
-				preserve_pinned: options?.preserve_pinned,
-				preserve_archived: options?.preserve_archived
-			}
+	const queryParams = new URLSearchParams();
+	if (options?.max_age_days !== undefined) {
+		queryParams.append('max_age_days', options.max_age_days.toString());
+	}
+	if (options?.include_chat_cleanup !== undefined) {
+		queryParams.append('include_chat_cleanup', options.include_chat_cleanup.toString());
+	}
+	if (options?.preserve_pinned !== undefined) {
+		queryParams.append('preserve_pinned', options.preserve_pinned.toString());
+	}
+	if (options?.preserve_archived !== undefined) {
+		queryParams.append('preserve_archived', options.preserve_archived.toString());
+	}
+
+	const url = `${WEBUI_API_BASE_URL}/retrieval/maintenance/cleanup/comprehensive${
+		queryParams.toString() ? `?${queryParams.toString()}` : ''
+	}`;
+
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
 		}
-	)
+	})
 		.then(async (res) => {
-			return res.data``;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -307,17 +377,25 @@ export interface ChatLifetimeScheduleInfo {
 	next_run: string | null;
 	lifetime_days: number;
 	schedule?: string;
+	schedule_cron?: string;
+	schedule_timezone?: string;
+	reason?: string;
 	error?: string;
 }
 
 export const getChatLifetimeSchedule = async (token: string): Promise<ChatLifetimeScheduleInfo> => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/configs/chat-lifetime/schedule`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/chat-lifetime/schedule`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);

@@ -1,20 +1,29 @@
-import { WEBUI_API_BASE_PATH } from '$lib/constants';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { get } from 'svelte/store';
 import { socket } from '$lib/stores';
 import type { Socket } from 'socket.io-client';
-import canchatAPI from '$lib/apis/canchatAPI';
+import i18next from 'i18next';
+
+const getFetchErrorMessage = (err: any) =>
+	err?.message === 'Failed to fetch' ? i18next.t('Failed to fetch') : err?.message;
 
 export const getCrewMCPStatus = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/crew-mcp/status`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/status`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load CrewAI MCP status. Please try again.')}`;
 			return null;
 		});
 
@@ -28,14 +37,20 @@ export const getCrewMCPStatus = async (token: string = '') => {
 export const getCrewMCPTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/crew-mcp/tools`, {
-		method: 'GET'
+	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/tools`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load CrewAI MCP tools. Please try again.')}`;
 			return null;
 		});
 
@@ -59,30 +74,35 @@ export const queryCrewMCP = async (
 	// Create an AbortController with extended timeout for long-running MCP operations
 	// SharePoint document analysis can take 120-180 seconds in production
 	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes timeout
+	const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
 
-	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/crew-mcp/query`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			query: query,
 			model: model,
 			selected_tools: selectedTools,
 			chat_id: chatId,
 			session_id: sessionId
-		},
+		}),
 		signal: controller.signal
 	})
 		.then(async (res) => {
 			clearTimeout(timeoutId);
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			clearTimeout(timeoutId);
 			if (err.name === 'AbortError') {
-				error =
-					'CrewAI MCP: Request timeout after 3 minutes. The analysis may be too complex or the SharePoint site has too many documents.';
+				error = `CrewAI MCP: ${i18next.t('Request timeout after 3 minutes. The analysis may be too complex or the SharePoint site has too many documents.')}`;
 			} else {
-				error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+				error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('CrewAI MCP query failed. Please try again.')}`;
 			}
 			return null;
 		});

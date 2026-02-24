@@ -1,5 +1,6 @@
 import hashlib
 import re
+import os
 import time
 import uuid
 from datetime import timedelta
@@ -314,7 +315,7 @@ def parse_ollama_modelfile(model_text):
         "mirostat": int,
         "mirostat_eta": float,
         "mirostat_tau": float,
-        "num_ctx": int,
+        "num_ctx": int,  # Kept for Modelfile parsing; user UI control removed
         "repeat_last_n": int,
         "repeat_penalty": float,
         "temperature": float,
@@ -408,3 +409,28 @@ def parse_ollama_modelfile(model_text):
         data["params"]["messages"] = messages
 
     return data
+
+
+def validate_path(path: str, base_dir: str | list[str]) -> str:
+    """
+    Validates that a path is within the specified base directory or directories.
+
+    Args:
+        path (str): The path to validate.
+        base_dir (str | list[str]): The base directory or list of base directories.
+
+    Returns:
+        str: The resolved absolute path if valid.
+
+    Raises:
+        ValueError: If the path is outside the base directory.
+    """
+    absolute_path = os.path.abspath(path)
+    base_dirs = [base_dir] if isinstance(base_dir, str) else base_dir
+    resolved_base_dirs = [os.path.abspath(base) for base in base_dirs]
+
+    for base in resolved_base_dirs:
+        if absolute_path.startswith(base):
+            return absolute_path
+
+    raise ValueError(f"Path {path} is outside of expected directories: {base_dirs}")

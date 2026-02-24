@@ -37,6 +37,9 @@ export class BasePage {
 	// --- Locators: System ---
 	readonly splashLogo: Locator;
 
+	// --- Locators: Toast ---
+	readonly toast: Locator;
+
 	constructor(page: Page, lang: 'en-GB' | 'fr-CA' = 'en-GB') {
 		this.page = page;
 		this.lang = lang;
@@ -53,6 +56,8 @@ export class BasePage {
 		this.splashLogo = page.locator('img#logo[alt="CANChat Logo"]');
 
 		this.updateLanguage(lang);
+
+		this.toast = page.locator('li[role="status"]');
 	}
 
 	/**
@@ -235,5 +240,23 @@ export class BasePage {
 	 */
 	getTranslation(key: string): string {
 		return (this.t as any)[key] || key;
+	}
+
+	/**
+	 * Verifies that a success toast appeared with specific text
+	 * @param messageKey The translation key for the expected message
+	 */
+	async verifyToast(messageKey: string) {
+		const expectedText = this.getTranslation(messageKey);
+		const specificToast = this.toast.filter({ hasText: expectedText }).first();
+		await expect(specificToast).toBeAttached();
+	}
+
+	/**
+	 * Reads text content directly from the browser clipboard.
+	 * Requires clipboard-read permission.
+	 */
+	async getClipboardText(): Promise<string> {
+		return await this.page.evaluate(() => navigator.clipboard.readText());
 	}
 }

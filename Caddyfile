@@ -5,7 +5,7 @@
 
 http:// {
 	reverse_proxy http://localhost:8080 {
-		header_up X-Forwarded-Email testuser@test.ca
-		header_up X-Forwarded-User Test User
+		# header_up X-Forwarded-Email testuser@test.ca
+		# header_up X-Forwarded-User Test User
 	}
 }

@@ -1,5 +1,7 @@
 <script>
-	import { createEventDispatcher, getContext } from 'svelte';
+	import { getI18n } from '$lib/utils/context';
+
+	import { createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import { updateMemoryById } from '$lib/apis/memories';
@@ -11,7 +13,7 @@
 	export let show;
 	export let memory = {};
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	let loading = false;
 	let content = '';
@@ -51,6 +53,7 @@
 			</div>
 			<button
 				class="self-center"
+				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
 				}}
