@@ -702,6 +702,8 @@ async def chat_web_search_handler(
         }
     )
 
+    terminal_status_sent = False
+
     try:
         results = await process_web_search(
             request,
@@ -743,13 +745,14 @@ async def chat_web_search_handler(
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": "No search results found",
+                        "description": 'No search results found for "{{searchQuery}}"',
                         "query": searchQuery,
                         "done": True,
                         "error": True,
                     },
                 }
             )
+            terminal_status_sent = True
     except Exception as e:
         log.exception(e)
         await event_emitter(
@@ -764,6 +767,7 @@ async def chat_web_search_handler(
                 },
             }
         )
+        terminal_status_sent = True
 
     if all_results:
         urls = []
@@ -776,19 +780,21 @@ async def chat_web_search_handler(
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": "Searched {{count}} sites",
+                    "description": 'Searched {{count}} sites for "{{searchQuery}}"',
                     "urls": urls,
+                    "query": searchQuery,
                     "done": True,
                 },
             }
         )
-    else:
+    elif not terminal_status_sent:
         await event_emitter(
             {
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": "No search results found",
+                    "description": 'No search results found for "{{searchQuery}}"',
+                    "query": searchQuery,
                     "done": True,
                     "error": True,
                 },
