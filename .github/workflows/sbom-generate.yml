@@ -136,6 +136,7 @@ jobs:
 
       - name: Create output
         id: create-output
+        continue-on-error: true
         run: |
           # new comparison file
           # switch to sbomdiff from cyclonedx diff
@@ -148,6 +149,7 @@ jobs:
 
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v6
+        continue-on-error: true
         with:
           name: SBOM-Artifacts
           path: |
@@ -157,4 +159,3 @@ jobs:
             .sbom/current.cdx.csv
             .sbom/current.cdx.json
             .sbom/current.spdx.json
-#            .sbom/previous.cdx.json
