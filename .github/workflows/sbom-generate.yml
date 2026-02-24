@@ -121,23 +121,30 @@ jobs:
 #          python sbom-to-excel/sbom_to_excel.py .sbom/previous.cdx.json -o .sbom/previous.cdx.xlsx
 #          python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
 
-      - name: Compare CDX SBOMs (becasue we have both)
-        id: compare-sboms
+      - name: Compare CDX SBOMs (because we have both)
+        id: compare-sbom-cdx
+        continue-on-error: true
+        run: sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --format text --output-file .sbom/comparison.cdx.md
+
+      - name: Compare SPDX SBOMs (because we have both)
+        id: compare-sbom-spdx
+        continue-on-error: true
+        run: sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --format text --output-file .sbom/comparison.spdx.md
+
+      - name: show files after changes
+        run: ls -R .sbom
+
+      - name: Create output
+        id: create-output
         run: |
-          sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --format text --output-file .sbom/comparison.cdx.md
-          sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --format text --output-file .sbom/comparison.spdx.md
           # new comparison file
           # switch to sbomdiff from cyclonedx diff
           # ./cyclonedx diff .sbom/previous.cdx.json .sbom/current.cdx.json --component-versions --output-format text >> .sbom/comparison.md
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
-          # append comparison file to history file and cat new history to github summary
           echo "" >> .sbom/comparison-history.md
           echo "## Summary Report - $TIMESTAMP" >> .sbom/comparison-history.md  # Add a newline for separation
           cat .sbom/comparison.md >> .sbom/comparison-history.md # copy differnces to the historic version
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
-
-      - name: show files after changes
-        run: ls -R .sbom
 
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v6
