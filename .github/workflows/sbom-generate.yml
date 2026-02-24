@@ -8,7 +8,6 @@ name: SBOM Generate
 # Then run a JSON file compare of the last current som against the newly create SBOM. Crfeate two files, 
 # a diff file and latest SBONM in excel format
 
-
 on:
   pull_request:
     branches:
@@ -43,17 +42,17 @@ jobs:
           
       - name: Install Dependencies
         run: |
-          # cdxgen
+          # cdxgen (create current AND previous, in CDX format ) 
           npm install -g @cyclonedx/cdxgen
-          # cycloneDX
+          # cycloneDX (create CSV from either format SBOM)
           #brew install cyclonedx/cyclonedx/cyclonedx-cli
           #error no brew
           wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           chmod 777 cyclonedx
-          # sbom-to-excel
-          git clone https://github.com/jacobbarkai/sbom-to-excel.git
-          pip install -r sbom-to-excel/requirements.txt
-          # sbomdiff
+          # sbom-to-excel (not mature - tool fails)
+          #git clone https://github.com/jacobbarkai/sbom-to-excel.git
+          #pip install -r sbom-to-excel/requirements.txt
+          # sbomdiff (create a DIFF from either format SBOM into TXT)
           pip install sbomdiff
           # initialize folder
           mkdir .sbom
@@ -81,14 +80,22 @@ jobs:
       - name: show files after download
         run: ls -R .sbom
 
-      - name: Download from Github current SBOM in SPDX JSON format and make pretty
+      - name: Create new current SPDX SBOM files - previous is from previous run or empty if not available
         id: current-sbom-spdx
-        run: curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
+        run: |
+          if test -f .sbom/current.spdx.json                      # check if downloaded from last run
+          then 
+            cp .sbom/current.spdx.json .sbom/previous.spdx.json   # have a previous SBOM - copy to previous
+          else
+            cp LICENSE .sbom/previous.spdx.json                   # do not have a previous SBOM - create dummy file for comparison later
+          fi
+          # create a NEW current SBOM
+          curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
           
       - name: Generate Current SBOM CDX format
         id: current-sbom-cdx
         run: |
-          cdxgen -o .sbom/compact.current.cdx.json -p > .sbom/current.txt
+          cdxgen -o .sbom/compact.current.cdx.json                             # OLD: -p > .sbom/current.txt
           cat .sbom/compact.current.cdx.json | jq > .sbom/current.cdx.json
           echo "current_sbom=.sbom/current.cdx.json" >> $GITHUB_OUTPUT
 
@@ -96,44 +103,40 @@ jobs:
         id: previous-sbom-cdx
         run: |
           git checkout HEAD^
-          cdxgen -o .sbom/compact.previous.cdx.json -p > .sbom/previous.txt
+          cdxgen -o .sbom/compact.previous.cdx.json                            # OLD:  -p > .sbom/previous.txt
           cat .sbom/compact.previous.cdx.json | jq > .sbom/previous.cdx.json
           echo "previous_sbom=.sbom/previous.cdx.json" >> $GITHUB_OUTPUT
           git checkout -
 
-      - name: convert all SBOM to EXCEL
-        id: convert-current-cdx-to-excel
-        continue-on-error: true
-        run: python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
-
-      - name: convert all SBOM to EXCEL
-        id: convert-previous-cdx-to-excel
-        continue-on-error: true
-        run: python sbom-to-excel/sbom_to_excel.py .sbom/previous.cdx.json -o .sbom/previous.cdx.xlsx
-
-      - name: convert all SBOM to EXCEL
-        id: convert-current-spdx-to-excel
-        continue-on-error: true
-        run: python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
-      
       - name: Create CSVs
         id: convert-sboms
         run: |
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
-          ./cyclonedx convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.cdx.csv
           ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv --input-format spdxjson
+          # skip - create only current files
+          # ./cyclonedx convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.cdx.csv
 
-      - name: Compare SBOMs
+#        TOOL NEEDS TO NOT CRASH IF WANTING TO REPLACE CSV
+#      - name: convert all SBOM to EXCEL
+#        id: convert-current-cdx-to-excel
+#        continue-on-error: true
+#        run: |
+#          python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
+#          python sbom-to-excel/sbom_to_excel.py .sbom/previous.cdx.json -o .sbom/previous.cdx.xlsx
+#          python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
+
+      - name: Compare CDX SBOMs (becasue we have both)
         id: compare-sboms
         run: |
-          TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
+          sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --format text --output-file .sbom/comparison.cdx.md
+          sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --format text --output-file .sbom/comparison.spdx.md
           # new comparison file
-          echo "## SBOM Comparison Report - $TIMESTAMP" > .sbom/comparison.md
           # switch to sbomdiff from cyclonedx diff
           # ./cyclonedx diff .sbom/previous.cdx.json .sbom/current.cdx.json --component-versions --output-format text >> .sbom/comparison.md
-          sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --format text >> .sbom/comparison.md
-          echo "" >> .sbom/comparison.md  # Add a newline for separation
+          TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           # append comparison file to history file and cat new history to github summary
+          echo "" >> .sbom/comparison-history.md
+          echo "## Summary Report - timestamp here" >> .sbom/comparison-history.md  # Add a newline for separation
           cat .sbom/comparison.md >> .sbom/comparison-history.md # copy differnces to the historic version
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
@@ -145,14 +148,10 @@ jobs:
         with:
           name: SBOM-Artifacts
           path: |
-            .sbom/comparison.md
+            .sbom/comparison.cdx.md
+            .sbom/comparison.spdx.md
             .sbom/comparison-history.md
             .sbom/current.cdx.csv
-            .sbom/current.cdx.xlsx
             .sbom/current.cdx.json
-            .sbom/current.spdx.xlsx
             .sbom/current.spdx.json
-            .sbom/current.txt
-            .sbom/previous.cdx.csv
-            .sbom/previous.cdx.json
-            .sbom/previous.txt
+#            .sbom/previous.cdx.json
