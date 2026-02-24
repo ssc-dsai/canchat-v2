@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { getContext, onMount, onDestroy } from 'svelte';
-	const i18n = getContext('i18n');
+	import { getI18n } from '$lib/utils/context';
+
+	import { onMount } from 'svelte';
+	const i18n = getI18n();
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Display from './Display.svelte';
@@ -51,7 +52,8 @@
 		mcp: {
 			time_server: false,
 			news_server: false,
-			mpo_sharepoint_server: false
+			mpo_sharepoint_server: false,
+			pmo_sharepoint_server: false
 		}
 	};
 	export let userIds = [];

@@ -1,6 +1,5 @@
 import { test, expect } from '../../../src/fixtures/base-fixture';
 import { describeLocalImage } from '../../../src/utils/openai';
-import { Language } from '../../../src/pages/base.page';
 
 test.describe('Feature: Image Generation', () => {
 	test('user can generate images using dall-e-2', async ({

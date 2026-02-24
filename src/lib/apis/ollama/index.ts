@@ -1,5 +1,8 @@
-import canchatAPI from '$lib/apis/canchatAPI';
-import { OLLAMA_API_BASE_PATH } from '$lib/constants';
+import { OLLAMA_API_BASE_URL } from '$lib/constants';
+import i18next from 'i18next';
+
+const getFetchErrorMessage = (err: any) =>
+	err?.message === 'Failed to fetch' ? i18next.t('Failed to fetch') : err?.message;
 
 export const verifyOllamaConnection = async (
 	token: string = '',
@@ -8,23 +11,24 @@ export const verifyOllamaConnection = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/verify`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/verify`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
-		data: {
+		body: JSON.stringify({
 			url,
 			key
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
-			error = `Ollama: ${err?.error?.message ?? 'Network Problem'}`;
+			error = `Ollama: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Ollama connection check failed. Please try again.')}`;
 			return [];
 		});
 
@@ -38,11 +42,17 @@ export const verifyOllamaConnection = async (
 export const getOllamaConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/config`, {
-		method: 'GET'
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/config`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -70,15 +80,20 @@ type OllamaConfig = {
 export const updateOllamaConfig = async (token: string = '', config: OllamaConfig) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/config/update`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/config/update`, {
 		method: 'POST',
-
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
 			...config
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -100,11 +115,17 @@ export const updateOllamaConfig = async (token: string = '', config: OllamaConfi
 export const getOllamaUrls = async (token: string = '') => {
 	let error = null;
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/urls`, {
-		method: 'GET'
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/urls`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -126,15 +147,20 @@ export const getOllamaUrls = async (token: string = '') => {
 export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/urls/update`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/urls/update`, {
 		method: 'POST',
-
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
 			urls: urls
-		}
+		})
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -156,11 +182,17 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
-		method: 'GET'
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
 	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -182,14 +214,17 @@ export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 export const getOllamaModels = async (token: string = '', urlIdx: null | number = null) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${OLLAMA_API_BASE_PATH}/api/tags${urlIdx !== null ? `/${urlIdx}` : ''}`,
-		{
-			method: 'GET'
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/tags${urlIdx !== null ? `/${urlIdx}` : ''}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
 		}
-	)
+	})
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			console.log(err);
@@ -219,18 +254,23 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 		conversation = '[no existing conversation]';
 	}
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/api/generate`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			model: model,
 			prompt: `Conversation:
 			${conversation}
 
 			As USER in the conversation above, your task is to continue the conversation. Remember, Your responses should be crafted as if you're a human conversing in a natural, realistic manner, keeping in mind the context and flow of the dialogue. Please generate a fitting response to the last message in the conversation, or if there is no existing conversation, initiate one as a normal person would.
-
+			
 			Response:
 			`
-		}
+		})
 	}).catch((err) => {
 		console.log(err);
 		if ('detail' in err) {
@@ -249,12 +289,17 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 export const generateEmbeddings = async (token: string = '', model: string, text: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/api/embeddings`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/embeddings`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			model: model,
 			prompt: text
-		}
+		})
 	}).catch((err) => {
 		error = err;
 		return null;
@@ -270,13 +315,18 @@ export const generateEmbeddings = async (token: string = '', model: string, text
 export const generateTextCompletion = async (token: string = '', model: string, text: string) => {
 	let error = null;
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/api/generate`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
 		method: 'POST',
-		data: {
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
 			model: model,
 			prompt: text,
 			stream: true
-		}
+		})
 	}).catch((err) => {
 		error = err;
 		return null;
@@ -290,13 +340,18 @@ export const generateTextCompletion = async (token: string = '', model: string, 
 };
 
 export const generateChatCompletion = async (token: string = '', body: object) => {
-	let controller = new AbortController();
+	const controller = new AbortController();
 	let error = null;
 
-	const res = await canchatAPI(`${OLLAMA_API_BASE_PATH}/api/chat`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/chat`, {
 		signal: controller.signal,
 		method: 'POST',
-		data: body
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(body)
 	}).catch((err) => {
 		error = err;
 		return null;
@@ -312,11 +367,16 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 export const createModel = async (token: string, payload: object, urlIdx: string | null = null) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${OLLAMA_API_BASE_PATH}/api/create${urlIdx !== null ? `/${urlIdx}` : ''}`,
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/api/create${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
-			data: payload
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify(payload)
 		}
 	).catch((err) => {
 		error = err;
@@ -333,17 +393,27 @@ export const createModel = async (token: string, payload: object, urlIdx: string
 export const deleteModel = async (token: string, tagName: string, urlIdx: string | null = null) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${OLLAMA_API_BASE_PATH}/api/delete${urlIdx !== null ? `/${urlIdx}` : ''}`,
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/api/delete${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'DELETE',
-			data: {
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({
 				name: tagName
-			}
+			})
 		}
 	)
 		.then(async (res) => {
-			return res.data;
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			console.log(json);
+			return true;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -367,16 +437,18 @@ export const pullModel = async (token: string, tagName: string, urlIdx: number |
 	let error = null;
 	const controller = new AbortController();
 
-	const res = await canchatAPI(
-		`${OLLAMA_API_BASE_PATH}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`,
-		{
-			signal: controller.signal,
-			method: 'POST',
-			data: {
-				name: tagName
-			}
-		}
-	).catch((err) => {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`, {
+		signal: controller.signal,
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			name: tagName
+		})
+	}).catch((err) => {
 		console.log(err);
 		error = err;
 
@@ -399,13 +471,18 @@ export const downloadModel = async (
 ) => {
 	let error = null;
 
-	const res = await canchatAPI(
-		`${OLLAMA_API_BASE_PATH}/models/download${urlIdx !== null ? `/${urlIdx}` : ''}`,
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/models/download${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
-			data: {
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({
 				url: download_url
-			}
+			})
 		}
 	).catch((err) => {
 		console.log(err);
@@ -429,11 +506,14 @@ export const uploadModel = async (token: string, file: File, urlIdx: string | nu
 	const formData = new FormData();
 	formData.append('file', file);
 
-	const res = await canchatAPI(
-		`${OLLAMA_API_BASE_PATH}/models/upload${urlIdx !== null ? `/${urlIdx}` : ''}`,
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/models/upload${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
-			data: formData
+			headers: {
+				Authorization: `Bearer ${token}`
+			},
+			body: formData
 		}
 	).catch((err) => {
 		console.log(err);
@@ -452,13 +532,13 @@ export const uploadModel = async (token: string, file: File, urlIdx: string | nu
 };
 
 // export const pullModel = async (token: string, tagName: string) => {
-// 	return await axiosInstance(`${OLLAMA_API_BASE_URL}/pull`, {
+// 	return await fetch(`${OLLAMA_API_BASE_URL}/pull`, {
 // 		method: 'POST',
 // 		headers: {
 // 			'Content-Type': 'text/event-stream',
 // 			Authorization: `Bearer ${token}`
 // 		},
-// 		data: {
+// 		body: JSON.stringify({
 // 			name: tagName
 // 		})
 // 	});

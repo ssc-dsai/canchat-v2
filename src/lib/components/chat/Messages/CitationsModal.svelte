@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import { getI18n } from '$lib/utils/context';
+
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { WEBUI_API_BASE_PATH } from '$lib/constants';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	export let show = false;
 	export let citation;
@@ -92,7 +93,7 @@
 									<a
 										class="hover:text-gray-500 hover:dark:text-gray-100 underline flex-grow"
 										href={document?.metadata?.file_id
-											? `${WEBUI_API_BASE_PATH}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
+											? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
 											: document.source?.url?.includes('http')
 												? document.source.url
 												: `#`}

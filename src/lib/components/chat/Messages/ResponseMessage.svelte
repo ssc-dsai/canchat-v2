@@ -14,7 +14,6 @@
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		copyToClipboard as _copyToClipboard,
-		approximateToHumanReadable,
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList,
@@ -46,7 +45,6 @@
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
 	import IssueModal from '$lib/components/common/IssueModal.svelte';
 	import SuggestionModal from '$lib/components/common/SuggestionModal.svelte';
-	import Modal from '$lib/components/common/Modal.svelte';
 
 	interface MessageType {
 		id: string;
@@ -640,6 +638,14 @@
 												</div>
 											</div>
 										</WebSearchResults>
+									{:else if status?.action === 'rag_context_truncated'}
+										<div class="flex flex-col justify-center -space-y-0.5">
+											<div
+												class="text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+											>
+												{$i18n.t("Some search results were trimmed to fit the model's limit.")}
+											</div>
+										</div>
 									{:else if status?.action === 'knowledge_search'}
 										<div class="flex flex-col justify-center -space-y-0.5">
 											<div
@@ -747,7 +753,7 @@
 									<div>
 										<button
 											id="save-new-message-button"
-											aria-label={$i18n.t('Save as Copy')}
+											aria-label={$i18n.t('Save As Copy')}
 											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
