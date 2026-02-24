@@ -80,15 +80,11 @@ jobs:
       - name: show files after download
         run: ls -R .sbom
 
-      - name: Create new current SPDX SBOM files - previous is from previous run or empty if not available
+      - name: Create SPDX SBOM files - copy from previous run if exists, or create empty previous if not available
         id: current-sbom-spdx
         run: |
-          if test -f .sbom/current.spdx.json                      # check if downloaded from last run
-          then 
-            cp .sbom/current.spdx.json .sbom/previous.spdx.json   # have a previous SBOM - copy to previous
-          else
-            cp LICENSE .sbom/previous.spdx.json                   # do not have a previous SBOM - create dummy file for comparison later
-          fi
+          # copy previous SBOM to previous if exists - if not exist create a blank file
+          if test -f .sbom/current.spdx.json; then cp .sbom/current.spdx.json .sbom/previous.spdx.json; else touch .sbom/previous.spdx.json; fi
           # create a NEW current SBOM
           curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
           
