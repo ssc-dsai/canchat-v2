@@ -124,12 +124,12 @@ jobs:
       - name: Compare CDX SBOMs (because we have both)
         id: compare-sbom-cdx
         continue-on-error: true
-        run: sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --format text --output-file .sbom/comparison.cdx.md
+        run: sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --format text > .sbom/comparison.cdx.md
 
       - name: Compare SPDX SBOMs (because we have both)
         id: compare-sbom-spdx
         continue-on-error: true
-        run: sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --format text --output-file .sbom/comparison.spdx.md
+        run: sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --format text > .sbom/comparison.spdx.md
 
       - name: show files after changes
         run: ls -R .sbom
