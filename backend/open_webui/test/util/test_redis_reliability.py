@@ -31,16 +31,19 @@ def anyio_backend():
 def reset_manager_singleton():
     """Reset singleton state before each test to ensure isolation."""
     # pylint: disable=protected-access
+    previous_use_redis_locks = locks_module.USE_REDIS_LOCKS
     RedisCollectionLockManager._instance = None
     locks_module._redis_collection_lock_manager = None
     yield
+    locks_module.USE_REDIS_LOCKS = previous_use_redis_locks
     RedisCollectionLockManager._instance = None
     locks_module._redis_collection_lock_manager = None
 
 
 @pytest.fixture
-def manager():
+def manager(monkeypatch):
     """Get a fresh manager instance with an async-capable mocked redis client."""
+    monkeypatch.setattr(locks_module, "USE_REDIS_LOCKS", True)
     m = get_collection_lock_manager()
 
     m.redis_client = MagicMock()
@@ -178,3 +181,83 @@ async def test_lock_heartbeat_mechanism(manager):
 
         await asyncio.sleep(0.05)
         assert lock._heartbeat_task is None
+
+
+@pytest.mark.anyio
+async def test_local_mode_acquires_without_redis_init(monkeypatch):
+    """When USE_REDIS_LOCKS is false, lock acquisition should work without Redis initialization."""
+    monkeypatch.setattr(locks_module, "USE_REDIS_LOCKS", False)
+    manager = get_collection_lock_manager()
+    manager._init_redis_client = AsyncMock(side_effect=RuntimeError("should not be called"))
+
+    async with manager.acquire_lock("local-mode-collection") as lock:
+        assert manager.use_redis_locks is False
+        assert lock.is_owned_by_current_task() is True
+        assert lock._heartbeat_task is None
+
+    manager._init_redis_client.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_local_mode_serializes_concurrent_tasks(monkeypatch):
+    """Local asyncio fallback should still serialize concurrent tasks within one process."""
+    monkeypatch.setattr(locks_module, "USE_REDIS_LOCKS", False)
+    manager = get_collection_lock_manager()
+
+    active = 0
+    max_active = 0
+    guard = asyncio.Lock()
+
+    async def _worker():
+        nonlocal active, max_active
+        async with manager.acquire_lock("local-serialize"):
+            async with guard:
+                active += 1
+                max_active = max(max_active, active)
+            await asyncio.sleep(0.03)
+            async with guard:
+                active -= 1
+
+    await asyncio.gather(_worker(), _worker())
+
+    assert max_active == 1
+
+
+@pytest.mark.anyio
+async def test_local_mode_health_check_reports_healthy(monkeypatch):
+    """Local mode should report health check as healthy without Redis."""
+    monkeypatch.setattr(locks_module, "USE_REDIS_LOCKS", False)
+    manager = get_collection_lock_manager()
+
+    assert await manager.health_check(retries=1) is True
+    metrics = manager.get_health_metrics()
+    assert metrics["use_redis_locks"] is False
+
+
+@pytest.mark.anyio
+async def test_local_mode_extend_is_noop(monkeypatch):
+    """Extending a local lock should succeed immediately without Redis interaction."""
+    monkeypatch.setattr(locks_module, "USE_REDIS_LOCKS", False)
+    manager = get_collection_lock_manager()
+
+    async with manager.acquire_lock("local-extend-test") as lock:
+        result = await lock.extend(additional_secs=60)
+        assert result is True
+        # Heartbeat was never started (no-op in local mode)
+        assert lock._heartbeat_task is None
+
+
+@pytest.mark.anyio
+async def test_local_mode_close_does_not_raise(monkeypatch):
+    """Closing the manager in local mode should be a no-op with no Redis teardown."""
+    monkeypatch.setattr(locks_module, "USE_REDIS_LOCKS", False)
+    manager = get_collection_lock_manager()
+
+    # Acquire and release a lock so there is something in the lock cache
+    async with manager.acquire_lock("local-close-test"):
+        pass
+
+    # Close should not raise and should leave the manager in a usable state
+    await manager.close()
+    assert manager.redis_client is None
+    assert manager._initialized is False

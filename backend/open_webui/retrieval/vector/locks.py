@@ -25,7 +25,7 @@ from typing import Any, Dict, Optional
 import redis.asyncio as redis
 from redis.exceptions import RedisError
 
-from open_webui.env import REDIS_URL, SRC_LOG_LEVELS
+from open_webui.env import REDIS_URL, SRC_LOG_LEVELS, USE_REDIS_LOCKS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -97,6 +97,11 @@ class AsyncRedisLock:
         # Heartbeat task for renewal
         self._heartbeat_task: Optional[asyncio.Task] = None
         self._heartbeat_stop: Optional[asyncio.Event] = None
+
+        # Local fallback lock (used when Redis locks are disabled)
+        self._local_lock: Optional[asyncio.Lock] = (
+            asyncio.Lock() if not self.manager.use_redis_locks else None
+        )
 
         # Track which client was used for script registration.
         self._last_registered_client = None
@@ -232,6 +237,44 @@ class AsyncRedisLock:
         if self._try_reentrant_acquire(task_id):
             return True
 
+        if not self.manager.use_redis_locks:
+            local_lock = self._local_lock
+            if local_lock is None:
+                log.error(
+                    f"[LOCK:LOCAL_ERROR] Local lock not initialized for {self.lock_name}"
+                )
+                return False
+
+            try:
+                if not blocking:
+                    if local_lock.locked():
+                        return False
+                    await local_lock.acquire()
+                elif timeout is not None:
+                    await asyncio.wait_for(local_lock.acquire(), timeout=timeout)
+                else:
+                    await local_lock.acquire()
+
+                with self._owners_lock:
+                    self._owners[task_id] = 1
+
+                log.debug(
+                    f"[LOCK:ACQUIRED_LOCAL] In-process lock acquired: {self.lock_name}, "
+                    f"task={task_id}"
+                )
+                return True
+            except asyncio.TimeoutError:
+                log.warning(
+                    f"[LOCK:TIMEOUT_LOCAL] Local lock acquisition timeout: {self.lock_name}, "
+                    f"task={task_id}, timeout={timeout}"
+                )
+                return False
+            except Exception as e:
+                log.error(
+                    f"Exception acquiring local lock {self.lock_name}: {type(e).__name__}: {e}"
+                )
+                return False
+
         log.info(
             f"[LOCK:ACQUIRE_START] Starting lock acquisition: {self.lock_name}, task={task_id}"
         )
@@ -330,6 +373,23 @@ class AsyncRedisLock:
                 )
                 return True
 
+        if not self.manager.use_redis_locks:
+            local_lock = self._local_lock
+            if local_lock is None:
+                log.error(
+                    f"[LOCK:LOCAL_ERROR] Local lock not initialized for {self.lock_name}"
+                )
+                return False
+
+            if local_lock.locked():
+                local_lock.release()
+
+            log.debug(
+                f"[LOCK:RELEASED_LOCAL] In-process lock released: {self.lock_name}, "
+                f"task={task_id}"
+            )
+            return True
+
         self._stop_heartbeat()
 
         try:
@@ -377,6 +437,9 @@ class AsyncRedisLock:
         """Manually extend the lock TTL."""
         if not self.is_owned_by_current_task():
             return False
+
+        if not self.manager.use_redis_locks:
+            return True
 
         try:
             ttl = additional_secs if additional_secs else self.timeout_secs
@@ -431,21 +494,32 @@ class RedisCollectionLockManager:
             with cls._instance_lock:
                 if cls._instance is None:
                     instance: RedisCollectionLockManager = super().__new__(cls)
+                    instance.use_redis_locks = USE_REDIS_LOCKS
                     instance.redis_url = redis_url or REDIS_URL
 
-                    if not instance.redis_url:
+                    if instance.use_redis_locks and not instance.redis_url:
                         raise RuntimeError(
                             "REDIS_URL environment variable is required for distributed locking. "
                             "Please set REDIS_URL to your Redis connection string (e.g., redis://localhost:6379/0)"
                         )
 
                     if (
-                        "localhost" in instance.redis_url
-                        or "127.0.0.1" in instance.redis_url
+                        instance.use_redis_locks
+                        and instance.redis_url
+                        and (
+                            "localhost" in instance.redis_url
+                            or "127.0.0.1" in instance.redis_url
+                        )
                     ):
                         log.warning(
                             f"[LOCK:SECURITY] Using default localhost Redis ({instance.redis_url}). "
                             "For multi-instance deployments, ensure all instances share a central Redis."
+                        )
+
+                    if not instance.use_redis_locks:
+                        log.warning(
+                            "[LOCK:LOCAL_MODE] USE_REDIS_LOCKS=false; using in-process asyncio locks. "
+                            "Distributed lock coordination is disabled for this process."
                         )
 
                     instance._initialized = False
@@ -635,6 +709,9 @@ class RedisCollectionLockManager:
 
     async def _ensure_initialized(self):
         """Ensure Redis client is initialized and loop-compatible."""
+        if not self.use_redis_locks:
+            return
+
         if self._client_ready_for_current_loop():
             return
 
@@ -686,7 +763,7 @@ class RedisCollectionLockManager:
     @asynccontextmanager
     async def acquire_lock(self, collection_name: str, timeout_secs: int = 30):
         """Acquire a collection lock with circuit breaker guardrails."""
-        if self._should_fail_fast():
+        if self.use_redis_locks and self._should_fail_fast():
             log.error(
                 f"[LOCK:CIRCUIT_OPEN] Failing fast: circuit is OPEN for collection {collection_name}. "
                 "Redis appears to be persistently unavailable."
@@ -752,6 +829,9 @@ class RedisCollectionLockManager:
 
     async def health_check(self, retries: int = 5) -> bool:
         """Comprehensive Redis health check with retries and functional validation."""
+        if not self.use_redis_locks:
+            return True
+
         for attempt in range(retries):
             try:
                 if not self._client_ready_for_current_loop():
@@ -849,6 +929,7 @@ class RedisCollectionLockManager:
     def get_health_metrics(self) -> Dict[str, Any]:
         """Return health metrics for monitoring and readiness checks."""
         return {
+            "use_redis_locks": self.use_redis_locks,
             "circuit_state": self.circuit_state.value,
             "consecutive_failures": self.consecutive_failures,
             "health_check_failures": self.health_check_failures,
@@ -867,6 +948,9 @@ class RedisCollectionLockManager:
 
         for lock in locks:
             lock._stop_heartbeat()
+
+        if not self.use_redis_locks:
+            return
 
         stale_client = None
         stale_loop = None
