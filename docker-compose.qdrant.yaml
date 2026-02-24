@@ -52,23 +52,6 @@ services:
       - 9090:9090
     restart: unless-stopped
 
-  redis:
-    image: redis:8.4.0
-    restart: always
-    ports:
-      - "6379:6379"
-    command: redis-server --loglevel warning --protected-mode no
-
-  caddy:
-    image: caddy:2
-    container_name: caddy
-    ports:
-      - "8888:8888"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      # - caddy_data:/data
-      # - caddy_config:/config
-
 volumes:
   ollama: {}
   postgres_data: {}
