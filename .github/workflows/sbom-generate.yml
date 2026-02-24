@@ -159,3 +159,5 @@ jobs:
             .sbom/current.cdx.csv
             .sbom/current.cdx.json
             .sbom/current.spdx.json
+            .sbom/previous.cdx.json
+            .sbom/previous.spdx.json
