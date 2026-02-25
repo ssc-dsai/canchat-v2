@@ -1668,11 +1668,7 @@ RAG_FULL_CONTEXT = PersistentConfig(
 RAG_FILE_MAX_COUNT = PersistentConfig(
     "RAG_FILE_MAX_COUNT",
     "rag.file.max_count",
-    (
-        int(os.environ.get("RAG_FILE_MAX_COUNT"))
-        if os.environ.get("RAG_FILE_MAX_COUNT")
-        else None
-    ),
+    int(os.environ.get("RAG_FILE_MAX_COUNT", "5")),
 )
 
 RAG_FILE_MAX_SIZE = PersistentConfig(
