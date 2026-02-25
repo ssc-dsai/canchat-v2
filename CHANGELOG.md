@@ -19,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **♿ Accessibility Landmarks**: Added landmarks to chat, navigation role to sidebar, and page heading to chat.
 - **🌐 Web Search Query**: Resolved web search query persistence issue.
 
-
 ## [0.5.7-ccv2-1.12.3] - 2026-02-18
 
 ### Fixed
