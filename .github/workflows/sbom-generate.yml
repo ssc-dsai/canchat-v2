@@ -97,8 +97,6 @@ jobs:
           if test -f .sbom/current.spdx.json; then cp .sbom/current.spdx.json .sbom/previous.spdx.json; fi
           curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
           python spdx-sorter/sort_spdx.py .sbom/current.spdx.json
-          # ensure a previous file exists
-          touch .sbom/previous.spdx.json
 
       - name: Generate Current SBOM CDX format
         id: current-sbom-cdx
@@ -138,7 +136,12 @@ jobs:
       - name: Compare SPDX SBOMs
         id: compare-sbom-spdx
         continue-on-error: true
-        run: sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
+        run: |
+          if test -f .sbom/previous.spdx.json; then 
+            sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
+          else
+            echo "Unable to use previous SPDX SBOM" > .sbom/comparison.spdx.md
+          fi
 
       - name: Get PR number or none
         id: pr
