@@ -1,13 +1,13 @@
 name: SBOM generate and compare
 # target steps:
-# download sbom (from github)
+# download sbom (from github - SPDX format)
 # - preblems with github API version (lack of sort-order, makes diff problematic)
-# - therfore create own SBOM with cdxgen and use CDX version of SBOM
-# create your own SBOMs
-# - advantage of creating own SBOM is the SBOM can be created for an earlier build, instead of hoping that the old SBOM is preserved from a previous run
-# - generate a curernt AND previous SBOM
-# compare previous SBOM to current SBOM and track the differences over time
-# generate csv or excel versions of full SBOM for simpler manual review
+# - sort with sbom-soreter
+# create your own SBOM method (CDX newer, more robust format)
+# - allows creating an SBOM for the earlier build, instead of relying on download of SBOM from a previous run
+# compare SBOMs
+# track DIFFs as artifacts within this github action, note artefacts expire, the max (and default) is 90 days
+# generate csv or excel SBOMs for simpler manual review
 
 on:
   pull_request:
@@ -47,23 +47,19 @@ jobs:
           npm install -g @cyclonedx/cdxgen
 
           # cycloneDX (create CSV from either format SBOM)
-          #brew install cyclonedx/cyclonedx/cyclonedx-cli
-          #error no brew
+          # suggested install requires brew (not present) download the asset directly
           wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           chmod 777 cyclonedx
 
-          # sbom-to-excel (not mature - tool fails)
-          #git clone https://github.com/jacobbarkai/sbom-to-excel.git
-          #pip install -r sbom-to-excel/requirements.txt
+          # sbom-to-excel
+          git clone https://github.com/jacobbarkai/sbom-to-excel.git
+          pip install -r sbom-to-excel/requirements.txt
 
           # sbomdiff (create a DIFF from either format SBOM into TXT)
           pip install sbomdiff
 
           # sbom-sorter
           git clone https://github.com/arturmartins/spdx-sorter.git
-          
-          # create artifact folder, avoids error if download fails, example when a previous run fails and theres nothing to download
-          mkdir .sbom
 
       - name: Get Previous Run ID
         id: get-run-id
@@ -76,7 +72,7 @@ jobs:
       - name: Download SBOM Artifacts from previous execution
         id: download-artifacts
         uses: actions/download-artifact@v7
-        # if doesn't exist continue or if this fails may need to check if exists in advance
+        # if doesn't exist continue on error
         continue-on-error: true
         with:
           path: .sbom
@@ -86,7 +82,7 @@ jobs:
           merge-multiple: true
 
       - name: show downloaded artifacts
-        run: ls -R .sbom      # helps with troubleshooting
+        run: ls -R .sbom    # gut check
 
       - name: Create SPDX SBOM files - copy from previous run if exists, or create empty previous if not available
         id: current-sbom-spdx
@@ -94,7 +90,7 @@ jobs:
           # copy downloaded current SPDX SBOM to previous if exists - if not exist create a blank file
           touch .sbom/previous.spdx.json
           if test -f .sbom/current.spdx.json; then cp .sbom/current.spdx.json .sbom/previous.spdx.json; fi
-          # update from github the current SBOM (and sort)
+          # update from github the current SBOM and sort (sort needed for compare later)
           curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
           python spdx-sorter/sort_spdx.py .sbom/current.spdx.json
 
@@ -118,17 +114,14 @@ jobs:
         id: convert-sboms
         run: |
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
-          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv --input-format spdxjson
-          # skip - create only current files
-          # ./cyclonedx convert --input-file .sbom/previous.cdx.json --output-file .sbom/previous.cdx.csv
+          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
 
-#        TOOL NEEDS TO NOT CRASH IF WANTING TO REPLACE CSV
+#        EXCEL TOOL NEEDS TO NOT CRASH IF WANTING TO REPLACE the CSV ABOVE
 #      - name: convert all SBOM to EXCEL
 #        id: convert-current-cdx-to-excel
 #        continue-on-error: true
 #        run: |
 #          python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
-#          python sbom-to-excel/sbom_to_excel.py .sbom/previous.cdx.json -o .sbom/previous.cdx.xlsx
 #          python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
 
       - name: Compare CDX SBOMs
@@ -137,7 +130,6 @@ jobs:
         run: sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --sbom cyclonedx --format text > .sbom/comparison.cdx.md
 
       - name: Compare SPDX SBOMs
-        # Github API does not sort it's JSON output - the file must be pre-sorted
         id: compare-sbom-spdx
         continue-on-error: true
         run: sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
@@ -155,7 +147,7 @@ jobs:
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
       - name: show artifacts after all changes
-        run: ls -R .sbom      # helps with troubleshooting
+        run: ls -R .sbom    # gut check
 
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v6
