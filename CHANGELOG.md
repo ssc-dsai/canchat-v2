@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.12.4] - 2026-02-25
+
+### Fixed
+
+- **🔧 Chat Input**: Corrected chat input size and alignment.
+- **💬 Verbose Chat Titles**: Resolved overly verbose chat titles.
+- **🧹 Lingering Prompts**: Cleared lingering prompts when switching to a new chat.
+- **📝 Markdown Links**: Escaped tildes in markdown links to prevent strikethrough.
+- **🌐 Web Search Context**: Applied truncation to web search context limits.
+- **🔧 Chat Cleanup Scheduler**: Resolved chat cleanup scheduler issue.
+- **🔌 WebSocket Manager**: Restored WebSocket manager fallback when Redis is unavailable.
+- **♿ Accessibility Landmarks**: Added landmarks to chat, navigation role to sidebar, and page heading to chat.
+- **🌐 Web Search Query**: Resolved web search query persistence issue.
+
 ## [0.5.7-ccv2-1.12.3] - 2026-02-18
 
 ### Fixed

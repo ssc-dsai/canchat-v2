@@ -3,6 +3,7 @@ import socketio
 import logging
 import sys
 import time
+import redis
 
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
@@ -25,8 +26,21 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
+effective_websocket_manager = WEBSOCKET_MANAGER
 
 if WEBSOCKET_MANAGER == "redis":
+    try:
+        redis_health_client = redis.Redis.from_url(WEBSOCKET_REDIS_URL)
+        redis_health_client.ping()
+    except Exception as e:
+        log.warning(
+            f"Redis websocket manager is unavailable ({e}). "
+            "Falling back to local websocket manager."
+        )
+        effective_websocket_manager = ""
+
+
+if effective_websocket_manager == "redis":
     mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],
@@ -49,9 +63,15 @@ else:
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
 
+
+async def _lock_noop():
+    """Fallback no-op lock operation."""
+    return True
+
+
 # Dictionary to maintain the user pool
 
-if WEBSOCKET_MANAGER == "redis":
+if effective_websocket_manager == "redis":
     log.debug("Using Redis to manage websockets.")
     try:
         SESSION_POOL = RedisDict(
@@ -76,12 +96,12 @@ if WEBSOCKET_MANAGER == "redis":
         SESSION_POOL = {}
         USER_POOL = {}
         USAGE_POOL = {}
-        acquire_func = release_func = renew_func = lambda: True
+        acquire_func = release_func = renew_func = _lock_noop
 else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
-    acquire_func = release_func = renew_func = lambda: True
+    acquire_func = release_func = renew_func = _lock_noop
 
 
 async def periodic_usage_pool_cleanup():
@@ -90,7 +110,7 @@ async def periodic_usage_pool_cleanup():
     This task should not cause application shutdown if it fails.
     """
     try:
-        if not acquire_func():
+        if not await acquire_func():
             log.debug("Usage pool cleanup lock already exists.  Not running it.")
             return
 
@@ -99,7 +119,7 @@ async def periodic_usage_pool_cleanup():
         while True:
             try:
                 # Check if we can renew the lock
-                if not renew_func():
+                if not await renew_func():
                     log.warning(
                         "Unable to renew cleanup lock. Another instance may have taken over."
                     )
@@ -149,7 +169,7 @@ async def periodic_usage_pool_cleanup():
         log.error(f"Fatal error in periodic_usage_pool_cleanup: {e}")
     finally:
         try:
-            release_func()
+            await release_func()
             log.debug("Released usage pool cleanup lock")
         except Exception as e:
             log.error(f"Error releasing cleanup lock:  {e}")
