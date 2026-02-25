@@ -91,7 +91,7 @@ class AsyncDatabaseConnector:
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
 def handle_peewee_migration(database_url: str):
-    # db = None
+    db = None
     try:
         # Replace the postgresql:// with postgres:// to handle the peewee migration
         db = register_connection(database_url.replace("postgresql://", "postgres://"))
@@ -105,11 +105,11 @@ def handle_peewee_migration(database_url: str):
         raise
     finally:
         # Properly closing the database connection
-        if db and not db.is_closed():
+        if db:
             db.close()
 
-        # Assert if db connection has been closed
-        assert db.is_closed(), "Database connection is still open."
+            # Assert if db connection has been closed
+            assert db.is_closed(), "Database connection is still open."
 
 
 # Function to run the alembic migrations

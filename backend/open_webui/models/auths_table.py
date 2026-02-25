@@ -139,7 +139,7 @@ class AuthsTable:
                     update(Auth).where(Auth.id == id).values(password=new_password)
                 )
                 await db.commit()
-                return True if result.scalar_one() == 1 else False
+                return result.rowcount == 1
         except Exception:
             return False
 
@@ -150,7 +150,7 @@ class AuthsTable:
                     update(Auth).where(Auth.id == id).values(email=email)
                 )
                 await db.commit()
-                return True if result.scalar_one() == 1 else False
+                return result.rowcount == 1
         except Exception:
             return False
 

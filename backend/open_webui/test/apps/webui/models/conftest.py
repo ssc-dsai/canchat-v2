@@ -26,138 +26,138 @@ Configuration of the fixtures used for each of the table services.
 """
 
 
-@pytest.fixture(scope="class")
-def auths_table(
+@pytest.fixture(scope="session")
+def db_connector(
     async_session_maker: async_sessionmaker[AsyncSession],
+):
+    yield AsyncDatabaseConnector(async_session_maker)
+
+
+@pytest.fixture(scope="session")
+def auths_table(
+    db_connector: AsyncDatabaseConnector,
     group_table: GroupTable,
     users_table: UsersTable,
 ):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
     yield AuthsTable(db_connector, group_table, users_table)
 
 
-@pytest.fixture(scope="class")
-def channel_table(async_session_maker: async_sessionmaker[AsyncSession]):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def channel_table(
+    db_connector: AsyncDatabaseConnector,
+):
     yield ChannelTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="class")
-def chat_table(
-    async_session_maker: async_sessionmaker[AsyncSession], tag_table: TagTable
-):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def chat_table(db_connector: AsyncDatabaseConnector, tag_table: TagTable):
     yield ChatTable(db_connector=db_connector, tag_table=tag_table)
 
 
-@pytest.fixture(scope="class")
-def domain_table(async_session_maker: async_sessionmaker[AsyncSession]):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def domain_table(
+    db_connector: AsyncDatabaseConnector,
+):
     yield DomainTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="class")
-def export_logs_table(async_session_maker: async_sessionmaker[AsyncSession]):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def export_logs_table(
+    db_connector: AsyncDatabaseConnector,
+):
     yield ExportLogsTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="class")
-def feedback_table(async_session_maker: async_sessionmaker[AsyncSession]):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def feedback_table(
+    db_connector: AsyncDatabaseConnector,
+):
     yield FeedbackTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="class")
-def files_table(async_session_maker: async_sessionmaker[AsyncSession]):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def files_table(
+    db_connector: AsyncDatabaseConnector,
+):
     yield FilesTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="class")
-def folder_table(
-    async_session_maker: async_sessionmaker[AsyncSession], chat_table: ChatTable
-):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def folder_table(db_connector: AsyncDatabaseConnector, chat_table: ChatTable):
+
     yield FolderTable(db_connector=db_connector, chats=chat_table)
 
 
-@pytest.fixture(scope="class")
-def functions_table(
-    async_session_maker: async_sessionmaker[AsyncSession], users_table: UsersTable
-):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def functions_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
+
     yield FunctionsTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="class")
-def group_table(
-    async_session_maker: async_sessionmaker[AsyncSession], users_table: UsersTable
-):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def group_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
+
     yield GroupTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="class")
-def knowledge_table(
-    async_session_maker: async_sessionmaker[AsyncSession], users_table: UsersTable
-):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def knowledge_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
+
     yield KnowledgeTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="class")
-def memories_table(async_session_maker: async_sessionmaker[AsyncSession]):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def memories_table(
+    db_connector: AsyncDatabaseConnector,
+):
+
     yield MemoriesTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="class")
-def message_table(async_session_maker: async_sessionmaker[AsyncSession]):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def message_table(
+    db_connector: AsyncDatabaseConnector,
+):
+
     yield MessageTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="class")
-def message_metrics_table(async_session_maker: async_sessionmaker[AsyncSession]):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def message_metrics_table(
+    db_connector: AsyncDatabaseConnector,
+):
+
     yield MessageMetricsTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="class")
-def models_table(
-    async_session_maker: async_sessionmaker[AsyncSession], users_table: UsersTable
-):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def models_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
+
     yield ModelsTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="class")
-def prompts_table(
-    async_session_maker: async_sessionmaker[AsyncSession], users_table: UsersTable
-):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def prompts_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
+
     yield PromptsTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="class")
-def tag_table(async_session_maker: async_sessionmaker[AsyncSession]):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def tag_table(
+    db_connector: AsyncDatabaseConnector,
+):
+
     yield TagTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="class")
-def tools_table(
-    async_session_maker: async_sessionmaker[AsyncSession], users_table: UsersTable
-):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def tools_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
+
     yield ToolsTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="class")
-def users_table(
-    async_session_maker: async_sessionmaker[AsyncSession], chat_table: ChatTable
-):
-    db_connector = AsyncDatabaseConnector(async_session_maker)
+@pytest.fixture(scope="session")
+def users_table(db_connector: AsyncDatabaseConnector, chat_table: ChatTable):
+
     users_table = UsersTable(db_connector=db_connector, chats=chat_table)
     yield users_table
