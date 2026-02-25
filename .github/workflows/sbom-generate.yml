@@ -164,10 +164,12 @@ jobs:
           # SPDX version
           echo "### Details (SPDX)" >> .sbom/comparison.md
           cat .sbom/comparison.spdx.md >> .sbom/comparison.md # copy differnces to the historic version
-          # prepend current comparison log to the top of the comparison history (recent first)
-          mv -f .sbom/comparison-history.md .sbom/old-comparison-history.md
+          # prepend current comparison log to the top of the comparison history file (most recent first)
+          if test -f .sbom/comparison-history.md; then cp .sbom/comparison-history.md .sbom/old-comparison-history.md; fi
           cp .sbom/comparison.md .sbom/comparison-history.md
-          cat .sbom/old-comparison-history.md >> .sbom/comparison-history.md
+          if test -f .sbom/old-comparison-history.md; then 
+            cat .sbom/old-comparison-history.md >> .sbom/comparison-history.md
+          fi
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
       - name: show artifacts after all changes
