@@ -131,21 +131,17 @@ jobs:
 #          python sbom-to-excel/sbom_to_excel.py .sbom/previous.cdx.json -o .sbom/previous.cdx.xlsx
 #          python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
 
-      - name: Compare CDX SBOMs (because we have both)
+      - name: Compare CDX SBOMs
         id: compare-sbom-cdx
         continue-on-error: true
         run: sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --sbom cyclonedx --format text > .sbom/comparison.cdx.md
 
       - name: Compare SPDX SBOMs
-        # Github API does not sort it's JSON output - this is likely for performance reasons
-        # This causes the bomdiff tool to erroneously find changes in cases where a package is installed multiple times (at different versions) for dependency reasons
-        # future plan... find a tool that will sort Github's version of the JSON artifact, or find another sbomdiff tool that works better with github's output
-        # KEEP the artifact anyway, the Github SBOM may be useful for other purposes
-        # also, when the problem occurs it also fails the step, therfore continue-on-error becasue the error can be expected
+        # Github API does not sort it's JSON output - the file must be pre-sorted
         id: compare-sbom-spdx
         continue-on-error: true
-        run: if test -f .sbom/previous.spdx.json; then sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md; fi
-
+        run: sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
+        
       - name: show artifacts after changes
         run: ls -R .sbom      # helps with troubleshooting
 
@@ -166,5 +162,5 @@ jobs:
         continue-on-error: true
         with:
           name: SBOM-Artifacts
-          path: .sbom/
+          path: .sbom/*
           
