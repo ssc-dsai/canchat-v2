@@ -180,5 +180,12 @@ jobs:
         with:
           name: SBOM-Artifacts
           include-hidden-files: true
-          path: .sbom/
-          
+          path: |
+            .sbom/comparison-history.md
+            .sbom/comparison.cdx.md
+            .sbom/comparison.spdx.md
+            .sbom/current.cdx.csv
+            .sbom/current.cdx.json
+            .sbom/current.spdx.csv
+            .sbom/current.spdx.json
+
