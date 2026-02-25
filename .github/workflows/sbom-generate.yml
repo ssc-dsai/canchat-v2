@@ -44,7 +44,9 @@ jobs:
       - name: Install Dependencies
         run: |
           # cdxgen (create current AND previous, in CDX format ) 
-          npm install -g @cyclonedx/cdxgen
+          #npm install -g @cyclonedx/cdxgen
+          wget -O cdxgen https://github.com/cdxgen/cdxgen/releases/download/v12.1.1/cdxgen-linux-amd64
+          chmod 777 cdxgen
 
           # cycloneDX (create CSV from either format SBOM)
           # suggested install requires brew (not present) download the asset directly
