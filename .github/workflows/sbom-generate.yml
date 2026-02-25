@@ -142,9 +142,6 @@ jobs:
         continue-on-error: true
         run: sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
         
-      - name: show artifacts after changes
-        run: ls -R .sbom      # helps with troubleshooting
-
       - name: Create output
         id: create-output
         continue-on-error: true
@@ -157,10 +154,14 @@ jobs:
           cat .sbom/comparison.spdx.md >> .sbom/comparison-history.md # copy differnces to the historic version
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
+      - name: show artifacts after all changes
+        run: ls -R .sbom      # helps with troubleshooting
+
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v6
         continue-on-error: true
         with:
           name: SBOM-Artifacts
-          path: .sbom/*
+          include-hidden-files: true
+          path: .sbom/
           
