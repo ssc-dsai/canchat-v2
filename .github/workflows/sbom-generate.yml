@@ -94,15 +94,9 @@ jobs:
           # copy downloaded current SPDX SBOM to previous if exists - if not exist create a blank file
           touch .sbom/previous.spdx.json
           if test -f .sbom/current.spdx.json; then python spdx-sorter/sort_spdx.py .sbom/current.spdx.json; mv -f .sbom/current.spdx.json .sbom/previous.spdx.json; fi
-          # downlaod a NEW current SBOM
+          # downlaod from github a NEW current SBOM
           curl https://github.com/ssc-dsai/canchat-v2/dependency-graph/sbom | jq > .sbom/current.spdx.json
           python spdx-sorter/sort_spdx.py .sbom/current.spdx.json
-
-      - name: Sort github SPDX SBOMS prior to compare (SPDX only)
-        id: sort-sboms
-        run: |
-         if test -f .sbom/previous.spdx.json; then python spdx-sorter/sort_spdx.py .sbom/previous.spdx.json; fi
-         if test -f .sbom/current.spdx.json; then ; fi
 
       - name: Generate Current SBOM CDX format
         id: current-sbom-cdx
