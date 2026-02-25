@@ -150,8 +150,10 @@ jobs:
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           echo "" >> .sbom/comparison-history.md
-          echo "## Differential - $TIMESTAMP" >> .sbom/comparison-history.md  # Add a newline for separation
+          echo "## Differential Details (CDX version) - $TIMESTAMP" >> .sbom/comparison-history.md  # Add a newline for separation
           cat .sbom/comparison.cdx.md >> .sbom/comparison-history.md # copy differnces to the historic version
+          echo "## Differential Details (SPDX - possible errors, confirm manually) - $TIMESTAMP" >> .sbom/comparison-history.md  # Add a newline for separation
+          cat .sbom/comparison.spdx.md >> .sbom/comparison-history.md # copy differnces to the historic version
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
       - name: Upload SBOM Artifacts
