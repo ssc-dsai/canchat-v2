@@ -52,8 +52,9 @@ jobs:
           chmod 777 cyclonedx
 
           # sbom-to-excel
-          git clone https://github.com/jacobbarkai/sbom-to-excel.git
-          pip install -r sbom-to-excel/requirements.txt
+          # SKIP, EXCEL TOOL NEEDS TO NOT CRASH IF WANTING TO REPLACE the CSV
+          # git clone https://github.com/jacobbarkai/sbom-to-excel.git
+          # pip install -r sbom-to-excel/requirements.txt
 
           # sbomdiff (create a DIFF from either format SBOM into TXT)
           pip install sbomdiff
@@ -100,16 +101,16 @@ jobs:
       - name: Generate Current SBOM CDX format
         id: current-sbom-cdx
         run: |
-          cdxgen -o .sbom/compact.current.cdx.json                             # OLD: -p > .sbom/current.txt
-          cat .sbom/compact.current.cdx.json | jq > .sbom/current.cdx.json
+          cdxgen -o .sbom/current.cdx.json                             # OLD: -p > .sbom/current.txt
+          jq . .sbom/current.cdx.json > tmp.json && mv tmp.json .sbom/current.cdx.json
           echo "current_sbom=.sbom/current.cdx.json" >> $GITHUB_OUTPUT
 
       - name: Generate Previous SBOM CDX format
         id: previous-sbom-cdx
         run: |
           git checkout HEAD^
-          cdxgen -o .sbom/compact.previous.cdx.json                            # OLD:  -p > .sbom/previous.txt
-          cat .sbom/compact.previous.cdx.json | jq > .sbom/previous.cdx.json
+          cdxgen -o .sbom/previous.cdx.json                            # OLD:  -p > .sbom/previous.txt
+          jq . .sbom/previous.cdx.json > tmp.json && mv tmp.json .sbom/previous.cdx.json
           echo "previous_sbom=.sbom/previous.cdx.json" >> $GITHUB_OUTPUT
           git checkout -
 
@@ -119,13 +120,13 @@ jobs:
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
           ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
 
-#        EXCEL TOOL NEEDS TO NOT CRASH IF WANTING TO REPLACE the CSV ABOVE
-#      - name: convert all SBOM to EXCEL
-#        id: convert-current-cdx-to-excel
-#        continue-on-error: true
-#        run: |
-#          python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
-#          python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
+        # SKIP, EXCEL TOOL NEEDS TO NOT CRASH IF WANTING TO REPLACE the CSV
+        #- name: convert all SBOM to EXCEL
+        # id: convert-current-cdx-to-excel
+        # continue-on-error: true
+        # run: |
+        #   python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
+        #   python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
 
       - name: Compare CDX SBOMs
         id: compare-sbom-cdx
