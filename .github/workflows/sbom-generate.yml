@@ -61,6 +61,9 @@ jobs:
           # sbom-sorter
           git clone https://github.com/arturmartins/spdx-sorter.git
 
+      - name: setup artefact folder
+        run: mkdir .sbom
+
       - name: Get Previous Run ID
         id: get-run-id
         run: |
