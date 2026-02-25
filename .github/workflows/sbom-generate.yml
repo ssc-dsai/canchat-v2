@@ -90,7 +90,8 @@ jobs:
       - name: show downloaded artifacts
         run: ls -R .sbom    # gut check
 
-      - name: Create SPDX SBOM files - copy from previous run if exists, or create empty previous if not available
+      - name: Create SPDX SBOM files
+        # SPDX previous is created by copying the SPDX current from the previous execution - if exists
         id: current-sbom-spdx
         run: |
           # copy current to previous then download new SBOM as current
@@ -130,17 +131,15 @@ jobs:
 
       - name: Compare CDX SBOMs
         id: compare-sbom-cdx
-        continue-on-error: true
         run: sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --sbom cyclonedx --format text > .sbom/comparison.cdx.md
 
       - name: Compare SPDX SBOMs
         id: compare-sbom-spdx
-        continue-on-error: true
         run: |
           if test -f .sbom/previous.spdx.json; then 
             sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
           else
-            echo "Unable to use previous SPDX SBOM" > .sbom/comparison.spdx.md
+            echo "unable to use the SPDX SBOM from the previous execution" > .sbom/comparison.spdx.md
           fi
 
       - name: Get PR number or none
@@ -153,23 +152,24 @@ jobs:
           else
             echo "pr_number=none (push)" >> $GITHUB_OUTPUT
           fi
-
        
       - name: Create output
         id: create-output
-        continue-on-error: true
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  > .sbom/comparison.md
           echo "## Run Timestamp: $TIMESTAMP" >> .sbom/comparison.md
+          
           # CDX version
           echo "" >> .sbom/comparison.md
           echo "### Details (CDX)" >> .sbom/comparison.md
           cat .sbom/comparison.cdx.md >> .sbom/comparison.md # copy differnces to the historic version
+          
           # SPDX version
           echo "" >> .sbom/comparison.md
           echo "### Details (SPDX)" >> .sbom/comparison.md
           cat .sbom/comparison.spdx.md >> .sbom/comparison.md # copy differnces to the historic version
+          
           # prepend current comparison log to the top of the comparison history file (most recent first)
           if test -f .sbom/comparison-history.md; then cp .sbom/comparison-history.md .sbom/old-comparison-history.md; fi
           cp .sbom/comparison.md .sbom/comparison-history.md
@@ -183,7 +183,6 @@ jobs:
 
       - name: Upload SBOM Artifacts
         uses: actions/upload-artifact@v6
-        continue-on-error: true
         with:
           name: SBOM-Artifacts
           include-hidden-files: true
