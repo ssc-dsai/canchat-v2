@@ -132,11 +132,11 @@ jobs:
         run: sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --sbom cyclonedx --format text > .sbom/comparison.cdx.md
 
       - name: Compare SPDX SBOMs
-        # Github API does not sort it's JSON output
-        # This may cause bomdiff tool to find changes in cases where a package is installed more than once at different versions
-        # NOT a recommended artifact to trust unless we can get GITHUB API to provide JSON in a consistent sort order
-        # KEEP until github downloads sorted or sbomdiff is updated to handle unsorted JSON
-        # when the problem occurs it also fails the step
+        # Github API does not sort it's JSON output - this is likely for performance reasons
+        # This causes the bomdiff tool to erroneously find changes in cases where a package is installed multiple times (at different versions) for dependency reasons
+        # future plan... find a tool that will sort Github's version of the JSON artifact, or find another sbomdiff tool that works better with github's output
+        # KEEP the artifact anyway, the Github SBOM may be useful for other purposes
+        # also, when the problem occurs it also fails the step, therfore continue-on-error becasue the error can be expected
         id: compare-sbom-spdx
         continue-on-error: true
         run: if test -f .sbom/previous.spdx.json; then sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md; fi
