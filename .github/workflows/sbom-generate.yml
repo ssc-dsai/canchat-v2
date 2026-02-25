@@ -168,11 +168,6 @@ jobs:
           mv -f .sbom/comparison-history.md .sbom/old-comparison-history.md
           cp .sbom/comparison.md .sbom/comparison-history.md
           cat .sbom/old-comparison-history.md >> .sbom/comparison-history.md
-          rm -f .sbom/old-comparison-history.md
-          # which single run to keep or remove as an artifact
-          rm -f .sbom/comparison.cdx.md
-          rm -f .sbom/comparison.spdx.md
-          # rm -f .sbom/comparison.md
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
       - name: show artifacts after all changes
@@ -186,8 +181,7 @@ jobs:
           include-hidden-files: true
           path: |
             .sbom/comparison-history.md
-            .sbom/comparison.cdx.md
-            .sbom/comparison.spdx.md
+            .sbom/comparison.md
             .sbom/current.cdx.csv
             .sbom/current.cdx.json
             .sbom/current.spdx.csv
