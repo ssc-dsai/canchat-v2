@@ -155,16 +155,15 @@ jobs:
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           echo "" >> .sbom/comparison-history.md
-          echo "## Run Timestamp: $TIMESTAMP" >> .sbom/comparison-history.md
           echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  >> .sbom/comparison-history.md
+          echo "## Run Timestamp: $TIMESTAMP" >> .sbom/comparison-history.md
           # CDX version
-          echo "# Details (CDX)" >> .sbom/comparison-history.md
+          echo "### Details (CDX)" >> .sbom/comparison-history.md
           cat .sbom/comparison.cdx.md >> .sbom/comparison-history.md # copy differnces to the historic version
           # SPDX version
-          echo "# Details (SPDX)" >> .sbom/comparison-history.md
-          echo "Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  >> .sbom/comparison-history.md
+          echo "### Details (SPDX)" >> .sbom/comparison-history.md
           cat .sbom/comparison.spdx.md >> .sbom/comparison-history.md # copy differnces to the historic version
-          # send file to summary screen
+          # send full comparison history file to summary screen
           cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
       - name: show artifacts after all changes
