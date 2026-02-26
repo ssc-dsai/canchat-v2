@@ -33,7 +33,8 @@
 		"format:backend": "black . --exclude \".venv/|/venv/\"",
 		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write \"src/lib/i18n/**/*.{js,json}\"",
 		"test:frontend": "vitest --passWithNoTests",
-		"pyodide:fetch": "node scripts/prepare-pyodide.js"
+		"pyodide:fetch": "node scripts/prepare-pyodide.js",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@istanbuljs/nyc-config-typescript": "^1.0.2",
@@ -55,6 +56,7 @@
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-svelte": "^2.43.0",
 		"eslint-plugin-unused-imports": "^4.3.0",
+		"husky": "^9.1.7",
 		"i18next-parser": "^9.0.1",
 		"nyc": "^17.1.0",
 		"postcss": "^8.4.31",
