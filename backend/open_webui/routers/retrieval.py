@@ -41,6 +41,11 @@ from open_webui.retrieval.loaders.youtube import YoutubeLoader
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.retrieval.web.web_search_logger import (
+    log_web_search_dispatch,
+    log_web_search_result,
+    log_web_search_content_load,
+)
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
@@ -1175,7 +1180,12 @@ async def process_web(
 
 
 def search_web(
-    request: Request, engine: str, query: str, request_timeout: Optional[int] = None
+    request: Request,
+    engine: str,
+    query: str,
+    request_timeout: Optional[int] = None,
+    user=None,
+    audit_event_id: Optional[str] = None,
 ) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
@@ -1196,7 +1206,40 @@ def search_web(
         query (str): The query to search for
         request_timeout (Optional[int]): Optional per-request timeout override in seconds.
             If not provided, providers use the configured default request timeout.
+        user: The authenticated user who triggered the search (for audit logging).
     """
+
+    result_count = request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT
+    domain_filter = request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+
+    # --- Audit: log dispatch BEFORE calling upstream provider ---
+    dispatch_ctx = log_web_search_dispatch(
+        engine=engine,
+        query=query,
+        result_count_requested=result_count,
+        domain_filter_list=domain_filter,
+        user=user,
+        event_id=audit_event_id,
+    )
+
+    results = []
+    try:
+        results = _dispatch_search(request, engine, query, request_timeout)
+
+        # --- Audit: log result AFTER upstream provider returns ---
+        log_web_search_result(dispatch_ctx=dispatch_ctx, results=results)
+        return results
+
+    except Exception as e:
+        # --- Audit: log failure ---
+        log_web_search_result(dispatch_ctx=dispatch_ctx, results=[], error=e)
+        raise
+
+
+def _dispatch_search(
+    request: Request, engine: str, query: str, request_timeout: Optional[int] = None
+) -> list[SearchResult]:
+    """Internal dispatcher — routes to the correct search provider."""
 
     # TODO: add playwright to search the web
     if engine == "searxng":
@@ -1344,6 +1387,7 @@ async def process_web_search(
     total_timeout = RAG_WEB_SEARCH_TOTAL_TIMEOUT.value
     request_timeout_cap = RAG_WEB_SEARCH_REQUEST_TIMEOUT.value
     start_time = time.monotonic()
+    audit_event_id = f"wsd_{uuid.uuid4().hex[:12]}"
     loaded_docs: list[Document] = []
     loaded_urls: list[str] = []
 
@@ -1370,6 +1414,8 @@ async def process_web_search(
                     request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                     form_data.query,
                     request_timeout,
+                    user,
+                    audit_event_id,
                 )
             except TimeoutError:
                 raise
@@ -1386,6 +1432,7 @@ async def process_web_search(
             try:
                 urls = [result.link for result in web_results]
                 loaded_urls = urls
+                content_load_start = time.monotonic()
                 request_timeout = get_capped_request_timeout()
                 loader = get_web_loader(
                     urls,
@@ -1416,6 +1463,16 @@ async def process_web_search(
                 loaded_docs = docs
 
                 if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                    content_load_ms = round(
+                        (time.monotonic() - content_load_start) * 1000
+                    )
+                    log_web_search_content_load(
+                        event_id=audit_event_id,
+                        urls=urls,
+                        docs_loaded=len(docs),
+                        latency_ms=content_load_ms,
+                        bypass_embedding=True,
+                    )
                     # Return raw results without embedding
                     return {
                         "status": True,
@@ -1446,6 +1503,16 @@ async def process_web_search(
                     user=user,
                 )
 
+                content_load_ms = round((time.monotonic() - content_load_start) * 1000)
+                log_web_search_content_load(
+                    event_id=audit_event_id,
+                    urls=urls,
+                    docs_loaded=len(docs),
+                    latency_ms=content_load_ms,
+                    bypass_embedding=False,
+                    collection_name=collection_name,
+                )
+
                 return {
                     "status": True,
                     "collection_name": collection_name,
@@ -1455,6 +1522,14 @@ async def process_web_search(
             except (TimeoutError, asyncio.TimeoutError):
                 raise
             except Exception as e:
+                content_load_ms = round((time.monotonic() - content_load_start) * 1000)
+                log_web_search_content_load(
+                    event_id=audit_event_id,
+                    urls=urls,
+                    docs_loaded=0,
+                    latency_ms=content_load_ms,
+                    error=e,
+                )
                 log.exception(e)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
