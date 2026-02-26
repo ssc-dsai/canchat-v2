@@ -1,8 +1,7 @@
 import pytest
-import pytest_asyncio
 from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.auths_table import AuthsTable
-from open_webui.models.users import User, UserModel
+from open_webui.models.users import User
 from sqlalchemy import select, update
 
 _user_attributes: dict[str, str] = {
@@ -61,7 +60,6 @@ class TestAuths:
 
             finally:
                 await session.rollback()
-                assert await auths_table.delete_auth_by_user_id(user_id=usermodel.id)
 
     @pytest.mark.asyncio
     async def test_authenticate_user_correct_password(
@@ -96,8 +94,6 @@ class TestAuths:
         for k, v in _user_attributes.items():
             assert getattr(authenticated_usermodel, k, None) == v
 
-        assert await auths_table.delete_auth_by_user_id(user_id=usermodel.id)
-
     @pytest.mark.asyncio
     async def test_authenticate_user_wrong_password(
         self,
@@ -128,7 +124,6 @@ class TestAuths:
         )
 
         assert not authenticated_usermodel
-        assert await auths_table.delete_auth_by_user_id(user_id=usermodel.id)
 
     @pytest.mark.asyncio
     async def test_authenticate_user_by_trusted_header_email_present_active(
@@ -153,9 +148,6 @@ class TestAuths:
         # Ensure returned model conforms to data input
         for k, v in _user_attributes.items():
             assert getattr(user, k, None) == v
-
-        # Cleanup
-        assert await auths_table.delete_auth_by_user_id(user_id=usermodel.id)
 
     @pytest.mark.asyncio
     async def test_authenticate_user_by_trusted_header_email_present_inactive(
@@ -193,9 +185,6 @@ class TestAuths:
 
         # Return should be None since auth is not active.
         assert not user
-
-        # Cleanup
-        assert await auths_table.delete_auth_by_user_id(user_id=usermodel.id)
 
     @pytest.mark.asyncio
     async def test_authenticate_user_by_trusted_header_email_not_present(
@@ -248,9 +237,6 @@ class TestAuths:
             pw = result.first()
             assert pw and pw[0] == new_hashed
 
-        # Cleanup
-        assert await auths_table.delete_auth_by_user_id(user_id=usermodel.id)
-
     @pytest.mark.asyncio
     async def test_update_user_password_by_id_no_user(
         self,
@@ -299,9 +285,6 @@ class TestAuths:
 
             email = result.first()
             assert email and email[0] == new_email
-
-        # Cleanup
-        assert await auths_table.delete_auth_by_user_id(user_id=usermodel.id)
 
     @pytest.mark.asyncio
     async def test_delete_auth_by_user_id(

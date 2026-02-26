@@ -37,7 +37,7 @@ class User(Base):
     created_at: Mapped[int] = mapped_column(BigInteger)
 
     api_key: Mapped[str] = mapped_column(String, nullable=True, unique=True)
-    settings: Mapped[UserSettings | None] = mapped_column(JSONField, nullable=True)
+    settings: Mapped[dict | None] = mapped_column(JSONField, nullable=True)
     info: Mapped[dict | None] = mapped_column(JSONField, nullable=True)
 
     oauth_sub: Mapped[str] = mapped_column(Text, unique=True)
@@ -205,7 +205,7 @@ class UsersTable:
         async with self.__db.get_async_db() as db:
             result = await db.execute(select(User.domain).distinct())
 
-            return [domain[0] for domain in result.scalars().all()]
+            return [domain[0] for domain in result.all()]
 
     async def get_num_users(self, domain: str | None = None) -> int | None:
         try:
@@ -222,23 +222,23 @@ class UsersTable:
     async def get_first_user(self) -> UserModel | None:
         try:
             async with self.__db.get_async_db() as db:
-                result = await db.execute(select(User).order_by(User.created_at.asc()))
-                return UserModel.model_validate(result.scalar_one())
+                result = await db.scalar(select(User).order_by(User.created_at.asc()))
+                return UserModel.model_validate(result)
         except Exception:
             return None
 
     async def get_user_webhook_url_by_id(self, id: str) -> str | None:
         try:
             async with self.__db.get_async_db() as db:
-                result = await db.execute(select(User).where(User.id == id))
-                user = result.scalar_one()
+                if user := await db.scalar(select(User).where(User.id == id)):
+                    if user.settings is None:
+                        return None
+                    else:
+                        settings = user.settings
+                        ui = settings.get("ui", {})
+                        notifications = ui.get("notifications", {})
 
-                if user.settings is None:
-                    return None
-                else:
-                    return user.settings.ui.get("notifications", {}).get(
-                        "webhook_url", None
-                    )
+                        return notifications.get("webhook_url", None)
         except Exception:
             return None
 

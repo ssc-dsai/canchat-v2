@@ -26,14 +26,14 @@ Configuration of the fixtures used for each of the table services.
 """
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def db_connector(
     async_session_maker: async_sessionmaker[AsyncSession],
 ):
     yield AsyncDatabaseConnector(async_session_maker)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def auths_table(
     db_connector: AsyncDatabaseConnector,
     group_table: GroupTable,
@@ -42,71 +42,71 @@ def auths_table(
     yield AuthsTable(db_connector, group_table, users_table)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def channel_table(
     db_connector: AsyncDatabaseConnector,
 ):
     yield ChannelTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def chat_table(db_connector: AsyncDatabaseConnector, tag_table: TagTable):
     yield ChatTable(db_connector=db_connector, tag_table=tag_table)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def domain_table(
     db_connector: AsyncDatabaseConnector,
 ):
     yield DomainTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def export_logs_table(
     db_connector: AsyncDatabaseConnector,
 ):
     yield ExportLogsTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def feedback_table(
     db_connector: AsyncDatabaseConnector,
 ):
     yield FeedbackTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def files_table(
     db_connector: AsyncDatabaseConnector,
 ):
     yield FilesTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def folder_table(db_connector: AsyncDatabaseConnector, chat_table: ChatTable):
 
     yield FolderTable(db_connector=db_connector, chats=chat_table)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def functions_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
 
     yield FunctionsTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def group_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
 
     yield GroupTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def knowledge_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
 
     yield KnowledgeTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def memories_table(
     db_connector: AsyncDatabaseConnector,
 ):
@@ -114,7 +114,7 @@ def memories_table(
     yield MemoriesTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def message_table(
     db_connector: AsyncDatabaseConnector,
 ):
@@ -122,7 +122,7 @@ def message_table(
     yield MessageTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def message_metrics_table(
     db_connector: AsyncDatabaseConnector,
 ):
@@ -130,19 +130,19 @@ def message_metrics_table(
     yield MessageMetricsTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def models_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
 
     yield ModelsTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def prompts_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
 
     yield PromptsTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def tag_table(
     db_connector: AsyncDatabaseConnector,
 ):
@@ -150,13 +150,13 @@ def tag_table(
     yield TagTable(db_connector=db_connector)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def tools_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
 
     yield ToolsTable(db_connector=db_connector, users_table=users_table)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def users_table(db_connector: AsyncDatabaseConnector, chat_table: ChatTable):
 
     users_table = UsersTable(db_connector=db_connector, chats=chat_table)

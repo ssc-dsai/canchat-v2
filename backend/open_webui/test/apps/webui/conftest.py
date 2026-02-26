@@ -26,7 +26,7 @@ async def event_loop():
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="session", params=["postgresql://", "sqlite:///"])
+@pytest_asyncio.fixture(scope="function", params=["postgresql://", "sqlite:///"])
 async def async_session_maker(
     event_loop,
     request: pytest.FixtureRequest,
@@ -53,7 +53,7 @@ async def async_session_maker(
                 except docker.errors.APIError:
                     pass
 
-                docker_client.containers.run(
+                container = docker_client.containers.run(
                     image="postgres:16.2",
                     detach=True,
                     environment=env_vars_postgres,
@@ -63,17 +63,14 @@ async def async_session_maker(
                     auto_remove=True,
                 )
 
-                time.sleep(2)
-                container = docker_client.containers.get(_PG_DOCKER_CONTAINER_NAME)
-
                 current_time = time.time()
                 for line in container.logs(stream=True, follow=True):
                     # Wait for database to be ready or for five seconds
                     if "ready to accept connections" in line.decode():
-                        time.sleep(1)
+                        await asyncio.sleep(0.5)
                         break
                     elif time.time() - current_time > 5:
-                        pytest.skip("PostgreSQL did not come up withing 5 seconds.")
+                        pytest.skip("PostgreSQL did not come up within 5 seconds.")
 
                 DB_URL = f"{param}{__PG_USER}:{__PG_PW}@localhost:{__PG_PORT}/{__PG_DB}"
 
