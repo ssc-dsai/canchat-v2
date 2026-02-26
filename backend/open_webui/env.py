@@ -332,6 +332,7 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+USE_REDIS_LOCKS = os.environ.get("USE_REDIS_LOCKS", "True").lower() == "true"
 
 ####################################
 # WEBUI_AUTH (Required for security)
