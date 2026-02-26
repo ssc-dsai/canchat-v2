@@ -238,6 +238,9 @@ class TestProcessWebSearchLogging:
             def load(self):
                 return [retrieval.Document(page_content="hello", metadata={})]
 
+            def lazy_load(self):
+                yield retrieval.Document(page_content="hello", metadata={})
+
         def fake_get_web_loader(
             urls, verify_ssl=True, requests_per_second=2, request_timeout=None
         ):
