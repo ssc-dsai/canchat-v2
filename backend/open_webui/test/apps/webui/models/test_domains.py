@@ -1,3 +1,6 @@
+import time
+import uuid
+
 import pytest
 from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.domains import Domain, DomainForm, DomainModel, DomainTable
@@ -31,6 +34,7 @@ class TestDomains:
             "ssc-spc.gc..ca",  # double period
             "sspc$#.ca",  # special characters
             None,  # not a string
+            "",  # Empty
         ],
     )
     @pytest.mark.asyncio
@@ -79,35 +83,147 @@ class TestDomains:
             assert d.description == description
             assert DomainModel.model_validate(d) == domain_model
 
-    # @pytest.mark.asyncio
-    # async def test_authenticate_user_correct_password(
-    #     self,
-    #     auths_table: AuthsTable,
-    # ):
-    #     # Required import since hashing happens outside of this service
-    #     # but unhashing happens within.
-    #     from open_webui.utils.auth import get_password_hash
+    @pytest.mark.asyncio
+    async def test_get_domains(
+        self,
+        domain_table: DomainTable,
+        db_connector: AsyncDatabaseConnector,
+    ):
+        current_time = int(time.time())
+        new_domain = Domain(
+            id=str(uuid.uuid4),
+            domain="test.example.domain",
+            created_at=current_time,
+            updated_at=current_time,
+        )
 
-    #     usermodel = await auths_table.insert_new_auth(
-    #         email=_domain_attributes["email"],
-    #         name=_domain_attributes["name"],
-    #         password=get_password_hash(_password),
-    #         profile_image_url=_domain_attributes["profile_image_url"],
-    #         role=_domain_attributes["role"],
-    #         oauth_sub=_domain_attributes["oauth_sub"],
-    #         domain=_domain_attributes["domain"],
-    #     )
-    #     assert usermodel
+        async with db_connector.get_async_db() as db:
+            db.add(new_domain)
+            await db.commit()
+            await db.refresh(new_domain)
 
-    #     # Ensure returned model conforms to data input
-    #     for k, v in _domain_attributes.items():
-    #         assert getattr(usermodel, k, None) == v
+            domains = await domain_table.get_domains()
 
-    #     authenticated_usermodel = await auths_table.authenticate_user(
-    #         email=_domain_attributes["email"], password=_password
-    #     )
+            scalars_domains = await db.scalars(select(Domain))
+            domain_models = [
+                DomainModel.model_validate(domain) for domain in scalars_domains.all()
+            ]
 
-    #     assert authenticated_usermodel
+            domains.sort(key=lambda domain: domain.domain)
+            domain_models.sort(key=lambda domain: domain.domain)
 
-    #     for k, v in _domain_attributes.items():
-    #         assert getattr(authenticated_usermodel, k, None) == v
+            assert domains == domain_models
+
+    @pytest.mark.asyncio
+    async def test_get_domain_by_id(
+        self,
+        domain_table: DomainTable,
+        db_connector: AsyncDatabaseConnector,
+    ):
+        current_time = int(time.time())
+        new_domain = Domain(
+            id=str(uuid.uuid4),
+            domain="test.example.domain",
+            created_at=current_time,
+            updated_at=current_time,
+        )
+
+        async with db_connector.get_async_db() as db:
+            db.add(new_domain)
+            await db.commit()
+            await db.refresh(new_domain)
+
+            domain = await domain_table.get_domain_by_id(domain_id=new_domain.id)
+
+            assert domain
+            assert DomainModel.model_validate(new_domain) == domain
+
+    @pytest.mark.asyncio
+    async def test_get_domain_by_domain(
+        self,
+        domain_table: DomainTable,
+        db_connector: AsyncDatabaseConnector,
+    ):
+        current_time = int(time.time())
+        new_domain = Domain(
+            id=str(uuid.uuid4),
+            domain="test.example.domain",
+            created_at=current_time,
+            updated_at=current_time,
+        )
+
+        async with db_connector.get_async_db() as db:
+            db.add(new_domain)
+            await db.commit()
+            await db.refresh(new_domain)
+
+            domain = await domain_table.get_domain_by_domain(
+                domain_name=new_domain.domain
+            )
+
+            assert domain
+            assert DomainModel.model_validate(new_domain) == domain
+
+    @pytest.mark.asyncio
+    async def test_update_domain_by_id(
+        self,
+        domain_table: DomainTable,
+        db_connector: AsyncDatabaseConnector,
+    ):
+        current_time = int(time.time())
+        new_domain = Domain(
+            id=str(uuid.uuid4),
+            domain="test.example.domain",
+            created_at=current_time,
+            updated_at=current_time,
+        )
+
+        async with db_connector.get_async_db() as db:
+            db.add(new_domain)
+            await db.commit()
+            await db.refresh(new_domain)
+
+            domain = await domain_table.update_domain_by_id(
+                domain_id=new_domain.id,
+                form_data=DomainForm(domain="new.domain.example"),
+            )
+            assert domain
+
+            await db.refresh(new_domain)
+
+            assert DomainModel.model_validate(new_domain) == domain
+
+    @pytest.mark.asyncio
+    async def test_delete_domain_by_id(
+        self,
+        domain_table: DomainTable,
+        db_connector: AsyncDatabaseConnector,
+    ):
+        current_time = int(time.time())
+        new_domain = Domain(
+            id=str(uuid.uuid4),
+            domain="test.example.domain",
+            created_at=current_time,
+            updated_at=current_time,
+        )
+
+        async with db_connector.get_async_db() as db:
+            db.add(new_domain)
+            await db.commit()
+            await db.refresh(new_domain)
+
+            domain = await domain_table.delete_domain_by_id(domain_id=new_domain.id)
+            assert domain
+
+            d = await db.scalar(select(Domain).where(Domain.id == new_domain.id))
+            assert not d
+
+    @pytest.mark.asyncio
+    async def test_delete_domain_by_id_no_domain(
+        self,
+        domain_table: DomainTable,
+    ):
+        id = "ThisIsAnIdThatDoesntExist"
+
+        domain = await domain_table.delete_domain_by_id(domain_id=id)
+        assert not domain
