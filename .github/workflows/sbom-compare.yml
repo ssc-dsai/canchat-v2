@@ -80,12 +80,12 @@ jobs:
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
 
-      - name: Download comparison-history.md
+      - name: Download comparison-history.md.txt
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           path: .sbom
-          name: comparison-history.md
+          name: comparison-history.md.txt
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
 
