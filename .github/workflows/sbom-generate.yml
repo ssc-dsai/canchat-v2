@@ -1,4 +1,3 @@
-name: SBOM generate and compare
 # target steps:
 # download sbom (from github - SPDX format)
 # - preblems with github API version (lack of sort-order, makes diff problematic)
@@ -9,6 +8,7 @@ name: SBOM generate and compare
 # track DIFFs as artifacts within this github action, note artefacts expire, the max (and default) is 90 days
 # generate csv or excel SBOMs for simpler manual review
 
+name: SBOM compare
 on:
   pull_request:
     branches:
@@ -26,7 +26,7 @@ permissions:
     contents: write
 
 jobs:
-  sbom-generate-and-compare:
+  sbom-compare:
     runs-on: ubuntu-latest
 
     steps:
