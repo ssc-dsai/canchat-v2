@@ -105,14 +105,16 @@ class MessageMetricsTable:
             return 0
 
     def get_daily_messages_number(
-        self, days: int = 1, domain: Optional[str] = None, model: Optional[str] = None
+        self, domain: Optional[str] = None, model: Optional[str] = None
     ) -> Optional[int]:
         try:
             with get_db() as db:
-                # Use the same time calculation as historical data for consistency
                 current_time = int(time.time())
                 end_time = current_time
-                start_time = end_time - (24 * 60 * 60)
+                # Calculate start of the current day in UTC
+                now_utc = time.gmtime(current_time)
+                today_str = time.strftime("%Y-%m-%d", now_utc)
+                start_time = int(time.mktime(time.strptime(f"{today_str} 00:00:00", "%Y-%m-%d %H:%M:%S")))
 
                 # Build the query to count messages for the current day
                 query = db.query(MessageMetric).filter(
@@ -154,14 +156,16 @@ class MessageMetricsTable:
             return 0  # Return 0 instead of None
 
     def get_daily_message_tokens_sum(
-        self, days: int = 1, domain: Optional[str] = None
+        self, domain: Optional[str] = None
     ) -> Optional[int]:
         try:
             with get_db() as db:
-                # Use the same time calculation as historical data for consistency
                 current_time = int(time.time())
                 end_time = current_time
-                start_time = end_time - (24 * 60 * 60)
+                # Calculate start of the current day in UTC
+                now_utc = time.gmtime(current_time)
+                today_str = time.strftime("%Y-%m-%d", now_utc)
+                start_time = int(time.mktime(time.strptime(f"{today_str} 00:00:00", "%Y-%m-%d %H:%M:%S")))
 
                 query = db.query(MessageMetric).filter(
                     MessageMetric.created_at >= start_time,
@@ -184,25 +188,23 @@ class MessageMetricsTable:
         self, days: int = 7, domain: Optional[str] = None, model: Optional[str] = None
     ) -> list[dict]:
         try:
-            from sqlalchemy import case, cast, String
-
             current_time = int(time.time())
 
             # Calculate today's date at midnight for proper day boundary
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
+            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
 
             # Calculate the start of the date range
-            start_timestamp = today_midnight - ((days - 1) * 24 * 60 * 60)
-            end_timestamp = today_midnight + (24 * 60 * 60)  # Include today
+            start_timestamp = today_midnight - ((days - 1) * 86400)  # 86400 = seconds in a day
+            end_timestamp = today_midnight + 86400  # Include today
 
-            # Generate all expected dates to ensure no gaps
+            # Prepare expected dates dictionary to ensure no gaps in results
             expected_dates = {}
-            for day in range(days):
-                day_start = today_midnight - (day * 24 * 60 * 60)
-                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
+            for offset in range(days):
+                day_start = today_midnight - (offset * 86400)
+                date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 expected_dates[date_str] = 0
 
             # Fetch data using a single query with GROUP BY
@@ -245,14 +247,14 @@ class MessageMetricsTable:
             # Generate continuous date range as fallback
             fallback = []
             current_time = int(time.time())
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
+            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
 
             for day in range(days):
-                day_start = today_midnight - (day * 24 * 60 * 60)
-                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
+                day_start = today_midnight - (day * 86400)
+                date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
 
             return sorted(fallback, key=lambda x: x["date"])
@@ -261,25 +263,23 @@ class MessageMetricsTable:
         self, days: int = 7, domain: Optional[str] = None
     ) -> list[dict]:
         try:
-            from sqlalchemy import case, cast, String
-
             current_time = int(time.time())
 
             # Calculate today's date at midnight for proper day boundary
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
+            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
 
             # Calculate the start of the date range
-            start_timestamp = today_midnight - ((days - 1) * 24 * 60 * 60)
-            end_timestamp = today_midnight + (24 * 60 * 60)  # Include today
+            start_timestamp = today_midnight - ((days - 1) * 86400)
+            end_timestamp = today_midnight + 86400  # Include today
 
             # Generate all expected dates to ensure no gaps
             expected_dates = {}
             for day in range(days):
-                day_start = today_midnight - (day * 24 * 60 * 60)
-                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
+                day_start = today_midnight - (day * 86400)
+                date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 expected_dates[date_str] = 0
 
             # Fetch data using a single query with GROUP BY
@@ -320,14 +320,14 @@ class MessageMetricsTable:
             # Generate continuous date range as fallback
             fallback = []
             current_time = int(time.time())
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
+            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
 
             for day in range(days):
-                day_start = today_midnight - (day * 24 * 60 * 60)
-                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
+                day_start = today_midnight - (day * 86400)
+                date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
 
             return sorted(fallback, key=lambda x: x["date"])
@@ -500,12 +500,12 @@ class MessageMetricsTable:
     ) -> list[dict]:
         try:
             current_time = int(time.time())
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
+            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
-            start_time = today_midnight - (days * 24 * 60 * 60)
-            end_time = today_midnight + (24 * 60 * 60)
+            start_time = today_midnight - (days * 86400)
+            end_time = today_midnight + 86400
 
             with get_db() as db:
                 query = db.query(
@@ -525,15 +525,15 @@ class MessageMetricsTable:
                 # Group user_ids by date string
                 day_to_users = {}
                 for user_id, created_at in results:
-                    date_str = time.strftime("%Y-%m-%d", time.localtime(created_at))
+                    date_str = time.strftime("%Y-%m-%d", time.gmtime(created_at))
                     if date_str not in day_to_users:
                         day_to_users[date_str] = set()
                     day_to_users[date_str].add(user_id)
 
                 output = []
                 for day in range(days):
-                    day_start = today_midnight - (day * 24 * 60 * 60)
-                    date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
+                    day_start = today_midnight - (day * 86400)
+                    date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                     count = len(day_to_users.get(date_str, set()))
                     output.append({"date": date_str, "count": count})
 
@@ -544,13 +544,13 @@ class MessageMetricsTable:
             # Fallback: return zeros for each day
             fallback = []
             current_time = int(time.time())
-            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
+            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
             for day in range(days):
-                day_start = today_midnight - (day * (24 * 60 * 60))
-                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
+                day_start = today_midnight - (day * 86400)
+                date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
             return sorted(fallback, key=lambda x: x["date"])
 

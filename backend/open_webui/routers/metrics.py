@@ -13,11 +13,10 @@ from fastapi.responses import StreamingResponse
 import logging
 import csv
 import io
-import time
 
 from open_webui.utils.auth import get_metrics_user
 from open_webui.env import SRC_LOG_LEVELS
-from datetime import datetime
+from datetime import datetime, timezone
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["METRICS"])
@@ -117,16 +116,17 @@ async def get_total_tokens(
 
     if start_date:
         try:
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
             start_timestamp = int(start_dt.timestamp())
         except ValueError:
             pass
 
     if end_date:
         try:
-            # End date should include the entire day, so add 24 hours
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-            end_timestamp = int(end_dt.timestamp()) + (24 * 60 * 60)
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            # Set end_timestamp to the end of the specified day (23:59:59 UTC)
+            end_of_day = end_dt.replace(hour=23, minute=59, second=59)
+            end_timestamp = int(end_of_day.timestamp())
         except ValueError:
             pass
 
