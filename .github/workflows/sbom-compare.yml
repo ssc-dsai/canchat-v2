@@ -173,14 +173,16 @@ jobs:
 
       - name: Upload SBOM artifact comparison-history.md
         uses: actions/upload-artifact@v7
+        continue-on-error: true
         with:
           name: SBOM-artifact-comparison-history.md
-          archive: false
           include-hidden-files: true
+          archive: false
           path: .sbom/comparison-history.md
 
       - name: Upload SBOM artifact comparison.md
         uses: actions/upload-artifact@v7
+        continue-on-error: true
         with:
           name: SBOM-artifact-comparison.md
           archive: false
@@ -189,6 +191,7 @@ jobs:
 
       - name: Upload SBOM artifact current.cdx.csv
         uses: actions/upload-artifact@v7
+        continue-on-error: true
         with:
           name: SBOM-artifact-current.cdx.csv
           archive: false
@@ -197,6 +200,7 @@ jobs:
           
       - name: Upload SBOM artifact current.cdx.json
         uses: actions/upload-artifact@v7
+        continue-on-error: true
         with:
           name: SBOM-artifact-current.cdx.json
           archive: false
@@ -205,6 +209,7 @@ jobs:
 
       - name: Upload SBOM artifact current.spdx.csv
         uses: actions/upload-artifact@v7
+        continue-on-error: true
         with:
           name: SBOM-artifact-current.spdx.csv
           archive: false
@@ -213,6 +218,7 @@ jobs:
           
       - name: Upload SBOM artifact current.spdx.json
         uses: actions/upload-artifact@v7
+        continue-on-error: true
         with:
           name: SBOM-artifact-current.spdx.json
           archive: false
