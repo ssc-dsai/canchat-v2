@@ -72,7 +72,6 @@ jobs:
          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
       - name: Download SBOM Artifact current.spdx.json
-        id: download-artifact-current.spdx.json
         uses: actions/download-artifact@v8
         # if doesn't exist continue on error
         continue-on-error: true
@@ -84,7 +83,6 @@ jobs:
           merge-multiple: true
 
       - name: Download SBOM Artifact comparison-history.md
-        id: download-artifact-comparison-history.md
         uses: actions/download-artifact@v8
         # if doesn't exist continue on error
         continue-on-error: true
