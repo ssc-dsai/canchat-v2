@@ -189,6 +189,7 @@ jobs:
           include-hidden-files: true
           archive: false
           path: .sbom/comparison-history.md
+          mime_type: txt/plain
 
       - name: Upload SBOM artifact comparison.md
         uses: actions/upload-artifact@v7
@@ -198,6 +199,7 @@ jobs:
           archive: false
           include-hidden-files: true
           path: .sbom/comparison.md
+          mime_type: txt/markdown
 
       - name: Upload SBOM artifact current.cdx.csv
         uses: actions/upload-artifact@v7
@@ -207,6 +209,7 @@ jobs:
           archive: false
           include-hidden-files: true
           path: .sbom/current.cdx.csv
+          mime_type: txt/plain
           
       - name: Upload SBOM artifact current.cdx.json
         uses: actions/upload-artifact@v7
@@ -225,6 +228,7 @@ jobs:
           archive: false
           include-hidden-files: true
           path: .sbom/current.spdx.csv
+          mime_type: txt/csv
           
       - name: Upload SBOM artifact current.spdx.json
         uses: actions/upload-artifact@v7
