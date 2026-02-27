@@ -80,7 +80,7 @@ jobs:
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
 
-      - name: Download comparison-history.md.txt
+      - name: Download comparison-history.md
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
@@ -88,6 +88,8 @@ jobs:
           name: comparison-history.md.txt
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
+      - name: artefact filename workaround
+        run: mv comparison-history.md.txt comparison-history.md
 
       - name: show downloaded artifacts
         run: ls -R .sbom    # gut check
@@ -152,32 +154,39 @@ jobs:
         id: create-summary
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
-          echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  > .sbom/comparison.md.txt
-          echo "## Run Timestamp: $TIMESTAMP" >> .sbom/comparison.md.txt
+          echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  > .sbom/comparison.md
+          echo "## Run Timestamp: $TIMESTAMP" >> .sbom/comparison.md
           
           # CDX version
-          echo "" >> .sbom/comparison.md.txt
-          echo "### Comparison of current CDX SBOM with previous commit" >> .sbom/comparison.md.txt
-          cat .sbom/comparison.cdx.md >> .sbom/comparison.md.txt # copy differnces to the historic version
+          echo "" >> .sbom/comparison.md
+          echo "### Comparison of current CDX SBOM with previous commit" >> .sbom/comparison.md
+          cat .sbom/comparison.cdx.md >> .sbom/comparison.md # copy differnces to the historic version
           
           # SPDX version
-          echo "" >> .sbom/comparison.md.txt
-          echo "### Comparison of current SPDX SBOM with previous CI run" >> .sbom/comparison.md.txt
-          cat .sbom/comparison.spdx.md >> .sbom/comparison.md.txt # copy differnces to the historic version
+          echo "" >> .sbom/comparison.md
+          echo "### Comparison of current SPDX SBOM with previous CI run" >> .sbom/comparison.md
+          cat .sbom/comparison.spdx.md >> .sbom/comparison.md # copy differnces to the historic version
           
           # prepend current comparison log to the top of the comparison history file (most recent first)
-          echo "" >> .sbom/comparison.md.txt
-          if test -f .sbom/comparison-history.md.txt; then cp .sbom/comparison-history.md.txt .sbom/old-comparison-history.md.txt; fi
-          cp .sbom/comparison.md.txt .sbom/comparison-history.md.txt
-          if test -f .sbom/old-comparison-history.md.txt; then 
-            cat .sbom/old-comparison-history.md.txt >> .sbom/comparison-history.md.txt
+          echo "" >> .sbom/comparison.md
+          if test -f .sbom/comparison-history.md; then cp .sbom/comparison-history.md .sbom/old-comparison-history.md; fi
+          cp .sbom/comparison.md .sbom/comparison-history.md
+          if test -f .sbom/old-comparison-history.md; then 
+            cat .sbom/old-comparison-history.md >> .sbom/comparison-history.md
           fi
-          cat .sbom/comparison-history.md.txt >> $GITHUB_STEP_SUMMARY
+          cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
       - name: show artifacts after all changes
         run: ls -R .sbom    # gut check
 
-      - name: Upload comparison-history.md.txt
+      - name: artefact filename workaround
+        run: |
+          mv comparison-history.md comparison-history.md.txt
+          mv comparison.md         comparison.md.txt
+          mv current.cdx.csv       current.cdx.csv.txt
+          mv current.spdx.csv      current.spdx.csv.txt
+
+      - name: Upload comparison-history.md
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
@@ -186,7 +195,7 @@ jobs:
           archive: false
           path: .sbom/comparison-history.md.txt
 
-      - name: Upload comparison.md.txt
+      - name: Upload comparison.md
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
@@ -195,7 +204,7 @@ jobs:
           include-hidden-files: true
           path: .sbom/comparison.md.txt
 
-      - name: Upload current.cdx.csv.txt
+      - name: Upload current.cdx.csv
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
@@ -213,7 +222,7 @@ jobs:
           include-hidden-files: true
           path: .sbom/current.cdx.json
 
-      - name: Upload current.spdx.csv.txt
+      - name: Upload current.spdx.csv
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
