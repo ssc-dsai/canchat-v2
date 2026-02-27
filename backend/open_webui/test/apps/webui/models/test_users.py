@@ -1,6 +1,7 @@
 import random
 import time
 import uuid
+from typing import Any
 
 import pytest
 from open_webui.internal.db_utils import AsyncDatabaseConnector
@@ -397,3 +398,251 @@ class TestUsers:
             # Update user with last_active_at.
             await db.refresh(user)
             assert UserModel.model_validate(user) == updated_user
+
+    @pytest.mark.parametrize(
+        "days, domain",
+        [
+            (0, None),
+            (1, None),
+            (20, None),
+            (0, f"{_user_attributes['domain']}"),
+            (4, f"{_user_attributes['domain']}.4"),
+            (20, f"{_user_attributes['domain']}.3"),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_get_daily_users_number(
+        self,
+        days: int,
+        domain: str | None,
+        db_connector: AsyncDatabaseConnector,
+        users_table: UsersTable,
+    ):
+        async with db_connector.get_async_db() as db:
+            if days > 30:
+                pytest.skip("Test built for a maximum number of days equal to 30.")
+
+            _20_hours_in_seconds = 20 * 60 * 60
+
+            _ums: list[UserModel] = list()
+            for index_day in range(30):
+                for index_user in range(index_day):
+                    user = UserModel(**_user_attributes)
+                    user.email = f"{index_day}_{index_user}_{user.email}.{index_day}"
+                    user.id += f"_{index_day}_{index_user}"
+                    user.domain = f"{user.domain}.{index_day}"
+                    user.oauth_sub = f"{user.oauth_sub}_{index_day}_{index_user}"
+                    user.last_active_at -= _20_hours_in_seconds * index_day
+                    _ums.append(user)
+
+            _users = [User(**user.model_dump()) for user in _ums]
+            db.add_all(_users)
+            await db.commit()
+
+            for user in _users:
+                await db.refresh(user)
+
+            daily_users = await users_table.get_daily_users_number(
+                days=days, domain=domain
+            )
+
+            assert daily_users is not None
+
+            if domain is None:
+                assert daily_users == sum(
+                    1
+                    for user in _users
+                    if user.last_active_at >= int(time.time()) - (days * 24 * 60 * 60)
+                )
+            else:
+                assert daily_users == sum(
+                    1
+                    for user in _users
+                    if user.last_active_at >= int(time.time()) - (days * 24 * 60 * 60)
+                    and user.domain == domain
+                )
+
+    @pytest.mark.asyncio
+    async def test_update_user_oauth_sub_by_id(
+        self,
+        db_connector: AsyncDatabaseConnector,
+        users_table: UsersTable,
+    ):
+        async with db_connector.get_async_db() as db:
+
+            _model = UserModel(**_user_attributes)
+            user = User(**_model.model_dump())
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+
+            _oauth_sub = user.oauth_sub + "_updated_sub"
+            updated_user = await users_table.update_user_oauth_sub_by_id(
+                id=user.id, oauth_sub=_oauth_sub
+            )
+
+            assert updated_user
+            assert updated_user.oauth_sub == _oauth_sub
+
+            # Update user with latest oauth_sub.
+            await db.refresh(user)
+
+            assert UserModel.model_validate(user) == updated_user
+
+    @pytest.mark.parametrize(
+        "updates",
+        [
+            {"email": "new.email@bob.test.ca"},  # A proper field to update.
+            {"bad_email": "new.email@bob.test.ca"},  # A field that doesn't belong.
+            {
+                "name": "Bobby Tester",
+                "oauth_sub": str(uuid.uuid4()),
+            },  # Multiple fields.
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_update_user_by_id(
+        self,
+        updates: dict[str, Any],
+        db_connector: AsyncDatabaseConnector,
+        users_table: UsersTable,
+    ):
+        async with db_connector.get_async_db() as db:
+
+            _model = UserModel(**_user_attributes)
+            user = User(**_model.model_dump())
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+
+            updated_user = await users_table.update_user_by_id(
+                id=user.id, updated=updates
+            )
+
+            assert updated_user
+
+            # Update user with latest oauth_sub.
+            await db.refresh(user)
+
+            assert UserModel.model_validate(user) == updated_user
+            assert UserModel(**(_user_attributes | updates)) == updated_user
+
+    @pytest.mark.asyncio
+    async def test_delete_user_by_id(
+        self,
+        db_connector: AsyncDatabaseConnector,
+        users_table: UsersTable,
+    ):
+        async with db_connector.get_async_db() as db:
+
+            _model = UserModel(**_user_attributes)
+            user = User(**_model.model_dump())
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+
+            is_deleted = await users_table.delete_user_by_id(id=user.id)
+
+            assert is_deleted
+
+            result = await db.scalar(select(User).where(User.id == _model.id))
+            assert not result
+
+    @pytest.mark.asyncio
+    async def test_update_user_api_key_by_id(
+        self,
+        db_connector: AsyncDatabaseConnector,
+        users_table: UsersTable,
+    ):
+        async with db_connector.get_async_db() as db:
+
+            _model = UserModel(**_user_attributes)
+            user = User(**_model.model_dump())
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+
+            _api_key = "sk-test-asdsad-asdasd"
+            updated_user = await users_table.update_user_api_key_by_id(
+                id=user.id, api_key=_api_key
+            )
+
+            assert updated_user
+
+            # Update user with latest oauth_sub.
+            await db.refresh(user)
+
+            assert user.api_key != _model.api_key
+
+    @pytest.mark.asyncio
+    async def test_update_user_api_key_by_id_no_id(
+        self,
+        users_table: UsersTable,
+    ):
+
+        _api_key = "sk-test-asdsad-asdasd"
+        updated_user = await users_table.update_user_api_key_by_id(
+            id=str(uuid.uuid4()), api_key=_api_key
+        )
+
+        assert not updated_user
+
+    @pytest.mark.asyncio
+    async def test_get_user_api_key_by_id(
+        self,
+        db_connector: AsyncDatabaseConnector,
+        users_table: UsersTable,
+    ):
+        async with db_connector.get_async_db() as db:
+
+            _api_key = "sk-test-asdsad-asdasd"
+            _model = UserModel(**_user_attributes)
+            _model.api_key = _api_key
+            user = User(**_model.model_dump())
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+
+            api_key = await users_table.get_user_api_key_by_id(id=user.id)
+
+            assert api_key
+
+            # Update user with latest oauth_sub.
+            await db.refresh(user)
+
+            assert user.api_key == api_key
+            assert api_key == _api_key
+
+    @pytest.mark.asyncio
+    async def test_get_valid_user_ids(
+        self,
+        db_connector: AsyncDatabaseConnector,
+        users_table: UsersTable,
+    ):
+        async with db_connector.get_async_db() as db:
+            _ums = [UserModel(**_user_attributes) for _ in range(5)]
+            for index, user in enumerate(_ums):
+                user.email = f"{index}_{user.email}"
+                user.id += f"_{index}"
+                user.oauth_sub = f"{user.oauth_sub}_{index}"
+
+            _users = [User(**user.model_dump()) for user in _ums]
+            db.add_all(_users)
+            await db.commit()
+
+            for user in _users:
+                await db.refresh(user)
+
+            # Get some random IDs
+            ids: set[str] = set()
+            for _ in range(3):
+                ids.add(_users[random.randrange(0, len(_users))].id)
+
+            valid_ids = await users_table.get_valid_user_ids(list(ids))
+
+            assert len(ids) == len(valid_ids)
+
+            list_ids = list(ids)
+            list_ids.sort()
+            valid_ids.sort()
+            assert list_ids == valid_ids

@@ -1,5 +1,6 @@
 import time
 from logging import getLogger
+from typing import Any
 
 from open_webui.internal.db_utils import AsyncDatabaseConnector, JSONField
 from open_webui.models.base import Base
@@ -319,8 +320,11 @@ class UsersTable:
         except Exception:
             return None
 
-    async def update_user_by_id(self, id: str, updated: dict) -> UserModel | None:
+    async def update_user_by_id(
+        self, id: str, updated: dict[str, Any]
+    ) -> UserModel | None:
         try:
+            # TODO: Should probably prevent `id` from being updated?
             async with self.__db.get_async_db() as db:
                 user = await db.scalar(select(User).where(User.id == id))
 
