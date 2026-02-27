@@ -79,7 +79,6 @@ jobs:
           name: current.spdx.json
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
-#          merge-multiple: true
 
       - name: Download comparison-history.md
         uses: actions/download-artifact@v8
@@ -89,7 +88,6 @@ jobs:
           name: comparison-history.md
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
-#          merge-multiple: true
 
       - name: show downloaded artifacts
         run: ls -R .sbom    # gut check
@@ -179,32 +177,32 @@ jobs:
       - name: show artifacts after all changes
         run: ls -R .sbom    # gut check
 
-      - name: Upload comparison-history.md
+      - name: Upload comparison-history.md.txt
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
-          name: comparison-history.md
+          name: comparison-history.md.txt
           include-hidden-files: true
           archive: false
-          path: .sbom/comparison-history.md
+          path: .sbom/comparison-history.md.txt
 
-      - name: Upload comparison.md
+      - name: Upload comparison.md.txt
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
-          name: comparison.md
+          name: comparison.md.txt
           archive: false
           include-hidden-files: true
-          path: .sbom/comparison.md
+          path: .sbom/comparison.md.txt
 
-      - name: Upload current.cdx.csv
+      - name: Upload current.cdx.csv.txt
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
-          name: current.cdx.csv
+          name: current.cdx.csv.txt
           archive: false
           include-hidden-files: true
-          path: .sbom/current.cdx.csv
+          path: .sbom/current.cdx.csv.txt
           
       - name: Upload current.cdx.json
         uses: actions/upload-artifact@v7
@@ -215,14 +213,14 @@ jobs:
           include-hidden-files: true
           path: .sbom/current.cdx.json
 
-      - name: Upload current.spdx.csv
+      - name: Upload current.spdx.csv.txt
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
-          name: current.spdx.csv
+          name: current.spdx.csv.txt
           archive: false
           include-hidden-files: true
-          path: .sbom/current.spdx.csv
+          path: .sbom/current.spdx.csv.txt
           
       - name: Upload current.spdx.json
         uses: actions/upload-artifact@v7
