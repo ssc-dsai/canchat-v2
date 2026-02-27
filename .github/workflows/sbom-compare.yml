@@ -91,7 +91,7 @@ jobs:
 
       - name: artifact filename workaround after download
         continue-on-error: true
-        run: mv comparison-history.md.txt comparison-history.md
+        run: mv .sbom/comparison-history.md.txt .sbom/comparison-history.md
 
       - name: show downloaded artifacts
         run: ls -R .sbom    # gut check
@@ -184,10 +184,10 @@ jobs:
       - name: artifact filename workaround before upload
         continue-on-error: true
         run: |
-          mv comparison-history.md comparison-history.md.txt
-          mv comparison.md         comparison.md.txt
-          mv current.cdx.csv       current.cdx.csv.txt
-          mv current.spdx.csv      current.spdx.csv.txt
+          mv .sbom/comparison-history.md .sbom/comparison-history.md.txt
+          mv .sbom/comparison.md         .sbom/comparison.md.txt
+          mv .sbom/current.cdx.csv       .sbom/current.cdx.csv.txt
+          mv .sbom/current.spdx.csv      .sbom/current.spdx.csv.txt
 
       - name: Upload comparison-history.md
         uses: actions/upload-artifact@v7
