@@ -8,7 +8,7 @@
 # track DIFFs as artifacts within this github action, note artefacts expire, the max (and default) is 90 days
 # generate csv or excel SBOMs for simpler manual review
 
-name: SBOM compare
+name: SBOM generate and compare
 on:
   pull_request:
     branches:
@@ -73,7 +73,7 @@ jobs:
 
       - name: Download SBOM Artifacts from previous execution
         id: download-artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         # if doesn't exist continue on error
         continue-on-error: true
         with:
@@ -172,9 +172,10 @@ jobs:
         run: ls -R .sbom    # gut check
 
       - name: Upload SBOM Artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: SBOM-Artifacts
+          archive: false
           include-hidden-files: true
           path: |
             .sbom/comparison-history.md
