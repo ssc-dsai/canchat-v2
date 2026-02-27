@@ -71,14 +71,26 @@ jobs:
             | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
-      - name: Download SBOM Artifacts from previous execution
-        id: download-artifacts
+      - name: Download SBOM Artifact current.spdx.json
+        id: download-artifact-current.spdx.json
         uses: actions/download-artifact@v8
         # if doesn't exist continue on error
         continue-on-error: true
         with:
           path: .sbom
-          name: SBOM-Artifacts
+          name: SBOM-artifact-current.spdx.json
+          run-id: ${{ steps.get-run-id.outputs.run_id }}
+          github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
+          merge-multiple: true
+
+      - name: Download SBOM Artifact comparison-history.md
+        id: download-artifact-comparison-history.md
+        uses: actions/download-artifact@v8
+        # if doesn't exist continue on error
+        continue-on-error: true
+        with:
+          path: .sbom
+          name: SBOM-artifact-comparison-history.md
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
           merge-multiple: true
