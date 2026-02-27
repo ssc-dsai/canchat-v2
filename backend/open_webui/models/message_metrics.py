@@ -195,152 +195,116 @@ class MessageMetricsTable:
     def get_historical_messages_data(
         self, days: int = 7, domain: Optional[str] = None, model: Optional[str] = None
     ) -> list[dict]:
+        """
+        Returns a list of dicts with 'date' and 'count' for each day in the range (oldest to newest),
+        counting the number of MessageMetric per day for the given number of days (UTC).
+        """
         try:
             current_time = int(time.time())
-
-            # Calculate today's date at midnight for proper day boundary
-            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
-            today_midnight = int(
-                time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
+            today_utc = time.strftime("%Y-%m-%d", time.gmtime(current_time))
+            today_midnight_utc = int(
+                time.mktime(time.strptime(f"{today_utc} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
 
-            # Calculate the start of the date range
-            start_timestamp = today_midnight - (
-                (days - 1) * 86400
-            )  # 86400 = seconds in a day
-            end_timestamp = today_midnight + 86400  # Include today
+            # Calculate the start and end timestamps (inclusive of today)
+            start_timestamp = today_midnight_utc - ((days - 1) * 86400)
+            end_timestamp = today_midnight_utc + 86400
 
-            # Prepare expected dates dictionary to ensure no gaps in results
+            # Build expected date keys in chronological order (oldest to newest)
             expected_dates = {}
-            for offset in range(days):
-                day_start = today_midnight - (offset * 86400)
+            for offset in reversed(range(days)):
+                day_start = today_midnight_utc - (offset * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 expected_dates[date_str] = 0
 
-            # Fetch data using a single query with GROUP BY
             with get_db() as db:
-                # Build query with date range filter
                 query = db.query(
                     func.strftime(
                         "%Y-%m-%d", func.datetime(MessageMetric.created_at, "unixepoch")
                     ).label("date"),
-                    func.count(MessageMetric.id).label("total"),
+                    func.count(MessageMetric.id).label("count"),
                 ).filter(
                     MessageMetric.created_at >= start_timestamp,
                     MessageMetric.created_at < end_timestamp,
                 )
-
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
                 if model:
                     query = query.filter(MessageMetric.model == model)
-
-                # Group by date
                 query = query.group_by("date")
-
-                # Execute query
                 results = query.all()
-
-                # Update expected_dates with actual results
-                for date_str, total in results:
+                for date_str, count in results:
                     if date_str in expected_dates:
-                        expected_dates[date_str] = total if total else 0
+                        expected_dates[date_str] = count if count else 0
 
-            # Convert to list format and sort chronologically
-            result = [
-                {"date": date, "count": count} for date, count in expected_dates.items()
+            # Output as a sorted list (oldest to newest)
+            return [
+                {"date": date, "count": expected_dates[date]}
+                for date in sorted(expected_dates.keys())
             ]
-            return sorted(result, key=lambda x: x["date"])
-
         except Exception as e:
             logger.error(f"Failed to get historical messages data: {e}")
-            # Generate continuous date range as fallback
+            # Fallback: return zeros for each day in the range
             fallback = []
-            current_time = int(time.time())
-            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
-            today_midnight = int(
-                time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
-            )
-
-            for day in range(days):
-                day_start = today_midnight - (day * 86400)
+            for offset in reversed(range(days)):
+                day_start = today_midnight_utc - (offset * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
-
-            return sorted(fallback, key=lambda x: x["date"])
+            return fallback
 
     def get_historical_tokens_data(
         self, days: int = 7, domain: Optional[str] = None
     ) -> list[dict]:
+        """
+        Returns a list of dicts with 'date' and 'count' for each day in the range (oldest to newest),
+        summing the total tokens per day for the given number of days (UTC).
+        """
         try:
             current_time = int(time.time())
-
-            # Calculate today's date at midnight for proper day boundary
-            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
-            today_midnight = int(
-                time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
+            today_utc = time.strftime("%Y-%m-%d", time.gmtime(current_time))
+            today_midnight_utc = int(
+                time.mktime(time.strptime(f"{today_utc} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
 
-            # Calculate the start of the date range
-            start_timestamp = today_midnight - ((days - 1) * 86400)
-            end_timestamp = today_midnight + 86400  # Include today
+            start_timestamp = today_midnight_utc - ((days - 1) * 86400)
+            end_timestamp = today_midnight_utc + 86400
 
-            # Generate all expected dates to ensure no gaps
             expected_dates = {}
-            for day in range(days):
-                day_start = today_midnight - (day * 86400)
+            for offset in reversed(range(days)):
+                day_start = today_midnight_utc - (offset * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 expected_dates[date_str] = 0
 
-            # Fetch data using a single query with GROUP BY
             with get_db() as db:
-                # Build query with date range filter
                 query = db.query(
                     func.strftime(
                         "%Y-%m-%d", func.datetime(MessageMetric.created_at, "unixepoch")
                     ).label("date"),
-                    func.sum(MessageMetric.total_tokens).label("total"),
+                    func.sum(MessageMetric.total_tokens).label("count"),
                 ).filter(
                     MessageMetric.created_at >= start_timestamp,
                     MessageMetric.created_at < end_timestamp,
                 )
-
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
-
-                # Group by date
                 query = query.group_by("date")
-
-                # Execute query
                 results = query.all()
-
-                # Update expected_dates with actual results
-                for date_str, total in results:
+                for date_str, count in results:
                     if date_str in expected_dates:
-                        expected_dates[date_str] = round(total, 2) if total else 0
+                        expected_dates[date_str] = round(count, 2) if count else 0
 
-            # Convert to list format and sort chronologically
-            result = [
-                {"date": date, "count": count} for date, count in expected_dates.items()
+            return [
+                {"date": date, "count": expected_dates[date]}
+                for date in sorted(expected_dates.keys())
             ]
-            return sorted(result, key=lambda x: x["date"])
-
         except Exception as e:
             logger.error(f"Failed to get historical tokens data: {e}")
-            # Generate continuous date range as fallback
             fallback = []
-            current_time = int(time.time())
-            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
-            today_midnight = int(
-                time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
-            )
-
-            for day in range(days):
-                day_start = today_midnight - (day * 86400)
+            for offset in reversed(range(days)):
+                day_start = today_midnight_utc - (offset * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
-
-            return sorted(fallback, key=lambda x: x["date"])
+            return fallback
 
     def get_range_metrics(
         self,
@@ -510,12 +474,12 @@ class MessageMetricsTable:
     ) -> list[dict]:
         try:
             current_time = int(time.time())
-            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
+            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
-            start_time = today_midnight - (days * 86400)
-            end_time = today_midnight + 86400
+            start_time = today_midnight - (days * 24 * 60 * 60)
+            end_time = today_midnight + (24 * 60 * 60)
 
             with get_db() as db:
                 query = db.query(
@@ -535,15 +499,15 @@ class MessageMetricsTable:
                 # Group user_ids by date string
                 day_to_users = {}
                 for user_id, created_at in results:
-                    date_str = time.strftime("%Y-%m-%d", time.gmtime(created_at))
+                    date_str = time.strftime("%Y-%m-%d", time.localtime(created_at))
                     if date_str not in day_to_users:
                         day_to_users[date_str] = set()
                     day_to_users[date_str].add(user_id)
 
                 output = []
                 for day in range(days):
-                    day_start = today_midnight - (day * 86400)
-                    date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
+                    day_start = today_midnight - (day * 24 * 60 * 60)
+                    date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
                     count = len(day_to_users.get(date_str, set()))
                     output.append({"date": date_str, "count": count})
 
@@ -554,13 +518,13 @@ class MessageMetricsTable:
             # Fallback: return zeros for each day
             fallback = []
             current_time = int(time.time())
-            today = time.strftime("%Y-%m-%d", time.gmtime(current_time))
+            today = time.strftime("%Y-%m-%d", time.localtime(current_time))
             today_midnight = int(
                 time.mktime(time.strptime(f"{today} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
             for day in range(days):
-                day_start = today_midnight - (day * 86400)
-                date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
+                day_start = today_midnight - (day * (24 * 60 * 60))
+                date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
             return sorted(fallback, key=lambda x: x["date"])
 
