@@ -1207,7 +1207,7 @@
 							</h5>
 							<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{dailyPrompts}</h4>
 							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-								{$i18n.t('Number of prompts sent in the last 24 hours')}
+								{$i18n.t('Number of prompts sent today')}
 							</div>
 						</div>
 					</div>
@@ -1266,7 +1266,7 @@
 							</h5>
 							<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{dailyTokens}</h4>
 							<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-								{$i18n.t('Number of tokens used in the last 24 hours')}
+								{$i18n.t('Number of tokens used today')}
 							</div>
 						</div>
 					</div>
@@ -1343,7 +1343,7 @@
 									{modelDailyPrompts}
 								</h4>
 								<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-									{$i18n.t('Prompts processed by this model in the last 24 hours')}
+									{$i18n.t('Prompts processed by this model today')}
 								</div>
 							</div>
 						</div>
