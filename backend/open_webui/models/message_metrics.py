@@ -414,7 +414,7 @@ class MessageMetricsTable:
 
                     count = query.count()
 
-                    day_str = time.strftime("%Y-%m-%d", time.gmttime(current_day))
+                    day_str = time.strftime("%Y-%m-%d", time.gmtime(current_day))
                     result.append({"date": day_str, "prompts": count})
 
                 current_day = next_day
@@ -457,7 +457,7 @@ class MessageMetricsTable:
                         round(tokens_sum[0], 2) if tokens_sum and tokens_sum[0] else 0
                     )
 
-                    day_str = time.strftime("%Y-%m-%d", time.gmttime(current_day))
+                    day_str = time.strftime("%Y-%m-%d", time.gmtime(current_day))
                     result.append({"date": day_str, "tokens": tokens_count})
 
                 current_day = next_day
@@ -474,7 +474,7 @@ class MessageMetricsTable:
     ) -> list[dict]:
         try:
             current_time = int(time.time())
-            today_utc = time.strftime("%Y-%m-%d", time.gmttime(current_time))
+            today_utc = time.strftime("%Y-%m-%d", time.gmtime(current_time))
             today_midnight_utc = int(
                 time.mktime(time.strptime(f"{today_utc} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
@@ -499,7 +499,7 @@ class MessageMetricsTable:
                 # Group user_ids by date string
                 day_to_users = {}
                 for user_id, created_at in results:
-                    date_str = time.strftime("%Y-%m-%d", time.gmttime(created_at))
+                    date_str = time.strftime("%Y-%m-%d", time.gmtime(created_at))
                     if date_str not in day_to_users:
                         day_to_users[date_str] = set()
                     day_to_users[date_str].add(user_id)
@@ -507,7 +507,7 @@ class MessageMetricsTable:
                 output = []
                 for day in range(days):
                     day_start = today_midnight_utc - (day * 86400)
-                    date_str = time.strftime("%Y-%m-%d", time.gmttime(day_start))
+                    date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                     count = len(day_to_users.get(date_str, set()))
                     output.append({"date": date_str, "count": count})
 
@@ -518,13 +518,13 @@ class MessageMetricsTable:
             # Fallback: return zeros for each day
             fallback = []
             current_time = int(time.time())
-            today_utc = time.strftime("%Y-%m-%d", time.gmttime(current_time))
+            today_utc = time.strftime("%Y-%m-%d", time.gmtime(current_time))
             today_midnight_utc = int(
                 time.mktime(time.strptime(f"{today_utc} 00:00:00", "%Y-%m-%d %H:%M:%S"))
             )
             for day in range(days):
                 day_start = today_midnight_utc - (day * 86400)
-                date_str = time.strftime("%Y-%m-%d", time.gmttime(day_start))
+                date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
             return sorted(fallback, key=lambda x: x["date"])
 
