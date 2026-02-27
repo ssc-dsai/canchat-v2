@@ -35,12 +35,7 @@ jobs:
         with:
           fetch-depth: 2  # Fetch the previous commit for comparison
           ref: ${{ github.head_ref }}  # For PRs, checkout the head branch
-
-#      - name: Set up Node.js
-#        uses: actions/setup-node@v3
-#        with:
-#          node-version: '24'
-          
+         
       - name: Install Dependencies
         run: |
           # cdxgen (create current AND previous, in CDX format ) 
@@ -54,7 +49,8 @@ jobs:
           chmod 777 cyclonedx
 
           # sbom-to-excel
-          # SKIP, EXCEL TOOL NEEDS TO NOT CRASH IF WANTING TO REPLACE the CSV
+          # creates a multi-worksheet SBOM in XLSX format
+          # SKIP - crashes on content - TRY AGAIN SOME other TIME
           # git clone https://github.com/jacobbarkai/sbom-to-excel.git
           # pip install -r sbom-to-excel/requirements.txt
 
@@ -118,14 +114,9 @@ jobs:
         run: |
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
           ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
-
-        # SKIP, EXCEL TOOL NEEDS TO NOT CRASH IF WANTING TO REPLACE the CSV
-        #- name: convert all SBOM to EXCEL
-        # id: convert-current-cdx-to-excel
-        # continue-on-error: true
-        # run: |
-        #   python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
-        #   python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
+          # SKIP
+          #   python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
+          #   python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
 
       - name: Compare CDX SBOMs
         id: compare-sbom-cdx
@@ -140,7 +131,7 @@ jobs:
             echo "Unable to use the previous run SPDX SBOM. The previous run may have failed." > .sbom/comparison.spdx.md
           fi
 
-      - name: Get PR number or none
+      - name: Get PR number
         id: pr
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
@@ -151,8 +142,8 @@ jobs:
             echo "pr_number=none (push)" >> $GITHUB_OUTPUT
           fi
        
-      - name: Create output
-        id: create-output
+      - name: create summary
+        id: create-summary
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  > .sbom/comparison.md
