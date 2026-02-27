@@ -122,8 +122,8 @@ jobs:
       - name: Create CSVs
         id: convert-sboms
         run: |
-          ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv.txt --output-format csv
-          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv.txt --output-format csv
+          ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
+          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
           # SKIP
           #   python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
           #   python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
