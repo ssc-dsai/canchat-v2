@@ -1,16 +1,14 @@
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.models.db_services import MODELS
 from open_webui.models.models import (
     ModelForm,
     ModelModel,
     ModelResponse,
     ModelUserResponse,
-    Models,
 )
-from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-
-
-from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()
 
@@ -25,9 +23,9 @@ async def get_models(id: str | None = None, user=Depends(get_verified_user)):
     # Admin, analyst, and global_analyst roles get access to all models
     # This allows analysts to see models in their domain for metrics analysis
     if user.role in ["admin", "analyst", "global_analyst"]:
-        return await Models.get_models()
+        return await MODELS.get_models()
     else:
-        return await Models.get_models_by_user_id(user.id)
+        return await MODELS.get_models_by_user_id(user.id)
 
 
 ###########################
@@ -37,7 +35,7 @@ async def get_models(id: str | None = None, user=Depends(get_verified_user)):
 
 @router.get("/base", response_model=list[ModelResponse])
 async def get_base_models(user=Depends(get_admin_user)):
-    return await Models.get_base_models()
+    return await MODELS.get_base_models()
 
 
 ############################
@@ -59,7 +57,7 @@ async def create_new_model(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    model = await Models.get_model_by_id(form_data.id)
+    model = await MODELS.get_model_by_id(form_data.id)
     if model:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -67,7 +65,7 @@ async def create_new_model(
         )
 
     else:
-        model = await Models.insert_new_model(form_data, user.id)
+        model = await MODELS.insert_new_model(form_data, user.id)
         if model:
             return model
         else:
@@ -85,7 +83,7 @@ async def create_new_model(
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
 @router.get("/model", response_model=ModelResponse | None)
 async def get_model_by_id(id: str, user=Depends(get_verified_user)):
-    model = await Models.get_model_by_id(id)
+    model = await MODELS.get_model_by_id(id)
     if model:
         if (
             user.role == "admin"
@@ -107,14 +105,14 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/model/toggle", response_model=ModelResponse | None)
 async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
-    model = await Models.get_model_by_id(id)
+    model = await MODELS.get_model_by_id(id)
     if model:
         if (
             user.role == "admin"
             or model.user_id == user.id
             or await has_access(user.id, "write", model.access_control)
         ):
-            model = await Models.toggle_model_by_id(id)
+            model = await MODELS.toggle_model_by_id(id)
 
             if model:
                 return model
@@ -146,7 +144,7 @@ async def update_model_by_id(
     form_data: ModelForm,
     user=Depends(get_verified_user),
 ):
-    model = await Models.get_model_by_id(id)
+    model = await MODELS.get_model_by_id(id)
 
     if not model:
         raise HTTPException(
@@ -164,7 +162,7 @@ async def update_model_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    model = await Models.update_model_by_id(id, form_data)
+    model = await MODELS.update_model_by_id(id, form_data)
     return model
 
 
@@ -175,7 +173,7 @@ async def update_model_by_id(
 
 @router.delete("/model/delete", response_model=bool)
 async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
-    model = await Models.get_model_by_id(id)
+    model = await MODELS.get_model_by_id(id)
     if not model:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -188,11 +186,11 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    result = await Models.delete_model_by_id(id)
+    result = await MODELS.delete_model_by_id(id)
     return result
 
 
 @router.delete("/delete/all", response_model=bool)
 async def delete_all_models(user=Depends(get_admin_user)):
-    result = await Models.delete_all_models()
+    result = await MODELS.delete_all_models()
     return result

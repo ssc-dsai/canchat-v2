@@ -1,32 +1,23 @@
 import logging
 import os
-from typing import Optional, Union
+from typing import Any
 
 import requests
-
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
-
-
+from langchain_core.retrievers import BaseRetriever
 from open_webui.config import VECTOR_DB
 from open_webui.constants import VECTOR_COLLECTION_PREFIXES
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-
+from open_webui.env import OFFLINE_MODE, SRC_LOG_LEVELS
+from open_webui.models.db_services import FILES
 from open_webui.models.users import UserModel
-from open_webui.models.files import Files
-
-from open_webui.env import SRC_LOG_LEVELS, OFFLINE_MODE
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
-
-
-from typing import Any
-
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_core.retrievers import BaseRetriever
 
 
 class AsyncVectorSearchRetriever(BaseRetriever):
@@ -399,7 +390,7 @@ async def get_sources_from_files(
                 documents = []
                 metadatas = []
                 for file_id in file_ids:
-                    file_object = await Files.get_file_by_id(file_id)
+                    file_object = await FILES.get_file_by_id(file_id)
 
                     if file_object:
                         documents.append(file_object.data.get("content", ""))
@@ -417,7 +408,7 @@ async def get_sources_from_files(
                 }
 
             elif file.get("id"):
-                file_object = await Files.get_file_by_id(file.get("id"))
+                file_object = await FILES.get_file_by_id(file.get("id"))
                 if file_object:
                     context = {
                         "documents": [[file_object.data.get("content", "")]],
@@ -571,7 +562,7 @@ def get_model_path(model: str, update_model: bool = False):
 
 def generate_openai_batch_embeddings(
     model: str, texts: list[str], url: str = "https://api.openai.com/v1", key: str = ""
-) -> Optional[list[list[float]]]:
+) -> list[list[float]] | None:
     try:
         r = requests.post(
             f"{url}/embeddings",
@@ -594,7 +585,7 @@ def generate_openai_batch_embeddings(
 
 def generate_ollama_batch_embeddings(
     model: str, texts: list[str], url: str, key: str = ""
-) -> Optional[list[list[float]]]:
+) -> list[list[float]] | None:
     try:
         r = requests.post(
             f"{url}/api/embed",
@@ -616,7 +607,7 @@ def generate_ollama_batch_embeddings(
         return None
 
 
-def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **kwargs):
+def generate_embeddings(engine: str, model: str, text: str | list[str], **kwargs):
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
 
@@ -660,7 +651,7 @@ class RerankCompressor(BaseDocumentCompressor):
         self,
         documents: Sequence[Document],
         query: str,
-        callbacks: Optional[Callbacks] = None,
+        callbacks: Callbacks | None = None,
     ) -> Sequence[Document]:
         reranking = self.reranking_function is not None
 

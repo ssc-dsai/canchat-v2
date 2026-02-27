@@ -1,20 +1,20 @@
-from pathlib import Path
 import time
+from pathlib import Path
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.config import CACHE_DIR
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.models.db_services import TOOLS
 from open_webui.models.tools import (
     ToolForm,
     ToolModel,
     ToolResponse,
     ToolUserResponse,
-    Tools,
 )
-from open_webui.utils.plugin import load_tools_module_by_id, replace_imports
-from open_webui.config import CACHE_DIR
-from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.utils.tools import get_tools_specs
-from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.plugin import load_tools_module_by_id, replace_imports
+from open_webui.utils.tools import get_tools_specs
 
 router = APIRouter()
 
@@ -26,9 +26,9 @@ router = APIRouter()
 @router.get("/", response_model=list[ToolUserResponse])
 async def get_tools(request: Request, user=Depends(get_verified_user)):
     if user.role == "admin":
-        tools = await Tools.get_tools()
+        tools = await TOOLS.get_tools()
     else:
-        tools = await Tools.get_tools_by_user_id(user.id, "read")
+        tools = await TOOLS.get_tools_by_user_id(user.id, "read")
 
     # Add MCP tools if available (check both enabled flag and manager existence)
     try:
@@ -129,9 +129,9 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
 @router.get("/list", response_model=list[ToolUserResponse])
 async def get_tool_list(user=Depends(get_verified_user)):
     if user.role == "admin":
-        tools = await Tools.get_tools()
+        tools = await TOOLS.get_tools()
     else:
-        tools = await Tools.get_tools_by_user_id(user.id, "write")
+        tools = await TOOLS.get_tools_by_user_id(user.id, "write")
     return tools
 
 
@@ -142,7 +142,7 @@ async def get_tool_list(user=Depends(get_verified_user)):
 
 @router.get("/export", response_model=list[ToolModel])
 async def export_tools(user=Depends(get_admin_user)):
-    tools = await Tools.get_tools()
+    tools = await TOOLS.get_tools()
     return tools
 
 
@@ -173,7 +173,7 @@ async def create_new_tools(
 
     form_data.id = form_data.id.lower()
 
-    tools = await Tools.get_tool_by_id(form_data.id)
+    tools = await TOOLS.get_tool_by_id(form_data.id)
     if tools is None:
         try:
             form_data.content = replace_imports(form_data.content)
@@ -186,7 +186,7 @@ async def create_new_tools(
             TOOLS[form_data.id] = tools_module
 
             specs = get_tools_specs(TOOLS[form_data.id])
-            tools = await Tools.insert_new_tool(user.id, form_data, specs)
+            tools = await TOOLS.insert_new_tool(user.id, form_data, specs)
 
             tool_cache_dir = Path(CACHE_DIR) / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -218,7 +218,7 @@ async def create_new_tools(
 
 @router.get("/id/{id}", response_model=ToolModel | None)
 async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
-    tools = await Tools.get_tool_by_id(id)
+    tools = await TOOLS.get_tool_by_id(id)
 
     if tools:
         if (
@@ -246,7 +246,7 @@ async def update_tools_by_id(
     form_data: ToolForm,
     user=Depends(get_verified_user),
 ):
-    tools = await Tools.get_tool_by_id(id)
+    tools = await TOOLS.get_tool_by_id(id)
     if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -282,7 +282,7 @@ async def update_tools_by_id(
         }
 
         print(updated)
-        tools = await Tools.update_tool_by_id(id, updated)
+        tools = await TOOLS.update_tool_by_id(id, updated)
 
         if tools:
             return tools
@@ -308,7 +308,7 @@ async def update_tools_by_id(
 async def delete_tools_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    tools = await Tools.get_tool_by_id(id)
+    tools = await TOOLS.get_tool_by_id(id)
     if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -321,7 +321,7 @@ async def delete_tools_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    result = await Tools.delete_tool_by_id(id)
+    result = await TOOLS.delete_tool_by_id(id)
     if result:
         TOOLS = request.app.state.TOOLS
         if id in TOOLS:
@@ -337,10 +337,10 @@ async def delete_tools_by_id(
 
 @router.get("/id/{id}/valves", response_model=dict | None)
 async def get_tools_valves_by_id(id: str, user=Depends(get_verified_user)):
-    tools = await Tools.get_tool_by_id(id)
+    tools = await TOOLS.get_tool_by_id(id)
     if tools:
         try:
-            valves = await Tools.get_tool_valves_by_id(id)
+            valves = await TOOLS.get_tool_valves_by_id(id)
             return valves
         except Exception as e:
             raise HTTPException(
@@ -363,7 +363,7 @@ async def get_tools_valves_by_id(id: str, user=Depends(get_verified_user)):
 async def get_tools_valves_spec_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    tools = await Tools.get_tool_by_id(id)
+    tools = await TOOLS.get_tool_by_id(id)
     if tools:
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
@@ -391,7 +391,7 @@ async def get_tools_valves_spec_by_id(
 async def update_tools_valves_by_id(
     request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-    tools = await Tools.get_tool_by_id(id)
+    tools = await TOOLS.get_tool_by_id(id)
     if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -424,7 +424,7 @@ async def update_tools_valves_by_id(
     try:
         form_data = {k: v for k, v in form_data.items() if v is not None}
         valves = Valves(**form_data)
-        _ = await Tools.update_tool_valves_by_id(id, valves.model_dump())
+        _ = await TOOLS.update_tool_valves_by_id(id, valves.model_dump())
         return valves.model_dump()
     except Exception as e:
         print(e)
@@ -441,10 +441,10 @@ async def update_tools_valves_by_id(
 
 @router.get("/id/{id}/valves/user", response_model=dict | None)
 async def get_tools_user_valves_by_id(id: str, user=Depends(get_verified_user)):
-    tools = await Tools.get_tool_by_id(id)
+    tools = await TOOLS.get_tool_by_id(id)
     if tools:
         try:
-            user_valves = await Tools.get_user_valves_by_id_and_user_id(id, user.id)
+            user_valves = await TOOLS.get_user_valves_by_id_and_user_id(id, user.id)
             return user_valves
         except Exception as e:
             raise HTTPException(
@@ -462,7 +462,7 @@ async def get_tools_user_valves_by_id(id: str, user=Depends(get_verified_user)):
 async def get_tools_user_valves_spec_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    tools = await Tools.get_tool_by_id(id)
+    tools = await TOOLS.get_tool_by_id(id)
     if tools:
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
@@ -485,7 +485,7 @@ async def get_tools_user_valves_spec_by_id(
 async def update_tools_user_valves_by_id(
     request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-    tools = await Tools.get_tool_by_id(id)
+    tools = await TOOLS.get_tool_by_id(id)
 
     if tools:
         if id in request.app.state.TOOLS:
@@ -500,7 +500,7 @@ async def update_tools_user_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
-                _ = await Tools.update_user_valves_by_id_and_user_id(
+                _ = await TOOLS.update_user_valves_by_id_and_user_id(
                     id, user.id, user_valves.model_dump()
                 )
                 return user_valves.model_dump()

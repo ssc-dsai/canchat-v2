@@ -1,14 +1,13 @@
+import logging
 import os
 import re
 import subprocess
 import sys
-import types
 import tempfile
-import logging
+import types
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.models.functions import Functions
-from open_webui.models.tools import Tools
+from open_webui.models.db_services import FUNCTIONS, TOOLS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -91,14 +90,14 @@ async def load_tools_module_by_id(toolkit_id, content=None):
     """
 
     if content is None:
-        tool = await Tools.get_tool_by_id(toolkit_id)
+        tool = await TOOLS.get_tool_by_id(toolkit_id)
         if not tool:
             raise Exception(f"Toolkit not found: {toolkit_id}")
 
         content = tool.content
 
         content = replace_imports(content)
-        _ = await Tools.update_tool_by_id(toolkit_id, {"content": content})
+        _ = await TOOLS.update_tool_by_id(toolkit_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
@@ -155,13 +154,13 @@ async def load_function_module_by_id(function_id: str, content=None):
     """
 
     if content is None:
-        function = await Functions.get_function_by_id(function_id)
+        function = await FUNCTIONS.get_function_by_id(function_id)
         if not function:
             raise Exception(f"Function not found: {function_id}")
         content = function.content
 
         content = replace_imports(content)
-        _ = await Functions.update_function_by_id(function_id, {"content": content})
+        _ = await FUNCTIONS.update_function_by_id(function_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
         install_frontmatter_requirements(frontmatter.get("requirements", ""))
@@ -197,7 +196,7 @@ async def load_function_module_by_id(function_id: str, content=None):
         log.error(f"Error loading module: {function_id}: {e}")
         del sys.modules[module_name]  # Cleanup by removing the module in case of error
 
-        _ = await Functions.update_function_by_id(function_id, {"is_active": False})
+        _ = await FUNCTIONS.update_function_by_id(function_id, {"is_active": False})
         raise e
     finally:
         os.unlink(temp_file.name)

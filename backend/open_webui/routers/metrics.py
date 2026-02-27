@@ -1,23 +1,20 @@
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.models.users import Users
-from open_webui.models.message_metrics import MessageMetrics
-from open_webui.models.export_logs import ExportLogs, ExportLogForm
+import csv
+import io
+import logging
+from datetime import datetime
+
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     status,
-    Response,
 )
 from fastapi.responses import StreamingResponse
-import logging
-import csv
-import io
-import time
-
-from open_webui.utils.auth import get_metrics_user
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from datetime import datetime
+from open_webui.models.db_services import EXPORT_LOGS, MESSAGE_METRICS, USERS
+from open_webui.models.export_logs import ExportLogForm
+from open_webui.utils.auth import get_metrics_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["METRICS"])
@@ -30,7 +27,7 @@ router = APIRouter()
 
 
 @router.get("/prompts")
-async def get_total_prompts(domain: str = None, user=Depends(get_metrics_user)):
+async def get_total_prompts(domain: str | None = None, user=Depends(get_metrics_user)):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
         # Force domain to user's domain for analysts
@@ -39,9 +36,9 @@ async def get_total_prompts(domain: str = None, user=Depends(get_metrics_user)):
     # Admin and global_analyst can see all domains or filter by domain
 
     total_prompts = (
-        await MessageMetrics.get_messages_number(domain)
+        await MESSAGE_METRICS.get_messages_number(domain)
         if domain
-        else await MessageMetrics.get_messages_number()
+        else await MESSAGE_METRICS.get_messages_number()
     )
 
     # Return 0 instead of raising a 404 error
@@ -66,7 +63,7 @@ async def get_domains(user=Depends(get_metrics_user)):
         return {"domains": [user.domain] if user.domain else []}
 
     # For admins and global_analysts, return all domains
-    domains = await MessageMetrics.get_domains() or []
+    domains = await MESSAGE_METRICS.get_domains() or []
     return {"domains": domains}
 
 
@@ -76,7 +73,9 @@ async def get_domains(user=Depends(get_metrics_user)):
 
 
 @router.get("/daily/prompts")
-async def get_daily_prompts_number(domain: str = None, user=Depends(get_metrics_user)):
+async def get_daily_prompts_number(
+    domain: str | None = None, user=Depends(get_metrics_user)
+):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
         # Force domain to user's domain for analysts
@@ -85,9 +84,9 @@ async def get_daily_prompts_number(domain: str = None, user=Depends(get_metrics_
     # Admin and global_analyst can see all domains or filter by domain
 
     total_daily_prompts = (
-        await MessageMetrics.get_daily_messages_number(domain=domain)
+        await MESSAGE_METRICS.get_daily_messages_number(domain=domain)
         if domain
-        else await MessageMetrics.get_daily_messages_number()
+        else await MESSAGE_METRICS.get_daily_messages_number()
     )
     return {"total_daily_prompts": total_daily_prompts}
 
@@ -98,7 +97,7 @@ async def get_daily_prompts_number(domain: str = None, user=Depends(get_metrics_
 
 
 @router.get("/tokens")
-async def get_total_tokens(domain: str = None, user=Depends(get_metrics_user)):
+async def get_total_tokens(domain: str | None = None, user=Depends(get_metrics_user)):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
         # Force domain to user's domain for analysts
@@ -107,9 +106,9 @@ async def get_total_tokens(domain: str = None, user=Depends(get_metrics_user)):
     # Admin and global_analyst can see all domains or filter by domain
 
     total_tokens = (
-        await MessageMetrics.get_message_tokens_sum(domain)
+        await MESSAGE_METRICS.get_message_tokens_sum(domain)
         if domain
-        else await MessageMetrics.get_message_tokens_sum()
+        else await MESSAGE_METRICS.get_message_tokens_sum()
     )
 
     return {"total_tokens": total_tokens}
@@ -121,7 +120,7 @@ async def get_total_tokens(domain: str = None, user=Depends(get_metrics_user)):
 
 
 @router.get("/daily/tokens")
-async def get_daily_tokens(domain: str = None, user=Depends(get_metrics_user)):
+async def get_daily_tokens(domain: str | None = None, user=Depends(get_metrics_user)):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
         # Force domain to user's domain for analysts
@@ -130,9 +129,9 @@ async def get_daily_tokens(domain: str = None, user=Depends(get_metrics_user)):
     # Admin and global_analyst can see all domains or filter by domain
 
     total_daily_tokens = (
-        await MessageMetrics.get_daily_message_tokens_sum(domain=domain)
+        await MESSAGE_METRICS.get_daily_message_tokens_sum(domain=domain)
         if domain
-        else await MessageMetrics.get_daily_message_tokens_sum()
+        else await MESSAGE_METRICS.get_daily_message_tokens_sum()
     )
     return {"total_daily_tokens": total_daily_tokens}
 
@@ -144,7 +143,7 @@ async def get_daily_tokens(domain: str = None, user=Depends(get_metrics_user)):
 
 @router.get("/historical/prompts")
 async def get_historical_prompts(
-    days: int = 7, domain: str = None, user=Depends(get_metrics_user)
+    days: int = 7, domain: str | None = None, user=Depends(get_metrics_user)
 ):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
@@ -157,7 +156,7 @@ async def get_historical_prompts(
     if domain == "":
         domain = None
 
-    historical_data = await MessageMetrics.get_historical_messages_data(days, domain)
+    historical_data = await MESSAGE_METRICS.get_historical_messages_data(days, domain)
 
     return {"historical_prompts": historical_data}
 
@@ -169,7 +168,7 @@ async def get_historical_prompts(
 
 @router.get("/historical/tokens")
 async def get_historical_tokens(
-    days: int = 7, domain: str = None, user=Depends(get_metrics_user)
+    days: int = 7, domain: str | None = None, user=Depends(get_metrics_user)
 ):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
@@ -182,7 +181,7 @@ async def get_historical_tokens(
     if domain == "":
         domain = None
 
-    historical_data = await MessageMetrics.get_historical_tokens_data(days, domain)
+    historical_data = await MESSAGE_METRICS.get_historical_tokens_data(days, domain)
 
     return {"historical_tokens": historical_data}
 
@@ -194,7 +193,7 @@ async def get_historical_tokens(
 
 @router.get("/models")
 async def get_models(user=Depends(get_metrics_user)):
-    models = await MessageMetrics.get_used_models() or []
+    models = await MESSAGE_METRICS.get_used_models() or []
 
     # For analyst role, we should filter models by domain if needed
     # However, since this is for metrics display, analysts should see all models
@@ -211,7 +210,7 @@ async def get_models(user=Depends(get_metrics_user)):
 
 @router.get("/models/prompts")
 async def get_model_prompts(
-    model: str = None, domain: str = None, user=Depends(get_metrics_user)
+    model: str | None = None, domain: str | None = None, user=Depends(get_metrics_user)
 ):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
@@ -220,7 +219,7 @@ async def get_model_prompts(
 
     # Admin and global_analyst can see all domains or filter by domain
 
-    total_prompts = await MessageMetrics.get_messages_number(domain, model)
+    total_prompts = await MESSAGE_METRICS.get_messages_number(domain, model)
     return {"total_prompts": total_prompts or 0}
 
 
@@ -231,7 +230,7 @@ async def get_model_prompts(
 
 @router.get("/models/daily/prompts")
 async def get_model_daily_prompts(
-    model: str = None, domain: str = None, user=Depends(get_metrics_user)
+    model: str | None = None, domain: str | None = None, user=Depends(get_metrics_user)
 ):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
@@ -240,7 +239,7 @@ async def get_model_daily_prompts(
 
     # Admin and global_analyst can see all domains or filter by domain
 
-    total_daily_prompts = await MessageMetrics.get_daily_messages_number(
+    total_daily_prompts = await MESSAGE_METRICS.get_daily_messages_number(
         domain=domain, model=model
     )
     return {"total_daily_prompts": total_daily_prompts}
@@ -254,8 +253,8 @@ async def get_model_daily_prompts(
 @router.get("/models/historical/prompts")
 async def get_model_historical_prompts(
     days: int = 7,
-    model: str = None,
-    domain: str = None,
+    model: str | None = None,
+    domain: str | None = None,
     user=Depends(get_metrics_user),
 ):
     # For analyst role, enforce domain restriction
@@ -271,7 +270,7 @@ async def get_model_historical_prompts(
     if model == "":
         model = None
 
-    historical_data = await MessageMetrics.get_historical_messages_data(
+    historical_data = await MESSAGE_METRICS.get_historical_messages_data(
         days, domain, model
     )
 
@@ -286,8 +285,8 @@ async def get_model_historical_prompts(
 @router.get("/historical/users/daily")
 async def get_historical_daily_users(
     days: int = 7,
-    model: str = None,
-    domain: str = None,
+    model: str | None = None,
+    domain: str | None = None,
     user=Depends(get_metrics_user),
 ):
     if user.role in ["admin", "global_analyst"]:
@@ -300,7 +299,7 @@ async def get_historical_daily_users(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    historical_daily_data = await MessageMetrics.get_historical_daily_users(
+    historical_daily_data = await MESSAGE_METRICS.get_historical_daily_users(
         days, domain_to_use, model
     )
 
@@ -316,8 +315,8 @@ async def get_historical_daily_users(
 async def get_range_metrics(
     start_date: str,
     end_date: str,
-    domain: str = None,
-    model: str = None,
+    domain: str | None = None,
+    model: str | None = None,
     user=Depends(get_metrics_user),
 ):
     """Get metrics for a specific date range"""
@@ -339,10 +338,10 @@ async def get_range_metrics(
         days_in_range = (end_timestamp - start_timestamp) // 86400
 
         # Get metrics for date range
-        users_data = await Users.get_range_metrics(
+        users_data = await USERS.get_range_metrics(
             start_timestamp, end_timestamp, domain
         )
-        prompts_data = await MessageMetrics.get_range_metrics(
+        prompts_data = await MESSAGE_METRICS.get_range_metrics(
             start_timestamp, end_timestamp, domain, model
         )
 
@@ -362,8 +361,8 @@ async def get_range_metrics(
         # Calculate growth rates if previous period data is available
         prev_start = start_timestamp - (end_timestamp - start_timestamp)
         prev_end = start_timestamp
-        prev_users_data = await Users.get_range_metrics(prev_start, prev_end, domain)
-        prev_prompts_data = await MessageMetrics.get_range_metrics(
+        prev_users_data = await USERS.get_range_metrics(prev_start, prev_end, domain)
+        prev_prompts_data = await MESSAGE_METRICS.get_range_metrics(
             prev_start, prev_end, domain, model
         )
 
@@ -428,7 +427,7 @@ async def get_range_metrics(
 
 @router.get("/inter-prompt-latency")
 async def get_inter_prompt_latency_histogram(
-    domain: str = None, model: str = None, user=Depends(get_metrics_user)
+    domain: str | None = None, model: str | None = None, user=Depends(get_metrics_user)
 ):
     """
     Get inter-prompt latency histogram for user behavior analysis.
@@ -444,7 +443,7 @@ async def get_inter_prompt_latency_histogram(
         domain = user.domain
 
     try:
-        histogram_data = await MessageMetrics.get_inter_prompt_latency_histogram(
+        histogram_data = await MESSAGE_METRICS.get_inter_prompt_latency_histogram(
             domain, model
         )
         return histogram_data
@@ -463,7 +462,7 @@ async def get_inter_prompt_latency_histogram(
 
 @router.get("/inter-prompt-latency")
 async def get_inter_prompt_latency_histogram(
-    domain: str = None, model: str = None, user=Depends(get_metrics_user)
+    domain: str | None = None, model: str | None = None, user=Depends(get_metrics_user)
 ):
     """
     Get inter-prompt latency histogram for user behavior analysis.
@@ -479,7 +478,7 @@ async def get_inter_prompt_latency_histogram(
 
     # Admin and global_analyst can see all domains or filter by domain
 
-    histogram_data = await MessageMetrics.get_inter_prompt_latency_histogram(
+    histogram_data = await MESSAGE_METRICS.get_inter_prompt_latency_histogram(
         domain, model
     )
 
@@ -496,7 +495,10 @@ async def get_inter_prompt_latency_histogram(
 
 @router.post("/export")
 async def export_metrics_data(
-    start_date: str, end_date: str, domain: str = None, user=Depends(get_metrics_user)
+    start_date: str,
+    end_date: str,
+    domain: str | None = None,
+    user=Depends(get_metrics_user),
 ):
     """
     Export metrics data as CSV for a specific date range.
@@ -528,7 +530,7 @@ async def export_metrics_data(
             domain = user.domain
 
         # Get metrics data for the date range
-        metrics_data = await MessageMetrics.get_export_data(
+        metrics_data = await MESSAGE_METRICS.get_export_data(
             start_timestamp, end_timestamp, domain
         )
 
@@ -598,7 +600,7 @@ async def export_metrics_data(
             date_range_end=end_timestamp,
         )
 
-        _ = await ExportLogs.insert_new_export_log(export_log_form)
+        _ = await EXPORT_LOGS.insert_new_export_log(export_log_form)
 
         # Generate filename
         filename = f"metrics_export_{start_date}_to_{end_date}.csv"
@@ -637,7 +639,7 @@ async def get_export_logs(user=Depends(get_metrics_user)):
 
     try:
         # Admins can see all export logs
-        export_logs = await ExportLogs.get_all_export_logs()
+        export_logs = await EXPORT_LOGS.get_all_export_logs()
         return {"export_logs": export_logs}
 
     except Exception as e:

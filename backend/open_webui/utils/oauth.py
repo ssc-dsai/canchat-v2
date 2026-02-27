@@ -10,35 +10,33 @@ from fastapi import (
     HTTPException,
     status,
 )
-from starlette.responses import RedirectResponse
-
-from open_webui.models.auths_table import Auths
-from open_webui.models.users import Users
-from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
-    ENABLE_OAUTH_SIGNUP,
-    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
-    OAUTH_PROVIDERS,
-    ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
-    OAUTH_ROLES_CLAIM,
-    OAUTH_GROUPS_CLAIM,
-    OAUTH_EMAIL_CLAIM,
-    OAUTH_PICTURE_CLAIM,
-    OAUTH_USERNAME_CLAIM,
-    OAUTH_ALLOWED_ROLES,
+    ENABLE_OAUTH_ROLE_MANAGEMENT,
+    ENABLE_OAUTH_SIGNUP,
+    JWT_EXPIRES_IN,
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
+    OAUTH_ALLOWED_ROLES,
+    OAUTH_EMAIL_CLAIM,
+    OAUTH_GROUPS_CLAIM,
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    OAUTH_PICTURE_CLAIM,
+    OAUTH_PROVIDERS,
+    OAUTH_ROLES_CLAIM,
+    OAUTH_USERNAME_CLAIM,
     WEBHOOK_URL,
-    JWT_EXPIRES_IN,
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import WEBUI_SESSION_COOKIE_SAME_SITE, WEBUI_SESSION_COOKIE_SECURE
+from open_webui.models.db_services import AUTHS, GROUPS, USERS
+from open_webui.models.groups import GroupModel, GroupUpdateForm
+from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.misc import parse_duration
-from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
+from starlette.responses import RedirectResponse
 
 log = logging.getLogger(__name__)
 
@@ -70,10 +68,10 @@ class OAuthManager:
         return self.oauth.create_client(provider_name)
 
     async def get_user_role(self, user, user_data):
-        if user and await Users.get_num_users() == 1:
+        if user and await USERS.get_num_users() == 1:
             # If the user is the only user, assign the role "admin" - actually repairs role for single user on login
             return "admin"
-        if not user and await Users.get_num_users() == 0:
+        if not user and await USERS.get_num_users() == 0:
             # If there are no users, assign the role "admin", as the first user will be an admin
             return "admin"
 
@@ -119,10 +117,10 @@ class OAuthManager:
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
         user_oauth_groups: list[str] = user_data.get(oauth_claim, list())
-        user_current_groups: list[GroupModel] = await Groups.get_groups_by_member_id(
+        user_current_groups: list[GroupModel] = await GROUPS.get_groups_by_member_id(
             user.id
         )
-        all_available_groups: list[GroupModel] = await Groups.get_groups()
+        all_available_groups: list[GroupModel] = await GROUPS.get_groups()
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
@@ -143,7 +141,7 @@ class OAuthManager:
                     permissions=group_permissions,
                     user_ids=user_ids,
                 )
-                _ = await Groups.update_group_by_id(
+                _ = await GROUPS.update_group_by_id(
                     id=group_model.id, form_data=update_form, overwrite=False
                 )
 
@@ -168,7 +166,7 @@ class OAuthManager:
                     permissions=group_permissions,
                     user_ids=user_ids,
                 )
-                _ = await Groups.update_group_by_id(
+                _ = await GROUPS.update_group_by_id(
                     id=group_model.id, form_data=update_form, overwrite=False
                 )
 
@@ -221,27 +219,27 @@ class OAuthManager:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
         # Check if the user exists
-        user = await Users.get_user_by_oauth_sub(provider_sub)
+        user = await USERS.get_user_by_oauth_sub(provider_sub)
 
         if not user:
             # If the user does not exist, check if merging is enabled
             if auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
                 # Check if the user exists by email
-                user = await Users.get_user_by_email(email)
+                user = await USERS.get_user_by_email(email)
                 if user:
                     # Update the user with the new oauth sub
-                    _ = await Users.update_user_oauth_sub_by_id(user.id, provider_sub)
+                    _ = await USERS.update_user_oauth_sub_by_id(user.id, provider_sub)
 
         if user:
             determined_role = await self.get_user_role(user, user_data)
             if user.role != determined_role:
-                _ = await Users.update_user_role_by_id(user.id, determined_role)
+                _ = await USERS.update_user_role_by_id(user.id, determined_role)
 
         if not user:
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
-                existing_user = await Users.get_user_by_email(
+                existing_user = await USERS.get_user_by_email(
                     user_data.get("email", "").lower()
                 )
                 if existing_user:
@@ -282,7 +280,7 @@ class OAuthManager:
 
                 role = await self.get_user_role(None, user_data)
 
-                user = await Auths.insert_new_auth(
+                user = await AUTHS.insert_new_auth(
                     email=email,
                     password=get_password_hash(
                         str(uuid.uuid4())

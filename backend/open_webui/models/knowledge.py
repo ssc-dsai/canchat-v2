@@ -2,18 +2,14 @@ import logging
 import time
 import uuid
 
-from open_webui.internal.db import get_async_db
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.base import Base
 from open_webui.models.files import FileMetadataResponse
-from open_webui.models.users import Users, UserResponse
-
-
+from open_webui.models.users import UserResponse, UsersTable
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, delete, Text, JSON, select
+from sqlalchemy import JSON, BigInteger, Text, delete, select
 from sqlalchemy.orm import Mapped, mapped_column
-
-from open_webui.utils.access_control import has_access
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -101,10 +97,20 @@ class KnowledgeForm(BaseModel):
 
 
 class KnowledgeTable:
+
+    __db: AsyncDatabaseConnector
+    __users: UsersTable
+
+    def __init__(
+        self, db_connector: AsyncDatabaseConnector, users_table: UsersTable
+    ) -> None:
+        self.__db = db_connector
+        self.__users = users_table
+
     async def insert_new_knowledge(
         self, user_id: str, form_data: KnowledgeForm
     ) -> KnowledgeModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             knowledge = KnowledgeModel(
                 **{
                     **form_data.model_dump(),
@@ -128,14 +134,14 @@ class KnowledgeTable:
                 return None
 
     async def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             knowledge_bases: list[KnowledgeUserModel] = []
             for knowledge in (
                 await db.scalars(
                     select(Knowledge).order_by(Knowledge.updated_at.desc())
                 )
             ).all():
-                user = await Users.get_user_by_id(knowledge.user_id)
+                user = await self.__users.get_user_by_id(knowledge.user_id)
                 knowledge_bases.append(
                     KnowledgeUserModel.model_validate(
                         {
@@ -149,6 +155,8 @@ class KnowledgeTable:
     async def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
+        from open_webui.utils.access_control import has_access
+
         knowledge_bases = await self.get_knowledge_bases()
         return [
             knowledge_base
@@ -159,7 +167,7 @@ class KnowledgeTable:
 
     async def get_knowledge_by_id(self, id: str) -> KnowledgeModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 knowledge = await db.scalar(select(Knowledge).where(Knowledge.id == id))
                 return KnowledgeModel.model_validate(knowledge) if knowledge else None
         except Exception:
@@ -169,7 +177,7 @@ class KnowledgeTable:
         self, id: str, form_data: KnowledgeForm, overwrite: bool = False
     ) -> KnowledgeModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 if knowledge := await db.scalar(
                     select(Knowledge).where(Knowledge.id == id)
                 ):
@@ -189,7 +197,7 @@ class KnowledgeTable:
         self, id: str, data: dict
     ) -> KnowledgeModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 if knowledge := await db.scalar(
                     select(Knowledge).where(Knowledge.id == id)
                 ):
@@ -205,7 +213,7 @@ class KnowledgeTable:
 
     async def delete_knowledge_by_id(self, id: str) -> bool:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 _ = await db.execute(delete(Knowledge).where(Knowledge.id == id))
                 await db.commit()
                 return True
@@ -214,12 +222,9 @@ class KnowledgeTable:
 
     async def delete_all_knowledge(self) -> bool:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 _ = await db.execute(delete(Knowledge))
                 await db.commit()
                 return True
         except Exception:
             return False
-
-
-Knowledges = KnowledgeTable()

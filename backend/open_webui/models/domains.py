@@ -1,15 +1,13 @@
 import logging
-import time
-from typing import List, Optional
-import uuid
 import re
+import time
+import uuid
 
-from open_webui.internal.db import get_async_db
-from open_webui.models.base import Base
 from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.internal.db_utils import AsyncDatabaseConnector
+from open_webui.models.base import Base
 from pydantic import BaseModel, ConfigDict, validator
-from sqlalchemy import BigInteger, select, String, Text
+from sqlalchemy import BigInteger, String, Text, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 log = logging.getLogger(__name__)
@@ -26,7 +24,7 @@ class Domain(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     domain: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[int] = mapped_column(BigInteger)
     updated_at: Mapped[int] = mapped_column(BigInteger)
 
@@ -36,14 +34,14 @@ class DomainModel(BaseModel):
 
     id: str
     domain: str
-    description: Optional[str] = None
-    created_at: Optional[int] = None
-    updated_at: Optional[int] = None
+    description: str | None = None
+    created_at: int | None = None
+    updated_at: int | None = None
 
 
 class DomainForm(BaseModel):
     domain: str
-    description: Optional[str] = None
+    description: str | None = None
 
     @validator("domain")
     def validate_domain(cls, v):
@@ -74,8 +72,14 @@ class DomainForm(BaseModel):
 
 
 class DomainTable:
-    async def insert_new_domain(self, form_data: DomainForm) -> Optional[DomainModel]:
-        async with get_async_db() as db:
+
+    __db: AsyncDatabaseConnector
+
+    def __init__(self, db_connector: AsyncDatabaseConnector) -> None:
+        self.__db = db_connector
+
+    async def insert_new_domain(self, form_data: DomainForm) -> DomainModel | None:
+        async with self.__db.get_async_db() as db:
             domain_id = str(uuid.uuid4())
             timestamp = int(time.time())
             domain = Domain(
@@ -99,27 +103,27 @@ class DomainTable:
                 return None
 
     async def get_domains(self) -> list[DomainModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             domains = await db.scalars(
                 select(Domain).order_by(Domain.description, Domain.domain)
             )
 
             return [DomainModel.model_validate(domain) for domain in domains.all()]
 
-    async def get_domain_by_id(self, domain_id: str) -> Optional[DomainModel]:
-        async with get_async_db() as db:
+    async def get_domain_by_id(self, domain_id: str) -> DomainModel | None:
+        async with self.__db.get_async_db() as db:
             domain = await db.scalar(select(Domain).where(Domain.id == domain_id))
             return DomainModel.model_validate(domain) if domain else None
 
-    async def get_domain_by_domain(self, domain_name: str) -> Optional[DomainModel]:
-        async with get_async_db() as db:
+    async def get_domain_by_domain(self, domain_name: str) -> DomainModel | None:
+        async with self.__db.get_async_db() as db:
             domain = await db.scalar(select(Domain).where(Domain.domain == domain_name))
             return DomainModel.model_validate(domain) if domain else None
 
     async def update_domain_by_id(
         self, domain_id: str, form_data: DomainForm
-    ) -> Optional[DomainModel]:
-        async with get_async_db() as db:
+    ) -> DomainModel | None:
+        async with self.__db.get_async_db() as db:
             domain = await db.scalar(select(Domain).where(Domain.id == domain_id))
             if not domain:
                 return None
@@ -138,7 +142,7 @@ class DomainTable:
                 return None
 
     async def delete_domain_by_id(self, domain_id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             domain = await db.scalar(select(Domain).where(Domain.id == domain_id))
             if not domain:
                 return False
@@ -152,14 +156,11 @@ class DomainTable:
                 await db.rollback()
                 return False
 
-    async def get_available_domains(self) -> List[DomainModel]:
+    async def get_available_domains(self) -> list[DomainModel]:
         """Get list of all available domains from the domains table only"""
         # Get domains from domains table only
         return await self.get_domains()
 
-    async def get_available_domains_list(self) -> List[str]:
+    async def get_available_domains_list(self) -> list[str]:
         """Get list of all available domain names as strings from domains table only"""
         return [domain.domain for domain in await self.get_domains()]
-
-
-Domains = DomainTable()

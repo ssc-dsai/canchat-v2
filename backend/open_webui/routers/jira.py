@@ -1,19 +1,18 @@
-from typing import List
+import logging
+
+import aiohttp
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
-    status,
-    Request,
-    Form,
-    UploadFile,
     File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
 )
-import logging
-import aiohttp
-
+from open_webui.env import AIOHTTP_CLIENT_TIMEOUT, SRC_LOG_LEVELS, VERSION
 from open_webui.utils.auth import get_verified_user
-from open_webui.env import SRC_LOG_LEVELS, VERSION, AIOHTTP_CLIENT_TIMEOUT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["JIRA"])
@@ -31,7 +30,7 @@ async def create_bug(
     email: str = Form(...),
     description: str = Form(...),
     stepsToReproduce: str = Form(...),
-    files: List[UploadFile] = File(None),
+    files: list[UploadFile] = File(None),
     user=Depends(get_verified_user),
 ):
     log.info("Processing Jira Bug submission")
@@ -151,7 +150,7 @@ async def create_task(
     request: Request,
     email: str = Form(...),
     description: str = Form(...),
-    files: List[UploadFile] = File(None),
+    files: list[UploadFile] = File(None),
     user=Depends(get_verified_user),
 ):
     log.info("Processing Jira Task submission")

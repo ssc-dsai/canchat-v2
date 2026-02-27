@@ -1,27 +1,23 @@
 import logging
 
-from open_webui.models.auths_table import Auths
-from open_webui.models.chats import Chats
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.models.db_services import AUTHS, CHATS, USERS
 from open_webui.models.users import (
     UserModel,
     UserRoleUpdateForm,
-    Users,
     UserSettings,
     UserUpdateForm,
 )
-
-
 from open_webui.socket.main import get_active_status_by_user_id
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
 from open_webui.utils.auth import (
     get_admin_user,
     get_current_user,
     get_password_hash,
     get_verified_user,
 )
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -39,14 +35,15 @@ async def get_users(
     limit: int | None = None,
     user=Depends(get_admin_user),
 ):
-    return await Users.get_users(skip, limit)
+    return await USERS.get_users(skip, limit)
 
 
 ############################
 # User Groups
 ############################
 
-# NOTE: This was added in https://github.com/ssc-dsai/canchat-v2/commit/240c91e79d9a3577332c030a4b46059859f787d8 but I can't find a matching function in Users.
+# NOTE: This was added in https://github.com/ssc-dsai/canchat-v2/commit/240c91e79d9a3577332c030a4b46059859f787d8
+# but I can't find a matching function in Users.
 # @router.get("/groups")
 # async def get_user_groups(user=Depends(get_verified_user)):
 #     return Users.get_user_groups(user.id)
@@ -70,7 +67,7 @@ async def get_user_domains(user=Depends(get_verified_user)):
         return {"domains": [user.domain] if user.domain else []}
 
     # For admins and global_analysts, return all domains
-    domains = await Users.get_user_domains() or []
+    domains = await USERS.get_user_domains() or []
     return {"domains": domains}
 
 
@@ -101,7 +98,7 @@ async def get_users_count(domain: str | None = None, user=Depends(get_verified_u
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    return await Users.get_num_users(domain_to_use)
+    return await USERS.get_num_users(domain_to_use)
 
 
 ############################
@@ -123,7 +120,7 @@ async def get_daily_users_count(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    return await Users.get_daily_users_number(domain=domain_to_use)
+    return await USERS.get_daily_users_number(domain=domain_to_use)
 
 
 ############################
@@ -196,8 +193,8 @@ async def update_user_permissions(
 
 @router.post("/update/role", response_model=UserModel | None)
 async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
-    if user.id != form_data.id and form_data.id != (await Users.get_first_user()).id:
-        return await Users.update_user_role_by_id(form_data.id, form_data.role)
+    if user.id != form_data.id and form_data.id != (await USERS.get_first_user()).id:
+        return await USERS.update_user_role_by_id(form_data.id, form_data.role)
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -212,7 +209,7 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
 
 @router.get("/user/settings", response_model=UserSettings | None)
 async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
-    user = await Users.get_user_by_id(user.id)
+    user = await USERS.get_user_by_id(user.id)
     if user:
         return user.settings
     else:
@@ -231,7 +228,7 @@ async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
 async def update_user_settings_by_session_user(
     form_data: UserSettings, user=Depends(get_verified_user)
 ):
-    user = await Users.update_user_by_id(user.id, {"settings": form_data.model_dump()})
+    user = await USERS.update_user_by_id(user.id, {"settings": form_data.model_dump()})
     if user:
         return user.settings
     else:
@@ -248,7 +245,7 @@ async def update_user_settings_by_session_user(
 
 @router.get("/user/info", response_model=dict | None)
 async def get_user_info_by_session_user(user=Depends(get_verified_user)):
-    user = await Users.get_user_by_id(user.id)
+    user = await USERS.get_user_by_id(user.id)
     if user:
         return user.info
     else:
@@ -265,7 +262,7 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user)):
 
 @router.get("/user/role", response_model=str | None)
 async def get_user_info_by_session_user(user=Depends(get_current_user)):
-    user = await Users.get_user_by_id(user.id)
+    user = await USERS.get_user_by_id(user.id)
     if user:
         return user.role
     else:
@@ -284,12 +281,12 @@ async def get_user_info_by_session_user(user=Depends(get_current_user)):
 async def update_user_info_by_session_user(
     form_data: dict, user=Depends(get_verified_user)
 ):
-    user = await Users.get_user_by_id(user.id)
+    user = await USERS.get_user_by_id(user.id)
     if user:
         if user.info is None:
             user.info = {}
 
-        user = await Users.update_user_by_id(
+        user = await USERS.update_user_by_id(
             user.id, {"info": {**user.info, **form_data}}
         )
         if user:
@@ -323,7 +320,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     # If it is, get the user_id from the chat
     if user_id.startswith("shared-"):
         chat_id = user_id.replace("shared-", "")
-        chat = await Chats.get_chat_by_id(chat_id)
+        chat = await CHATS.get_chat_by_id(chat_id)
         if chat:
             user_id = chat.user_id
         else:
@@ -332,7 +329,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
                 detail=ERROR_MESSAGES.USER_NOT_FOUND,
             )
 
-    user = await Users.get_user_by_id(user_id)
+    user = await USERS.get_user_by_id(user_id)
 
     if user:
         return UserResponse(
@@ -360,11 +357,11 @@ async def update_user_by_id(
     form_data: UserUpdateForm,
     session_user=Depends(get_admin_user),
 ):
-    user = await Users.get_user_by_id(user_id)
+    user = await USERS.get_user_by_id(user_id)
 
     if user:
         if form_data.email.lower() != user.email:
-            email_user = await Users.get_user_by_email(form_data.email.lower())
+            email_user = await USERS.get_user_by_email(form_data.email.lower())
             if email_user:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -374,10 +371,10 @@ async def update_user_by_id(
         if form_data.password:
             hashed = get_password_hash(form_data.password)
             log.debug(f"hashed: {hashed}")
-            await Auths.update_user_password_by_id(user_id, hashed)
+            await AUTHS.update_user_password_by_id(user_id, hashed)
 
-        await Auths.update_email_by_id(user_id, form_data.email.lower())
-        updated_user = await Users.update_user_by_id(
+        await AUTHS.update_email_by_id(user_id, form_data.email.lower())
+        updated_user = await USERS.update_user_by_id(
             user_id,
             {
                 "name": form_data.name,
@@ -408,7 +405,7 @@ async def update_user_by_id(
 @router.delete("/{user_id}", response_model=bool)
 async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
     if user.id != user_id:
-        result = await Auths.delete_auth_by_user_id(user_id)
+        result = await AUTHS.delete_auth_by_user_id(user_id)
 
         if result:
             return True
@@ -443,5 +440,5 @@ async def get_users_enrollment_historical(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    historical_data = await Users.get_historical_users_data(days, domain_to_use)
+    historical_data = await USERS.get_historical_users_data(days, domain_to_use)
     return {"historical_users": historical_data}

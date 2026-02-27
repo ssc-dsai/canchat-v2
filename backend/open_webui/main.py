@@ -76,11 +76,8 @@ from open_webui.routers.retrieval import (
     load_reranker_model,
 )
 
-from open_webui.internal.db import Session, get_async_db
-
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-from open_webui.models.users import Users
+from open_webui.internal.db import DB_SESSION, get_async_db
+from open_webui.models.db_services import USERS, MODELS, FUNCTIONS
 
 from open_webui.config import (
     # Ollama
@@ -319,9 +316,6 @@ from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
 
-if SAFE_MODE:
-    print("SAFE MODE ENABLED")
-    Functions.deactivate_all_functions()
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -346,7 +340,8 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(rf"""
+print(
+    rf"""
   ___                    __        __   _     _   _ ___
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
 | | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
@@ -358,13 +353,18 @@ print(rf"""
 v{VERSION} - building the best open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
-""")
+"""
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
+
+    if SAFE_MODE:
+        print("SAFE MODE ENABLED")
+        await FUNCTIONS.deactivate_all_functions()
 
     # Initialize metrics service
     try:
@@ -384,48 +384,48 @@ async def lifespan(app: FastAPI):
         log.error(f"Failed to initialize the metrics service: {e}")
 
     # Initialize FastMCP manager
-    try:
-        from mcp_backend.management.mcp_manager import get_mcp_manager
+    # try:
+    #     from mcp_backend.management.mcp_manager import get_mcp_manager
 
-        app.state.mcp_manager = get_mcp_manager()
-        log.info("FastMCP manager initialized")
+    #     app.state.mcp_manager = get_mcp_manager()
+    #     log.info("FastMCP manager initialized")
 
-        # Initialize all MCP servers (built-in and external) if enabled
-        if app.state.config.ENABLE_MCP_API:
-            await app.state.mcp_manager.initialize_all_servers()
-            log.info("All MCP servers initialized")
+    #     # Initialize all MCP servers (built-in and external) if enabled
+    #     if app.state.config.ENABLE_MCP_API:
+    #         await app.state.mcp_manager.initialize_all_servers()
+    #         log.info("All MCP servers initialized")
 
-            # Note: Built-in MCP servers use stdio transport and are managed internally
-            # External MCP servers are loaded from database and managed via API
+    #         # Note: Built-in MCP servers use stdio transport and are managed internally
+    #         # External MCP servers are loaded from database and managed via API
 
-    except Exception as e:
-        log.error(f"Failed to initialize FastMCP manager: {e}")
+    # except Exception as e:
+    #     log.error(f"Failed to initialize FastMCP manager: {e}")
 
     # Initialize Wikipedia grounding models in background
-    async def initialize_wiki_grounding():
-        """Initialize Wikipedia grounding models in background to avoid first-user delay"""
-        try:
-            from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
+    # async def initialize_wiki_grounding():
+    #     """Initialize Wikipedia grounding models in background to avoid first-user delay"""
+    #     try:
+    #         from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
 
-            log.info(
-                "Starting background initialization of Wikipedia grounding models..."
-            )
-            success = await get_wiki_search_grounder().initialize()
-            if success:
-                log.info(
-                    "Wikipedia grounding models initialized successfully in background"
-                )
-            else:
-                log.warning(
-                    "Wikipedia grounding models failed to initialize in background"
-                )
-        except Exception as e:
-            log.error(
-                f"Error during background Wikipedia grounding initialization: {e}"
-            )
+    #         log.info(
+    #             "Starting background initialization of Wikipedia grounding models..."
+    #         )
+    #         success = await get_wiki_search_grounder().initialize()
+    #         if success:
+    #             log.info(
+    #                 "Wikipedia grounding models initialized successfully in background"
+    #             )
+    #         else:
+    #             log.warning(
+    #                 "Wikipedia grounding models failed to initialize in background"
+    #             )
+    #     except Exception as e:
+    #         log.error(
+    #             f"Error during background Wikipedia grounding initialization: {e}"
+    #         )
 
     # Start background initialization (non-blocking)
-    wiki_init_task = asyncio.create_task(initialize_wiki_grounding())
+    # wiki_init_task = asyncio.create_task(initialize_wiki_grounding())
 
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
@@ -459,17 +459,17 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         # Cancel background tasks if they're still running
-        if not wiki_init_task.done():
-            log.info("Cancelling Wikipedia grounding initialization task")
-            wiki_init_task.cancel()
-            try:
-                await wiki_init_task
-            except asyncio.CancelledError:
-                log.info(
-                    "Wikipedia grounding initialization task cancelled successfully"
-                )
-            except Exception as e:
-                log.error(f"Error cancelling Wikipedia initialization task: {e}")
+        # if not wiki_init_task.done():
+        #     log.info("Cancelling Wikipedia grounding initialization task")
+        #     wiki_init_task.cancel()
+        #     try:
+        #         await wiki_init_task
+        #     except asyncio.CancelledError:
+        #         log.info(
+        #             "Wikipedia grounding initialization task cancelled successfully"
+        #         )
+        #     except Exception as e:
+        #         log.error(f"Error cancelling Wikipedia initialization task: {e}")
 
         # Cancel the cleanup task if it's still running
         if not cleanup_task.done():
@@ -483,21 +483,21 @@ async def lifespan(app: FastAPI):
                 log.error(f"Error cancelling cleanup task: {e}")
 
         # Cleanup MCP manager and all its server processes
-        if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
-            try:
-                await app.state.mcp_manager.cleanup()
-                log.info("MCP manager cleanup completed")
-            except Exception as e:
-                log.error(f"Error during MCP manager cleanup: {e}")
+        # if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
+        #     try:
+        #         await app.state.mcp_manager.cleanup()
+        #         log.info("MCP manager cleanup completed")
+        #     except Exception as e:
+        #         log.error(f"Error during MCP manager cleanup: {e}")
 
-        # Cleanup chat lifetime scheduler
-        try:
-            from open_webui.scheduler import stop_chat_lifetime_scheduler
+        # # Cleanup chat lifetime scheduler
+        # try:
+        #     from open_webui.scheduler import stop_chat_lifetime_scheduler
 
-            stop_chat_lifetime_scheduler()
-            log.info("Chat lifetime scheduler cleanup completed")
-        except Exception as e:
-            log.error(f"Error during chat lifetime scheduler cleanup: {e}")
+        #     stop_chat_lifetime_scheduler()
+        #     log.info("Chat lifetime scheduler cleanup completed")
+        # except Exception as e:
+        #     log.error(f"Error during chat lifetime scheduler cleanup: {e}")
 
 
 app = FastAPI(
@@ -913,7 +913,7 @@ async def commit_session_after_request(request: Request, call_next):
     try:
         response = await call_next(request)
         # log.debug("Commit session after request")
-        Session.commit()
+        DB_SESSION.commit()
 
         # Ensure we always return a response
         if response is None:
@@ -930,7 +930,7 @@ async def commit_session_after_request(request: Request, call_next):
             f"Error in commit_session_after_request middleware for {request.url.path}: {e}"
         )
         try:
-            Session.rollback()
+            DB_SESSION.rollback()
         except Exception as rollback_error:
             log.error(f"Error during session rollback: {rollback_error}")
         return JSONResponse(
@@ -1108,7 +1108,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                     filtered_models.append(model)
                 continue
 
-            model_info = await Models.get_model_by_id(model["id"])
+            model_info = await MODELS.get_model_by_id(model["id"])
             if model_info:
                 if user.id == model_info.user_id or await has_access(
                     user.id, type="read", access_control=model_info.access_control
@@ -1274,11 +1274,11 @@ async def get_app_config(request: Request):
                 detail="Invalid token",
             )
         if data is not None and "id" in data:
-            user = await Users.get_user_by_id(data["id"])
+            user = await USERS.get_user_by_id(data["id"])
 
     onboarding = False
     if user is None:
-        user_count = await Users.get_num_users()
+        user_count = await USERS.get_num_users()
         onboarding = user_count == 0
 
     return {

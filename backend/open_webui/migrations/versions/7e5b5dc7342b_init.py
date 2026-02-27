@@ -11,7 +11,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-from open_webui.internal.db import JSONField
+from open_webui.internal.db_utils import JSONField
 from open_webui.migrations.util import get_existing_tables
 
 # revision identifiers, used by Alembic.

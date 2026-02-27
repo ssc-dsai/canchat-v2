@@ -1,58 +1,53 @@
-import re
-import uuid
-import time
 import datetime
 import logging
+import re
+import time
+import uuid
+from ssl import CERT_REQUIRED, PROTOCOL_TLS
+
 from aiohttp import ClientSession
-
-from open_webui.models.auths import (
-    AddUserForm,
-    ApiKey,
-    Token,
-    LdapForm,
-    SigninForm,
-    SigninResponse,
-    SignupForm,
-    UpdatePasswordForm,
-    UpdateProfileForm,
-    UserResponse,
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse, Response
+from ldap3 import NONE, Connection, Server, Tls
+from ldap3.utils.conv import escape_filter_chars
+from open_webui.config import (
+    ENABLE_OAUTH_SIGNUP,
+    OPENID_PROVIDER_URL,
 )
-from open_webui.models.auths_table import Auths
-from open_webui.models.users import Users
-
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
+    SRC_LOG_LEVELS,
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
-    SRC_LOG_LEVELS,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import RedirectResponse, Response
-from open_webui.config import (
-    OPENID_PROVIDER_URL,
-    ENABLE_OAUTH_SIGNUP,
+from open_webui.models.auths import (
+    AddUserForm,
+    ApiKey,
+    LdapForm,
+    SigninForm,
+    SigninResponse,
+    SignupForm,
+    Token,
+    UpdatePasswordForm,
+    UpdateProfileForm,
+    UserResponse,
 )
-from pydantic import BaseModel
-from open_webui.utils.misc import parse_duration, validate_email_format
+from open_webui.models.db_services import AUTHS, USERS
+from open_webui.utils.access_control import get_permissions
 from open_webui.utils.auth import (
     create_api_key,
     create_token,
     get_admin_user,
-    get_verified_user,
     get_current_user,
     get_password_hash,
+    get_verified_user,
 )
+from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.webhook import post_webhook
-from open_webui.utils.access_control import get_permissions
-
-from typing import Optional
-
-from ssl import CERT_REQUIRED, PROTOCOL_TLS
-from ldap3 import Server, Connection, NONE, Tls
-from ldap3.utils.conv import escape_filter_chars
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -65,8 +60,8 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class SessionUserResponse(Token, UserResponse):
-    expires_at: Optional[int] = None
-    permissions: Optional[dict] = None
+    expires_at: int | None = None
+    permissions: dict | None = None
 
 
 @router.get("/", response_model=SessionUserResponse)
@@ -126,7 +121,7 @@ async def update_profile(
     form_data: UpdateProfileForm, session_user=Depends(get_verified_user)
 ):
     if session_user:
-        user = await Users.update_user_by_id(
+        user = await USERS.update_user_by_id(
             session_user.id,
             {"profile_image_url": form_data.profile_image_url, "name": form_data.name},
         )
@@ -150,11 +145,11 @@ async def update_password(
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
     if session_user:
-        user = await Auths.authenticate_user(session_user.email, form_data.password)
+        user = await AUTHS.authenticate_user(session_user.email, form_data.password)
 
         if user:
             hashed = get_password_hash(form_data.new_password)
-            return await Auths.update_user_password_by_id(user.id, hashed)
+            return await AUTHS.update_user_password_by_id(user.id, hashed)
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
     else:
@@ -248,16 +243,16 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             if not connection_user.bind():
                 raise HTTPException(400, f"Authentication failed for {form_data.user}")
 
-            user = await Users.get_user_by_email(mail)
+            user = await USERS.get_user_by_email(mail)
             if not user:
                 try:
                     role = (
                         "admin"
-                        if await Users.get_num_users() == 0
+                        if await USERS.get_num_users() == 0
                         else request.app.state.config.DEFAULT_USER_ROLE
                     )
 
-                    user = await Auths.insert_new_auth(
+                    user = await AUTHS.insert_new_auth(
                         email=mail,
                         password=str(uuid.uuid4()),
                         name=cn,
@@ -275,7 +270,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 except Exception as err:
                     raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
-            user = await Auths.authenticate_user_by_trusted_header(mail)
+            user = await AUTHS.authenticate_user_by_trusted_header(mail)
 
             if user:
                 token = create_token(
@@ -329,7 +324,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             trusted_name = request.headers.get(
                 WEBUI_AUTH_TRUSTED_NAME_HEADER, trusted_email
             )
-        if not await Users.get_user_by_email(trusted_email.lower()):
+        if not await USERS.get_user_by_email(trusted_email.lower()):
             await signup(
                 request,
                 response,
@@ -337,15 +332,15 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                     email=trusted_email, password=str(uuid.uuid4()), name=trusted_name
                 ),
             )
-        user = await Auths.authenticate_user_by_trusted_header(trusted_email)
+        user = await AUTHS.authenticate_user_by_trusted_header(trusted_email)
     elif WEBUI_AUTH == False:
         admin_email = "admin@localhost"
         admin_password = "admin"
 
-        if await Users.get_user_by_email(admin_email.lower()):
-            user = await Auths.authenticate_user(admin_email.lower(), admin_password)
+        if await USERS.get_user_by_email(admin_email.lower()):
+            user = await AUTHS.authenticate_user(admin_email.lower(), admin_password)
         else:
-            if await Users.get_num_users() != 0:
+            if await USERS.get_num_users() != 0:
                 raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
 
             await signup(
@@ -354,9 +349,9 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 SignupForm(email=admin_email, password=admin_password, name="User"),
             )
 
-            user = await Auths.authenticate_user(admin_email.lower(), admin_password)
+            user = await AUTHS.authenticate_user(admin_email.lower(), admin_password)
     else:
-        user = await Auths.authenticate_user(
+        user = await AUTHS.authenticate_user(
             form_data.email.lower(), form_data.password
         )
 
@@ -422,7 +417,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
     else:
-        if await Users.get_num_users() != 0:
+        if await USERS.get_num_users() != 0:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
@@ -432,22 +427,22 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
 
-    if await Users.get_user_by_email(form_data.email.lower()):
+    if await USERS.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
         role = (
             "admin"
-            if await Users.get_num_users() == 0
+            if await USERS.get_num_users() == 0
             else request.app.state.config.DEFAULT_USER_ROLE
         )
 
-        if await Users.get_num_users() == 0:
+        if await USERS.get_num_users() == 0:
             # Disable signup after the first user is created
             request.app.state.config.ENABLE_SIGNUP = False
 
         hashed = get_password_hash(form_data.password)
-        user = await Auths.insert_new_auth(
+        user = await AUTHS.insert_new_auth(
             form_data.email.lower(),
             hashed,
             form_data.name,
@@ -557,12 +552,12 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
 
-    if await Users.get_user_by_email(form_data.email.lower()):
+    if await USERS.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
         hashed = get_password_hash(form_data.password)
-        user = await Auths.insert_new_auth(
+        user = await AUTHS.insert_new_auth(
             form_data.email.lower(),
             hashed,
             form_data.name,
@@ -603,11 +598,11 @@ async def get_admin_details(request: Request, user=Depends(get_current_user)):
         print(admin_email, admin_name)
 
         if admin_email:
-            admin = await Users.get_user_by_email(admin_email)
+            admin = await USERS.get_user_by_email(admin_email)
             if admin:
                 admin_name = admin.name
         else:
-            admin = await Users.get_first_user()
+            admin = await USERS.get_first_user()
             if admin:
                 admin_email = admin.email
                 admin_name = admin.name
@@ -706,7 +701,7 @@ async def update_admin_config(
 class LdapServerConfig(BaseModel):
     label: str
     host: str
-    port: Optional[int] = None
+    port: int | None = None
     attribute_for_mail: str = "mail"
     attribute_for_username: str = "uid"
     app_dn: str
@@ -714,8 +709,8 @@ class LdapServerConfig(BaseModel):
     search_base: str
     search_filters: str = ""
     use_tls: bool = True
-    certificate_path: Optional[str] = None
-    ciphers: Optional[str] = "ALL"
+    certificate_path: str | None = None
+    ciphers: str | None = "ALL"
 
 
 @router.get("/admin/config/ldap/server", response_model=LdapServerConfig)
@@ -796,7 +791,7 @@ async def get_ldap_config(request: Request, user=Depends(get_admin_user)):
 
 
 class LdapConfigForm(BaseModel):
-    enable_ldap: Optional[bool] = None
+    enable_ldap: bool | None = None
 
 
 @router.post("/admin/config/ldap")
@@ -822,7 +817,7 @@ async def generate_api_key(request: Request, user=Depends(get_current_user)):
         )
 
     api_key = create_api_key()
-    success = await Users.update_user_api_key_by_id(user.id, api_key)
+    success = await USERS.update_user_api_key_by_id(user.id, api_key)
 
     if success:
         return {
@@ -835,14 +830,14 @@ async def generate_api_key(request: Request, user=Depends(get_current_user)):
 # delete api key
 @router.delete("/api_key", response_model=bool)
 async def delete_api_key(user=Depends(get_current_user)):
-    success = await Users.update_user_api_key_by_id(user.id, None)
+    success = await USERS.update_user_api_key_by_id(user.id, None)
     return success
 
 
 # get api key
 @router.get("/api_key", response_model=ApiKey)
 async def get_api_key(user=Depends(get_current_user)):
-    api_key = await Users.get_user_api_key_by_id(user.id)
+    api_key = await USERS.get_user_api_key_by_id(user.id)
     if api_key:
         return {
             "api_key": api_key,

@@ -1,17 +1,14 @@
 import logging
 import uuid
-import jwt
-
 from datetime import UTC, datetime, timedelta
-from typing import Optional, Union
 
-from open_webui.models.users import UserModel, Users
-
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import WEBUI_SECRET_KEY
-
+import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import WEBUI_SECRET_KEY
+from open_webui.models.db_services import USERS
+from open_webui.models.users import UserModel
 from passlib.context import CryptContext
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
@@ -38,7 +35,7 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> str:
+def create_token(data: dict, expires_delta: timedelta | None = None) -> str:
     payload = data.copy()
 
     if expires_delta:
@@ -49,7 +46,7 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
     return encoded_jwt
 
 
-def decode_token(token: str) -> Optional[dict]:
+def decode_token(token: str) -> dict | None:
     try:
         decoded = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
         return decoded
@@ -121,14 +118,14 @@ async def get_current_user(
         )
 
     if data is not None and "id" in data:
-        user = await Users.get_user_by_id(data["id"])
+        user = await USERS.get_user_by_id(data["id"])
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
             )
         else:
-            _ = await Users.update_user_last_active_by_id(user.id)
+            _ = await USERS.update_user_last_active_by_id(user.id)
         return user
     else:
         raise HTTPException(
@@ -138,7 +135,7 @@ async def get_current_user(
 
 
 async def get_current_user_by_api_key(api_key: str):
-    user = await Users.get_user_by_api_key(api_key)
+    user = await USERS.get_user_by_api_key(api_key)
 
     if user is None:
         raise HTTPException(
@@ -146,7 +143,7 @@ async def get_current_user_by_api_key(api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
     else:
-        _ = await Users.update_user_last_active_by_id(user.id)
+        _ = await USERS.update_user_last_active_by_id(user.id)
 
     return user
 

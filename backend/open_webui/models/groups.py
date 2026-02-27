@@ -3,12 +3,12 @@ import time
 import uuid
 from threading import Lock
 
-from open_webui.internal.db import get_async_db
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.base import Base
-
+from open_webui.models.users import UsersTable
 from pydantic import BaseModel, ConfigDict, field_validator
-from sqlalchemy import BigInteger, delete, select, String, Text, update, JSON, or_, func
+from sqlalchemy import JSON, BigInteger, String, Text, delete, func, or_, select, update
 from sqlalchemy.orm import Mapped, mapped_column
 
 log = logging.getLogger(__name__)
@@ -130,15 +130,25 @@ class GroupForm(BaseModel):
 
 
 class GroupUpdateForm(GroupForm):
-    user_ids: list[str | None] = None
-    allowed_domains: list[str | None] = None
+    user_ids: list[str | None] | None = None
+    allowed_domains: list[str | None] | None = None
 
 
 class GroupTable:
+
+    __db: AsyncDatabaseConnector
+    __users: UsersTable
+
+    def __init__(
+        self, db_connector: AsyncDatabaseConnector, users_table: UsersTable
+    ) -> None:
+        self.__db = db_connector
+        self.__users = users_table
+
     async def insert_new_group(
         self, user_id: str, form_data: GroupForm
     ) -> GroupModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             group = GroupModel(
                 **{
                     **form_data.model_dump(exclude_none=True),
@@ -165,7 +175,7 @@ class GroupTable:
                 return None
 
     async def get_groups(self) -> list[GroupModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             groups = await db.scalars(select(Group).order_by(Group.updated_at.desc()))
             return [GroupModel.model_validate(group) for group in groups.all()]
 
@@ -177,12 +187,8 @@ class GroupTable:
 
         Uses caching and SQL filtering for optimal performance.
         """
-        from open_webui.models.users import (
-            Users,
-        )  # Import here to avoid circular imports
-
         # Get user info for domain checking
-        user = await Users.get_user_by_id(user_id)
+        user = await self.__users.get_user_by_id(user_id)
         user_domain = user.domain if user else None
 
         # Generate cache key
@@ -197,7 +203,7 @@ class GroupTable:
         # Cache miss - compute groups using SQL filtering
         log.debug(f"Cache miss for user {user_id}, computing groups")
 
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             query = select(Group).where(
                 or_(
                     func.json_array_length(Group.user_ids) > 0,
@@ -233,7 +239,7 @@ class GroupTable:
 
     async def get_group_by_id(self, id: str) -> GroupModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 group = await db.scalar(select(Group).where(Group.id == id))
                 return GroupModel.model_validate(group) if group else None
         except Exception:
@@ -245,9 +251,6 @@ class GroupTable:
         1. Explicitly added users in user_ids
         2. All users whose email domain matches allowed_domains
         """
-        from open_webui.models.users import (
-            Users,
-        )  # Import here to avoid circular imports
 
         group = await self.get_group_by_id(id)
         if not group:
@@ -258,7 +261,7 @@ class GroupTable:
 
         # Add domain-based users
         if group.allowed_domains:
-            all_users = await Users.get_users()
+            all_users = await self.__users.get_users()
             for user in all_users:
                 if user.domain and user.domain in group.allowed_domains:
                     user_ids.add(user.id)
@@ -269,7 +272,7 @@ class GroupTable:
         self, id: str, form_data: GroupUpdateForm, overwrite: bool = False
     ) -> GroupModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 if group := await db.scalar(select(Group).where(Group.id == id)):
                     group.allowed_domains = form_data.allowed_domains
                     group.user_ids = form_data.user_ids
@@ -285,7 +288,7 @@ class GroupTable:
 
     async def delete_group_by_id(self, id: str) -> bool:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 _ = await db.execute(delete(Group).where(Group.id == id))
                 await db.commit()
                 # Invalidate cache when group is deleted
@@ -295,7 +298,7 @@ class GroupTable:
             return False
 
     async def delete_all_groups(self) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 _ = await db.execute(delete(Group))
                 await db.commit()
@@ -306,7 +309,7 @@ class GroupTable:
                 return False
 
     async def remove_user_from_all_groups(self, user_id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 groups = await self.get_groups_by_member_id(user_id)
 
@@ -329,6 +332,3 @@ class GroupTable:
                 return True
             except Exception:
                 return False
-
-
-Groups = GroupTable()

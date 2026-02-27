@@ -1,12 +1,12 @@
 import time
 import uuid
-from pydantic import BaseModel
-from sqlalchemy import Text, BigInteger, func, select
-from sqlalchemy.orm import Mapped, mapped_column
-
-from open_webui.internal.db import get_async_db
-from open_webui.models.base import Base
 from logging import getLogger
+
+from open_webui.internal.db_utils import AsyncDatabaseConnector
+from open_webui.models.base import Base
+from pydantic import BaseModel
+from sqlalchemy import BigInteger, Text, func, select
+from sqlalchemy.orm import Mapped, mapped_column
 
 logger = getLogger(__name__)
 
@@ -44,10 +44,16 @@ class UsageModel(BaseModel):
 
 
 class MessageMetricsTable:
+
+    __db: AsyncDatabaseConnector
+
+    def __init__(self, db_connector: AsyncDatabaseConnector) -> None:
+        self.__db = db_connector
+
     async def insert_new_metrics(
         self, user: dict, model: str, usage: dict, chat_id: str | None = None
     ):
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             id = str(uuid.uuid4())
             ts = int(time.time())
             tokens = UsageModel(**usage)
@@ -73,7 +79,7 @@ class MessageMetricsTable:
 
     async def get_used_models(self) -> list[str]:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 models = await db.scalars(select(MessageMetric.model).distinct())
                 return [model for model in models.all()]
         except Exception as e:
@@ -82,7 +88,7 @@ class MessageMetricsTable:
 
     async def get_domains(self) -> list[str]:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 domains = await db.scalars(select(MessageMetric.user_domain).distinct())
                 return [domain for domain in domains.all()]
         except Exception as e:
@@ -93,7 +99,7 @@ class MessageMetricsTable:
         self, domain: str | None = None, model: str | None = None
     ) -> int | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 query = select(func.count()).select_from(MessageMetric)
                 if domain:
                     query = query.where(MessageMetric.user_domain == domain)
@@ -108,7 +114,7 @@ class MessageMetricsTable:
         self, domain: str | None = None, model: str | None = None
     ) -> int | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Use the same time calculation as historical data for consistency
                 current_time = int(time.time())
                 end_time = current_time
@@ -136,7 +142,7 @@ class MessageMetricsTable:
 
     async def get_message_tokens_sum(self, domain: str | None = None) -> int | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 query = select(func.sum(MessageMetric.total_tokens))
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
@@ -150,7 +156,7 @@ class MessageMetricsTable:
         self, days: int = 1, domain: str | None = None
     ) -> int | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Use the same time calculation as historical data for consistency
                 current_time = int(time.time())
                 end_time = current_time
@@ -206,7 +212,7 @@ class MessageMetricsTable:
                 start_time = day_start
                 end_time = start_time + (24 * 60 * 60)
 
-                async with get_async_db() as db:
+                async with self.__db.get_async_db() as db:
                     query = (
                         select(func.count())
                         .select_from(MessageMetric)
@@ -279,7 +285,7 @@ class MessageMetricsTable:
                 start_time = day_start
                 end_time = start_time + (24 * 60 * 60)
 
-                async with get_async_db() as db:
+                async with self.__db.get_async_db() as db:
                     query = select(func.sum(MessageMetric.total_tokens)).filter(
                         MessageMetric.created_at >= start_time,
                         MessageMetric.created_at < end_time,
@@ -322,7 +328,7 @@ class MessageMetricsTable:
     ) -> dict[str, int]:
         """Get message metrics for a specific date range"""
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Build query with range filters
                 query = (
                     select(
@@ -359,7 +365,7 @@ class MessageMetricsTable:
     ) -> list[dict[str, int | str]]:
         """Get token usage by model for a specific date range"""
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Base query with filters
                 query = (
                     select(
@@ -406,7 +412,7 @@ class MessageMetricsTable:
             while current_day < end_timestamp:
                 next_day = current_day + 86400  # add one day in seconds
 
-                async with get_async_db() as db:
+                async with self.__db.get_async_db() as db:
                     query = (
                         select(func.count())
                         .select_from(MessageMetric)
@@ -450,7 +456,7 @@ class MessageMetricsTable:
             while current_day < end_timestamp:
                 next_day = current_day + 86400  # add one day in seconds
 
-                async with get_async_db() as db:
+                async with self.__db.get_async_db() as db:
                     query = select(func.sum(MessageMetric.total_tokens)).where(
                         MessageMetric.created_at >= current_day,
                         MessageMetric.created_at < next_day,
@@ -491,7 +497,7 @@ class MessageMetricsTable:
             start_time = today_midnight - (days * 24 * 60 * 60)
             end_time = today_midnight + (24 * 60 * 60)
 
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 query = select(MessageMetric.user_id, MessageMetric.created_at).where(
                     MessageMetric.created_at >= start_time,
                     MessageMetric.created_at < end_time,
@@ -548,7 +554,7 @@ class MessageMetricsTable:
         Only considers second or subsequent prompts in a chat session.
         """
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Query all metrics with chat_id, ordered by chat_id and created_at
                 query = select(MessageMetric.chat_id, MessageMetric.created_at).where(
                     MessageMetric.chat_id.isnot(None)
@@ -668,7 +674,7 @@ class MessageMetricsTable:
         Returns all message metrics within the specified timeframe.
         """
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 query = select(MessageMetric).where(
                     MessageMetric.created_at >= start_timestamp,
                     MessageMetric.created_at < end_timestamp,
@@ -703,6 +709,3 @@ class MessageMetricsTable:
         except Exception as e:
             logger.error(f"Failed to get export data: {e}")
             return []
-
-
-MessageMetrics = MessageMetricsTable()

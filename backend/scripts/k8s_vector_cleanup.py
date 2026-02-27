@@ -110,7 +110,7 @@ def main():
             cleanup_old_chat_collections,
             cleanup_expired_chats,
         )
-        from open_webui.models.knowledge import Knowledges
+        from open_webui.models.db_services import KNOWLEDGES
         from open_webui.config import CHAT_LIFETIME_ENABLED, CHAT_LIFETIME_DAYS
 
         logger.info("✓ Successfully imported cleanup modules")
@@ -119,7 +119,7 @@ def main():
         logger.info("🔌 Testing database connectivity...")
         try:
             # Try to get knowledge bases as a connectivity test
-            knowledge_bases = await Knowledges.get_knowledge_bases()
+            knowledge_bases = await KNOWLEDGES.get_knowledge_bases()
             logger.info(f"✓ Database connection successful")
             logger.info(f"📊 Found {len(knowledge_bases)} knowledge bases to preserve")
         except Exception as e:
