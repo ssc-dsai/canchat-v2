@@ -114,7 +114,11 @@ class MessageMetricsTable:
                 # Calculate start of the current day in UTC
                 now_utc = time.gmtime(current_time)
                 today_str = time.strftime("%Y-%m-%d", now_utc)
-                start_time = int(time.mktime(time.strptime(f"{today_str} 00:00:00", "%Y-%m-%d %H:%M:%S")))
+                start_time = int(
+                    time.mktime(
+                        time.strptime(f"{today_str} 00:00:00", "%Y-%m-%d %H:%M:%S")
+                    )
+                )
 
                 # Build the query to count messages for the current day
                 query = db.query(MessageMetric).filter(
@@ -165,7 +169,11 @@ class MessageMetricsTable:
                 # Calculate start of the current day in UTC
                 now_utc = time.gmtime(current_time)
                 today_str = time.strftime("%Y-%m-%d", now_utc)
-                start_time = int(time.mktime(time.strptime(f"{today_str} 00:00:00", "%Y-%m-%d %H:%M:%S")))
+                start_time = int(
+                    time.mktime(
+                        time.strptime(f"{today_str} 00:00:00", "%Y-%m-%d %H:%M:%S")
+                    )
+                )
 
                 query = db.query(MessageMetric).filter(
                     MessageMetric.created_at >= start_time,
@@ -197,7 +205,9 @@ class MessageMetricsTable:
             )
 
             # Calculate the start of the date range
-            start_timestamp = today_midnight - ((days - 1) * 86400)  # 86400 = seconds in a day
+            start_timestamp = today_midnight - (
+                (days - 1) * 86400
+            )  # 86400 = seconds in a day
             end_timestamp = today_midnight + 86400  # Include today
 
             # Prepare expected dates dictionary to ensure no gaps in results

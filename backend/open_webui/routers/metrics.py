@@ -116,14 +116,18 @@ async def get_total_tokens(
 
     if start_date:
         try:
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
             start_timestamp = int(start_dt.timestamp())
         except ValueError:
             pass
 
     if end_date:
         try:
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
             # Set end_timestamp to the end of the specified day (23:59:59 UTC)
             end_of_day = end_dt.replace(hour=23, minute=59, second=59)
             end_timestamp = int(end_of_day.timestamp())
