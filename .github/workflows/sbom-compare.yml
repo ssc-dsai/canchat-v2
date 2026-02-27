@@ -88,7 +88,9 @@ jobs:
           name: comparison-history.md.txt
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
-      - name: artefact filename workaround
+
+      - name: artifact filename workaround after download
+        continue-on-error: true
         run: mv comparison-history.md.txt comparison-history.md
 
       - name: show downloaded artifacts
@@ -179,7 +181,8 @@ jobs:
       - name: show artifacts after all changes
         run: ls -R .sbom    # gut check
 
-      - name: artefact filename workaround
+      - name: artifact filename workaround before upload
+        continue-on-error: true
         run: |
           mv comparison-history.md comparison-history.md.txt
           mv comparison.md         comparison.md.txt
