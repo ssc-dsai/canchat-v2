@@ -80,6 +80,7 @@ from open_webui.config import (
     UPLOAD_DIR,
     DEFAULT_LOCALE,
     ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
+    RAG_WEB_SEARCH_REQUEST_TIMEOUT,
     RAG_WEB_SEARCH_TOTAL_TIMEOUT,
 )
 from open_webui.env import (
@@ -1341,7 +1342,10 @@ async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     total_timeout = RAG_WEB_SEARCH_TOTAL_TIMEOUT.value
+    request_timeout_cap = RAG_WEB_SEARCH_REQUEST_TIMEOUT.value
     start_time = time.monotonic()
+    loaded_docs: list[Document] = []
+    loaded_urls: list[str] = []
 
     def get_remaining_timeout() -> int:
         elapsed = time.monotonic() - start_time
@@ -1350,10 +1354,13 @@ async def process_web_search(
             raise TimeoutError()
         return max(1, int(remaining))
 
+    def get_capped_request_timeout() -> int:
+        return min(get_remaining_timeout(), request_timeout_cap)
+
     try:
         async with asyncio.timeout(total_timeout):
             try:
-                request_timeout = get_remaining_timeout()
+                request_timeout = get_capped_request_timeout()
                 log.debug(
                     f"[process_web_search] query: '{form_data.query}', engine: '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
                 )
@@ -1378,16 +1385,16 @@ async def process_web_search(
 
             try:
                 urls = [result.link for result in web_results]
-                request_timeout = get_remaining_timeout()
+                loaded_urls = urls
+                request_timeout = get_capped_request_timeout()
                 loader = get_web_loader(
                     urls,
                     verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
                     requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                     request_timeout=request_timeout,
                 )
-                docs = await asyncio.to_thread(loader.load)
-                # Add metadata for tracking
-                for doc in docs:
+
+                def enrich_doc_metadata(doc: Document) -> None:
                     if not hasattr(doc, "metadata"):
                         doc.metadata = {}
                     doc.metadata.update(
@@ -1398,6 +1405,15 @@ async def process_web_search(
                             "type": "web_search",
                         }
                     )
+
+                def load_docs_incremental() -> list[Document]:
+                    for doc in loader.lazy_load():
+                        enrich_doc_metadata(doc)
+                        loaded_docs.append(doc)
+                    return loaded_docs
+
+                docs = await asyncio.to_thread(load_docs_incremental)
+                loaded_docs = docs
 
                 if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
                     # Return raw results without embedding
@@ -1445,6 +1461,30 @@ async def process_web_search(
                     detail=ERROR_MESSAGES.DEFAULT(e),
                 )
     except (TimeoutError, asyncio.TimeoutError):
+        if loaded_docs:
+            log.warning(
+                f"[process_web_search] total timeout reached after loading {len(loaded_docs)} docs; returning partial results"
+            )
+            if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                return {
+                    "status": True,
+                    "collection_name": None,
+                    "docs": [
+                        {
+                            "content": doc.page_content,
+                            "metadata": doc.metadata,
+                        }
+                        for doc in loaded_docs
+                    ],
+                    "filenames": loaded_urls,
+                    "loaded_count": len(loaded_docs),
+                }
+            return {
+                "status": True,
+                "collection_name": None,
+                "filenames": loaded_urls,
+                "loaded_count": len(loaded_docs),
+            }
         log.error(
             f"[process_web_search] exceeded total timeout of {total_timeout}s for query: '{form_data.query}'"
         )

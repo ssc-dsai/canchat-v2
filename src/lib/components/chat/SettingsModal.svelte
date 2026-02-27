@@ -16,7 +16,6 @@
 	import Audio from './Settings/Audio.svelte';
 	import Chats from './Settings/Chats.svelte';
 	import User from '../icons/User.svelte';
-	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
 
 	const i18n = getI18n();
@@ -117,21 +116,6 @@
 				'save',
 				'interfaceoptions',
 				'interfacecustomization'
-			]
-		},
-		{
-			id: 'personalization',
-			title: 'Personalization',
-			keywords: [
-				'personalization',
-				'memory',
-				'personalize',
-				'preferences',
-				'profile',
-				'personalsettings',
-				'customsettings',
-				'userpreferences',
-				'accountpreferences'
 			]
 		},
 		{
@@ -448,21 +432,6 @@
 								</div>
 								<div class=" self-center">{$i18n.t('Interface')}</div>
 							</button>
-						{:else if tabId === 'personalization'}
-							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'personalization'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'personalization';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<User />
-								</div>
-								<div class=" self-center">{$i18n.t('Personalization')}</div>
-							</button>
 						{:else if tabId === 'audio'}
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
@@ -616,13 +585,6 @@
 					/>
 				{:else if selectedTab === 'interface'}
 					<Interface
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'personalization'}
-					<Personalization
 						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
