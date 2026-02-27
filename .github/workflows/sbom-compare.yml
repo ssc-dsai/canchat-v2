@@ -118,8 +118,8 @@ jobs:
       - name: Create CSVs
         id: convert-sboms
         run: |
-          ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
-          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
+          ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv.txt
+          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv.txt
           # SKIP
           #   python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
           #   python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
@@ -152,27 +152,27 @@ jobs:
         id: create-summary
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
-          echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  > .sbom/comparison.md
-          echo "## Run Timestamp: $TIMESTAMP" >> .sbom/comparison.md
+          echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  > .sbom/comparison.md.txt
+          echo "## Run Timestamp: $TIMESTAMP" >> .sbom/comparison.md.txt
           
           # CDX version
-          echo "" >> .sbom/comparison.md
-          echo "### Comparison of current CDX SBOM with previous commit" >> .sbom/comparison.md
-          cat .sbom/comparison.cdx.md >> .sbom/comparison.md # copy differnces to the historic version
+          echo "" >> .sbom/comparison.md.txt
+          echo "### Comparison of current CDX SBOM with previous commit" >> .sbom/comparison.md.txt
+          cat .sbom/comparison.cdx.md >> .sbom/comparison.md.txt # copy differnces to the historic version
           
           # SPDX version
-          echo "" >> .sbom/comparison.md
-          echo "### Comparison of current SPDX SBOM with previous CI run" >> .sbom/comparison.md
-          cat .sbom/comparison.spdx.md >> .sbom/comparison.md # copy differnces to the historic version
+          echo "" >> .sbom/comparison.md.txt
+          echo "### Comparison of current SPDX SBOM with previous CI run" >> .sbom/comparison.md.txt
+          cat .sbom/comparison.spdx.md >> .sbom/comparison.md.txt # copy differnces to the historic version
           
           # prepend current comparison log to the top of the comparison history file (most recent first)
-          echo "" >> .sbom/comparison.md
-          if test -f .sbom/comparison-history.md; then cp .sbom/comparison-history.md .sbom/old-comparison-history.md; fi
-          cp .sbom/comparison.md .sbom/comparison-history.md
-          if test -f .sbom/old-comparison-history.md; then 
-            cat .sbom/old-comparison-history.md >> .sbom/comparison-history.md
+          echo "" >> .sbom/comparison.md.txt
+          if test -f .sbom/comparison-history.md.txt; then cp .sbom/comparison-history.md.txt .sbom/old-comparison-history.md.txt; fi
+          cp .sbom/comparison.md.txt .sbom/comparison-history.md.txt
+          if test -f .sbom/old-comparison-history.md.txt; then 
+            cat .sbom/old-comparison-history.md.txt >> .sbom/comparison-history.md.txt
           fi
-          cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
+          cat .sbom/comparison-history.md.txt >> $GITHUB_STEP_SUMMARY
 
       - name: show artifacts after all changes
         run: ls -R .sbom    # gut check
