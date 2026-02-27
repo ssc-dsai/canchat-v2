@@ -137,7 +137,7 @@ jobs:
           if test -f .sbom/previous.spdx.json; then 
             sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
           else
-            echo "unable to use the SPDX SBOM from the previous execution" > .sbom/comparison.spdx.md
+            echo "Unable to use the previous run SPDX SBOM. The previous run may have failed." > .sbom/comparison.spdx.md
           fi
 
       - name: Get PR number or none
