@@ -257,3 +257,15 @@ jobs:
           archive: false
           include-hidden-files: true
           path: .sbom/current.spdx.json
+
+# this is a test
+# - this is known to fail UNTIL the upload bug is fixed      
+# - if upload OK then the script can have the upload and download workarounds removed
+      - name: test upload MD file
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: comparison-history.md
+          include-hidden-files: true
+          archive: false
+          path: .sbom/comparison-history.md
