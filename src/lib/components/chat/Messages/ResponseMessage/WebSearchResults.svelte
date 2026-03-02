@@ -10,15 +10,19 @@
 
 <Collapsible bind:open={state} className="w-full space-y-1">
 	<div
-		class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+		class="flex items-start gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 	>
-		<slot />
+		<div class="min-w-0 flex-1">
+			<slot />
+		</div>
 
-		{#if state}
-			<ChevronUp strokeWidth="3.5" className="size-3.5 " />
-		{:else}
-			<ChevronDown strokeWidth="3.5" className="size-3.5 " />
-		{/if}
+		<div class="mt-0.5 shrink-0">
+			{#if state}
+				<ChevronUp strokeWidth="3.5" className="size-3.5 " />
+			{:else}
+				<ChevronDown strokeWidth="3.5" className="size-3.5 " />
+			{/if}
+		</div>
 	</div>
 	<div
 		class="text-sm border border-gray-300/30 dark:border-gray-700/50 rounded-xl mb-1.5"

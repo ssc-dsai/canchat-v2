@@ -61,10 +61,18 @@ export class ChatPage extends BasePage {
 			name: 'Call'
 		});
 		this.stopGenerationButton = this.page.locator('button.bg-white.hover\\:bg-gray-100');
-		this.bulkDeleteButton = this.page.locator(`button[title="${this.t['Delete Selected'] || 'Delete Selected'}"]`);
-		this.selectedCountLabel = this.page.locator(`span:has-text("${this.t['selected'] || 'selected'}")`);
-		this.newFolderButton = this.page.locator(`button[aria-label="${this.t['New Folder'] || 'New Folder'}"]`);
-		this.foldersContainer = this.page.locator(`div:has-text("${this.t['Chats'] || 'Chats'}")`).first();
+		this.bulkDeleteButton = this.page.locator(
+			`button[title="${this.t['Delete Selected'] || 'Delete Selected'}"]`
+		);
+		this.selectedCountLabel = this.page.locator(
+			`span:has-text("${this.t['selected'] || 'selected'}")`
+		);
+		this.newFolderButton = this.page.locator(
+			`button[aria-label="${this.t['New Folder'] || 'New Folder'}"]`
+		);
+		this.foldersContainer = this.page
+			.locator(`div:has-text("${this.t['Chats'] || 'Chats'}")`)
+			.first();
 		this.searchResultsLabel = this.page.locator('[aria-live="polite"].sr-only');
 	}
 
@@ -176,7 +184,9 @@ export class ChatPage extends BasePage {
 	 * Checks if the "Network Problem" error is visible
 	 */
 	async isNetworkErrorPresent(): Promise<boolean> {
-		return await this.responseMessages.getByText(this.getTranslation('Network Problem')).isVisible();
+		return await this.responseMessages
+			.getByText(this.getTranslation('Network Problem'))
+			.isVisible();
 	}
 
 	/**
@@ -418,7 +428,7 @@ export class ChatPage extends BasePage {
 	 * Saves the edited answer as a new copy
 	 */
 	async saveAnswerAsCopy(): Promise<void> {
-		const label = this.getTranslation('Save as Copy');
+		const label = this.getTranslation('Save As Copy');
 		await this.page.getByRole('button', { name: label }).click();
 		await this.waitToSettle(500);
 	}
@@ -808,7 +818,10 @@ export class ChatPage extends BasePage {
 	 * Creates a new folder in the sidebar
 	 */
 	async createNewFolder() {
-		const chatsFolder = this.page.locator('div:has-text("Chats")').filter({ has: this.newFolderButton }).first();
+		const chatsFolder = this.page
+			.locator('div:has-text("Chats")')
+			.filter({ has: this.newFolderButton })
+			.first();
 		await chatsFolder.hover();
 		await this.newFolderButton.click();
 		await this.waitToSettle(500);

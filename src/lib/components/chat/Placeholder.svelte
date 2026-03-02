@@ -28,6 +28,7 @@
 
 	export let transparentBackground = false;
 
+	export let onChange: Function = () => {};
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
@@ -213,6 +214,7 @@
 					bind:wikiGroundingEnabled
 					bind:wikiGroundingMode
 					bind:atSelectedModel
+					{onChange}
 					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}

@@ -57,7 +57,6 @@ from open_webui.routers import (
     groups,
     files,
     functions,
-    memories,
     metrics,
     models,
     knowledge,
@@ -346,7 +345,8 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(rf"""
+print(
+    rf"""
   ___                    __        __   _     _   _ ___
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
 | | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
@@ -358,7 +358,8 @@ print(rf"""
 v{VERSION} - building the best open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
-""")
+"""
+)
 
 
 @asynccontextmanager
@@ -1070,7 +1071,6 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledg
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
-app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])

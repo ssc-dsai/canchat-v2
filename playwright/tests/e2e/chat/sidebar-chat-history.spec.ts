@@ -54,7 +54,9 @@ test.describe('Sidebar and Chat History Features', () => {
 		// NOTE: Using page.goto('/') as a workaround because Playwright's click/dispatchEvent
 		// is not triggering Svelte's event handlers on this button when inside a conversation.
 		await userPage.page.goto('/');
-		await expect(userPage.page.locator('button:has(span.font-medium)').first()).toBeVisible({ timeout: 30000 });
+		await expect(userPage.page.locator('button:has(span.font-medium)').first()).toBeVisible({
+			timeout: 30000
+		});
 
 		// 8. User observe that his default model is selected in the chat page.
 		const finalModel = await userPage.getSelectedModel();
@@ -64,7 +66,9 @@ test.describe('Sidebar and Chat History Features', () => {
 	// ===========================================
 	// CHAT-SIDEBAR-TC003: Search Chat History
 	// ===========================================
-	test('CHAT-SIDEBAR-TC003: User can perform a search on his chat history', async ({ userPage }) => {
+	test('CHAT-SIDEBAR-TC003: User can perform a search on his chat history', async ({
+		userPage
+	}) => {
 		// 1. Ensure we have at least one specific chat to search for
 		await userPage.sendMessage('Tell me about Shared Services Canada');
 		await expect(userPage.responseMessages.last()).toBeVisible();
@@ -92,7 +96,7 @@ test.describe('Sidebar and Chat History Features', () => {
 		await expect(userPage.searchInput).toHaveValue('');
 		await userPage.page.waitForTimeout(5000);
 		const countAfter = await userPage.chatHistoryItems.count();
-		expect(countAfter).toBeGreaterThanOrEqual(countBefore)
+		expect(countAfter).toBeGreaterThanOrEqual(countBefore);
 
 		// 7. User enter the search term for tag: "tag:"
 		await userPage.searchInput.press('Escape');
@@ -156,7 +160,9 @@ test.describe('Sidebar and Chat History Features', () => {
 		// 3. User observe the conversation opens
 		// URL should change back to the first chat URL. If not, navigate manually.
 		if (!userPage.page.url().includes(firstChatUrl)) {
-			console.log(`URL mismatch after click: expected to include ${firstChatUrl}, got ${userPage.page.url()}. Navigating manually.`);
+			console.log(
+				`URL mismatch after click: expected to include ${firstChatUrl}, got ${userPage.page.url()}. Navigating manually.`
+			);
 			await userPage.page.goto(firstChatUrl);
 		}
 
@@ -231,7 +237,9 @@ test.describe('Sidebar and Chat History Features', () => {
 	// ===========================================
 	// CHAT-SIDEBAR-TC006: Create Folders and Move Conversations
 	// ===========================================
-	test('CHAT-SIDEBAR-TC006: User can create chat folders and move conversation in them', async ({ userPage }) => {
+	test('CHAT-SIDEBAR-TC006: User can create chat folders and move conversation in them', async ({
+		userPage
+	}) => {
 		// 1. Ensure at least one chat exists
 		await userPage.page.goto('/');
 		await userPage.sendMessage('Chat for folder move');
@@ -346,7 +354,9 @@ test.describe('Sidebar and Chat History Features', () => {
 	// ===========================================
 	// CHAT-SIDEBAR-TC009: Rename Chat or Folder
 	// ===========================================
-	test.skip('CHAT-SIDEBAR-TC009: User can rename a chat or folder in the sidebar', async ({ userPage }) => {
+	test.skip('CHAT-SIDEBAR-TC009: User can rename a chat or folder in the sidebar', async ({
+		userPage
+	}) => {
 		// 1. User sends a message to create a new conversation: "Write me a story"
 		// 2. User hover over the conversation he just created and click on the 3dot button
 		// 3. User clicks on the "Rename" menu item.
@@ -400,7 +410,9 @@ test.describe('Sidebar and Chat History Features', () => {
 	// ===========================================
 	// CHAT-SIDEBAR-TC012: Download Chat
 	// ===========================================
-	test.skip('CHAT-SIDEBAR-TC012: User can download a chat from the sidebar', async ({ userPage }) => {
+	test.skip('CHAT-SIDEBAR-TC012: User can download a chat from the sidebar', async ({
+		userPage
+	}) => {
 		// 1. User sends a message to create a new conversation
 		// 2. User hover over the conversation he just created and click on the 3dot button
 		// 3. User clicks on the "Download" menu item and then the "Plain Text (.txt)" sub-menu item
@@ -413,7 +425,9 @@ test.describe('Sidebar and Chat History Features', () => {
 	// ===========================================
 	// CHAT-SIDEBAR-TC013: Add and Remove Tags
 	// ===========================================
-	test.skip('CHAT-SIDEBAR-TC013: User can add and remove tags to a chat in the sidebar', async ({ userPage }) => {
+	test.skip('CHAT-SIDEBAR-TC013: User can add and remove tags to a chat in the sidebar', async ({
+		userPage
+	}) => {
 		// 1. User sends a message to create a new conversation
 		// 2. User hover over the conversation he just created and click on the 3dot button
 		// 3. User clicks on the "+" menu item next to "Add a tag"
@@ -430,7 +444,9 @@ test.describe('Sidebar and Chat History Features', () => {
 	// ===========================================
 	// CHAT-SIDEBAR-TC014: Create New Chat from Header (Sidebar hidden)
 	// ===========================================
-	test.skip('CHAT-SIDEBAR-TC014: User can create a new chat from the header when the sidebar is hidden', async ({ userPage }) => {
+	test.skip('CHAT-SIDEBAR-TC014: User can create a new chat from the header when the sidebar is hidden', async ({
+		userPage
+	}) => {
 		// 1. User clicks on the new chat button in the header
 		// 2. User observes that the chat page suggestions cycle to new ones
 		// 3. User observes that the default model is selected in the new chat
