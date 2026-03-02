@@ -72,6 +72,7 @@ jobs:
 
       - name: Get Previous Run ID
         id: get-run-id
+        continue-on-error: true
         run: |
          RUN_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs?branch=${{ github.ref_name }}" \
@@ -106,6 +107,7 @@ jobs:
       - name: Create SPDX SBOM files
         # SPDX previous is created by copying the SPDX current from the previous execution - if exists
         id: current-sbom-spdx
+        continue-on-error: true
         run: |
           # copy current to previous then download new SBOM as current
           if test -f .sbom/current.spdx.json; then cp .sbom/current.spdx.json .sbom/previous.spdx.json; fi
@@ -120,6 +122,7 @@ jobs:
 
       - name: Generate Previous SBOM CDX format
         id: previous-sbom-cdx
+        continue-on-error: true
         run: |
           git checkout HEAD^
           ./cdxgen -o .sbom/previous.cdx.json --json-pretty
@@ -128,6 +131,7 @@ jobs:
 
       - name: Create CSVs
         id: convert-sboms
+        continue-on-error: true
         run: |
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
           ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
@@ -137,10 +141,12 @@ jobs:
 
       - name: Compare CDX SBOMs
         id: compare-sbom-cdx
+        continue-on-error: true
         run: sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --sbom cyclonedx --format text > .sbom/comparison.cdx.md
 
       - name: Compare SPDX SBOMs
         id: compare-sbom-spdx
+        continue-on-error: true
         run: |
           if test -f .sbom/previous.spdx.json; then 
             sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
@@ -150,6 +156,7 @@ jobs:
 
       - name: Get PR number
         id: pr
+        continue-on-error: true
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
             # Extract PR number from the event payload
@@ -161,6 +168,7 @@ jobs:
        
       - name: create summary
         id: create-summary
+        continue-on-error: true
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  > .sbom/comparison.md
