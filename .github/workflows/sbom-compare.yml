@@ -7,11 +7,7 @@
 # DIFF the SPDX files (prev from last action run)
 # DIFF the CDX files (prev from last commit)
 # create CSVs for easier human usability (sbom-to-excel would be nicer but the conversion tool is not robust and crashing on content)
-# upload artifacts
-
-# bug with V7 artifact upload
-#  - CSV and MD extensions fail the artefact upload (bug is being worked on)
-#  - workaround, use extension TXT on files that are normally CSV and MD
+# upload carryover and other artifacts
 
 name: SBOM compare
 on:
@@ -63,6 +59,7 @@ jobs:
 
       - name: Get Previous Run ID
         id: get-run-id
+        # fail expected if no previous github action run exists - allow the script to continue
         continue-on-error: true
         run: |
          RUN_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
@@ -70,31 +67,22 @@ jobs:
             | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
-      - name: Download current.spdx.json
+      - name: Download carryover files from last run
         uses: actions/download-artifact@v8
+        # fail expected if no previous github action run exists or doesnt have carryover artifact - allow the script to continue
         continue-on-error: true
         with:
           path: .sbom
-          name: current.spdx.json
+          name: carryover
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
 
-      - name: Download comparison-history.md
-        uses: actions/download-artifact@v8
-        continue-on-error: true
-        with:
-          path: .sbom
-          name: comparison-history.md.txt
-          run-id: ${{ steps.get-run-id.outputs.run_id }}
-          github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
-
-      - name: show downloaded artifacts
+      - name: show downloaded artifacts in run log
         run: ls -R .sbom    # gut check
 
       - name: Create SPDX SBOM files
         # SPDX previous is created by copying the SPDX current from the previous execution - if exists
         id: current-sbom-spdx
-        continue-on-error: true
         run: |
           # copy current to previous then download new SBOM as current
           if test -f .sbom/current.spdx.json; then cp .sbom/current.spdx.json .sbom/previous.spdx.json; fi
@@ -109,7 +97,6 @@ jobs:
 
       - name: Generate Previous SBOM CDX format
         id: previous-sbom-cdx
-        continue-on-error: true
         run: |
           git checkout HEAD^
           ./cdxgen -o .sbom/previous.cdx.json --json-pretty
@@ -118,34 +105,30 @@ jobs:
 
       - name: Create CSVs
         id: convert-sboms
-        continue-on-error: true
         run: |
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv.txt --output-format csv
           ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv.txt --output-format csv
 
       - name: Compare CDX SBOMs
         id: compare-sbom-cdx
-        continue-on-error: true
         run: |
-          if test -f .sbom/previous.cdx.json; then 
-            sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --sbom cyclonedx --format text > .sbom/comparison.cdx.md.txt
+          if test -f .sbom/previous.cdx.json; then
+            sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --sbom cyclonedx --format text > .sbom/comparison.cdx.md
           else
-            echo "Unable to use the previous commit CDX SBOM. A previous commit may not exist." > .sbom/comparison.cdx.md.txt
+            echo "Unable to use the previous commit CDX SBOM. A previous commit may not exist." > .sbom/comparison.cdx.md
           fi
 
       - name: Compare SPDX SBOMs
         id: compare-sbom-spdx
-        continue-on-error: true
         run: |
-          if test -f .sbom/previous.spdx.json; then 
-            sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md.txt
+          if test -f .sbom/previous.spdx.json; then
+            sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
           else
-            echo "Unable to use the previous run SPDX SBOM. The previous run may have failed." > .sbom/comparison.spdx.md.txt
+            echo "Unable to use the previous run SPDX SBOM. The previous run may have failed." > .sbom/comparison.spdx.md
           fi
 
       - name: Get PR number
         id: pr
-        continue-on-error: true
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
             # Extract PR number from the event payload
@@ -157,84 +140,50 @@ jobs:
        
       - name: create summary
         id: create-summary
-        continue-on-error: true
         run: |
           TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
-          echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  > .sbom/comparison.md.txt
-          echo "## Run Timestamp: $TIMESTAMP" >> .sbom/comparison.md.txt
+          echo "# Pull Request Number: ${{ steps.pr.outputs.pr_number }}"  > .sbom/comparison.md
+          echo "## Run Timestamp: $TIMESTAMP" >> .sbom/comparison.md
           
           # CDX version
-          echo "" >> .sbom/comparison.md.txt
-          echo "### Comparison of current CDX SBOM with previous commit" >> .sbom/comparison.md.txt
-          cat .sbom/comparison.cdx.md.txt >> .sbom/comparison.md.txt # copy differnces to the historic version
+          echo "" >> .sbom/comparison.md
+          echo "### Comparison of current CDX SBOM with previous commit" >> .sbom/comparison.md
+          cat .sbom/comparison.cdx.md >> .sbom/comparison.md # copy differnces to the historic version
           
           # SPDX version
-          echo "" >> .sbom/comparison.md.txt
-          echo "### Comparison of current SPDX SBOM with previous CI run" >> .sbom/comparison.md.txt
-          cat .sbom/comparison.spdx.md.txt >> .sbom/comparison.md.txt # copy differnces to the historic version
+          echo "" >> .sbom/comparison.md
+          echo "### Comparison of current SPDX SBOM with previous CI run" >> .sbom/comparison.md
+          cat .sbom/comparison.spdx.md >> .sbom/comparison.md # copy differnces to the historic version
           
           # prepend current comparison log to the top of the comparison history file (most recent first)
-          echo "" >> .sbom/comparison.md.txt
-          if test -f .sbom/comparison-history.md.txt; then cp .sbom/comparison-history.md.txt .sbom/old-comparison-history.md.txt; fi
-          cp .sbom/comparison.md.txt .sbom/comparison-history.md.txt
-          if test -f .sbom/old-comparison-history.md.txt; then 
-            cat .sbom/old-comparison-history.md.txt >> .sbom/comparison-history.md.txt
+          echo "" >> .sbom/comparison.md
+          if test -f .sbom/comparison-history.md; then cp .sbom/comparison-history.md .sbom/old-comparison-history.md; fi
+          cp .sbom/comparison.md.txt .sbom/comparison-history.md
+          if test -f .sbom/old-comparison-history.md; then 
+            cat .sbom/old-comparison-history.md >> .sbom/comparison-history.md.txt
           fi
-          cat .sbom/comparison-history.md.txt >> $GITHUB_STEP_SUMMARY
+          cat .sbom/comparison-history.md >> $GITHUB_STEP_SUMMARY
 
-      - name: show artifacts after all changes
+      - name: show artifacts in run log before upload
         run: ls -R .sbom    # gut check
 
-      - name: Upload comparison-history.md
+      - name: Upload sbom-reports
         uses: actions/upload-artifact@v7
-        continue-on-error: true
         with:
-          name: comparison-history.md.txt
+          name: sbom-reports
           include-hidden-files: true
-          archive: false
-          path: .sbom/comparison-history.md.txt
+          path: |
+            .sbom/comparison.md
+            .sbom/current.cdx.csv
+            .sbom/current.cdx.json
+            .sbom/current.spdx.csv
+            .sbom/current.spdx.json
 
-      - name: Upload comparison.md
+      - name: Upload carryover
         uses: actions/upload-artifact@v7
-        continue-on-error: true
         with:
-          name: comparison.md.txt
-          archive: false
+          name: carryover
           include-hidden-files: true
-          path: .sbom/comparison.md.txt
-
-      - name: Upload current.cdx.csv
-        uses: actions/upload-artifact@v7
-        continue-on-error: true
-        with:
-          name: current.cdx.csv.txt
-          archive: false
-          include-hidden-files: true
-          path: .sbom/current.cdx.csv.txt
-          
-      - name: Upload current.cdx.json
-        uses: actions/upload-artifact@v7
-        continue-on-error: true
-        with:
-          name: current.cdx.json
-          archive: false
-          include-hidden-files: true
-          path: .sbom/current.cdx.json
-
-      - name: Upload current.spdx.csv
-        uses: actions/upload-artifact@v7
-        continue-on-error: true
-        with:
-          name: current.spdx.csv.txt
-          archive: false
-          include-hidden-files: true
-          path: .sbom/current.spdx.csv.txt
-          
-      - name: Upload current.spdx.json
-        uses: actions/upload-artifact@v7
-        continue-on-error: true
-        with:
-          name: current.spdx.json
-          archive: false
-          include-hidden-files: true
-          path: .sbom/current.spdx.json
+          path: |
+            .sbom/comparison-history.md
+            .sbom/current.spdx.json
