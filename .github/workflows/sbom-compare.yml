@@ -52,12 +52,6 @@ jobs:
           wget -O cyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.30.0/cyclonedx-linux-x64
           chmod 777 cyclonedx
 
-          # sbom-to-excel
-          # creates a multi-worksheet SBOM in XLSX format
-          # SKIP - crashes on content - TRY AGAIN SOME other TIME
-          # git clone https://github.com/jacobbarkai/sbom-to-excel.git
-          # pip install -r sbom-to-excel/requirements.txt
-
           # sbomdiff (create a DIFF from either format SBOM into TXT)
           pip install sbomdiff
 
@@ -128,9 +122,6 @@ jobs:
         run: |
           ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv.txt --output-format csv
           ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv.txt --output-format csv
-          # SKIP
-          #   python sbom-to-excel/sbom_to_excel.py .sbom/current.cdx.json -o .sbom/current.cdx.xlsx
-          #   python sbom-to-excel/sbom_to_excel.py .sbom/current.spdx.json -o .sbom/current.spdx.xlsx
 
       - name: Compare CDX SBOMs
         id: compare-sbom-cdx
