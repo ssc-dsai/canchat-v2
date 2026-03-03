@@ -6,17 +6,16 @@ API endpoints for CrewAI integration with MCP servers
 import logging
 import os
 import sys
-import json
-import aiohttp
 from pathlib import Path
-from typing import Optional, Dict, Any
-from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from typing import Any
 
-from open_webui.utils.auth import get_verified_user
-from open_webui.models.chats import Chats
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from open_webui.models.users import UserModel
+from open_webui.models.db_services import CHATS
 from open_webui.socket.main import get_event_emitter
+from open_webui.utils.auth import get_verified_user
+from pydantic import BaseModel
 
 # Add the backend directory to the path to import crew_mcp_integration
 backend_dir = Path(__file__).parent.parent.parent
@@ -31,7 +30,7 @@ GRAPH_ACCESS_TOKEN_HEADER = os.getenv(
 )
 
 
-def extract_graph_access_token(request: Request) -> Optional[str]:
+def extract_graph_access_token(request: Request) -> str | None:
     """
     Extract the Graph API access token from OAuth2 proxy headers.
     This token will be used by ALL MCP servers for delegated SharePoint access.
@@ -77,7 +76,7 @@ def extract_graph_access_token(request: Request) -> Optional[str]:
     return None
 
 
-async def get_graph_access_token_for_user(request: Request) -> Optional[str]:
+async def get_graph_access_token_for_user(request: Request) -> str | None:
     """
     Get the Graph API access token directly from OAuth2 proxy headers.
     This token will be set globally for ALL MCP servers to use.
@@ -98,18 +97,18 @@ router = APIRouter()
 # Request/Response models
 class CrewMCPQuery(BaseModel):
     query: str
-    llm_config: Optional[Dict[str, Any]] = None
-    selected_tools: Optional[list] = None  # List of selected tool IDs from frontend
-    chat_id: Optional[str] = None  # Chat ID for title and tag generation
-    model: Optional[str] = None  # Model used for the query
-    session_id: Optional[str] = None  # Session ID for WebSocket events
+    llm_config: dict[str, Any | None] = None
+    selected_tools: list | None = None  # List of selected tool IDs from frontend
+    chat_id: str | None = None  # Chat ID for title and tag generation
+    model: str | None = None  # Model used for the query
+    session_id: str | None = None  # Session ID for WebSocket events
 
 
 class CrewMCPResponse(BaseModel):
     result: str
     tools_used: list
     success: bool
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class MCPToolsResponse(BaseModel):
@@ -117,7 +116,7 @@ class MCPToolsResponse(BaseModel):
     count: int
 
 
-async def _setup_event_emitter(request: CrewMCPQuery, user):
+async def _setup_event_emitter(request: CrewMCPQuery, user: UserModel):
     """Setup event emitter for WebSocket notifications"""
     try:
         return get_event_emitter(
@@ -134,7 +133,7 @@ async def _setup_event_emitter(request: CrewMCPQuery, user):
 
 
 async def _generate_title(
-    request_data, request: CrewMCPQuery, result: str, user, task_model_id
+    request_data, request: CrewMCPQuery, result: str, user: UserModel, task_model_id
 ):
     """Generate and update chat title"""
     from open_webui.utils.chat import generate_chat_completion
@@ -165,14 +164,14 @@ Respond with just the title, no quotes or formatting."""
     if title_res and len(title_res.get("choices", [])) == 1:
         title = title_res["choices"][0]["message"]["content"].strip()
         if title:
-            _ = await Chats.update_chat_title_by_id(request.chat_id, title)
+            _ = await CHATS.update_chat_title_by_id(request.chat_id, title)
             return title
 
     return None
 
 
 async def _generate_tags(
-    request_data, request: CrewMCPQuery, result: str, user, task_model_id
+    request_data, request: CrewMCPQuery, result: str, user: UserModel, task_model_id
 ):
     """Generate and update chat tags"""
     from open_webui.utils.chat import generate_chat_completion
@@ -207,7 +206,9 @@ Assistant: {result[:1000]}..."""
                 tags_json = json.loads(json_match.group())
                 tags = tags_json.get("tags", [])
                 if isinstance(tags, list) and tags:
-                    _ = await Chats.update_chat_tags_by_id(request.chat_id, tags, user)
+                    _ = await CHATS.update_chat_tags_by_id(
+                        request.chat_id, tags, user.id
+                    )
                     return tags
             except json.JSONDecodeError:
                 pass
@@ -228,7 +229,7 @@ async def _emit_event(event_emitter, event_type: str, data, chat_id: str):
 
 
 async def generate_title_and_tags_background(
-    request_data, request: CrewMCPQuery, result: str, user
+    request_data, request: CrewMCPQuery, result: str, user: UserModel
 ):
     """
     Background task to generate title and tags for MCP requests.
@@ -320,8 +321,8 @@ async def get_mcp_tools(user=Depends(get_verified_user)) -> MCPToolsResponse:
 async def run_crew_query(
     request_data: Request,
     request: CrewMCPQuery,
-    user=Depends(get_verified_user),
-    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
+    user: UserModel = Depends(get_verified_user),
+    auth_token: HTTPAuthorizationCredentials | None = Depends(bearer_security),
 ) -> CrewMCPResponse:
     """Run a CrewAI query with MCP tools"""
     if not crew_mcp_manager:
@@ -464,8 +465,8 @@ async def run_crew_query(
 async def run_multi_server_crew_query(
     request_data: Request,
     request: CrewMCPQuery,
-    user=Depends(get_verified_user),
-    auth_token: Optional[HTTPAuthorizationCredentials] = Depends(bearer_security),
+    user: UserModel = Depends(get_verified_user),
+    auth_token: HTTPAuthorizationCredentials | None = Depends(bearer_security),
 ) -> CrewMCPResponse:
     """Run a CrewAI query using ALL available MCP servers and tools simultaneously"""
     if not crew_mcp_manager:

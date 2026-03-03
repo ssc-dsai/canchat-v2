@@ -1,63 +1,47 @@
+import asyncio
+import hashlib
 import json
 import logging
 import os
 import re
 import shutil
-import hashlib
 import time
-import tiktoken
-import asyncio
-
 import uuid
 from datetime import datetime, timedelta
 
+import tiktoken
 from fastapi import (
+    APIRouter,
     Depends,
     HTTPException,
     Request,
     status,
-    APIRouter,
 )
-from pydantic import BaseModel
-import tiktoken
-
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
+from open_webui.config import (
+    DEFAULT_LOCALE,
+    ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
+    ENV,
+    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+    UPLOAD_DIR,
+)
+from open_webui.constants import ERROR_MESSAGES, VECTOR_COLLECTION_PREFIXES
+from open_webui.env import (
+    DEVICE_TYPE,
+    DOCKER,
+    SRC_LOG_LEVELS,
+)
 
-from open_webui.constants import VECTOR_COLLECTION_PREFIXES
-from open_webui.models.files import FileModel, Files
-from open_webui.models.knowledge import Knowledges
-from open_webui.models.chats import Chats
-from open_webui.storage.provider import Storage
-
-
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+# Wikipedia grounding
+from open_webui.grounding.wiki_search_utils import WikiSearchGrounder
+from open_webui.models.db_services import CHATS, FILES, KNOWLEDGES
+from open_webui.models.files import FileModel
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
-
-# Web search engines
-from open_webui.retrieval.web.main import SearchResult
-from open_webui.retrieval.web.utils import get_web_loader
-from open_webui.retrieval.web.brave import search_brave
-from open_webui.retrieval.web.kagi import search_kagi
-from open_webui.retrieval.web.mojeek import search_mojeek
-from open_webui.retrieval.web.duckduckgo import search_duckduckgo
-from open_webui.retrieval.web.google_pse import search_google_pse
-from open_webui.retrieval.web.jina_search import search_jina
-from open_webui.retrieval.web.searchapi import search_searchapi
-from open_webui.retrieval.web.searxng import search_searxng
-from open_webui.retrieval.web.serper import search_serper
-from open_webui.retrieval.web.serply import search_serply
-from open_webui.retrieval.web.serpstack import search_serpstack
-from open_webui.retrieval.web.tavily import search_tavily
-from open_webui.retrieval.web.bing import search_bing
-
-# Wikipedia grounding
-from open_webui.grounding.wiki_search_utils import WikiSearchGrounder
-
-
 from open_webui.retrieval.utils import (
     get_embedding_function,
     get_model_path,
@@ -66,26 +50,30 @@ from open_webui.retrieval.utils import (
     query_doc,
     query_doc_with_hybrid_search,
 )
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.web.bing import search_bing
+from open_webui.retrieval.web.brave import search_brave
+from open_webui.retrieval.web.duckduckgo import search_duckduckgo
+from open_webui.retrieval.web.google_pse import search_google_pse
+from open_webui.retrieval.web.jina_search import search_jina
+from open_webui.retrieval.web.kagi import search_kagi
+
+# Web search engines
+from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.mojeek import search_mojeek
+from open_webui.retrieval.web.searchapi import search_searchapi
+from open_webui.retrieval.web.searxng import search_searxng
+from open_webui.retrieval.web.serper import search_serper
+from open_webui.retrieval.web.serply import search_serply
+from open_webui.retrieval.web.serpstack import search_serpstack
+from open_webui.retrieval.web.tavily import search_tavily
+from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.storage.provider import Storage
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import (
     calculate_sha256_string,
 )
-from open_webui.utils.auth import get_admin_user, get_verified_user
-
-
-from open_webui.config import (
-    ENV,
-    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-    UPLOAD_DIR,
-    DEFAULT_LOCALE,
-    ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
-)
-from open_webui.env import (
-    SRC_LOG_LEVELS,
-    DEVICE_TYPE,
-    DOCKER,
-)
-from open_webui.constants import ERROR_MESSAGES
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -887,7 +875,7 @@ async def process_file(
     user=Depends(get_verified_user),
 ):
     try:
-        file = await Files.get_file_by_id(form_data.file_id)
+        file = await FILES.get_file_by_id(form_data.file_id)
 
         collection_name = form_data.collection_name
 
@@ -997,13 +985,13 @@ async def process_file(
             text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
-        _ = await Files.update_file_data_by_id(
+        _ = await FILES.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
 
         hash = calculate_sha256_string(text_content)
-        _ = await Files.update_file_hash_by_id(file.id, hash)
+        _ = await FILES.update_file_hash_by_id(file.id, hash)
 
         try:
             result = await save_docs_to_vector_db(
@@ -1019,7 +1007,7 @@ async def process_file(
             )
 
             if result:
-                _ = await Files.update_file_metadata_by_id(
+                _ = await FILES.update_file_metadata_by_id(
                     file.id,
                     {
                         "collection_name": collection_name,
@@ -1582,7 +1570,7 @@ async def delete_entries_from_collection(
         if await VECTOR_DB_CLIENT.has_collection(
             collection_name=form_data.collection_name
         ):
-            file = await Files.get_file_by_id(form_data.file_id)
+            file = await FILES.get_file_by_id(form_data.file_id)
             hash = file.hash
 
             _ = await VECTOR_DB_CLIENT.delete(
@@ -1600,7 +1588,7 @@ async def delete_entries_from_collection(
 @router.post("/reset/db")
 async def reset_vector_db(user=Depends(get_admin_user)):
     await VECTOR_DB_CLIENT.reset()
-    _ = await Knowledges.delete_all_knowledge()
+    _ = await KNOWLEDGES.delete_all_knowledge()
 
 
 @router.post("/reset/uploads")
@@ -1682,7 +1670,7 @@ async def process_files_batch(
             ]
 
             hash = calculate_sha256_string(text_content)
-            _ = await Files.update_file_data_by_id(
+            _ = await FILES.update_file_data_by_id(
                 file.id, {"content": text_content, "hash": hash}
             )
 
@@ -1707,7 +1695,7 @@ async def process_files_batch(
 
             # Update all files with collection name
             for result in results:
-                _ = await Files.update_file_metadata_by_id(
+                _ = await FILES.update_file_metadata_by_id(
                     result.file_id, {"collection_name": collection_name}
                 )
                 result.status = "completed"
@@ -1830,10 +1818,8 @@ async def cleanup_orphaned_vectors() -> dict:
         cleanup_summary["collections_checked"] = len(collections)
 
         # Get all knowledge base IDs to preserve them
-        from open_webui.models.knowledge import Knowledges
-
         try:
-            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await KNOWLEDGES.get_knowledge_bases()
             existing_kb_ids = {kb.id for kb in existing_knowledge_bases}
             log.info(f"Found {len(existing_kb_ids)} knowledge bases to preserve")
         except Exception as e:
@@ -1879,7 +1865,7 @@ async def cleanup_orphaned_vectors() -> dict:
 
                 # Check if file still exists in database
                 try:
-                    file = await Files.get_file_by_id(file_id)
+                    file = await FILES.get_file_by_id(file_id)
                     if not file:
                         # File doesn't exist, delete the collection
                         await VECTOR_DB_CLIENT.delete_collection(
@@ -2830,7 +2816,7 @@ async def cleanup_orphaned_files_by_reference():
         # Get knowledge base files that should be preserved
         kb_referenced_files = set()
         try:
-            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await KNOWLEDGES.get_knowledge_bases()
             for kb in existing_knowledge_bases:
                 if kb.data and isinstance(kb.data, dict):
                     file_ids = kb.data.get("file_ids", [])
@@ -2844,7 +2830,7 @@ async def cleanup_orphaned_files_by_reference():
             kb_referenced_files = set()
 
         # Get all files from the database
-        all_files = await Files.get_files()
+        all_files = await FILES.get_files()
 
         for file in all_files:
             cleanup_summary["files_checked"] += 1
@@ -2874,7 +2860,7 @@ async def cleanup_orphaned_files_by_reference():
                         log.info(f"Deleted physical file: {file.path}")
 
                     # Delete from database
-                    _ = await Files.delete_file_by_id(file.id)
+                    _ = await FILES.delete_file_by_id(file.id)
                     cleanup_summary["files_deleted"] += 1
                     log.info(f"Deleted orphaned file: {file.id}")
 
@@ -2947,7 +2933,7 @@ async def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
         # Get knowledge base files to preserve their collections
         kb_file_ids = set()
         try:
-            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await KNOWLEDGES.get_knowledge_bases()
             for kb in existing_knowledge_bases:
                 if kb.data and isinstance(kb.data, dict):
                     file_ids = kb.data.get("file_ids", [])
@@ -2994,7 +2980,7 @@ async def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
 
                     # Get file from database to check its age
                     try:
-                        file = await Files.get_file_by_id(file_id)
+                        file = await FILES.get_file_by_id(file_id)
                         if file:
                             # Check if file is old based on its creation timestamp
                             if hasattr(file, "created_at") and file.created_at:
@@ -3052,7 +3038,7 @@ async def reindex_file_on_demand(file_id: str, request: Request, user=None) -> b
         log.info(f"Re-indexing file {file_id} on demand...")
 
         # Get file from database
-        file = await Files.get_file_by_id(file_id)
+        file = await FILES.get_file_by_id(file_id)
         if not file:
             log.error(f"File {file_id} not found in database")
             return False
@@ -3156,10 +3142,8 @@ async def cleanup_orphaned_chat_files() -> dict:
             return cleanup_summary
 
         # Get all existing knowledge base IDs to preserve them
-        from open_webui.models.knowledge import Knowledges
-
         try:
-            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await KNOWLEDGES.get_knowledge_bases()
             existing_kb_ids = {kb.id for kb in existing_knowledge_bases}
             log.info(f"Found {len(existing_kb_ids)} knowledge bases to preserve")
         except Exception as e:
@@ -3210,7 +3194,7 @@ async def cleanup_orphaned_chat_files() -> dict:
                     continue
 
                 # Check if file exists in database
-                file = await Files.get_file_by_id(file_id)
+                file = await FILES.get_file_by_id(file_id)
                 if not file:
                     # File doesn't exist in database - orphaned
                     cleanup_summary["orphaned_files_found"] += 1
@@ -3238,7 +3222,7 @@ async def cleanup_orphaned_chat_files() -> dict:
                     log.warning(f"Could not delete physical file {file.path}: {e}")
 
                 # Delete from database
-                _ = await Files.delete_file_by_id(file_id)
+                _ = await FILES.delete_file_by_id(file_id)
                 cleanup_summary["files_deleted"] += 1
 
                 log.info(f"Cleaned up chat file: {file_id}")
@@ -3310,8 +3294,6 @@ async def cleanup_expired_chats(
         dict: Summary of cleanup operations
     """
     try:
-        from open_webui.models.chats import Chats
-        from open_webui.models.files import Files
         from open_webui.storage.provider import Storage
 
         cleanup_summary = {
@@ -3337,13 +3319,13 @@ async def cleanup_expired_chats(
         # Get expired chats
         if force_cleanup_all:
             # Get all chats regardless of age
-            expired_chats = await Chats.get_all_chats_for_cleanup(
+            expired_chats = await CHATS.get_all_chats_for_cleanup(
                 preserve_pinned=preserve_pinned,
                 preserve_archived=preserve_archived,
             )
         else:
             # Get only expired chats based on age
-            expired_chats = await Chats.get_expired_chats(
+            expired_chats = await CHATS.get_expired_chats(
                 max_age_days=max_age_days,
                 preserve_pinned=preserve_pinned,
                 preserve_archived=preserve_archived,
@@ -3461,7 +3443,7 @@ async def cleanup_expired_chats(
         # Get knowledge base files that should be preserved
         kb_referenced_files = set()
         try:
-            existing_knowledge_bases = await Knowledges.get_knowledge_bases()
+            existing_knowledge_bases = await KNOWLEDGES.get_knowledge_bases()
             for kb in existing_knowledge_bases:
                 if kb.data and isinstance(kb.data, dict):
                     file_ids = kb.data.get("file_ids", [])
@@ -3495,7 +3477,7 @@ async def cleanup_expired_chats(
                     # Only delete if this file is not referenced by any remaining chats
                     if file_id not in all_file_refs:
                         # Get file info
-                        file = await Files.get_file_by_id(file_id)
+                        file = await FILES.get_file_by_id(file_id)
                         if file:
                             # Clean up vector collection
                             collection_name = f"file-{file_id}"
@@ -3519,7 +3501,7 @@ async def cleanup_expired_chats(
                                     )
 
                             # Delete from database
-                            _ = await Files.delete_file_by_id(file_id)
+                            _ = await FILES.delete_file_by_id(file_id)
                             cleanup_summary["files_cleaned"] += 1
                             log.debug(f"Deleted file record: {file_id}")
                     else:
@@ -3540,7 +3522,7 @@ async def cleanup_expired_chats(
         # Delete chats in batch
         if chat_ids_to_delete:
             log.info(f"Deleting {len(chat_ids_to_delete)} expired chats...")
-            deletion_result = await Chats.delete_chat_list(chat_ids_to_delete)
+            deletion_result = await CHATS.delete_chat_list(chat_ids_to_delete)
             cleanup_summary["chats_deleted"] = deletion_result["deleted_count"]
 
             if deletion_result["errors"]:

@@ -1,15 +1,13 @@
-import asyncio
-
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.models.db_services import PROMPTS
 from open_webui.models.prompts import (
     PromptForm,
-    PromptUserResponse,
     PromptModel,
-    Prompts,
+    PromptUserResponse,
 )
-from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
-from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.auth import get_verified_user
 
 router = APIRouter()
 
@@ -22,11 +20,11 @@ router = APIRouter()
 async def get_prompts(user=Depends(get_verified_user)):
     """Get all prompts (original behavior) - now with access control and public prompts"""
     if user.role == "admin":
-        prompts = await Prompts.get_prompts()
+        prompts = await PROMPTS.get_prompts()
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
         # Use optimized method with large limit for backward compatibility
-        prompts = await Prompts.get_prompts_with_access_control(
+        prompts = await PROMPTS.get_prompts_with_access_control(
             user.id,
             page=1,
             limit=10000,
@@ -40,11 +38,11 @@ async def get_prompts(user=Depends(get_verified_user)):
 async def get_prompt_list(user=Depends(get_verified_user)):
     """Get all prompts with user info (original behavior) - now with access control and public prompts"""
     if user.role == "admin":
-        prompts = await Prompts.get_prompts()
+        prompts = await PROMPTS.get_prompts()
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
         # Use optimized method with large limit for backward compatibility
-        prompts = await Prompts.get_prompts_with_access_control_and_users(
+        prompts = await PROMPTS.get_prompts_with_access_control_and_users(
             user.id,
             page=1,
             limit=10000,
@@ -64,12 +62,12 @@ async def get_prompts_paginated(
 ):
     """Get paginated prompts with optional search"""
     if user.role == "admin":
-        prompts = await Prompts.get_prompts_paginated(
+        prompts = await PROMPTS.get_prompts_paginated(
             page=page, limit=limit, search=search
         )
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
-        prompts = await Prompts.get_prompts_with_access_control(
+        prompts = await PROMPTS.get_prompts_with_access_control(
             user.id,
             page=page,
             limit=limit,
@@ -88,14 +86,14 @@ async def get_prompt_list_paginated(
 ):
     """Get paginated prompt list with user info and optional search"""
     if user.role == "admin":
-        prompts = await Prompts.get_prompts_with_users_paginated(
+        prompts = await PROMPTS.get_prompts_with_users_paginated(
             page=page,
             limit=limit,
             search=search,
         )
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
-        prompts = await Prompts.get_prompts_with_access_control_and_users(
+        prompts = await PROMPTS.get_prompts_with_access_control_and_users(
             user.id,
             page=page,
             limit=limit,
@@ -112,10 +110,10 @@ async def get_prompts_count(
 ):
     """Get total count of prompts with optional search filter"""
     if user.role == "admin":
-        count = await Prompts.get_prompts_count(search=search)
+        count = await PROMPTS.get_prompts_count(search=search)
     else:
         # Non-admin users see count of accessible prompts
-        count = await Prompts.get_prompts_count_with_access_control(
+        count = await PROMPTS.get_prompts_count_with_access_control(
             user.id, search=search
         )
 
@@ -146,9 +144,9 @@ async def create_new_prompt(
             detail="Only administrators can create public prompts",
         )
 
-    prompt = await Prompts.get_prompt_by_command(form_data.command)
+    prompt = await PROMPTS.get_prompt_by_command(form_data.command)
     if prompt is None:
-        prompt = await Prompts.insert_new_prompt(user.id, form_data)
+        prompt = await PROMPTS.insert_new_prompt(user.id, form_data)
 
         if prompt:
             return prompt
@@ -169,9 +167,7 @@ async def create_new_prompt(
 
 @router.get("/command/{command}", response_model=PromptModel | None)
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
-    prompt = await Prompts.get_prompt_by_command(f"/{command}")
-
-    if prompt:
+    if prompt := await PROMPTS.get_prompt_by_command(f"/{command}"):
         if (
             user.role == "admin"
             or prompt.user_id == user.id
@@ -196,7 +192,7 @@ async def update_prompt_by_command(
     form_data: PromptForm,
     user=Depends(get_verified_user),
 ):
-    prompt = await Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await PROMPTS.get_prompt_by_command(f"/{command}")
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -227,7 +223,7 @@ async def update_prompt_by_command(
             detail="Only administrators can create or modify public prompts",
         )
 
-    prompt = await Prompts.update_prompt_by_command(f"/{command}", form_data)
+    prompt = await PROMPTS.update_prompt_by_command(f"/{command}", form_data)
     if prompt:
         return prompt
     else:
@@ -244,7 +240,7 @@ async def update_prompt_by_command(
 
 @router.delete("/command/{command}/delete", response_model=bool)
 async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)):
-    prompt = await Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await PROMPTS.get_prompt_by_command(f"/{command}")
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -268,5 +264,5 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
                 detail="Only administrators can delete public prompts",
             )
 
-    result = await Prompts.delete_prompt_by_command(f"/{command}")
+    result = await PROMPTS.delete_prompt_by_command(f"/{command}")
     return result

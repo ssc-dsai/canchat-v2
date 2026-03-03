@@ -169,7 +169,8 @@ class QdrantClient:
         return await self.upsert(collection_name=collection_name, items=items)
 
     async def upsert(self, collection_name: str, items: list[VectorItem]):
-        # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
+        # Update the items in the collection, if the items are not present, insert them.
+        # If the collection does not exist, it will be created.
 
         quantization_config = (
             ScalarQuantization(

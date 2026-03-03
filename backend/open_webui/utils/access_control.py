@@ -1,15 +1,14 @@
-from typing import Optional, List, Dict, Any
-from open_webui.models.users import Users, UserModel
-from open_webui.models.groups import Groups
-
+import json
+from typing import Any
 
 from open_webui.config import DEFAULT_USER_PERMISSIONS
-import json
+from open_webui.models.db_services import GROUPS, USERS
+from open_webui.models.users import UserModel
 
 
 def fill_missing_permissions(
-    permissions: Dict[str, Any], default_permissions: Dict[str, Any]
-) -> Dict[str, Any]:
+    permissions: dict[str, Any], default_permissions: dict[str, Any]
+) -> dict[str, Any]:
     """
     Recursively fills in missing properties in the permissions dictionary
     using the default permissions as a template.
@@ -27,8 +26,8 @@ def fill_missing_permissions(
 
 async def get_permissions(
     user_id: str,
-    default_permissions: Dict[str, Any],
-) -> Dict[str, Any]:
+    default_permissions: dict[str, Any],
+) -> dict[str, Any]:
     """
     Get all permissions for a user by combining the permissions of all groups the user is a member of.
     If a permission is defined in multiple groups, the most permissive value is used (True > False).
@@ -36,8 +35,8 @@ async def get_permissions(
     """
 
     def combine_permissions(
-        permissions: Dict[str, Any], group_permissions: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        permissions: dict[str, Any], group_permissions: dict[str, Any]
+    ) -> dict[str, Any]:
         """Combine permissions from multiple groups by taking the most permissive value."""
         for key, value in group_permissions.items():
             if isinstance(value, dict):
@@ -53,7 +52,7 @@ async def get_permissions(
                     )  # Use the most permissive value (True > False)
         return permissions
 
-    user_groups = await Groups.get_groups_by_member_id(user_id)
+    user_groups = await GROUPS.get_groups_by_member_id(user_id)
 
     # Deep copy default permissions to avoid modifying the original dict
     permissions = json.loads(json.dumps(default_permissions))
@@ -72,7 +71,7 @@ async def get_permissions(
 async def has_permission(
     user_id: str,
     permission_key: str,
-    default_permissions: Dict[str, Any] = {},
+    default_permissions: dict[str, Any] = {},
 ) -> bool:
     """
     Check if a user has a specific permission by checking the group permissions
@@ -81,7 +80,7 @@ async def has_permission(
     Permission keys can be hierarchical and separated by dots ('.').
     """
 
-    def get_permission(permissions: Dict[str, Any], keys: List[str]) -> bool:
+    def get_permission(permissions: dict[str, Any], keys: list[str]) -> bool:
         """Traverse permissions dict using a list of keys (from dot-split permission_key)."""
         for key in keys:
             if key not in permissions:
@@ -93,7 +92,7 @@ async def has_permission(
     permission_hierarchy = permission_key.split(".")
 
     # Retrieve user group permissions
-    user_groups = await Groups.get_groups_by_member_id(user_id)
+    user_groups = await GROUPS.get_groups_by_member_id(user_id)
 
     for group in user_groups:
         group_permissions = group.permissions
@@ -110,12 +109,12 @@ async def has_permission(
 async def has_access(
     user_id: str,
     type: str = "write",
-    access_control: Optional[dict] = None,
+    access_control: dict | None = None,
 ) -> bool:
     if access_control is None:
         return type == "read"
 
-    user_groups = await Groups.get_groups_by_member_id(user_id)
+    user_groups = await GROUPS.get_groups_by_member_id(user_id)
     user_group_ids = [group.id for group in user_groups]
     permission_access = access_control.get(type, {})
     permitted_group_ids = permission_access.get("group_ids", [])
@@ -128,10 +127,10 @@ async def has_access(
 
 # Get all users with access to a resource
 async def get_users_with_access(
-    type: str = "write", access_control: Optional[dict] = None
-) -> List[UserModel]:
+    type: str = "write", access_control: dict | None = None
+) -> list[UserModel]:
     if access_control is None:
-        return await Users.get_users()
+        return await USERS.get_users()
 
     permission_access = access_control.get(type, {})
     permitted_group_ids = permission_access.get("group_ids", [])
@@ -140,8 +139,8 @@ async def get_users_with_access(
     user_ids_with_access = set(permitted_user_ids)
 
     for group_id in permitted_group_ids:
-        group_user_ids = await Groups.get_group_user_ids_by_id(group_id)
+        group_user_ids = await GROUPS.get_group_user_ids_by_id(group_id)
         if group_user_ids:
             user_ids_with_access.update(group_user_ids)
 
-    return await Users.get_users_by_user_ids(list(user_ids_with_access))
+    return await USERS.get_users_by_user_ids(list(user_ids_with_access))

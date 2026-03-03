@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
 import logging
 
-from open_webui.models.memories import Memories, MemoryModel
+from fastapi import APIRouter, Depends, HTTPException, Request
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.models.db_services import MEMORIES
+from open_webui.models.memories import MemoryModel
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_verified_user
-from open_webui.env import SRC_LOG_LEVELS
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -25,7 +26,7 @@ async def get_embeddings(request: Request):
 
 @router.get("/", response_model=list[MemoryModel])
 async def get_memories(user=Depends(get_verified_user)):
-    return await Memories.get_memories_by_user_id(user.id)
+    return await MEMORIES.get_memories_by_user_id(user.id)
 
 
 ############################
@@ -47,7 +48,7 @@ async def add_memory(
     form_data: AddMemoryForm,
     user=Depends(get_verified_user),
 ):
-    memory = await Memories.insert_new_memory(user.id, form_data.content)
+    memory = await MEMORIES.insert_new_memory(user.id, form_data.content)
 
     _ = await VECTOR_DB_CLIENT.upsert(
         collection_name=f"user-memory-{user.id}",
@@ -96,7 +97,7 @@ async def reset_memory_from_vector_db(
 ):
     await VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
 
-    memories = await Memories.get_memories_by_user_id(user.id)
+    memories = await MEMORIES.get_memories_by_user_id(user.id)
     await VECTOR_DB_CLIENT.upsert(
         collection_name=f"user-memory-{user.id}",
         items=[
@@ -123,7 +124,7 @@ async def reset_memory_from_vector_db(
 
 @router.delete("/delete/user", response_model=bool)
 async def delete_memory_by_user_id(user=Depends(get_verified_user)):
-    result = await Memories.delete_memories_by_user_id(user.id)
+    result = await MEMORIES.delete_memories_by_user_id(user.id)
 
     if result:
         try:
@@ -147,7 +148,7 @@ async def update_memory_by_id(
     form_data: MemoryUpdateModel,
     user=Depends(get_verified_user),
 ):
-    memory = await Memories.update_memory_by_id(memory_id, form_data.content)
+    memory = await MEMORIES.update_memory_by_id(memory_id, form_data.content)
     if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
 
@@ -177,7 +178,7 @@ async def update_memory_by_id(
 
 @router.delete("/{memory_id}", response_model=bool)
 async def delete_memory_by_id(memory_id: str, user=Depends(get_verified_user)):
-    result = await Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
+    result = await MEMORIES.delete_memory_by_id_and_user_id(memory_id, user.id)
 
     if result:
         _ = await VECTOR_DB_CLIENT.delete(
