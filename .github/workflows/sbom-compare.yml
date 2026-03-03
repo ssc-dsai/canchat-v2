@@ -68,7 +68,7 @@ jobs:
          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
 
       - name: Download carryover files from last run
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v7
         # fail expected if no previous github action run exists or doesnt have carryover artifact - allow the script to continue
         continue-on-error: true
         with:
