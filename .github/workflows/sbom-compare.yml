@@ -18,11 +18,11 @@ on:
       - dev
       - chat-1551
 
-  push:
-    branches:
-      - main
-      - dev
-      - chat-1551
+#  push:
+#    branches:
+#      - main
+#      - dev
+#      - chat-1551
 
 permissions:
     actions: read
