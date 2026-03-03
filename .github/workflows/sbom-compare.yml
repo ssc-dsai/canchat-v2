@@ -68,8 +68,12 @@ jobs:
         run: |
          RUN_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs?branch=${{ github.ref_name }}" \
-            | jq -r '.workflow_runs | if length > 1 then .[1].id else empty end')
-         echo "run_id=${RUN_ID:-}" >> $GITHUB_OUTPUT
+            | jq -r '.workflow_runs 
+              | map(select(.name == "Your Workflow Name"))  # Replace "Your Workflow Name" with the desired name
+              | if length > 1 then .[1].id else empty end')  # Fetch the second most recent run with the matching name
+            echo "run_id=${RUN_ID:-}" >> $GITHUB_OUTPUT
+
+#            | jq -r '.workflow_runs | if length > 1 then .[1].id else empty end')
 
 #            | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
 #         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
