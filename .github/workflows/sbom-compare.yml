@@ -59,6 +59,13 @@ jobs:
       - name: setup artefact folder
         run: mkdir .sbom
 
+      - name: Debug API Response
+        run: |
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?branch=${{ github.ref_name }}" \
+            | jq '.workflow_runs'
+
+
       - name: Get Previous Run ID
         id: get-run-id
         # fail expected if no previous github action run exists - allow the script to continue
@@ -66,8 +73,13 @@ jobs:
         run: |
          RUN_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs?branch=${{ github.ref_name }}" \
-            | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
-         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+            | jq -r '.workflow_runs | if length > 1 then .[1].id else empty end')
+         echo "run_id=${RUN_ID:-}" >> $GITHUB_OUTPUT
+
+#            | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
+#         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+
+
 
       - name: Download carryover files from last run
         uses: actions/download-artifact@v7
