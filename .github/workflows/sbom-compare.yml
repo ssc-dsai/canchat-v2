@@ -39,8 +39,6 @@ jobs:
         run: |
           # cdxgen (create current AND previous, in CDX format ) 
           npm install -g @cyclonedx/cdxgen
-          #wget -O cdxgen https://github.com/cdxgen/cdxgen/releases/download/v12.1.1/cdxgen-linux-amd64
-          #chmod 777 cdxgen
 
           # cycloneDX (create CSV from either format SBOM)
           # suggested install requires brew (not present) download the asset directly
@@ -75,13 +73,6 @@ jobs:
               | if length > 1 then .[1].id else empty end')  # Fetch the second most recent run with the matching name
             echo "run_id=${RUN_ID:-}" >> $GITHUB_OUTPUT
 
-#            | jq -r '.workflow_runs | if length > 1 then .[1].id else empty end')
-
-#            | jq -r '.workflow_runs[1].id') # Fetch the second most recent run (index 1)
-#         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-
-
-
       - name: Download carryover files from last run
         uses: actions/download-artifact@v8
         # fail expected if no previous github action run exists or doesnt have carryover artifact - allow the script to continue
@@ -108,14 +99,14 @@ jobs:
       - name: Generate Current SBOM CDX format
         id: current-sbom-cdx
         run: |
-          ./cdxgen -o .sbom/current.cdx.json --json-pretty
+          cdxgen -o .sbom/current.cdx.json --json-pretty
           echo "current_sbom=.sbom/current.cdx.json" >> $GITHUB_OUTPUT
 
       - name: Generate Previous SBOM CDX format
         id: previous-sbom-cdx
         run: |
           git checkout HEAD^
-          ./cdxgen -o .sbom/previous.cdx.json --json-pretty
+          cdxgen -o .sbom/previous.cdx.json --json-pretty
           echo "previous_sbom=.sbom/previous.cdx.json" >> $GITHUB_OUTPUT
           git checkout -
 
