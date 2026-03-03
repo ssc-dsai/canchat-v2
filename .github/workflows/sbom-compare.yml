@@ -106,8 +106,8 @@ jobs:
       - name: Create CSVs
         id: convert-sboms
         run: |
-          ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv.txt --output-format csv
-          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv.txt --output-format csv
+          ./cyclonedx convert --input-file .sbom/current.cdx.json --output-file .sbom/current.cdx.csv
+          ./cyclonedx convert --input-file .sbom/current.spdx.json --output-file .sbom/current.spdx.csv
 
       - name: Compare CDX SBOMs
         id: compare-sbom-cdx
