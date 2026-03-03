@@ -78,6 +78,7 @@ from open_webui.routers.retrieval import (
 
 from open_webui.internal.db import DB_SESSION, get_async_db
 from open_webui.models.db_services import USERS, MODELS, FUNCTIONS
+from open_webui.models.users import UserModel
 
 from open_webui.config import (
     # Ollama
@@ -1157,7 +1158,7 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
 async def chat_completion(
     request: Request,
     form_data: dict,
-    user=Depends(get_verified_user),
+    user: UserModel = Depends(get_verified_user),
 ):
     if not request.app.state.MODELS:
         await get_all_models(request)

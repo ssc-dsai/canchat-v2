@@ -1480,7 +1480,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
 
 async def process_chat_response(
-    request, response, form_data, user, events, metadata, tasks
+    request, response, form_data, user: UserModel, events, metadata, tasks
 ):
     async def background_tasks_handler():
         message_map = await CHATS.get_messages_by_chat_id(metadata["chat_id"])
@@ -1570,7 +1570,7 @@ async def process_chat_response(
                         try:
                             tags = json.loads(tags_string).get("tags", [])
                             _ = await CHATS.update_chat_tags_by_id(
-                                metadata["chat_id"], tags, user
+                                metadata["chat_id"], tags, user.id
                             )
 
                             await event_emitter(

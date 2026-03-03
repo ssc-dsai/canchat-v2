@@ -6,6 +6,7 @@ import sys
 from typing import Any
 
 from fastapi import Request
+from open_webui.models.users import UserModel
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL, SRC_LOG_LEVELS
 from open_webui.functions import generate_function_chat_completion
 from open_webui.models.db_services import FUNCTIONS
@@ -40,7 +41,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 async def generate_chat_completion(
     request: Request,
     form_data: dict,
-    user: Any,
+    user: UserModel,
     bypass_filter: bool = False,
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:

@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
@@ -381,7 +382,7 @@ async def update_chat_by_id(
 ):
     chat = await CHATS.get_chat_by_id_and_user_id(id, user.id)
     if chat:
-        updated_chat = {**chat.chat, **form_data.chat}
+        updated_chat: dict[Any, Any] = chat.chat | form_data.chat
         chat = await CHATS.update_chat_by_id(id, updated_chat)
         return ChatResponse(**chat.model_dump())
     else:

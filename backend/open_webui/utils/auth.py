@@ -148,7 +148,7 @@ async def get_current_user_by_api_key(api_key: str):
     return user
 
 
-def get_verified_user(user=Depends(get_current_user)):
+def get_verified_user(user: UserModel = Depends(get_current_user)) -> UserModel:
     if user.role not in {"user", "admin", "analyst", "global_analyst"}:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -157,7 +157,7 @@ def get_verified_user(user=Depends(get_current_user)):
     return user
 
 
-def get_admin_user(user=Depends(get_current_user)):
+def get_admin_user(user: UserModel = Depends(get_current_user)) -> UserModel:
     if user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -166,7 +166,7 @@ def get_admin_user(user=Depends(get_current_user)):
     return user
 
 
-def get_metrics_user(user=Depends(get_current_user)):
+def get_metrics_user(user: UserModel = Depends(get_current_user)) -> UserModel:
     if user.role not in {"admin", "analyst", "global_analyst"}:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

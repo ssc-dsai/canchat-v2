@@ -244,9 +244,8 @@ async def update_user_settings_by_session_user(
 
 
 @router.get("/user/info", response_model=dict | None)
-async def get_user_info_by_session_user(user=Depends(get_verified_user)):
-    user = await USERS.get_user_by_id(user.id)
-    if user:
+async def get_user_info_by_session_user(user: UserModel = Depends(get_verified_user)):
+    if user := await USERS.get_user_by_id(user.id):
         return user.info
     else:
         raise HTTPException(
@@ -261,9 +260,10 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user)):
 
 
 @router.get("/user/role", response_model=str | None)
-async def get_user_info_by_session_user(user=Depends(get_current_user)):
-    user = await USERS.get_user_by_id(user.id)
-    if user:
+async def get_user_info_by_session_user(
+    user: UserModel = Depends(get_current_user),
+) -> str:
+    if user := await USERS.get_user_by_id(user.id):
         return user.role
     else:
         raise HTTPException(

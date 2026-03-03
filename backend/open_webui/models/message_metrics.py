@@ -4,6 +4,7 @@ from logging import getLogger
 
 from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.base import Base
+from open_webui.models.users import UserModel
 from pydantic import BaseModel
 from sqlalchemy import BigInteger, Text, func, select
 from sqlalchemy.orm import Mapped, mapped_column
@@ -51,7 +52,7 @@ class MessageMetricsTable:
         self.__db = db_connector
 
     async def insert_new_metrics(
-        self, user: dict, model: str, usage: dict, chat_id: str | None = None
+        self, user: UserModel, model: str, usage: dict, chat_id: str | None = None
     ):
         async with self.__db.get_async_db() as db:
             id = str(uuid.uuid4())

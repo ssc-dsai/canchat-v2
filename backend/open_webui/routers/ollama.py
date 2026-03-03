@@ -30,6 +30,7 @@ from pydantic import BaseModel, ConfigDict
 from starlette.background import BackgroundTask
 
 
+from open_webui.models.users import UserModel
 from open_webui.models.db_services import MODELS
 from open_webui.utils.misc import (
     calculate_sha256,
@@ -967,9 +968,9 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
 async def generate_chat_completion(
     request: Request,
     form_data: dict,
-    url_idx: Optional[int] = None,
-    user=Depends(get_verified_user),
-    bypass_filter: Optional[bool] = False,
+    url_idx: int | None = None,
+    user: UserModel = Depends(get_verified_user),
+    bypass_filter: bool | None = False,
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True

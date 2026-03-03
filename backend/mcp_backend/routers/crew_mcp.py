@@ -11,6 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from open_webui.models.users import UserModel
 from open_webui.models.db_services import CHATS
 from open_webui.socket.main import get_event_emitter
 from open_webui.utils.auth import get_verified_user
@@ -115,7 +116,7 @@ class MCPToolsResponse(BaseModel):
     count: int
 
 
-async def _setup_event_emitter(request: CrewMCPQuery, user):
+async def _setup_event_emitter(request: CrewMCPQuery, user: UserModel):
     """Setup event emitter for WebSocket notifications"""
     try:
         return get_event_emitter(
@@ -132,7 +133,7 @@ async def _setup_event_emitter(request: CrewMCPQuery, user):
 
 
 async def _generate_title(
-    request_data, request: CrewMCPQuery, result: str, user, task_model_id
+    request_data, request: CrewMCPQuery, result: str, user: UserModel, task_model_id
 ):
     """Generate and update chat title"""
     from open_webui.utils.chat import generate_chat_completion
@@ -170,7 +171,7 @@ Respond with just the title, no quotes or formatting."""
 
 
 async def _generate_tags(
-    request_data, request: CrewMCPQuery, result: str, user, task_model_id
+    request_data, request: CrewMCPQuery, result: str, user: UserModel, task_model_id
 ):
     """Generate and update chat tags"""
     from open_webui.utils.chat import generate_chat_completion
@@ -205,7 +206,9 @@ Assistant: {result[:1000]}..."""
                 tags_json = json.loads(json_match.group())
                 tags = tags_json.get("tags", [])
                 if isinstance(tags, list) and tags:
-                    _ = await CHATS.update_chat_tags_by_id(request.chat_id, tags, user)
+                    _ = await CHATS.update_chat_tags_by_id(
+                        request.chat_id, tags, user.id
+                    )
                     return tags
             except json.JSONDecodeError:
                 pass
@@ -226,7 +229,7 @@ async def _emit_event(event_emitter, event_type: str, data, chat_id: str):
 
 
 async def generate_title_and_tags_background(
-    request_data, request: CrewMCPQuery, result: str, user
+    request_data, request: CrewMCPQuery, result: str, user: UserModel
 ):
     """
     Background task to generate title and tags for MCP requests.
@@ -318,7 +321,7 @@ async def get_mcp_tools(user=Depends(get_verified_user)) -> MCPToolsResponse:
 async def run_crew_query(
     request_data: Request,
     request: CrewMCPQuery,
-    user=Depends(get_verified_user),
+    user: UserModel = Depends(get_verified_user),
     auth_token: HTTPAuthorizationCredentials | None = Depends(bearer_security),
 ) -> CrewMCPResponse:
     """Run a CrewAI query with MCP tools"""
@@ -462,7 +465,7 @@ async def run_crew_query(
 async def run_multi_server_crew_query(
     request_data: Request,
     request: CrewMCPQuery,
-    user=Depends(get_verified_user),
+    user: UserModel = Depends(get_verified_user),
     auth_token: HTTPAuthorizationCredentials | None = Depends(bearer_security),
 ) -> CrewMCPResponse:
     """Run a CrewAI query using ALL available MCP servers and tools simultaneously"""
