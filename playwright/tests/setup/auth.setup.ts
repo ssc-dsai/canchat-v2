@@ -35,14 +35,14 @@ setup('global setup: seed data & authenticate', async ({ page }) => {
 
 	// Make one model visible
 	await adminPage.navigateToAdminSettings('Settings', 'Connections'); //temporary
-	await adminPage.openModelSettings('chatgpt-4o-');
+	await adminPage.openModelSettings('gpt-5-chat-latest');
 	await adminPage.updateModelDescription({
 		en: 'English Description',
 		fr: 'French Description'
 	});
 	await adminPage.updateModelVisibility(adminPage.getTranslation('public'));
 	await adminPage.saveModelSettings();
-	await adminPage.updateChatModel('chatgpt-4o-latest');
+	await adminPage.updateChatModel('gpt-5-chat-latest');
 	await adminPage.setDefaultChatModel();
 	await adminPage.signOut();
 

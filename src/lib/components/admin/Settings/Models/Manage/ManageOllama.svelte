@@ -53,7 +53,7 @@
 	let modelUploadMode = 'file';
 	let modelInputFile: File[] | null = null;
 	let modelFileUrl = '';
-	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`;
+	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`;
 	let modelFileDigest = '';
 
 	let uploadProgress = null;
@@ -395,6 +395,7 @@
 
 		deleteModelTag = '';
 		models.set(await getModels(localStorage.token));
+		await init();
 	};
 
 	const cancelModelPullHandler = async (model: string) => {
@@ -789,7 +790,7 @@
 
 					{#if createModelDigest !== ''}
 						<div class="flex flex-col mt-1">
-							<div class="font-medium mb-1">{createModelTag}</div>
+							<div class="font-medium mb-1">{createModelName}</div>
 							<div class="">
 								<div class="flex flex-row justify-between space-x-4 pr-2">
 									<div class=" flex-1">

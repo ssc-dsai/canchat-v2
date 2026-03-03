@@ -57,7 +57,6 @@ from open_webui.routers import (
     groups,
     files,
     functions,
-    memories,
     metrics,
     models,
     knowledge,
@@ -1070,7 +1069,6 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledg
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
-app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])

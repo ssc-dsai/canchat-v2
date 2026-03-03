@@ -84,6 +84,24 @@
 		return serverName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 	};
 
+	const translateIfKey = (text: string) => ($i18n.exists(text) ? $i18n.t(text) : text);
+
+	const localizeApiError = (rawError: unknown) => {
+		const normalized = String(rawError ?? '').replace(
+			'Network Problem',
+			$i18n.t('Network Problem')
+		);
+		const prefixes = ['MCP: ', 'CrewAI MCP: ', 'OpenAI: ', 'Ollama: '];
+
+		for (const prefix of prefixes) {
+			if (normalized.startsWith(prefix)) {
+				return `${prefix}${translateIfKey(normalized.slice(prefix.length))}`;
+			}
+		}
+
+		return translateIfKey(normalized);
+	};
+
 	// Reactive statement to ensure we always have at least one input field
 	$: {
 		if (MCP_BASE_URLS.length === 0) {
@@ -101,7 +119,7 @@
 				MCP_BASE_URLS: MCP_BASE_URLS,
 				MCP_API_CONFIGS: MCP_API_CONFIGS
 			}).catch((error) => {
-				toast.error(`${error}`);
+				toast.error(localizeApiError(error));
 			});
 			if (res) {
 				toast.success($i18n.t('MCP API settings updated'));
@@ -122,7 +140,7 @@
 
 	const updateMCPURLsHandler = async () => {
 		const res = await updateMCPURLs(localStorage.token, MCP_BASE_URLS).catch((error) => {
-			toast.error(`${error}`);
+			toast.error(localizeApiError(error));
 		});
 
 		if (res) {
@@ -133,7 +151,7 @@
 	const getMCPToolsHandler = async () => {
 		mcpToolsLoading = true;
 		const res = await getMCPTools(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
+			toast.error(localizeApiError(error));
 			return [];
 		});
 
@@ -165,7 +183,7 @@
 
 	const restartBuiltinServerHandler = async (serverName: string) => {
 		const res = await restartBuiltinServer(localStorage.token, serverName).catch((error) => {
-			toast.error(`Failed to restart ${serverName}: ${error}`);
+			toast.error(`Failed to restart ${serverName}: ${localizeApiError(error)}`);
 			return null;
 		});
 
@@ -309,7 +327,7 @@
 				}
 			}
 		} catch (error) {
-			toast.error($i18n.t('Failed to save server: {{error}}', { error }));
+			toast.error($i18n.t('Failed to save server: {{error}}', { error: localizeApiError(error) }));
 		}
 	};
 
@@ -338,7 +356,7 @@
 				}
 			}
 		} catch (error) {
-			toast.error(`Failed to delete server: ${error}`);
+			toast.error(`Failed to delete server: ${localizeApiError(error)}`);
 		}
 	};
 
@@ -351,7 +369,7 @@
 				await getMCPToolsHandler();
 			}
 		} catch (error) {
-			toast.error(`Failed to start server: ${error}`);
+			toast.error(`Failed to start server: ${localizeApiError(error)}`);
 		}
 	};
 
@@ -364,7 +382,7 @@
 				await getMCPToolsHandler();
 			}
 		} catch (error) {
-			toast.error(`Failed to stop server: ${error}`);
+			toast.error(`Failed to stop server: ${localizeApiError(error)}`);
 		}
 	};
 
@@ -377,7 +395,7 @@
 				await getMCPToolsHandler();
 			}
 		} catch (error) {
-			toast.error(`Failed to restart server: ${error}`);
+			toast.error(`Failed to restart server: ${localizeApiError(error)}`);
 		}
 	};
 
