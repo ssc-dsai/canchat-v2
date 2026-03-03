@@ -77,7 +77,7 @@ jobs:
 
 
       - name: Download carryover files from last run
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         # fail expected if no previous github action run exists or doesnt have carryover artifact - allow the script to continue
         continue-on-error: true
         with:
