@@ -3,7 +3,7 @@
 # download previous SBOM (from previous run artifact)
 # - lack of github SBOM sort order detects changes incorectly, solution is to sort
 # - occasional workflow failures and artifacts expiring will cause issues with previous artefact availability for a current run
-#   - solution: create a 'previous' and 'current' SBOM in the same script (use CDX, newer more robust format)
+#  - solution: create a 'previous' and 'current' SBOM in the same script (use CDX, newer more robust format)
 # DIFF the SPDX files (prev from last action run)
 # DIFF the CDX files (prev from last commit)
 # create CSVs for easier human usability (sbom-to-excel would be nicer but the conversion tool is not robust and crashing on content)
