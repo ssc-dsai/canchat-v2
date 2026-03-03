@@ -22,6 +22,9 @@ class MessageMetric(Base):
     prompt_tokens = Column(BigInteger)
     total_tokens = Column(BigInteger)
     chat_id = Column(Text, nullable=True)
+    mcp_tool = Column(
+        Text, nullable=True
+    )  # MCP toggle/process name, None for non-MCP calls
     created_at = Column(BigInteger)
 
 
@@ -34,6 +37,7 @@ class MessageMetricsModel(BaseModel):
     prompt_tokens: float
     total_tokens: float
     chat_id: Optional[str] = None
+    mcp_tool: Optional[str] = None  # MCP toggle/process name, None for non-MCP calls
     created_at: int
 
 
@@ -45,7 +49,12 @@ class UsageModel(BaseModel):
 
 class MessageMetricsTable:
     def insert_new_metrics(
-        self, user: dict, model: str, usage: dict, chat_id: Optional[str] = None
+        self,
+        user: dict,
+        model: str,
+        usage: dict,
+        chat_id: Optional[str] = None,
+        mcp_tool: Optional[str] = None,
     ):
         with get_db() as db:
             id = str(uuid.uuid4())
@@ -62,6 +71,7 @@ class MessageMetricsTable:
                     "prompt_tokens": tokens.prompt_tokens,
                     "total_tokens": tokens.total_tokens,
                     "chat_id": chat_id,
+                    "mcp_tool": mcp_tool,
                     "created_at": ts,
                 }
             )
@@ -87,6 +97,21 @@ class MessageMetricsTable:
                 return [domain[0] for domain in domains if domain[0]]
         except Exception as e:
             logger.error(f"Failed to get domains: {e}")
+            return []
+
+    def get_mcp_processes(self) -> list[str]:
+        """Return the distinct MCP toggle/process names that have been logged."""
+        try:
+            with get_db() as db:
+                processes = (
+                    db.query(MessageMetric.mcp_tool)
+                    .filter(MessageMetric.mcp_tool.isnot(None))
+                    .distinct()
+                    .all()
+                )
+                return [p[0] for p in processes if p[0]]
+        except Exception as e:
+            logger.error(f"Failed to get MCP processes: {e}")
             return []
 
     def get_messages_number(
@@ -130,12 +155,32 @@ class MessageMetricsTable:
             logger.error(f"Failed to get daily messages number: {e}")
             return 0
 
-    def get_message_tokens_sum(self, domain: Optional[str] = None) -> Optional[int]:
+    def _apply_mcp_filter(self, query, mcp_tool: Optional[str]):
+        """Apply mcp_tool filter to a SQLAlchemy query.
+
+        Sentinel values:
+          '__mcp_all__'  → mcp_tool IS NOT NULL  (all MCP rows)
+          '__non_mcp__'  → mcp_tool IS NULL      (non-MCP rows only)
+          anything else  → mcp_tool = <value>    (specific tool)
+          None / falsy   → no filter
+        """
+        if mcp_tool == "__mcp_all__":
+            return query.filter(MessageMetric.mcp_tool.isnot(None))
+        elif mcp_tool == "__non_mcp__":
+            return query.filter(MessageMetric.mcp_tool.is_(None))
+        elif mcp_tool:
+            return query.filter(MessageMetric.mcp_tool == mcp_tool)
+        return query
+
+    def get_message_tokens_sum(
+        self, domain: Optional[str] = None, mcp_tool: Optional[str] = None
+    ) -> Optional[int]:
         try:
             with get_db() as db:
                 query = db.query(MessageMetric)
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
+                query = self._apply_mcp_filter(query, mcp_tool)
                 result = query.with_entities(
                     func.sum(MessageMetric.total_tokens),
                 ).first()
@@ -145,7 +190,10 @@ class MessageMetricsTable:
             return 0  # Return 0 instead of None
 
     def get_daily_message_tokens_sum(
-        self, days: int = 1, domain: Optional[str] = None
+        self,
+        days: int = 1,
+        domain: Optional[str] = None,
+        mcp_tool: Optional[str] = None,
     ) -> Optional[int]:
         try:
             with get_db() as db:
@@ -161,6 +209,7 @@ class MessageMetricsTable:
 
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
+                query = self._apply_mcp_filter(query, mcp_tool)
 
                 result = query.with_entities(
                     func.sum(MessageMetric.total_tokens),
@@ -241,7 +290,10 @@ class MessageMetricsTable:
             return sorted(fallback, key=lambda x: x["date"])
 
     def get_historical_tokens_data(
-        self, days: int = 7, domain: Optional[str] = None
+        self,
+        days: int = 7,
+        domain: Optional[str] = None,
+        mcp_tool: Optional[str] = None,
     ) -> list[dict]:
         try:
             result = []
@@ -284,6 +336,7 @@ class MessageMetricsTable:
 
                     if domain:
                         query = query.filter(MessageMetric.user_domain == domain)
+                    query = self._apply_mcp_filter(query, mcp_tool)
 
                     # Sum tokens for this day
                     tokens_sum = query.with_entities(
@@ -438,6 +491,7 @@ class MessageMetricsTable:
         end_timestamp: int,
         domain: str = None,
         model: str = None,
+        mcp_tool: str = None,
     ) -> list[dict]:
         """Get historical daily token usage data for a specific date range"""
         try:
@@ -459,6 +513,8 @@ class MessageMetricsTable:
 
                     if model:
                         query = query.filter(MessageMetric.model == model)
+
+                    query = self._apply_mcp_filter(query, mcp_tool)
 
                     tokens_sum = query.first()
                     tokens_count = (
@@ -692,6 +748,7 @@ class MessageMetricsTable:
                             "prompt_tokens": result.prompt_tokens,
                             "total_tokens": result.total_tokens,
                             "chat_id": result.chat_id,
+                            "mcp_tool": result.mcp_tool,
                             "created_at": result.created_at,
                         }
                     )
