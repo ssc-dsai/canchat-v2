@@ -12,11 +12,13 @@
 name: SBOM compare
 on:
   push:
-  # pull_request:
     branches:
       - main
       - dev
-      - chat-1551
+  pull_request:
+    branches:
+      - main
+      - dev
 
 permissions:
     actions: read
