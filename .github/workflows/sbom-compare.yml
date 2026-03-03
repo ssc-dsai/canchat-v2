@@ -73,7 +73,7 @@ jobs:
         continue-on-error: true
         with:
           path: .sbom
-          name: carryover
+          name: carryover.zip
           merge-multiple: true
           run-id: ${{ steps.get-run-id.outputs.run_id }}
           github-token:  ${{ secrets.GITHUB_TOKEN}} # may need a custom token ie: MY_PAT_TOKEN
@@ -171,7 +171,7 @@ jobs:
       - name: Upload sbom-reports
         uses: actions/upload-artifact@v7
         with:
-          name: sbom-reports
+          name: sbom-reports.zip
           include-hidden-files: true
           path: |
             .sbom/comparison.md
@@ -183,7 +183,7 @@ jobs:
       - name: Upload carryover
         uses: actions/upload-artifact@v7
         with:
-          name: carryover
+          name: carryover.zip
           include-hidden-files: true
           path: |
             .sbom/comparison-history.md
