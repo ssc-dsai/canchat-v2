@@ -150,7 +150,7 @@ class MessageMetricsTable:
                 if start_timestamp:
                     query = query.filter(MessageMetric.created_at >= start_timestamp)
                 if end_timestamp:
-                    query = query.filter(MessageMetric.created_at < end_timestamp)
+                    query = query.filter(MessageMetric.created_at <= end_timestamp)
                 result = query.with_entities(
                     func.sum(MessageMetric.total_tokens),
                 ).first()
