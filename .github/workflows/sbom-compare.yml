@@ -9,6 +9,7 @@
 # create CSVs for easier human usability (sbom-to-excel would be nicer but the conversion tool is not robust and crashing on content)
 # upload carryover and other artifacts
 
+
 name: SBOM compare
 on:
   pull_request:
