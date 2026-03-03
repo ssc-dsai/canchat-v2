@@ -112,14 +112,7 @@ class MessageMetricsTable:
                 current_time = int(time.time())
                 end_time = current_time
                 # Calculate start of the current day in UTC
-                now_utc = time.gmtime(current_time)
-                today_str = time.strftime("%Y-%m-%d", now_utc)
-                start_time = int(
-                    time.mktime(
-                        time.strptime(f"{today_str} 00:00:00", "%Y-%m-%d %H:%M:%S")
-                    )
-                )
-
+                start_time = current_time - (current_time % 86400)
                 # Build the query to count messages for the current day
                 query = db.query(MessageMetric).filter(
                     MessageMetric.created_at >= start_time,
@@ -166,14 +159,7 @@ class MessageMetricsTable:
             with get_db() as db:
                 current_time = int(time.time())
                 end_time = current_time
-                # Calculate start of the current day in UTC
-                now_utc = time.gmtime(current_time)
-                today_str = time.strftime("%Y-%m-%d", now_utc)
-                start_time = int(
-                    time.mktime(
-                        time.strptime(f"{today_str} 00:00:00", "%Y-%m-%d %H:%M:%S")
-                    )
-                )
+                start_time = current_time - (current_time % 86400)
 
                 query = db.query(MessageMetric).filter(
                     MessageMetric.created_at >= start_time,
@@ -201,19 +187,16 @@ class MessageMetricsTable:
         """
         try:
             current_time = int(time.time())
-            today_utc = time.strftime("%Y-%m-%d", time.gmtime(current_time))
-            today_midnight_utc = int(
-                time.mktime(time.strptime(f"{today_utc} 00:00:00", "%Y-%m-%d %H:%M:%S"))
-            )
+            today_midnight = current_time - (current_time % 86400)
 
             # Calculate the start and end timestamps (inclusive of today)
-            start_timestamp = today_midnight_utc - ((days - 1) * 86400)
-            end_timestamp = today_midnight_utc + 86400
+            start_timestamp = today_midnight - ((days - 1) * 86400)
+            end_timestamp = today_midnight + 86400
 
             # Build expected date keys in chronological order (oldest to newest)
             expected_dates = {}
             for offset in reversed(range(days)):
-                day_start = today_midnight_utc - (offset * 86400)
+                day_start = today_midnight - (offset * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 expected_dates[date_str] = 0
 
@@ -247,7 +230,7 @@ class MessageMetricsTable:
             # Fallback: return zeros for each day in the range
             fallback = []
             for offset in reversed(range(days)):
-                day_start = today_midnight_utc - (offset * 86400)
+                day_start = today_midnight - (offset * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
             return fallback
@@ -261,17 +244,14 @@ class MessageMetricsTable:
         """
         try:
             current_time = int(time.time())
-            today_utc = time.strftime("%Y-%m-%d", time.gmtime(current_time))
-            today_midnight_utc = int(
-                time.mktime(time.strptime(f"{today_utc} 00:00:00", "%Y-%m-%d %H:%M:%S"))
-            )
+            today_midnight = current_time - (current_time % 86400)
 
-            start_timestamp = today_midnight_utc - ((days - 1) * 86400)
-            end_timestamp = today_midnight_utc + 86400
+            start_timestamp = today_midnight - ((days - 1) * 86400)
+            end_timestamp = today_midnight + 86400
 
             expected_dates = {}
             for offset in reversed(range(days)):
-                day_start = today_midnight_utc - (offset * 86400)
+                day_start = today_midnight - (offset * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 expected_dates[date_str] = 0
 
@@ -301,7 +281,7 @@ class MessageMetricsTable:
             logger.error(f"Failed to get historical tokens data: {e}")
             fallback = []
             for offset in reversed(range(days)):
-                day_start = today_midnight_utc - (offset * 86400)
+                day_start = today_midnight - (offset * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
             return fallback
@@ -474,12 +454,9 @@ class MessageMetricsTable:
     ) -> list[dict]:
         try:
             current_time = int(time.time())
-            today_utc = time.strftime("%Y-%m-%d", time.gmtime(current_time))
-            today_midnight_utc = int(
-                time.mktime(time.strptime(f"{today_utc} 00:00:00", "%Y-%m-%d %H:%M:%S"))
-            )
-            start_time = today_midnight_utc - (days * 86400)
-            end_time = today_midnight_utc + 86400
+            today_midnight = current_time - (current_time % 86400)
+            start_time = today_midnight - (days * 86400)
+            end_time = today_midnight + 86400
 
             with get_db() as db:
                 query = db.query(
@@ -506,7 +483,7 @@ class MessageMetricsTable:
 
                 output = []
                 for day in range(days):
-                    day_start = today_midnight_utc - (day * 86400)
+                    day_start = today_midnight - (day * 86400)
                     date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                     count = len(day_to_users.get(date_str, set()))
                     output.append({"date": date_str, "count": count})
@@ -518,12 +495,9 @@ class MessageMetricsTable:
             # Fallback: return zeros for each day
             fallback = []
             current_time = int(time.time())
-            today_utc = time.strftime("%Y-%m-%d", time.gmtime(current_time))
-            today_midnight_utc = int(
-                time.mktime(time.strptime(f"{today_utc} 00:00:00", "%Y-%m-%d %H:%M:%S"))
-            )
+            today_midnight = current_time - (current_time % 86400)
             for day in range(days):
-                day_start = today_midnight_utc - (day * 86400)
+                day_start = today_midnight - (day * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
             return sorted(fallback, key=lambda x: x["date"])
