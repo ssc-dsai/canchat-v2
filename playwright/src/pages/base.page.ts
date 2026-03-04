@@ -117,13 +117,36 @@ export class BasePage {
 	 * @param visible the state of the sidebar
 	 */
 	async toggleSidebar(visible: boolean) {
-		const isClosed = await this.sidebarOpenButton.isVisible();
-		const isOpen = await this.sidebarCloseButton.isVisible();
+		// Wait for the UI to be ready enough to determine state
+		// We use a short wait for either button to appear to establish baseline
+		try {
+			await Promise.race([
+				this.sidebarOpenButton.waitFor({ state: 'visible', timeout: 5000 }),
+				this.sidebarCloseButton.waitFor({ state: 'visible', timeout: 5000 })
+			]);
+		} catch (e) {
+			// Continue, let checks decide
+		}
 
-		if (visible && isClosed) {
+		if (visible) {
+			// We want to OPEN it.
+			// If Close button is already visible, it's open. Done.
+			// Using isVisible() here is safer because we waited above.
+			if (await this.sidebarCloseButton.isVisible()) {
+				return;
+			}
+			// It's not Open, so it must be Closed (or loading).
+			// Click Open button. This will WAIT for it to be visible/enabled.
 			await this.sidebarOpenButton.click();
 			await expect(this.sidebarCloseButton).toBeVisible();
-		} else if (!visible && isOpen) {
+		} else {
+			// We want to CLOSE it.
+			// If Open button is already visible, it's closed. Done.
+			if (await this.sidebarOpenButton.isVisible()) {
+				return;
+			}
+			// It's not Closed, so it must be Open.
+			// Click Close button. This will WAIT for it.
 			await this.sidebarCloseButton.click();
 			await expect(this.sidebarOpenButton).toBeVisible();
 		}

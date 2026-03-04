@@ -38,7 +38,7 @@ export class ChatPage extends BasePage {
 		this.selectedCountLabel = page.locator('span:has-text("selected")');
 		this.bulkDeleteButton = page.locator('button[title="Delete Selected"]');
 		this.newFolderButton = page.locator('button[aria-label="New Folder"]');
-		this.foldersContainer = page.locator('div:has-text("Chats")').first();
+		this.foldersContainer = page.locator('.group').filter({ hasText: 'Chats' }).first();
 		this.folders = page.locator('button[id^="folder-"][id$="-button"]');
 		this.searchTagItems = page.locator('button[id^="search-tag-"]');
 		this.searchOptionItems = page.locator('button[id^="search-option-"]');
@@ -71,7 +71,8 @@ export class ChatPage extends BasePage {
 			`button[aria-label="${this.t['New Folder'] || 'New Folder'}"]`
 		);
 		this.foldersContainer = this.page
-			.locator(`div:has-text("${this.t['Chats'] || 'Chats'}")`)
+			.locator('.group')
+			.filter({ hasText: this.t['Chats'] || 'Chats' })
 			.first();
 		this.searchResultsLabel = this.page.locator('[aria-live="polite"].sr-only');
 	}
