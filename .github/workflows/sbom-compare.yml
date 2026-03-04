@@ -54,13 +54,6 @@ jobs:
       - name: setup artefact folder
         run: mkdir .sbom
 
-      - name: Debug API Response
-        run: |
-          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs?branch=${{ github.ref_name }}" \
-            | jq '.workflow_runs'
-
-
       - name: Get Previous Run ID
         id: get-run-id
         # fail expected if no previous github action run exists - allow the script to continue
