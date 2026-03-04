@@ -263,7 +263,8 @@ test.describe('Messaging Features', () => {
 	// ===========================================
 	// TC010: Generate image from answer
 	// ===========================================
-	test('TC010: User can use the ANSWER options (Generate image)', async ({ userPage }) => {
+	test.skip('TC010: User can use the ANSWER options (Generate image)', async ({ userPage }) => {
+		// skippig test as dall-e is not working
 		test.setTimeout(240000);
 		const question = 'Hello, how are you?';
 		await userPage.sendMessage(question);
