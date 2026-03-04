@@ -112,12 +112,25 @@ jobs:
           echo "CANChat failed to start in time" >&2
           exit 1
  
-      - name:  Start Playwright Tests
+      - name: Start Playwright Tests (Parallel)
         env:
           REUSE_EXISTING_SERVER: true
         run: |
-          npm run test
-          exit 0
+          bash -c 'env $(grep -v "^#" "${ENV_FILE:-.env}"| xargs) npx playwright test --grep-invert @serial --reporter=blob'
+          
+      - name: Start Playwright Tests (Serial)
+        if: always()
+        env:
+          REUSE_EXISTING_SERVER: true
+        run: |
+          bash -c 'env $(grep -v "^#" "${ENV_FILE:-.env}"| xargs) npx playwright test --grep @serial --workers=1 --reporter=blob'
+
+      - name: Merge Playwright Reports
+        if: always()
+        run: |
+          PLAYWRIGHT_JSON_OUTPUT_NAME=results.json npx playwright merge-reports --reporter=html,json ./blob-report
+          mkdir -p playwright-report
+          mv results.json playwright-report/results.json || true
  
       - name: Get timestamp
         id: timestamps
