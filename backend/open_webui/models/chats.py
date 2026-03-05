@@ -571,47 +571,36 @@ class ChatTable:
             if dialect_name == "sqlite":
                 # SQLite case: using JSON1 extension for JSON searching
                 query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
+                    (Chat.title.ilike(f"%{search_text}%") | text("""
                             EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.chat, '$.messages') AS message
                                 WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
                             )
-                            """
-                        )
-                    ).params(search_text=search_text)
+                            """)).params(  # Case-insensitive search in title
+                        search_text=search_text
+                    )
                 )
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
+                    query = query.filter(text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.meta, '$.tags') AS tag
                             )
-                            """
-                        )
-                    )
+                            """))
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(
-                                    f"""
+                                text(f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_each(Chat.meta, '$.tags') AS tag
                                         WHERE tag.value = :tag_id_{tag_idx}
                                     )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
@@ -620,47 +609,36 @@ class ChatTable:
             elif dialect_name == "postgresql":
                 # PostgreSQL relies on proper JSON query for search
                 query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
+                    (Chat.title.ilike(f"%{search_text}%") | text("""
                             EXISTS (
                                 SELECT 1
                                 FROM json_array_elements(Chat.chat->'messages') AS message
                                 WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
                             )
-                            """
-                        )
-                    ).params(search_text=search_text)
+                            """)).params(  # Case-insensitive search in title
+                        search_text=search_text
+                    )
                 )
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
+                    query = query.filter(text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
-                            """
-                        )
-                    )
+                            """))
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(
-                                    f"""
+                                text(f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_array_elements_text(Chat.meta->'tags') AS tag
                                         WHERE tag = :tag_id_{tag_idx}
                                     )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
@@ -912,9 +890,11 @@ class ChatTable:
         max_age_days: Optional[int] = None,
         preserve_pinned: bool = True,
         preserve_archived: bool = False,
+        batch_size: int = 100,
     ) -> list[ChatModel]:
         """
         Get chats for cleanup, optionally filtered by age.
+        Uses pagination to handle large datasets efficiently.
 
         Args:
             max_age_days: Age threshold in days. If None, gets all chats regardless of age.
@@ -947,29 +927,112 @@ class ChatTable:
                 # Exclude shared chats (user_id starting with "shared-")
                 query = query.filter(~Chat.user_id.like("shared-%"))
 
-                chats = query.all()
+                # Order by created_at to ensure consistent pagination
+                query = query.order_by(Chat.created_at.asc())
 
-                # Convert SQLAlchemy objects to ChatModel objects
+                offset = 0
                 result_chats = []
-                for chat in chats:
+
+                log.info("Starting paginated chat cleanup query...")
+
+                while True:
+                    # Get batch of chats
+                    batch = query.offset(offset).limit(batch_size).all()
+
+                    if not batch:
+                        break  # No more chats to process
+
+                    log.debug(
+                        f"Processing batch of {len(batch)} chats (offset {offset})"
+                    )
+
+                    # Convert batch to ChatModel objects
+                    for chat in batch:
+                        try:
+                            chat_model = ChatModel.model_validate(chat)
+                            result_chats.append(chat_model)
+                        except Exception as e:
+                            log.error(
+                                f"Error converting chat {chat.id} to ChatModel: {e}"
+                            )
+                            continue
+
+                    # Clear batch from memory
+                    del batch
+                    offset += batch_size
+
+                    # Log progress every 1000 records
+                    if offset % 1000 == 0:
+                        log.info(
+                            f"Processed {offset} chats so far, found {len(result_chats)} for cleanup"
+                        )
+
+                log.info(
+                    f"Completed paginated chat cleanup query. Total chats for cleanup: {len(result_chats)}"
+                )
+                return result_chats
+
+        except Exception as e:
+            log.error(f"Error getting chats for cleanup: {e}")
+            return []
+
+    def get_chats_for_cleanup_batch(
+        self,
+        max_age_days: int = None,
+        preserve_pinned: bool = True,
+        preserve_archived: bool = False,
+        batch_size: int = 50,
+        offset: int = 0,
+    ) -> list[ChatModel]:
+        """
+        Get a single batch of chats for cleanup without accumulating all in memory.
+        This is the memory-efficient version for streaming cleanup.
+
+        Args:
+            max_age_days: Age threshold in days. If None, gets all chats regardless of age.
+            preserve_pinned: If True, exclude pinned chats from cleanup
+            preserve_archived: If True, exclude archived chats from cleanup
+            batch_size: Number of chats to return in this batch
+            offset: Starting offset for pagination
+
+        Returns:
+            List of ChatModel objects for this batch (up to batch_size)
+        """
+        try:
+            with get_db() as db:
+                query = db.query(Chat)
+
+                # Apply age filter if specified
+                if max_age_days is not None:
+                    import time
+
+                    cutoff_timestamp = int(time.time()) - (max_age_days * 24 * 60 * 60)
+                    query = query.filter(Chat.updated_at < cutoff_timestamp)
+
+                # Apply preservation filters
+                if preserve_pinned:
+                    query = query.filter(
+                        or_(Chat.pinned == False, Chat.pinned.is_(None))
+                    )
+
+                if preserve_archived:
+                    query = query.filter(Chat.archived == False)
+
+                # Exclude shared chats (user_id starting with "shared-")
+                query = query.filter(~Chat.user_id.like("shared-%"))
+
+                # Order by created_at to ensure consistent results
+                query = query.order_by(Chat.created_at.asc())
+
+                # Get just this batch
+                batch = query.offset(offset).limit(batch_size).all()
+
+                # Convert to ChatModel objects
+                result_chats = []
+                for chat in batch:
                     try:
-                        chat_model = ChatModel(
-                            id=chat.id,
-                            user_id=chat.user_id,
-                            title=chat.title,
-                            chat=chat.chat or {},
-                            created_at=chat.created_at,
-                            updated_at=chat.updated_at,
-                            share_id=chat.share_id,
-                            archived=chat.archived or False,
-                            pinned=chat.pinned or False,
-                            meta=chat.meta or {},
-                            folder_id=chat.folder_id,
-                        )
+                        chat_model = ChatModel.model_validate(chat)
                         result_chats.append(chat_model)
-                        log.debug(
-                            f"Successfully created ChatModel for chat {chat.id} for cleanup"
-                        )
                     except Exception as e:
                         log.error(f"Error converting chat {chat.id} to ChatModel: {e}")
                         continue
@@ -977,7 +1040,7 @@ class ChatTable:
                 return result_chats
 
         except Exception as e:
-            log.error(f"Error getting chats for cleanup: {e}")
+            log.error(f"Error getting chat batch for cleanup: {e}")
             return []
 
     # Backward compatibility methods
@@ -1004,12 +1067,19 @@ class ChatTable:
         """
         return self.get_chats_for_cleanup(None, preserve_pinned, preserve_archived)
 
-    def delete_chat_list(self, chat_ids: list[str]) -> dict:
+    def delete_chat_list(
+        self,
+        chat_ids: list[str],
+        batch_size: int = 100,
+        log_context: Optional[str] = None,
+    ) -> dict:
         """
         Delete multiple chats by their IDs and return deletion summary.
+        Uses batching for large datasets to prevent memory issues.
 
         Args:
             chat_ids: List of chat IDs to delete
+            log_context: Optional caller context prefix for log messages
 
         Returns:
             Dictionary with deletion results
@@ -1022,23 +1092,66 @@ class ChatTable:
                 "errors": [],
             }
 
+            if not chat_ids:
+                return result
+
             with get_db() as db:
-                for chat_id in chat_ids:
+                total_batches = max(1, (len(chat_ids) + batch_size - 1) // batch_size)
+                context_prefix = f"{log_context} -> " if log_context else ""
+
+                for i in range(0, len(chat_ids), batch_size):
+                    batch_ids = chat_ids[i : i + batch_size]
+                    sub_batch_number = i // batch_size + 1
+                    log.info(
+                        f"{context_prefix}deleting DB sub-batch "
+                        f"{sub_batch_number}/{total_batches}: {len(batch_ids)} chats"
+                    )
+
                     try:
-                        deleted = db.query(Chat).filter_by(id=chat_id).delete()
-                        if deleted > 0:
-                            result["deleted_count"] += 1
-                        else:
-                            result["failed_count"] += 1
-                            result["errors"].append(f"Chat {chat_id} not found")
-                    except Exception as e:
-                        result["failed_count"] += 1
-                        result["errors"].append(
-                            f"Error deleting chat {chat_id}: {str(e)}"
+                        # Use bulk delete for better performance
+                        deleted_count = (
+                            db.query(Chat)
+                            .filter(Chat.id.in_(batch_ids))
+                            .delete(synchronize_session=False)
                         )
 
-                db.commit()
+                        result["deleted_count"] += deleted_count
 
+                        # Check if any in this batch weren't found
+                        not_found_count = len(batch_ids) - deleted_count
+                        if not_found_count > 0:
+                            result["failed_count"] += not_found_count
+                            result["errors"].append(
+                                f"DB sub-batch {sub_batch_number}: {not_found_count} chats not found"
+                            )
+
+                        # Commit this batch
+                        db.commit()
+
+                        log.debug(
+                            f"{context_prefix}successfully deleted {deleted_count} chats "
+                            f"in DB sub-batch {sub_batch_number}"
+                        )
+
+                    except Exception as e:
+                        # Handle batch failure
+                        result["failed_count"] += len(batch_ids)
+                        error_msg = (
+                            f"{context_prefix}error deleting DB sub-batch "
+                            f"{sub_batch_number}: {str(e)}"
+                        )
+                        result["errors"].append(error_msg)
+                        log.error(error_msg)
+
+                        # Try to rollback this batch and continue
+                        try:
+                            db.rollback()
+                        except Exception:
+                            pass
+
+            log.info(
+                f"Chat deletion completed. Deleted: {result['deleted_count']}, Failed: {result['failed_count']}"
+            )
             return result
 
         except Exception as e:

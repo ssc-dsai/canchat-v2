@@ -16,6 +16,79 @@ from fastmcp.client import Client
 from fastmcp.client.transports import PythonStdioTransport
 
 log = logging.getLogger(__name__)
+# Ensure MCP manager logs are visible
+log.setLevel(logging.INFO)
+
+# Define allowed executables for MCP servers
+ALLOWED_EXECUTABLES = frozenset(
+    [
+        "python",
+        "python3",
+        "node",
+        "npx",
+        "uv",
+    ]
+)
+
+
+def validate_command(command: List[str]) -> bool:
+    """Validate that a command uses only allowed executables and check potential command injection.
+
+
+    Args:
+        command: The command list (e.g., ["python", "script.py"])
+
+    Returns:
+        True if command is safe, raises ValueError otherwise
+    """
+    if not (command and isinstance(command[0], str) and command[0].strip()):
+        raise ValueError("Command must include a valid executable")
+
+    executable = command[0]
+
+    # Extract just the executable name
+    executable_name = os.path.basename(executable)
+
+    if executable_name not in ALLOWED_EXECUTABLES:
+        raise ValueError(
+            f"Executable '{executable_name}' is not allowed."
+            f"Allowed executables: {', '.join(sorted(ALLOWED_EXECUTABLES))}"
+        )
+
+    # Security check for interpreters to prevent inline code execution
+    if executable_name in ["python", "python3", "node"]:
+        if len(command) < 2:
+            raise ValueError(
+                f"Command must include script/arguments for {executable_name}"
+            )
+
+        # Check if the first argument looks like a flag
+        first_arg = command[1].strip()
+        if first_arg.startswith("-"):
+            raise ValueError(
+                f"Interpreter flags (like {command[1]}) are not allowed."
+                "Provide a script file as the first argument."
+            )
+
+    # Allow safe npx flags but block execution flags
+    if executable_name == "npx":
+        if len(command) < 2:
+            raise ValueError("Command must include package/arguments for npx")
+
+        # Scan arguments until we hit the command
+        for i in range(1, len(command)):
+            arg = command[i].strip()
+
+            if not arg.startswith("-"):
+                break
+
+            # Check for dangerous execution flags in npx options
+            if arg in ["-c", "--call", "--shell-auto-fallback"]:
+                raise ValueError(
+                    f"Execution flags (like {arg}) are not allowed for npx."
+                )
+
+    return True
 
 
 class FastMCPManager:
@@ -78,6 +151,9 @@ class FastMCPManager:
         config = self.server_configs[name]
 
         try:
+            # Validate command before execution
+            validate_command(config["command"])
+
             # Check if this is an HTTP server (has --http in command)
             is_http_server = "--http" in config["command"]
 
@@ -114,7 +190,10 @@ class FastMCPManager:
             else:
                 # For stdio servers, use PythonStdioTransport
                 # Extract the script path from the command
-                if len(config["command"]) >= 2 and config["command"][0] == "python":
+                executable = config["command"][0]
+                executable_name = os.path.basename(executable)
+
+                if executable_name.startswith("python"):
                     script_path = config["command"][1]
                     args = config["command"][2:] if len(config["command"]) > 2 else []
 
@@ -129,11 +208,14 @@ class FastMCPManager:
                     # Store the transport instead of the client for reuse
                     self.clients[name] = transport
 
-                    log.info(f"Started stdio MCP server: {name}")
+                    log.info(
+                        f"Started stdio MCP server: {name} (using {executable_name})"
+                    )
                     return True
                 else:
                     log.error(
-                        f"Invalid command format for stdio server {name}: {config['command']}"
+                        f"Unsupported executable for stdio server {name}: {executable_name}. "
+                        "Only Python scripts are supported through stdio transport."
                     )
                     return False
 
@@ -259,6 +341,7 @@ class FastMCPManager:
                     "time_server",
                     "news_server",
                     "mpo_sharepoint_server",
+                    "pmo_sharepoint_server",
                 ],  # Mark built-in servers
             }
             servers.append(server_info)
@@ -268,13 +351,22 @@ class FastMCPManager:
     async def get_all_tools(self) -> List[Dict[str, Any]]:
         """Get all tools from all connected MCP servers"""
         all_tools = []
+        log.info(f"=== get_all_tools() called ===")
+        log.info(f"Total servers configured: {len(self.server_configs)}")
+        log.info(f"Server names: {list(self.server_configs.keys())}")
 
         for server_name in self.server_configs.keys():
-            if self.get_server_status(server_name) != "running":
+            log.info(f"Processing server: {server_name}")
+            server_status = self.get_server_status(server_name)
+            log.info(f"Server {server_name} status: {server_status}")
+
+            if server_status != "running":
+                log.warning(f"Skipping {server_name} - not running")
                 continue
 
             try:
                 config = self.server_configs[server_name]
+                log.info(f"Server {server_name} transport: {config.get('transport')}")
 
                 if config.get("transport") == "http":
                     # For HTTP servers, create a new client connection
@@ -308,16 +400,23 @@ class FastMCPManager:
                 else:
                     # For stdio servers, use the stored transport to create a new client connection
                     if server_name in self.clients:
+                        log.debug(f"Getting tools from stdio server: {server_name}")
                         transport = self.clients[server_name]  # This is the transport
                         client = Client(transport)
                         async with client:
+                            log.debug(
+                                f"Client initialized for {server_name}, calling list_tools()"
+                            )
                             tools = await client.list_tools()
+                            log.info(f"Got {len(tools)} tools from {server_name}")
 
                             for tool in tools:
                                 # Mark if this is a built-in server
                                 is_builtin = server_name in [
                                     "time_server",
                                     "news_server",
+                                    "mpo_sharepoint_server",
+                                    "pmo_sharepoint_server",
                                 ]
                                 tool_dict = {
                                     "name": tool.name,
@@ -334,9 +433,17 @@ class FastMCPManager:
                                     "is_builtin": is_builtin,
                                 }
                                 all_tools.append(tool_dict)
+                                log.debug(f"Added tool {tool.name} from {server_name}")
+                    else:
+                        log.warning(
+                            f"No client/transport found for stdio server: {server_name}"
+                        )
 
             except Exception as e:
                 log.exception(f"Error getting tools from server {server_name}: {e}")
+                log.error(
+                    f"Server {server_name} will appear as running but with no tools"
+                )
 
         return all_tools
 
@@ -396,8 +503,12 @@ class FastMCPManager:
 
     async def initialize_default_servers(self):
         """Initialize and start default MCP servers with stdio transport"""
+        log.info("=== Initializing default MCP servers ===")
+
         # Add configuration for time server (stdio)
         backend_dir = Path(__file__).parent.parent.parent  # Go up to backend/ directory
+        log.info(f"Backend directory resolved to: {backend_dir}")
+
         time_server_path = (
             backend_dir / "mcp_backend" / "servers" / "fastmcp_time_server.py"
         )
@@ -415,8 +526,13 @@ class FastMCPManager:
             )
 
             # Start the time server
-            await self.start_server("time_server")
-            log.info("Time server started successfully")
+            log.info(f"About to start time server...")
+            start_result = await self.start_server("time_server")
+            log.info(f"Time server start_server returned: {start_result}")
+            if start_result:
+                log.info("Time server started successfully")
+            else:
+                log.error("Time server failed to start")
         else:
             log.warning(f"Time server not found at {time_server_path}")
 
@@ -438,8 +554,13 @@ class FastMCPManager:
             )
 
             # Start the news server
-            await self.start_server("news_server")
-            log.info("News server started successfully")
+            log.info(f"About to start news server...")
+            start_result = await self.start_server("news_server")
+            log.info(f"News server start_server returned: {start_result}")
+            if start_result:
+                log.info("News server started successfully")
+            else:
+                log.error("News server failed to start")
         else:
             log.warning(f"News server not found at {news_server_path}")
 
@@ -461,11 +582,46 @@ class FastMCPManager:
             )
 
             # Start the MPO SharePoint server
-            await self.start_server("mpo_sharepoint_server")
-            log.info("MPO SharePoint server started successfully")
+            log.info(f"About to start MPO SharePoint server...")
+            start_result = await self.start_server("mpo_sharepoint_server")
+            log.info(f"MPO SharePoint server start_server returned: {start_result}")
+            if start_result:
+                log.info("MPO SharePoint server started successfully")
+            else:
+                log.error("MPO SharePoint server failed to start")
         else:
             log.warning(
                 f"MPO SharePoint server not found at {mpo_sharepoint_server_path}"
+            )
+
+        # Add configuration for PMO SharePoint server (stdio)
+        pmo_sharepoint_server_path = (
+            backend_dir / "mcp_backend" / "servers" / "pmo_sharepoint_server.py"
+        )
+
+        log.info(f"Looking for PMO SharePoint server at: {pmo_sharepoint_server_path}")
+        log.info(f"PMO SharePoint server exists: {pmo_sharepoint_server_path.exists()}")
+
+        if pmo_sharepoint_server_path.exists():
+            self.add_server_config(
+                name="pmo_sharepoint_server",
+                command=["python", str(pmo_sharepoint_server_path)],
+                working_dir=str(backend_dir),
+                env=dict(os.environ),  # Pass current environment variables
+                transport="stdio",
+            )
+
+            # Start the PMO SharePoint server
+            log.info(f"About to start PMO SharePoint server...")
+            start_result = await self.start_server("pmo_sharepoint_server")
+            log.info(f"PMO SharePoint server start_server returned: {start_result}")
+            if start_result:
+                log.info("PMO SharePoint server started successfully")
+            else:
+                log.error("PMO SharePoint server failed to start")
+        else:
+            log.warning(
+                f"PMO SharePoint server not found at {pmo_sharepoint_server_path}"
             )
 
         # Legacy SharePoint server (keep for backward compatibility)
@@ -528,8 +684,17 @@ class FastMCPManager:
 
     async def initialize_all_servers(self):
         """Initialize both built-in and external servers"""
+        log.info("=== Starting MCP server initialization ===")
+        log.info(f"Calling initialize_default_servers()")
         await self.initialize_default_servers()
+        log.info(f"Completed initialize_default_servers()")
+        log.info(f"Calling initialize_external_servers()")
         await self.initialize_external_servers()
+        log.info(f"Completed initialize_external_servers()")
+        log.info("=== MCP server initialization complete ===")
+        log.info(f"Total configured servers: {len(self.server_configs)}")
+        log.info(f"Configured server names: {list(self.server_configs.keys())}")
+        log.info(f"Running servers: {self.get_running_servers()}")
 
     async def cleanup(self):
         """Clean up all server processes and connections"""
@@ -562,6 +727,7 @@ class FastMCPManager:
                                 "time_server",
                                 "news_server",
                                 "mpo_sharepoint_server",
+                                "pmo_sharepoint_server",
                             ]
                             tool_dict = {
                                 "name": tool.name,
@@ -592,6 +758,7 @@ class FastMCPManager:
                                 "time_server",
                                 "news_server",
                                 "mpo_sharepoint_server",
+                                "pmo_sharepoint_server",
                             ]
                             tool_dict = {
                                 "name": tool.name,

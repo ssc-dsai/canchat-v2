@@ -1,11 +1,13 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { getAllTags } from '$lib/apis/chats';
 	import { tags } from '$lib/stores';
-	import { getContext, createEventDispatcher, onMount, onDestroy } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	export let placeholder = '';
 	export let value = '';

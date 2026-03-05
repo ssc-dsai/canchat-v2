@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import dayjs from 'dayjs';
 	import { toast } from 'svelte-sonner';
-	import { tick, getContext, onMount } from 'svelte';
+	import { tick } from 'svelte';
 
 	import { ariaMessage, models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
@@ -14,7 +16,7 @@
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	export let user;
 

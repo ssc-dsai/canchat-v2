@@ -39,13 +39,12 @@
 
 	import 'tippy.js/dist/tippy.css';
 
-	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	import i18n, { initI18n, getLanguages } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
-	import TopRightControls from '$lib/components/layout/TopRightControls.svelte';
 
 	setContext('i18n', i18n);
 
@@ -107,6 +106,35 @@
 
 		_socket.on('usage', (data) => {
 			USAGE_POOL.set(data['models']);
+		});
+
+		_socket.on('chat-deleted', async (data) => {
+			console.log('Received chat deletion notification:', data);
+
+			// Refresh chat list to reflect deleted chats
+			if (data.deleted_count > 0) {
+				try {
+					// Update main chat list
+					const updatedChats = await getChatList(localStorage.token, $currentChatPage);
+					chats.set(updatedChats);
+
+					// Check if current chat was deleted and redirect if necessary
+					if (data.deleted_chat_ids && data.deleted_chat_ids.includes($chatId)) {
+						await chatId.set('');
+						await goto('/');
+						toast.info($i18n.t('Current chat was automatically cleaned up'));
+					}
+
+					// Show notification about cleanup
+					const message =
+						data.deleted_count === 1
+							? $i18n.t('One chat was automatically cleaned up')
+							: `${data.deleted_count} ${$i18n.t('chats were automatically cleaned up')}`;
+					toast.info(message);
+				} catch (error) {
+					console.error('Error refreshing chats after deletion:', error);
+				}
+			}
 		});
 	};
 
@@ -386,16 +414,10 @@
 		<div class="flex flex-row h-screen">
 			<AppSidebar />
 			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
-				{#if $user}
-					<TopRightControls />
-				{/if}
 				<slot />
 			</div>
 		</div>
 	{:else}
-		{#if $user}
-			<TopRightControls />
-		{/if}
 		<slot />
 	{/if}
 {/if}

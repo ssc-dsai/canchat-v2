@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { tick, getContext, onMount, onDestroy } from 'svelte';
+	import { tick, onMount, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
-	import { config, mobile, settings, socket } from '$lib/stores';
+	import { config, mobile, settings } from '$lib/stores';
 	import { blobToFile, compressImage } from '$lib/utils';
 
 	import Tooltip from '../common/Tooltip.svelte';
@@ -40,6 +42,9 @@
 	export let onChange: Function;
 	export let scrollEnd = true;
 	export let scrollToBottom: Function = () => {};
+
+	// Check if any files are currently uploading
+	$: hasUploadingFiles = files.some((file) => file.status === 'uploading');
 
 	const screenCaptureHandler = async () => {
 		try {
@@ -226,6 +231,12 @@
 
 	const submitHandler = async () => {
 		if (content === '' && files.length === 0) {
+			return;
+		}
+
+		// Don't submit if files are still uploading
+		if (hasUploadingFiles) {
+			toast.info($i18n.t('Please wait for files to finish uploading before sending'));
 			return;
 		}
 
@@ -554,11 +565,11 @@
 										<Tooltip content={$i18n.t('Send message')}>
 											<button
 												id="send-message-button"
-												class="{content !== '' || files.length !== 0
+												class="{content !== '' || (files.length !== 0 && !hasUploadingFiles)
 													? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 													: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 												type="submit"
-												disabled={content === '' && files.length === 0}
+												disabled={content === '' || hasUploadingFiles}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"

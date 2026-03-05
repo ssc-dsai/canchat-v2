@@ -3,6 +3,7 @@ import socketio
 import logging
 import sys
 import time
+import redis
 
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
@@ -21,13 +22,25 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
 )
 
-
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
+effective_websocket_manager = WEBSOCKET_MANAGER
 
 if WEBSOCKET_MANAGER == "redis":
+    try:
+        redis_health_client = redis.Redis.from_url(WEBSOCKET_REDIS_URL)
+        redis_health_client.ping()
+    except Exception as e:
+        log.warning(
+            f"Redis websocket manager is unavailable ({e}). "
+            "Falling back to local websocket manager."
+        )
+        effective_websocket_manager = ""
+
+
+if effective_websocket_manager == "redis":
     mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],
@@ -50,13 +63,19 @@ else:
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
 
+
+async def _lock_noop():
+    """Fallback no-op lock operation."""
+    return True
+
+
 # Dictionary to maintain the user pool
 
-if WEBSOCKET_MANAGER == "redis":
+if effective_websocket_manager == "redis":
     log.debug("Using Redis to manage websockets.")
     try:
         SESSION_POOL = RedisDict(
-            "open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL
+            "open-webui: session_pool", redis_url=WEBSOCKET_REDIS_URL
         )
         USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
         USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
@@ -77,12 +96,12 @@ if WEBSOCKET_MANAGER == "redis":
         SESSION_POOL = {}
         USER_POOL = {}
         USAGE_POOL = {}
-        acquire_func = release_func = renew_func = lambda: True
+        acquire_func = release_func = renew_func = _lock_noop
 else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
-    acquire_func = release_func = renew_func = lambda: True
+    acquire_func = release_func = renew_func = _lock_noop
 
 
 async def periodic_usage_pool_cleanup():
@@ -91,8 +110,8 @@ async def periodic_usage_pool_cleanup():
     This task should not cause application shutdown if it fails.
     """
     try:
-        if not acquire_func():
-            log.debug("Usage pool cleanup lock already exists. Not running it.")
+        if not await acquire_func():
+            log.debug("Usage pool cleanup lock already exists.  Not running it.")
             return
 
         log.debug("Running periodic_usage_pool_cleanup")
@@ -100,7 +119,7 @@ async def periodic_usage_pool_cleanup():
         while True:
             try:
                 # Check if we can renew the lock
-                if not renew_func():
+                if not await renew_func():
                     log.warning(
                         "Unable to renew cleanup lock. Another instance may have taken over."
                     )
@@ -150,10 +169,10 @@ async def periodic_usage_pool_cleanup():
         log.error(f"Fatal error in periodic_usage_pool_cleanup: {e}")
     finally:
         try:
-            release_func()
+            await release_func()
             log.debug("Released usage pool cleanup lock")
         except Exception as e:
-            log.error(f"Error releasing cleanup lock: {e}")
+            log.error(f"Error releasing cleanup lock:  {e}")
 
     log.info("Periodic usage pool cleanup task exited gracefully")
 
@@ -186,25 +205,227 @@ async def usage(sid, data):
     await sio.emit("usage", {"models": get_models_in_use()})
 
 
+@sio.on("crew-mcp-query")
+async def crew_mcp_query(sid, data):
+    """Handle CrewMCP query via WebSocket"""
+    try:
+        # Authenticate user from session
+        if sid not in SESSION_POOL:
+            log.error(f"crew-mcp-query: Session {sid} not found in SESSION_POOL")
+            await sio.emit(
+                "crew-mcp-error",
+                {"error": "Unauthorized - session not found", "code": 401},
+                room=sid,
+            )
+            return
+
+        user_session = SESSION_POOL[sid]
+        log.info(f"crew-mcp-query: Retrieved session for sid={sid}")
+        log.info(f"crew-mcp-query: Session keys: {list(user_session.keys())}")
+
+        # Extract request data
+        query = data.get("query", "")
+        model = data.get("model", "")
+        selected_tools = data.get("selected_tools", [])
+        chat_id = data.get("chat_id", "")
+
+        if not query:
+            await sio.emit(
+                "crew-mcp-error", {"error": "Query is required", "code": 400}, room=sid
+            )
+            return
+
+        log.info(
+            f"CrewMCP WebSocket query from user {user_session. get('id')}: {query[: 100]}"
+        )
+
+        # Emit processing status
+        await sio.emit(
+            "crew-mcp-status",
+            {"status": "processing", "message": "CrewAI is analyzing your request... "},
+            room=sid,
+        )
+
+        # Import crew_mcp_manager
+        try:
+            from mcp_backend.routers.crew_mcp import crew_mcp_manager
+            import os
+            import asyncio
+            import concurrent.futures
+        except ImportError as e:
+            log.error(f"Failed to import CrewMCP dependencies: {e}")
+            await sio.emit(
+                "crew-mcp-error",
+                {"error": "CrewMCP integration not available", "code": 503},
+                room=sid,
+            )
+            return
+
+        # Check if manager is initialized
+        if not crew_mcp_manager:
+            await sio.emit(
+                "crew-mcp-error",
+                {"error": "CrewMCP manager not initialized", "code": 503},
+                room=sid,
+            )
+            return
+
+        # Get the Graph access token from session (stored during websocket connect)
+        user_access_token = user_session.get("graph_access_token")
+
+        # **ENHANCED LOGGING**
+        log.info(f"crew-mcp-query:  Checking for graph_access_token in session")
+        log.info(
+            f"crew-mcp-query: 'graph_access_token' in user_session = {('graph_access_token' in user_session)}"
+        )
+        log.info(f"crew-mcp-query:  user_access_token type = {type(user_access_token)}")
+        log.info(f"crew-mcp-query: user_access_token bool = {bool(user_access_token)}")
+
+        if user_access_token:
+            log.info(
+                f"crew-mcp-query: Token found!  Length={len(user_access_token)}, First 50 chars={user_access_token[:50]}"
+            )
+        else:
+            log.warning(
+                f"crew-mcp-query: NO TOKEN FOUND in session.  Session has keys: {list(user_session. keys())}"
+            )
+            log.warning(
+                f"crew-mcp-query: user_access_token value = {repr(user_access_token)}"
+            )
+
+        use_delegated_access = os.getenv(
+            "SHP_USE_DELEGATED_ACCESS", "false"
+        ).lower() in ("true", "1", "yes")
+
+        log.info(f"crew-mcp-query:  SHP_USE_DELEGATED_ACCESS={use_delegated_access}")
+
+        if use_delegated_access:
+            # Delegated access (OBO flow) - use user token
+            if user_access_token:
+                crew_mcp_manager.set_user_token(user_access_token)
+                log.info(
+                    "crew-mcp-query: Set user token on crew_mcp_manager (delegated access)"
+                )
+            else:
+                crew_mcp_manager.set_user_token(None)
+                log.warning(
+                    "crew-mcp-query: SHP_USE_DELEGATED_ACCESS=true but no user token available - SharePoint access may fail"
+                )
+        else:
+            # Application access (client credentials flow) - no user token needed
+            crew_mcp_manager.set_user_token(None)
+            log.info(
+                "crew-mcp-query: Using SharePoint application access (client credentials flow) - SHP_USE_DELEGATED_ACCESS=false"
+            )
+
+        # Get available tools
+        tools = crew_mcp_manager.get_available_tools()
+        if not tools:
+            await sio.emit(
+                "crew-mcp-error",
+                {
+                    "error": "No MCP tools available.  Check MCP server configuration.",
+                    "code": 503,
+                },
+                room=sid,
+            )
+            return
+
+        log.info(f"Selected tools: {selected_tools}")
+        log.info("Using intelligent crew with manager agent for routing")
+
+        # Run crew in executor to prevent blocking
+        loop = asyncio.get_event_loop()
+        log.info("Starting crew execution in thread pool executor via WebSocket")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            result = await loop.run_in_executor(
+                executor,
+                crew_mcp_manager.run_intelligent_crew,
+                query,
+                selected_tools,
+            )
+
+        log.info(
+            f"Crew execution finished via WebSocket. Result length: {len(result) if result else 0}"
+        )
+
+        used_tools = [tool["name"] for tool in tools]
+
+        # Emit success result
+        await sio.emit(
+            "crew-mcp-result",
+            {"result": result, "tools_used": used_tools, "success": True},
+            room=sid,
+        )
+
+        log.info(f"CrewMCP WebSocket query completed successfully")
+
+    except Exception as e:
+        log.error(f"CrewMCP WebSocket error: {e}", exc_info=True)
+        await sio.emit("crew-mcp-error", {"error": str(e), "code": 500}, room=sid)
+
+
 @sio.event
 async def connect(sid, environ, auth):
+    log.info(f"WebSocket connect event:  sid={sid}, auth present={bool(auth)}")
+    log.info(
+        f"WebSocket environ keys:  {sorted([k for k in environ.keys() if k.startswith('HTTP_')])}"
+    )
+
+    # Extract Graph access token from environ early and store temporarily
+    graph_access_token = environ.get("HTTP_X_FORWARDED_ACCESS_TOKEN")
+    if graph_access_token:
+        # Store token in a temporary pool keyed by sid for later retrieval during user-join
+        SESSION_POOL[f"_temp_token_{sid}"] = graph_access_token
+        log.info(
+            f"✅ Temporarily stored Graph access token for sid {sid} (length: {len(graph_access_token)})"
+        )
+
     user = None
+
     if auth and "token" in auth:
         data = decode_token(auth["token"])
 
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
+            log.info(
+                f"WebSocket connect:  Authenticated user {user.id if user else 'None'}"
+            )
 
-        if user:
-            SESSION_POOL[sid] = user.model_dump()
-            if user.id in USER_POOL:
-                USER_POOL[user.id] = USER_POOL[user.id] + [sid]
-            else:
-                USER_POOL[user.id] = [sid]
+    if user:
+        session_data = user.model_dump()
 
-            # print(f"user {user.name}({user.id}) connected with session ID {sid}")
-            await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
-            await sio.emit("usage", {"models": get_models_in_use()})
+        # Attach token to authenticated user session
+        if graph_access_token:
+            session_data["graph_access_token"] = graph_access_token
+            log.info(
+                f"✅ Stored Graph access token for user {user.id} (length: {len(graph_access_token)})"
+            )
+            # Clean up temporary storage
+            if f"_temp_token_{sid}" in SESSION_POOL:
+                del SESSION_POOL[f"_temp_token_{sid}"]
+
+        SESSION_POOL[sid] = session_data
+
+        # Verify token was stored
+        stored_session = SESSION_POOL.get(sid)
+        if stored_session and "graph_access_token" in stored_session:
+            log.info(
+                f"✅ Verified: graph_access_token successfully stored in SESSION_POOL[{sid}]"
+            )
+        elif graph_access_token:
+            log.error(
+                f"❌ ERROR: graph_access_token NOT in SESSION_POOL after storage! This is a Redis/storage issue."
+            )
+
+        if user.id in USER_POOL:
+            USER_POOL[user.id] = USER_POOL[user.id] + [sid]
+        else:
+            USER_POOL[user.id] = [sid]
+
+        await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
+        await sio.emit("usage", {"models": get_models_in_use()})
 
 
 @sio.on("user-join")
@@ -221,7 +442,31 @@ async def user_join(sid, data):
     if not user:
         return
 
-    SESSION_POOL[sid] = user.model_dump()
+    # Build complete session object
+    existing_session = SESSION_POOL.get(sid, {})
+    graph_access_token = existing_session.get("graph_access_token")
+
+    # Check if token was stored temporarily during connect
+    temp_token_key = f"_temp_token_{sid}"
+    if not graph_access_token and temp_token_key in SESSION_POOL:
+        graph_access_token = SESSION_POOL[temp_token_key]
+        log.info(
+            f"✅ Retrieved temporarily stored Graph access token for user {user.id} during user-join (length: {len(graph_access_token)})"
+        )
+        # Clean up temporary storage
+        del SESSION_POOL[temp_token_key]
+
+    # Build the new session with user data
+    new_session = user.model_dump()
+    if graph_access_token:
+        new_session["graph_access_token"] = graph_access_token
+        log.info(
+            f"✅ Attached Graph access token for user {user.id} during user-join (length: {len(graph_access_token)})"
+        )
+
+    # Single atomic update to Redis
+    SESSION_POOL[sid] = new_session
+
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
@@ -232,8 +477,6 @@ async def user_join(sid, data):
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
-
-    # print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
     await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
     return {"id": user.id, "name": user.name}
@@ -421,10 +664,10 @@ async def emit_group_membership_update(
     Emit group membership changes to all connected clients
 
     Args:
-        group_id: The ID of the group that was updated
+        group_id:  The ID of the group that was updated
         group_name: The name of the group
         user_count: The new user count in the group
-        action: 'added' or 'removed'
+        action:  'added' or 'removed'
         users_affected: List of user emails or IDs that were affected (optional)
     """
     event_data = {
@@ -442,5 +685,5 @@ async def emit_group_membership_update(
     # Emit to all connected clients
     await sio.emit("group-membership-update", event_data)
     log.info(
-        f"Emitted group membership update: {action} {len(users_affected) if users_affected else 0} users to/from group '{group_name}'"
+        f"Emitted group membership update:  {action} {len(users_affected) if users_affected else 0} users to/from group '{group_name}'"
     )

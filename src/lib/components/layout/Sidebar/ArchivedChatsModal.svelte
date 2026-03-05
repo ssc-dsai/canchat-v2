@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { getI18n } from '$lib/utils/context';
+
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -14,7 +16,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import UnarchiveAllConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	export let show = false;
 
@@ -84,7 +86,7 @@
 	size="lg"
 	bind:show
 	title={$i18n.t('Archived Chats')}
-	returnFocusSelector={'#' + $returnFocusButtonID}
+	returnFocusSelector={$returnFocusButtonID ? `#${$returnFocusButtonID}` : ''}
 >
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
