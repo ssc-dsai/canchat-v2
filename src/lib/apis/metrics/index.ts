@@ -240,9 +240,9 @@ export const getTotalTokens = async (
 		if (start_date) params.append('start_date', start_date);
 		if (end_date) params.append('end_date', end_date);
 		if (mcpTool) params.append('mcp_tool', mcpTool);
-				const url = params.toString()
-					? `${WEBUI_API_BASE_URL}/metrics/tokens?${params.toString()}`
-					: `${WEBUI_API_BASE_URL}/metrics/tokens`;
+		const url = params.toString()
+			? `${WEBUI_API_BASE_URL}/metrics/tokens?${params.toString()}`
+			: `${WEBUI_API_BASE_URL}/metrics/tokens`;
 		const res = await fetch(url, {
 			method: 'GET',
 			headers: {

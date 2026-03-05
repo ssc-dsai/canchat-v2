@@ -284,7 +284,9 @@
 				// Pass date range to getTotalTokens for proper filtering
 				totalTokens = await getTotalTokens(
 					localStorage.token,
-					updatedDomain, startDate, endDate,
+					updatedDomain,
+					startDate,
+					endDate,
 					selectedMcpProcess ?? undefined
 				);
 				dailyUsers = await getDailyUsers(localStorage.token, updatedDomain);
