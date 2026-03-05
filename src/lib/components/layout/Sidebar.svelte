@@ -932,6 +932,8 @@
 				{#if !search && folders}
 					<Folders
 						{folders}
+						{selectedChatIds}
+						showBulkActions={selectedChatIds.length > 0}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);
@@ -941,6 +943,16 @@
 						}}
 						on:change={async () => {
 							initChatList();
+						}}
+						on:select={(e) => {
+							toggleChatSelection(e.detail);
+						}}
+						on:unselect={(e) => {
+							toggleChatSelection(e.detail);
+						}}
+						on:tag={(e) => {
+							const { type, name, chatId } = e.detail;
+							tagEventHandler(type, name, chatId);
 						}}
 					/>
 				{/if}
