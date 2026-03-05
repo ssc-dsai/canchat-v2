@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from open_webui.models.auths_table import Auths
 from open_webui.models.chats import Chats
@@ -15,11 +15,12 @@ from open_webui.models.users import (
 from open_webui.socket.main import get_active_status_by_user_id
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from open_webui.utils.auth import (
     get_admin_user,
     get_current_user,
+    get_department_usage_user,
     get_password_hash,
     get_verified_user,
 )
@@ -301,6 +302,66 @@ async def update_user_info_by_session_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
+
+
+############################
+# Get Users Per Domain
+############################
+
+
+@router.get("/count-per-domain")
+async def get_users_per_domain(
+    start_timestamp: int,
+    end_timestamp: int,
+    domain: List[str] = Query(...),
+    user=Depends(get_department_usage_user),
+):
+    if user.role not in ["admin", "global_analyst"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if len(domain) == 0:
+        return []
+
+    # Fetch lists of dicts from the model
+    total_users = Users.get_users_count_by_domain(
+        start_timestamp, end_timestamp, domain, False
+    )
+    active_users = Users.get_users_count_by_domain(
+        start_timestamp, end_timestamp, domain, True
+    )
+
+    # Merge by domain to keep department/domain labels aligned
+    merged = {}
+
+    for item in total_users or []:
+        key = item.get("domain")
+        merged[key] = {
+            "domain": item.get("domain"),
+            "department": item.get("department"),
+            "total_users": item.get("user_count", 0),
+            "active_users": 0,
+        }
+
+    for item in active_users or []:
+        key = item.get("domain")
+        if key in merged:
+            merged[key]["active_users"] = item.get("user_count", 0)
+        else:
+            merged[key] = {
+                "domain": item.get("domain"),
+                "department": item.get("department"),
+                "total_users": 0,
+                "active_users": item.get("user_count", 0),
+            }
+
+    # Return a sorted list for stable ordering (by department then domain)
+    return sorted(
+        merged.values(),
+        key=lambda x: ((x.get("department") or ""), (x.get("domain") or "")),
+    )
 
 
 ############################
