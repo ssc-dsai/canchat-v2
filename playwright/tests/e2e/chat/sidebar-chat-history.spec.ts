@@ -58,7 +58,7 @@ test.describe('Sidebar and Chat History Features', () => {
 			timeout: 30000
 		});
 
-		// 8. User observe that his default model is selected in the chat page.
+		// 7. User observe that his default model is selected in the chat page.
 		const finalModel = await userPage.getSelectedModel();
 		expect(finalModel).toBe(initialModel);
 	});
@@ -113,7 +113,6 @@ test.describe('Sidebar and Chat History Features', () => {
 		await expect(userPage.chatHistoryItems.first()).toBeVisible();
 
 		// 10. User clicks on one of the available conversation
-		const firstChatTitle = await userPage.chatHistoryItems.first().innerText();
 		await userPage.waitToSettle(1000);
 		await userPage.searchInput.press('Escape');
 		await userPage.chatHistoryItems.first().click({ force: true });
@@ -776,7 +775,7 @@ test.describe('Sidebar and Chat History Features', () => {
 
 		// 7. User observe that a new chat has been created
 		await expect(userPage.messageInput).toBeVisible();
-		await expect(userPage.page.url()).not.toContain('c/'); // URL should reset to base if new chat
+		expect(userPage.page.url()).not.toContain('c/'); // URL should reset to base if new chat
 
 		// 8. User observe that his default model is selected in the chat page.
 		await expect(userPage.page.locator('#model-selector-0-button')).toBeVisible();
