@@ -1360,6 +1360,37 @@ CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS = (
     os.environ.get("CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", "False").lower() == "true"
 )
 
+####################################
+# Redis User Session Cleanup
+####################################
+
+# Enable scheduled cleanup of stale Redis user/session pools (default: True when Redis is used)
+REDIS_POOL_CLEANUP_ENABLED = (
+    os.environ.get("REDIS_POOL_CLEANUP_ENABLED", "True").lower() == "true"
+)
+
+# Cron schedule for Redis pool cleanup (default: midnight daily)
+REDIS_POOL_CLEANUP_SCHEDULE_CRON = os.environ.get(
+    "REDIS_POOL_CLEANUP_SCHEDULE_CRON", "0 0 * * *"
+)
+
+# Timezone for Redis pool cleanup schedule (default: America/Toronto)
+REDIS_POOL_CLEANUP_SCHEDULE_TIMEZONE = os.environ.get(
+    "REDIS_POOL_CLEANUP_SCHEDULE_TIMEZONE", "America/Toronto"
+)
+
+# Lock timeout in seconds for Redis pool cleanup (default: 1800 seconds)
+REDIS_POOL_CLEANUP_LOCK_TIMEOUT = int(
+    os.environ.get("REDIS_POOL_CLEANUP_LOCK_TIMEOUT", "1800")
+)
+
+# When enabled, cleanup also removes disconnected entries from SESSION_POOL.
+# Default is False for safety to avoid removing sessions during connect/join races.
+# Leaving the option to clean up session pool if similar issues arise in the future.
+REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL = (
+    os.environ.get("REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL", "False").lower() == "true"
+)
+
 
 ####################################
 # TASKS

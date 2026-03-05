@@ -17,6 +17,11 @@ from open_webui.config import (
     CHAT_CLEANUP_SCHEDULE_TIMEZONE,
     CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS,
     CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS,
+    REDIS_POOL_CLEANUP_ENABLED,
+    REDIS_POOL_CLEANUP_SCHEDULE_CRON,
+    REDIS_POOL_CLEANUP_SCHEDULE_TIMEZONE,
+    REDIS_POOL_CLEANUP_LOCK_TIMEOUT,
+    REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL,
 )
 from open_webui.socket.utils import RedisLock, renew_lock_periodically
 
@@ -26,7 +31,7 @@ log.setLevel(SRC_LOG_LEVELS["SCHEDULER"])
 # Global scheduler instance
 scheduler = None
 CLEANUP_JOB_ID = "chat_lifetime_cleanup"
-USER_POOL_CLEANUP_JOB_ID = "user_pool_cleanup"
+REDIS_POOL_CLEANUP_JOB_ID = "redis_pool_cleanup"
 
 
 def describe_cron_schedule(cron_expr: str) -> str:
@@ -161,112 +166,6 @@ async def automated_chat_cleanup():
                 log.warning("Could not confirm chat cleanup lock release")
 
 
-async def automated_user_pool_cleanup():
-    """
-    Automated user pool cleanup job that removes stale user sessions at midnight.
-    Only removes users from USER_POOL if they don't have active sessions in SESSION_POOL.
-    This prevents the USER_POOL from growing forever with stale sessions while
-    maintaining consistency between USER_POOL and SESSION_POOL.
-    """
-    try:
-        if WEBSOCKET_MANAGER != "redis":
-            log.debug("Not using Redis websocket manager - skipping user pool cleanup")
-            return
-
-        log.info("Starting automated user pool cleanup")
-
-        # Import here to avoid circular imports
-        from open_webui.socket.utils import RedisDict
-
-        try:
-            USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-            SESSION_POOL = RedisDict(
-                "open-webui: session_pool", redis_url=WEBSOCKET_REDIS_URL
-            )
-
-            # Get all active session IDs
-            active_session_ids = set(SESSION_POOL.keys())
-
-            # Remove users whose session IDs are not in SESSION_POOL
-            stale_users = []
-            for user_id in list(USER_POOL.keys()):
-                session_ids = USER_POOL[user_id]
-                # Filter out stale session IDs
-                valid_session_ids = [
-                    sid for sid in session_ids if sid in active_session_ids
-                ]
-
-                if len(valid_session_ids) == 0:
-                    # No valid sessions for this user, remove from USER_POOL
-                    stale_users.append(user_id)
-                    del USER_POOL[user_id]
-                elif len(valid_session_ids) < len(session_ids):
-                    # Some sessions are stale, update with only valid ones
-                    USER_POOL[user_id] = valid_session_ids
-
-            log.info(
-                f"Automated user pool cleanup completed: removed {len(stale_users)} users with stale sessions"
-            )
-        except Exception as e:
-            log.error(f"Failed to clean up user pool from Redis: {str(e)}")
-
-    except Exception as e:
-        log.error(f"Automated user pool cleanup failed: {str(e)}")
-
-
-async def automated_user_pool_cleanup():
-    """
-    Automated user pool cleanup job that removes stale user sessions at midnight.
-    Only removes users from USER_POOL if they don't have active sessions in SESSION_POOL.
-    This prevents the USER_POOL from growing forever with stale sessions while
-    maintaining consistency between USER_POOL and SESSION_POOL.
-    """
-    try:
-        if WEBSOCKET_MANAGER != "redis":
-            log.debug("Not using Redis websocket manager - skipping user pool cleanup")
-            return
-
-        log.info("Starting automated user pool cleanup")
-
-        # Import here to avoid circular imports
-        from open_webui.socket.utils import RedisDict
-
-        try:
-            USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-            SESSION_POOL = RedisDict(
-                "open-webui: session_pool", redis_url=WEBSOCKET_REDIS_URL
-            )
-
-            # Get all active session IDs
-            active_session_ids = set(SESSION_POOL.keys())
-
-            # Remove users whose session IDs are not in SESSION_POOL
-            stale_users = []
-            for user_id in list(USER_POOL.keys()):
-                session_ids = USER_POOL[user_id]
-                # Filter out stale session IDs
-                valid_session_ids = [
-                    sid for sid in session_ids if sid in active_session_ids
-                ]
-
-                if len(valid_session_ids) == 0:
-                    # No valid sessions for this user, remove from USER_POOL
-                    stale_users.append(user_id)
-                    del USER_POOL[user_id]
-                elif len(valid_session_ids) < len(session_ids):
-                    # Some sessions are stale, update with only valid ones
-                    USER_POOL[user_id] = valid_session_ids
-
-            log.info(
-                f"Automated user pool cleanup completed: removed {len(stale_users)} users with stale sessions"
-            )
-        except Exception as e:
-            log.error(f"Failed to clean up user pool from Redis: {str(e)}")
-
-    except Exception as e:
-        log.error(f"Automated user pool cleanup failed: {str(e)}")
-
-
 def update_cleanup_schedule():
     """
     Update the cleanup schedule based on current configuration.
@@ -311,39 +210,113 @@ def update_cleanup_schedule():
         log.error(f"Failed to update cleanup schedule: {str(e)}")
 
 
-def schedule_user_pool_cleanup():
+####################################
+# Redis User/Session Pool Cleanup
+####################################
+
+
+async def automated_redis_pool_cleanup():
     """
-    Schedule the user pool cleanup to run daily at midnight.
-    This is called once when the application starts.
+    Scheduled task that flushes stale entries from the Redis-backed USER_POOL
+    and SESSION_POOL. Uses a distributed lock to ensure only one replica runs
+    the cleanup at a time.
+
+    This task:
+    1. Acquires a Redis distributed lock to prevent concurrent runs
+    2. Filters USER_POOL SIDs using live Socket.IO connection state
+    3. Optionally prunes disconnected SESSION_POOL entries (configurable)
+    4. Releases the lock
     """
+    lock = None
+
     try:
         if WEBSOCKET_MANAGER != "redis":
-            log.info(
-                "Not using Redis websocket manager - skipping user pool cleanup schedule"
-            )
+            log.debug("Redis pool cleanup skipped: WEBSOCKET_MANAGER is not 'redis'")
             return
 
+        lock = RedisLock(
+            redis_url=WEBSOCKET_REDIS_URL,
+            lock_name="redis_pool_cleanup_lock",
+            timeout_secs=REDIS_POOL_CLEANUP_LOCK_TIMEOUT,
+        )
+
+        if not await lock.acquire_lock():
+            if lock.last_error:
+                log.error(
+                    f"Skipping Redis pool cleanup: lock acquisition failed: {lock.last_error}"
+                )
+            else:
+                log.info(
+                    "Another replica is already running Redis pool cleanup - skipping"
+                )
+            return
+
+        log.info("Starting scheduled Redis pool cleanup")
+
+        from open_webui.socket.main import flush_user_and_session_pools
+
+        stats = flush_user_and_session_pools(
+            prune_session_pool=REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL
+        )
+
+        log.info(f"Scheduled Redis pool cleanup completed: {stats}")
+
+    except Exception as e:
+        log.error(f"Redis pool cleanup failed: {e}", exc_info=True)
+    finally:
+        if lock and lock.lock_obtained:
+            released = await lock.release_lock()
+            if released:
+                log.debug("Released Redis pool cleanup lock")
+            else:
+                log.warning("Could not confirm Redis pool cleanup lock release")
+
+
+def schedule_redis_pool_cleanup():
+    """
+    Schedule the Redis session pool cleanup.
+    """
+    try:
         scheduler_instance = get_scheduler()
 
         # Remove existing job if it exists
-        if scheduler_instance.get_job(USER_POOL_CLEANUP_JOB_ID):
-            scheduler_instance.remove_job(USER_POOL_CLEANUP_JOB_ID)
-            log.info("Removed existing user pool cleanup schedule")
+        if scheduler_instance.get_job(REDIS_POOL_CLEANUP_JOB_ID):
+            scheduler_instance.remove_job(REDIS_POOL_CLEANUP_JOB_ID)
+            log.info("Removed existing Redis pool cleanup schedule")
 
-        # Schedule daily cleanup at midnight
-        trigger = CronTrigger(hour=0, minute=0)
+        if not REDIS_POOL_CLEANUP_ENABLED:
+            log.info("Redis pool cleanup disabled (REDIS_POOL_CLEANUP_ENABLED=false)")
+            return
+
+        if WEBSOCKET_MANAGER != "redis":
+            log.info(
+                "Redis pool cleanup not scheduled: WEBSOCKET_MANAGER is not 'redis'"
+            )
+            return
+
+        trigger = CronTrigger.from_crontab(
+            REDIS_POOL_CLEANUP_SCHEDULE_CRON,
+            timezone=REDIS_POOL_CLEANUP_SCHEDULE_TIMEZONE,
+        )
         scheduler_instance.add_job(
-            automated_user_pool_cleanup,
+            automated_redis_pool_cleanup,
             trigger=trigger,
-            id=USER_POOL_CLEANUP_JOB_ID,
-            name="Automated User Pool Cleanup",
+            id=REDIS_POOL_CLEANUP_JOB_ID,
+            name="Redis User/Session Pool Cleanup",
             replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=300,
         )
 
-        log.info("Scheduled daily user pool cleanup at midnight (00:00)")
+        log.info(
+            f"Scheduled Redis pool cleanup with cron "
+            f"'{REDIS_POOL_CLEANUP_SCHEDULE_CRON}' "
+            f"(timezone: {REDIS_POOL_CLEANUP_SCHEDULE_TIMEZONE})"
+        )
 
     except Exception as e:
-        log.error(f"Failed to schedule user pool cleanup: {str(e)}")
+        log.error(f"Failed to update Redis pool cleanup schedule: {str(e)}")
 
 
 def start_chat_lifetime_scheduler():
@@ -354,8 +327,8 @@ def start_chat_lifetime_scheduler():
     try:
         log.info("Initializing chat lifetime scheduler...")
         get_scheduler()  # Initialize scheduler
-        update_cleanup_schedule()  # Set up initial schedule
-        schedule_user_pool_cleanup()  # Set up user pool cleanup
+        update_cleanup_schedule()  # Set up chat lifetime cleanup schedule
+        schedule_redis_pool_cleanup()  # Set up Redis pool cleanup schedule
         log.info("Chat lifetime scheduler initialization complete")
     except Exception as e:
         log.error(f"Failed to start chat lifetime scheduler: {str(e)}")
