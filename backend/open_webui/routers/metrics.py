@@ -119,8 +119,8 @@ async def get_total_tokens(
     domain: str = None,
     start_date: str = None,
     end_date: str = None,
-    mcp_tool: str = None, user=Depends(get_metrics_user),
-
+    mcp_tool: str = None,
+    user=Depends(get_metrics_user),
 ):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":

@@ -172,12 +172,11 @@ class MessageMetricsTable:
         return query
 
     def get_message_tokens_sum(
-        
         self,
         domain: Optional[str] = None,
         start_timestamp: Optional[int] = None,
         end_timestamp: Optional[int] = None,
-        mcp_tool: Optional[str] = None
+        mcp_tool: Optional[str] = None,
     ) -> Optional[int]:
         try:
             with get_db() as db:
