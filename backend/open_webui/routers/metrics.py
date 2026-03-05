@@ -154,7 +154,10 @@ async def get_total_tokens(
             pass
 
     total_tokens = MessageMetrics.get_message_tokens_sum(
-        domain=domain, start_timestamp=start_timestamp, end_timestamp=end_timestamp
+        domain=domain,
+        start_timestamp=start_timestamp,
+        end_timestamp=end_timestamp,
+        mcp_tool=mcp_tool,
     )
 
     return {"total_tokens": total_tokens}

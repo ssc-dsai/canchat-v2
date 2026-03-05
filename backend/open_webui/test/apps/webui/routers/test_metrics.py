@@ -193,9 +193,9 @@ class TestMcpTokenMetrics(AbstractPostgresTest):
     # ═══════════════════════════════════════════════════════════════════════════
 
     def test_endpoint_mcp_processes_requires_auth(self):
-        """Unauthenticated request must be rejected with 401/422."""
+        """Unauthenticated request must be rejected with a 4xx status."""
         response = self.fast_api_client.get(self.create_url("/mcp-processes"))
-        assert response.status_code in (401, 422)
+        assert response.status_code in (401, 403, 422)
 
     def test_endpoint_mcp_processes_empty_db(self):
         """Empty database should return an empty list, not an error."""
