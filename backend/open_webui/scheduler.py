@@ -5,7 +5,7 @@ import threading
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from open_webui.env import SRC_LOG_LEVELS, WEBSOCKET_REDIS_URL, WEBSOCKET_MANAGER
+from open_webui.env import SRC_LOG_LEVELS, REDIS_URL, USE_REDIS_LOCKS
 from open_webui.config import (
     CHAT_LIFETIME_ENABLED,
     CHAT_LIFETIME_DAYS,
@@ -74,9 +74,9 @@ async def automated_chat_cleanup():
             log.info("Chat lifetime is disabled - skipping automated cleanup")
             return
 
-        if WEBSOCKET_MANAGER == "redis":
+        if USE_REDIS_LOCKS:
             lock = RedisLock(
-                redis_url=WEBSOCKET_REDIS_URL,
+                redis_url=REDIS_URL,
                 lock_name="chat_cleanup_job",
                 timeout_secs=CHAT_CLEANUP_LOCK_TIMEOUT,
             )
@@ -91,19 +91,20 @@ async def automated_chat_cleanup():
                         "Another replica is already running chat cleanup - skipping this run"
                     )
                 return
-        elif not CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS:
-            # Strict policy by default: skip cleanup when single-run guarantees are unavailable.
+        elif CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS:
+            # Perform cleanup when not using redis and manually configured to start.
+            log.warning(
+                "Running automated chat cleanup without distributed lock "
+                "Use only in single-instance environments."
+            )
+        else:
+            # Skip cleanup when single-run guarantees are unavailable.
             log.warning(
                 "Skipping automated chat cleanup: distributed lock is unavailable "
-                "(WEBSOCKET_MANAGER is not 'redis'). Set CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true "
+                "Redis was not detected. Set CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true "
                 "for single-instance local development."
             )
             return
-        else:
-            log.warning(
-                "Running automated chat cleanup without distributed lock "
-                "(CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true). Use only in single-instance environments."
-            )
 
         log.info(
             f"Starting automated chat cleanup (age > {days} days, preserve_pinned={preserve_pinned}, preserve_archived={preserve_archived})"
@@ -210,7 +211,10 @@ def start_chat_lifetime_scheduler():
     This should be called once when the application starts.
     """
     try:
-        log.info("Initializing chat lifetime scheduler...")
+        if USE_REDIS_LOCKS:
+            log.info("Initializing chat lifetime scheduler using Redis Locks...")
+        elif not USE_REDIS_LOCKS:
+            log.info("Initializing chat lifetime scheduler not using Redis Locks...")
         get_scheduler()  # Initialize scheduler
         update_cleanup_schedule()  # Set up initial schedule
         log.info("Chat lifetime scheduler initialization complete")
@@ -248,19 +252,6 @@ def get_schedule_info():
                 "schedule": describe_cron_schedule(CHAT_CLEANUP_SCHEDULE_CRON),
                 "schedule_cron": CHAT_CLEANUP_SCHEDULE_CRON,
                 "schedule_timezone": CHAT_CLEANUP_SCHEDULE_TIMEZONE,
-            }
-
-        if WEBSOCKET_MANAGER != "redis" and not CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS:
-            return {
-                "enabled": True,
-                "status": "Blocked",
-                "next_run": None,
-                "lifetime_days": CHAT_LIFETIME_DAYS.value,
-                "schedule": describe_cron_schedule(CHAT_CLEANUP_SCHEDULE_CRON),
-                "schedule_cron": CHAT_CLEANUP_SCHEDULE_CRON,
-                "schedule_timezone": CHAT_CLEANUP_SCHEDULE_TIMEZONE,
-                "reason": "WEBSOCKET_MANAGER is not 'redis'; distributed lock is unavailable. "
-                "Set CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true for single-instance local development.",
             }
 
         scheduler_instance = get_scheduler()
