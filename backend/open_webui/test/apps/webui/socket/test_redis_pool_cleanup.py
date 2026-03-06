@@ -427,7 +427,7 @@ class TestAutomatedRedisPoolCleanup:
         FakeLock.acquire_result = lock_acquired
         FakeLock.acquire_error = lock_error
 
-        monkeypatch.setattr(sched_mod, "WEBSOCKET_MANAGER", "redis")
+        monkeypatch.setattr(sched_mod, "USE_REDIS_LOCKS", True)
         monkeypatch.setattr(sched_mod, "WEBSOCKET_REDIS_URL", "redis://test")
         monkeypatch.setattr(sched_mod, "REDIS_POOL_CLEANUP_ENABLED", True)
         monkeypatch.setattr(sched_mod, "REDIS_POOL_CLEANUP_SCHEDULE_CRON", "0 0 * * *")
@@ -481,12 +481,12 @@ class TestAutomatedRedisPoolCleanup:
 
         assert calls["flush"] == 0
 
-    def test_cleanup_skips_when_not_redis_manager(self, monkeypatch):
-        """Cleanup should be a no-op when WEBSOCKET_MANAGER is not 'redis'."""
+    def test_cleanup_skips_when_redis_locks_unavailable(self, monkeypatch):
+        """Cleanup should be a no-op when Redis locks are unavailable."""
         from open_webui import scheduler as sched_mod
 
         self._patch_scheduler(monkeypatch)
-        monkeypatch.setattr(sched_mod, "WEBSOCKET_MANAGER", "")
+        monkeypatch.setattr(sched_mod, "USE_REDIS_LOCKS", False)
 
         calls = {"flush": 0}
 
@@ -522,7 +522,7 @@ class TestRedisPoolCleanupSchedule:
         )
         monkeypatch.setattr(sched_mod, "REDIS_POOL_CLEANUP_LOCK_TIMEOUT", 60)
         monkeypatch.setattr(sched_mod, "REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL", False)
-        monkeypatch.setattr(sched_mod, "WEBSOCKET_MANAGER", "redis")
+        monkeypatch.setattr(sched_mod, "USE_REDIS_LOCKS", True)
         monkeypatch.setattr(sched_mod, "WEBSOCKET_REDIS_URL", "redis://test")
         return sched_mod
 
@@ -564,10 +564,10 @@ class TestRedisPoolCleanupSchedule:
             fake_scheduler.add_job_kwargs["id"] == sched_mod.REDIS_POOL_CLEANUP_JOB_ID
         )
 
-    def test_schedule_skips_when_not_redis_manager(self, monkeypatch):
-        """No job should be created when WEBSOCKET_MANAGER is not 'redis'."""
+    def test_schedule_skips_when_redis_locks_unavailable(self, monkeypatch):
+        """No job should be created when Redis locks are unavailable."""
         sched_mod = self._patch_scheduler_config(monkeypatch)
-        monkeypatch.setattr(sched_mod, "WEBSOCKET_MANAGER", "")
+        monkeypatch.setattr(sched_mod, "USE_REDIS_LOCKS", False)
 
         class FakeScheduler:
             def __init__(self):

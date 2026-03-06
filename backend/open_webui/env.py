@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import pkgutil
+import redis
 import sys
 import shutil
 from pathlib import Path
@@ -333,6 +334,18 @@ ENABLE_REALTIME_CHAT_SAVE = (
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
+USE_REDIS_LOCKS = False
+
+try:
+    # Set a socket timeout so the app doesn't hang if Redis is unreachable.
+    redis_health_client = redis.Redis.from_url(REDIS_URL, socket_connect_timeout=2)
+
+    if redis_health_client.ping():
+        USE_REDIS_LOCKS = True
+        log.info("Redis is up. Redis locks are ENABLED.")
+except Exception as e:
+    log.info(f"Redis is unavailable. Redis locks are DISABLED: {e}")
+
 ####################################
 # WEBUI_AUTH (Required for security)
 ####################################
@@ -377,7 +390,7 @@ ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
 
-WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "redis")
+WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
 

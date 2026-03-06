@@ -5,7 +5,12 @@ import threading
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from open_webui.env import SRC_LOG_LEVELS, WEBSOCKET_MANAGER, WEBSOCKET_REDIS_URL
+from open_webui.env import (
+    SRC_LOG_LEVELS,
+    USE_REDIS_LOCKS,
+    WEBSOCKET_MANAGER,
+    WEBSOCKET_REDIS_URL,
+)
 from open_webui.config import (
     CHAT_LIFETIME_ENABLED,
     CHAT_LIFETIME_DAYS,
@@ -218,9 +223,9 @@ def update_cleanup_schedule():
 
 async def automated_redis_pool_cleanup():
     """
-    Scheduled task that flushes stale entries from the Redis-backed USER_POOL
-    and SESSION_POOL. Uses a distributed lock to ensure only one replica runs
-    the cleanup at a time.
+    Scheduled task that flushes stale entries from USER_POOL and SESSION_POOL.
+    Uses Redis-based distributed locking when Redis locks are available to ensure
+    only one replica runs the cleanup at a time.
 
     This task:
     1. Acquires a Redis distributed lock to prevent concurrent runs
@@ -234,8 +239,8 @@ async def automated_redis_pool_cleanup():
     lock_lost_flag = threading.Event()
 
     try:
-        if WEBSOCKET_MANAGER != "redis":
-            log.debug("Redis pool cleanup skipped: WEBSOCKET_MANAGER is not 'redis'")
+        if not USE_REDIS_LOCKS:
+            log.debug("Redis pool cleanup skipped: Redis locks are unavailable")
             return
 
         lock = RedisLock(
@@ -321,10 +326,8 @@ def schedule_redis_pool_cleanup():
             log.info("Redis pool cleanup disabled (REDIS_POOL_CLEANUP_ENABLED=false)")
             return
 
-        if WEBSOCKET_MANAGER != "redis":
-            log.info(
-                "Redis pool cleanup not scheduled: WEBSOCKET_MANAGER is not 'redis'"
-            )
+        if not USE_REDIS_LOCKS:
+            log.info("Redis pool cleanup not scheduled: Redis locks are unavailable")
             return
 
         trigger = CronTrigger.from_crontab(
