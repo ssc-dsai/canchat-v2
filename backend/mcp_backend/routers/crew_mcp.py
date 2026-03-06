@@ -407,13 +407,7 @@ async def run_crew_query(
             )
 
         # Unpack the (result_str, token_usage, mcp_process) tuple returned by run_intelligent_crew
-        if isinstance(crew_result, tuple) and len(crew_result) == 3:
-            result, token_usage, mcp_process = crew_result
-        else:
-            # Fallback: treat as plain string (should not happen in normal operation)
-            result = str(crew_result)
-            token_usage = {}
-            mcp_process = None
+        result, token_usage, mcp_process = crew_result
 
         # Log token consumption to the metrics DB so Crew AI usage is tracked alongside
         # standard CanChat token consumption.

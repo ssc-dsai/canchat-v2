@@ -1,6 +1,6 @@
 """add mcp_tool to message_metrics
 
-Revision ID: b2c3d4e5f6a7
+Revision ID: 0020fee30b61
 Revises: 5a92423d379e
 Create Date: 2026-03-03 14:19:17.048218
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "b2c3d4e5f6a7"
+revision: str = "0020fee30b61"
 down_revision: Union[str, None] = "5a92423d379e"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

@@ -318,7 +318,7 @@ class MessageMetricsTable:
                 )
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
-                    query = self._apply_mcp_filter(query, mcp_tool)
+                query = self._apply_mcp_filter(query, mcp_tool)
                 query = query.group_by("date")
                 results = query.all()
                 for date_str, count in results:
