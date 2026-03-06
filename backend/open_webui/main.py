@@ -453,14 +453,14 @@ async def lifespan(app: FastAPI):
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
 
-    # Initialize chat lifetime scheduler
+    # Initialize scheduler (chat cleanup, Redis pool cleanup, etc.)
     try:
-        from open_webui.scheduler import start_chat_lifetime_scheduler
+        from open_webui.scheduler import start_scheduler
 
-        start_chat_lifetime_scheduler()
-        log.info("Chat lifetime scheduler initialized")
+        start_scheduler()
+        log.info("Scheduler initialized")
     except Exception as e:
-        log.error(f"Failed to initialize chat lifetime scheduler: {e}")
+        log.error(f"Failed to initialize scheduler: {e}")
 
     # Add task completion callback to log if it exits
     def on_cleanup_done(task):
@@ -513,14 +513,14 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 log.error(f"Error during MCP manager cleanup: {e}")
 
-        # Cleanup chat lifetime scheduler
+        # Cleanup scheduler
         try:
-            from open_webui.scheduler import stop_chat_lifetime_scheduler
+            from open_webui.scheduler import stop_scheduler
 
-            stop_chat_lifetime_scheduler()
-            log.info("Chat lifetime scheduler cleanup completed")
+            stop_scheduler()
+            log.info("Scheduler cleanup completed")
         except Exception as e:
-            log.error(f"Error during chat lifetime scheduler cleanup: {e}")
+            log.error(f"Error during scheduler cleanup: {e}")
 
         # Cleanup cached Qdrant client
         try:
