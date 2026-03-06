@@ -793,9 +793,9 @@
 	}
 
 	// Handler for MCP process selection changes (Tokens tab)
-	function handleMcpProcessChange(event) {
-		const newProcess = event.target.value || null;
-		selectedMcpProcess = newProcess;
+	// Note: selectedMcpProcess is already updated by bind:value before this fires,
+	// so we do not read event.target.value (which would give the string "null" instead of JS null).
+	function handleMcpProcessChange() {
 		updateCharts(selectedDomain, selectedModel);
 	}
 
@@ -1022,8 +1022,8 @@
 							<select
 								id="mcp-process-select"
 								bind:value={selectedMcpProcess}
-								on:change={(e) => {
-									handleMcpProcessChange(e);
+								on:change={() => {
+									handleMcpProcessChange();
 									updateRangeMetrics();
 								}}
 								class="block w-52 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
