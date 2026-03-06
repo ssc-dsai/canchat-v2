@@ -246,7 +246,7 @@ def test_admin_cleanup_endpoint_requires_distributed_lock(monkeypatch):
             return False
 
     monkeypatch.setattr("open_webui.env.USE_REDIS_LOCKS", True)
-    monkeypatch.setattr("open_webui.env.WEBSOCKET_REDIS_URL", "redis://test")
+    monkeypatch.setattr("open_webui.env.REDIS_URL", "redis://test")
     monkeypatch.setattr("open_webui.socket.utils.RedisLock", DummyLock)
 
     async def fake_renew(*args, **kwargs):
@@ -303,7 +303,7 @@ def test_admin_cleanup_endpoint_returns_conflict_when_lock_already_held(monkeypa
             return False
 
     monkeypatch.setattr("open_webui.env.USE_REDIS_LOCKS", True)
-    monkeypatch.setattr("open_webui.env.WEBSOCKET_REDIS_URL", "redis://test")
+    monkeypatch.setattr("open_webui.env.REDIS_URL", "redis://test")
     monkeypatch.setattr("open_webui.socket.utils.RedisLock", DummyLock)
 
     async def fake_renew(*args, **kwargs):

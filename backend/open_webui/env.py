@@ -343,8 +343,7 @@ try:
     if redis_health_client.ping():
         USE_REDIS_LOCKS = True
         log.info("Redis is up. Redis locks are ENABLED.")
-    else:
-        USE_REDIS_LOCKS = False
+        redis_health_client.close()
 
 except (redis.ConnectionError, redis.TimeoutError, Exception) as e:
     log.warning(f"Redis is unavailable ({e}). " "Redis locks are DISABLED.")
