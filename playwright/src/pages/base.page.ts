@@ -21,21 +21,23 @@ export class BasePage {
 	t: typeof en;
 
 	// --- Locators: Header ---
-	readonly userProfileButton: Locator;
+	userProfileButton!: Locator;
 	menuSettings!: Locator;
 	menuAdminPanel!: Locator;
 	menuSignOut!: Locator;
 	setDefaultModel!: Locator;
-	readonly headerLanguageButtonEN: Locator;
-	readonly headerLanguageButtonFR: Locator;
+	headerLanguageButtonEN!: Locator;
+	headerLanguageButtonFR!: Locator;
 
 	// --- Locators: Sidebar ---
-	readonly sidebarOpenButton: Locator;
+	sidebarOpenButton!: Locator;
 	readonly sidebarCloseButton: Locator;
 	readonly sidebarNewChatButton: Locator;
+	readonly headerNewChatButton: Locator;
 
 	// --- Locators: System ---
 	readonly splashLogo: Locator;
+	confirmDialogButton!: Locator;
 
 	// --- Locators: Toast ---
 	readonly toast: Locator;
@@ -45,19 +47,14 @@ export class BasePage {
 		this.lang = lang;
 		this.t = lang === 'fr-CA' ? fr : en;
 
-		this.userProfileButton = page.getByRole('button', { name: 'User profile' });
-
 		this.sidebarOpenButton = page.locator('#sidebar-toggle-button');
 		this.sidebarCloseButton = page.locator('#hide-sidebar-button');
-		this.sidebarNewChatButton = page.getByRole('link', { name: 'logo New Chat' });
-		this.headerLanguageButtonEN = page.getByRole('button', { name: 'EN', exact: true });
-		this.headerLanguageButtonFR = page.getByRole('button', { name: 'FR', exact: true });
-
+		this.sidebarNewChatButton = page.locator('#sidebar-new-chat-button');
+		this.headerNewChatButton = page.locator('#new-chat-button');
 		this.splashLogo = page.locator('img#logo[alt="CANChat Logo"]');
+		this.toast = page.locator('li[role="status"]');
 
 		this.updateLanguage(lang);
-
-		this.toast = page.locator('li[role="status"]');
 	}
 
 	/**
@@ -67,6 +64,12 @@ export class BasePage {
 	updateLanguage(lang: Language) {
 		this.t = lang === 'fr-CA' ? fr : en;
 
+		this.userProfileButton = this.page.getByRole('button', {
+			name: this.t['User profile'] || 'User profile'
+		});
+		this.headerLanguageButtonEN = this.page.getByRole('button', { name: 'EN', exact: true });
+		this.headerLanguageButtonFR = this.page.getByRole('button', { name: 'FR', exact: true });
+
 		this.menuSettings = this.page.getByRole('menuitem', { name: this.t['Settings'] || 'Settings' });
 		this.menuAdminPanel = this.page.getByRole('menuitem', {
 			name: this.t['Admin Panel'] || 'Admin Panel'
@@ -74,6 +77,9 @@ export class BasePage {
 		this.menuSignOut = this.page.getByRole('menuitem', { name: /Sign Out|Déconnexion/i });
 		this.setDefaultModel = this.page.getByRole('button', {
 			name: this.t['Set as default'] || 'Set as default'
+		});
+		this.confirmDialogButton = this.page.getByRole('button', {
+			name: this.t['Confirm'] || 'Confirm'
 		});
 	}
 
@@ -112,16 +118,46 @@ export class BasePage {
 	 * @param visible the state of the sidebar
 	 */
 	async toggleSidebar(visible: boolean) {
-		const isClosed = await this.sidebarOpenButton.isVisible();
-		const isOpen = await this.sidebarCloseButton.isVisible();
+		// Wait for the UI to be ready enough to determine state
+		// We use a short wait for either button to appear to establish baseline
+		try {
+			await Promise.race([
+				this.sidebarOpenButton.waitFor({ state: 'visible', timeout: 5000 }),
+				this.sidebarCloseButton.waitFor({ state: 'visible', timeout: 5000 })
+			]);
+		} catch (e) {
+			// Continue, let checks decide
+		}
 
-		if (visible && isClosed) {
+		if (visible) {
+			// We want to OPEN it.
+			// If Close button is already visible, it's open. Done.
+			// Using isVisible() here is safer because we waited above.
+			if (await this.sidebarCloseButton.isVisible()) {
+				return;
+			}
+			// It's not Open, so it must be Closed (or loading).
+			// Click Open button. This will WAIT for it to be visible/enabled.
 			await this.sidebarOpenButton.click();
 			await expect(this.sidebarCloseButton).toBeVisible();
-		} else if (!visible && isOpen) {
+		} else {
+			// We want to CLOSE it.
+			// If Open button is already visible, it's closed. Done.
+			if (await this.sidebarOpenButton.isVisible()) {
+				return;
+			}
+			// It's not Closed, so it must be Open.
+			// Click Close button. This will WAIT for it.
 			await this.sidebarCloseButton.click();
 			await expect(this.sidebarOpenButton).toBeVisible();
 		}
+	}
+
+	/**
+	 * Returns true if the sidebar is currently open.
+	 */
+	async isSidebarOpen(): Promise<boolean> {
+		return await this.sidebarCloseButton.isVisible();
 	}
 
 	/**

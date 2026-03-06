@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getI18n } from '$lib/utils/context';
+
+	import { onMount } from 'svelte';
 	import { getMCPConfig } from '$lib/apis/mcp';
-	const i18n = getContext('i18n');
+	const i18n = getI18n();
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';

@@ -1,5 +1,4 @@
-import { test, expect } from '../../../src/fixtures/base-fixture';
-import { Language } from '../../../src/pages/base.page';
+import { test } from '../../../src/fixtures/base-fixture';
 
 test.describe('Feature: Model Context Protocol (MCP)', () => {
 	test.setTimeout(240000);

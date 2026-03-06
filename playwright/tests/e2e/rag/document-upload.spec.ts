@@ -1,5 +1,4 @@
 import { test, expect } from '../../../src/fixtures/base-fixture';
-import { Language } from '../../../src/pages/base.page';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, tick } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import { Switch } from 'bits-ui';
 	export let state = true;
 	export let ariaLabel = '';

@@ -55,7 +55,7 @@ def get_config_value(request: Request, key: str, default=None):
 
 def set_config_value(request: Request, key: str, value):
     """Helper function to set config values that handles both dict and object formats"""
-    if key not in MCPConfigForm.model_fields.keys:
+    if key not in MCPConfigForm.model_fields.keys():
         raise ValueError(f"Config key '{key}' is not allowed")
 
     config = request.app.state.config

@@ -57,7 +57,6 @@ from open_webui.routers import (
     groups,
     files,
     functions,
-    memories,
     metrics,
     models,
     knowledge,
@@ -363,6 +362,30 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Validate Redis lock manager health (already initialized during import)
+    # The lock manager creation will fail fast if REDIS_URL is not set or Redis is unavailable
+    try:
+        from open_webui.retrieval.vector.locks import get_collection_lock_manager
+
+        redis_lock_manager = get_collection_lock_manager()
+
+        # Perform async health check to verify connectivity
+        if not await redis_lock_manager.health_check():
+            raise RuntimeError(
+                "Redis health check failed during startup. "
+                "Distributed locking requires Redis to be available and responsive."
+            )
+
+        app.state.redis_lock_manager = redis_lock_manager
+        log.info(
+            f"Redis distributed locking validated and ready: {redis_lock_manager.redis_url}"
+        )
+    except Exception as e:
+        log.error(
+            f"FATAL: Redis validation failed. Application cannot start without distributed locking. Error: {e}"
+        )
+        raise
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -498,6 +521,24 @@ async def lifespan(app: FastAPI):
             log.info("Chat lifetime scheduler cleanup completed")
         except Exception as e:
             log.error(f"Error during chat lifetime scheduler cleanup: {e}")
+
+        # Cleanup cached Qdrant client
+        try:
+            from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+
+            if VECTOR_DB_CLIENT and hasattr(VECTOR_DB_CLIENT, "close"):
+                await VECTOR_DB_CLIENT.close()
+                log.info("Qdrant client cleanup completed")
+        except Exception as e:
+            log.error(f"Error during Qdrant client cleanup: {e}")
+
+        # Cleanup Redis lock manager
+        if hasattr(app.state, "redis_lock_manager") and app.state.redis_lock_manager:
+            try:
+                await app.state.redis_lock_manager.close()
+                log.info("Redis lock manager cleanup completed")
+            except Exception as e:
+                log.error(f"Error during Redis lock manager cleanup: {e}")
 
 
 app = FastAPI(
@@ -1070,7 +1111,6 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledg
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
-app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
@@ -1447,6 +1487,51 @@ def healthcheck_with_db():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection failed",
+        )
+
+
+@app.get("/health/redis")
+async def healthcheck_redis():
+    """
+    Redis readiness endpoint for orchestration (Kubernetes, load balancers).
+    Returns 503 if Redis is unhealthy or circuit is OPEN.
+    """
+    try:
+        from open_webui.retrieval.vector.locks import get_collection_lock_manager
+
+        manager = get_collection_lock_manager()
+        metrics = manager.get_health_metrics()
+
+        # Fail if circuit is open (persistent Redis issues)
+        if metrics["circuit_state"] == "open":
+            log.warning(
+                f"[HEALTH:REDIS] Circuit OPEN: {metrics['consecutive_failures']} "
+                f"consecutive failures, {metrics['recovery_attempts']} recovery attempts"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Redis circuit open. State: {metrics}",
+            )
+
+        # Fail if Redis not initialized
+        if not metrics["redis_initialized"]:
+            log.warning("[HEALTH:REDIS] Redis not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Redis not initialized",
+            )
+
+        return {
+            "status": True,
+            "redis": metrics,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Redis health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Redis health check error: {str(e)}",
         )
 
 

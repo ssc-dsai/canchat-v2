@@ -332,6 +332,7 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+USE_REDIS_LOCKS = os.environ.get("USE_REDIS_LOCKS", "False").lower() == "true"
 
 ####################################
 # WEBUI_AUTH (Required for security)
@@ -377,7 +378,7 @@ ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
 
-WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
+WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "redis")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
 
