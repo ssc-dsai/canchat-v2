@@ -16,6 +16,7 @@ from open_webui.config import (
     CHAT_CLEANUP_SCHEDULE_CRON,
     CHAT_CLEANUP_SCHEDULE_TIMEZONE,
     CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS,
+    CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS,
 )
 from open_webui.socket.utils import RedisLock, renew_lock_periodically
 
@@ -90,11 +91,20 @@ async def automated_chat_cleanup():
                         "Another replica is already running chat cleanup - skipping this run"
                     )
                 return
-        elif not USE_REDIS_LOCKS:
+        elif CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS:
+            # Perform cleanup when not using redis and manually configured to start.
             log.warning(
                 "Running automated chat cleanup without distributed lock "
                 "Use only in single-instance environments."
             )
+        else:
+            # Skip cleanup when single-run guarantees are unavailable.
+            log.warning(
+                "Skipping automated chat cleanup: distributed lock is unavailable "
+                "Redis was not detected. Set CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true "
+                "for single-instance local development."
+            )
+            return
 
         log.info(
             f"Starting automated chat cleanup (age > {days} days, preserve_pinned={preserve_pinned}, preserve_archived={preserve_archived})"

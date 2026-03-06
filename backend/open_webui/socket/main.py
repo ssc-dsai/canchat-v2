@@ -26,15 +26,27 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
 if WEBSOCKET_MANAGER == "redis":
-    mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
-    sio = socketio.AsyncServer(
-        cors_allowed_origins=[],
-        async_mode="asgi",
-        transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
-        allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
-        always_connect=True,
-        client_manager=mgr,
-    )
+    try:
+        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+        sio = socketio.AsyncServer(
+            cors_allowed_origins=[],
+            async_mode="asgi",
+            transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
+            allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
+            always_connect=True,
+            client_manager=mgr,
+        )
+    except Exception as e:
+        log.error(
+            f"Failed to initialize Redis websocket manager: {e}. Falling back to local manager."
+        )
+        sio = socketio.AsyncServer(
+            cors_allowed_origins=[],
+            async_mode="asgi",
+            transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
+            allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
+            always_connect=True,
+        )
 else:
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],

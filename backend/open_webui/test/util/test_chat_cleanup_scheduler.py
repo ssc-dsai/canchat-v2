@@ -56,6 +56,7 @@ def _patch_common_scheduler_dependencies(
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_CRON", "0 2 * * *")
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_TIMEZONE", "America/Toronto")
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS", 300)
+    monkeypatch.setattr(scheduler, "CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", False)
     monkeypatch.setattr(scheduler, "USE_REDIS_LOCKS", True)
     monkeypatch.setattr(scheduler, "REDIS_URL", "redis://test")
     monkeypatch.setattr(scheduler, "RedisLock", FakeLock)
@@ -140,12 +141,14 @@ def test_automated_cleanup_uses_executor_for_heavy_work(monkeypatch):
     assert fake_loop.run_in_executor_called > 0
 
 
-def test_automated_cleanup_runs_without_redis_locks(monkeypatch):
+def test_automated_cleanup_runs_with_local_override(monkeypatch):
     """
-    When USE_REDIS_LOCKS is False, cleanup should still run without distributed locking.
+    When USE_REDIS_LOCKS is False but CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS is True,
+    cleanup should run without distributed locking.
     """
     _patch_common_scheduler_dependencies(monkeypatch, lock_acquired=True)
     monkeypatch.setattr(scheduler, "USE_REDIS_LOCKS", False)
+    monkeypatch.setattr(scheduler, "CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", True)
 
     calls = {"cleanup": 0}
 
@@ -158,6 +161,28 @@ def test_automated_cleanup_runs_without_redis_locks(monkeypatch):
     asyncio.run(scheduler.automated_chat_cleanup())
 
     assert calls["cleanup"] == 1
+
+
+def test_automated_cleanup_skips_without_redis_and_no_local_override(monkeypatch):
+    """
+    When USE_REDIS_LOCKS is False and CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS is False,
+    cleanup should be skipped for safety.
+    """
+    _patch_common_scheduler_dependencies(monkeypatch, lock_acquired=True)
+    monkeypatch.setattr(scheduler, "USE_REDIS_LOCKS", False)
+    monkeypatch.setattr(scheduler, "CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", False)
+
+    calls = {"cleanup": 0}
+
+    async def fake_cleanup(*args, **kwargs):
+        calls["cleanup"] += 1
+        return {"ok": True}
+
+    _install_fake_retrieval_module(monkeypatch, fake_cleanup)
+
+    asyncio.run(scheduler.automated_chat_cleanup())
+
+    assert calls["cleanup"] == 0
 
 
 def test_update_cleanup_schedule_uses_configured_cron_timezone_and_job_options(
