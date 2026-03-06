@@ -1342,8 +1342,8 @@ CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL = int(
     os.environ.get("CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL", "300")
 )
 
-# Chat cleanup schedule in cron format (default: daily at 2 AM)
-CHAT_CLEANUP_SCHEDULE_CRON = os.environ.get("CHAT_CLEANUP_SCHEDULE_CRON", "0 2 * * *")
+# Chat cleanup schedule in cron format (default: daily at 1:23 AM)
+CHAT_CLEANUP_SCHEDULE_CRON = os.environ.get("CHAT_CLEANUP_SCHEDULE_CRON", "23 1 * * *")
 
 # Chat cleanup schedule timezone (default: Toronto)
 CHAT_CLEANUP_SCHEDULE_TIMEZONE = os.environ.get(

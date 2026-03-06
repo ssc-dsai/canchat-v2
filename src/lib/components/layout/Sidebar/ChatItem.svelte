@@ -259,9 +259,9 @@
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
 				class="bg-transparent w-full outline-none mr-10"
-				on:keydown={(e) => {
+				on:keydown={async (e) => {
 					if (e.key === 'Enter') {
-						editChatTitle(id, chatTitle);
+						await editChatTitle(id, chatTitle);
 						confirmEdit = false;
 						chatTitle = '';
 					}
@@ -340,6 +340,27 @@
 						<!-- Show checkbox when in selection mode or on hover -->
 						<div
 							class="checkbox-area mr-2 flex items-center cursor-pointer p-1 -m-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+							on:click|stopPropagation|preventDefault={() => {
+								if (selected) {
+									dispatch('unselect');
+								} else {
+									dispatch('select');
+								}
+							}}
+							on:keydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.stopPropagation();
+									e.preventDefault();
+									if (selected) {
+										dispatch('unselect');
+									} else {
+										dispatch('select');
+									}
+								}
+							}}
+							role="button"
+							tabindex="0"
+							aria-label={selected ? 'Unselect' : 'Select'}
 						>
 							{#if selected}
 								<!-- Selected checkbox -->
@@ -391,13 +412,12 @@
         {selected
 			? 'from-transparent'
 			: id === $chatId || confirmEdit
-				? 'from-gray-200 dark:from-gray-900'
+				? 'visible block from-gray-200 dark:from-gray-900'
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
-            absolute {className === 'pr-2'
+            absolute z-50 {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%
-
-              to-transparent"
+            to-transparent"
 		on:mouseenter={(e) => {
 			mouseOver = true;
 		}}
@@ -412,8 +432,10 @@
 				<Tooltip content={$i18n.t('Confirm')}>
 					<button
 						class="self-center dark:hover:text-white transition"
-						on:click={() => {
-							editChatTitle(id, chatTitle);
+						aria-label={$i18n.t('Confirm')}
+						data-test="confirm-rename"
+						on:click={async () => {
+							await editChatTitle(id, chatTitle);
 							confirmEdit = false;
 							chatTitle = '';
 							toast.success($i18n.t('Chat title saved.'));
@@ -426,13 +448,15 @@
 				<Tooltip content={$i18n.t('Cancel')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
+						aria-label={$i18n.t('Cancel')}
+						data-test="cancel-rename"
 						on:click={() => {
 							confirmEdit = false;
 							chatTitle = '';
 							toast.success($i18n.t('Chat title rename cancelled'));
 						}}
 					>
-						<XMark strokeWidth="2.5" />
+						<XMark className="size-3.5" strokeWidth="2.5" />
 					</button>
 				</Tooltip>
 			</div>

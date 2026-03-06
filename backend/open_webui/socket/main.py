@@ -3,7 +3,6 @@ import socketio
 import logging
 import sys
 import time
-import redis
 
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
@@ -26,30 +25,28 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
-effective_websocket_manager = WEBSOCKET_MANAGER
-
 if WEBSOCKET_MANAGER == "redis":
     try:
-        redis_health_client = redis.Redis.from_url(WEBSOCKET_REDIS_URL)
-        redis_health_client.ping()
-    except Exception as e:
-        log.warning(
-            f"Redis websocket manager is unavailable ({e}). "
-            "Falling back to local websocket manager."
+        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+        sio = socketio.AsyncServer(
+            cors_allowed_origins=[],
+            async_mode="asgi",
+            transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
+            allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
+            always_connect=True,
+            client_manager=mgr,
         )
-        effective_websocket_manager = ""
-
-
-if effective_websocket_manager == "redis":
-    mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
-    sio = socketio.AsyncServer(
-        cors_allowed_origins=[],
-        async_mode="asgi",
-        transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
-        allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
-        always_connect=True,
-        client_manager=mgr,
-    )
+    except Exception as e:
+        log.error(
+            f"Failed to initialize Redis websocket manager: {e}. Falling back to local manager."
+        )
+        sio = socketio.AsyncServer(
+            cors_allowed_origins=[],
+            async_mode="asgi",
+            transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
+            allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
+            always_connect=True,
+        )
 else:
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],
@@ -71,7 +68,7 @@ async def _lock_noop():
 
 # Dictionary to maintain the user pool
 
-if effective_websocket_manager == "redis":
+if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
     try:
         SESSION_POOL = RedisDict(
