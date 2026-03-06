@@ -354,24 +354,25 @@ def schedule_redis_pool_cleanup():
         log.error(f"Failed to update Redis pool cleanup schedule: {str(e)}")
 
 
-def start_chat_lifetime_scheduler():
+def start_scheduler():
     """
-    Initialize the chat lifetime scheduler.
+    Initialize the application scheduler.
     This should be called once when the application starts.
+    Sets up all scheduled tasks including chat lifetime cleanup and Redis pool cleanup.
     """
     try:
-        log.info("Initializing chat lifetime scheduler...")
+        log.info("Initializing scheduler...")
         get_scheduler()  # Initialize scheduler
         update_cleanup_schedule()  # Set up chat lifetime cleanup schedule
         schedule_redis_pool_cleanup()  # Set up Redis pool cleanup schedule
-        log.info("Chat lifetime scheduler initialization complete")
+        log.info("Scheduler initialization complete")
     except Exception as e:
-        log.error(f"Failed to start chat lifetime scheduler: {str(e)}")
+        log.error(f"Failed to start scheduler: {str(e)}")
 
 
-def stop_chat_lifetime_scheduler():
+def stop_scheduler():
     """
-    Stop the chat lifetime scheduler.
+    Stop the application scheduler.
     This should be called when the application shuts down.
     """
     global scheduler
@@ -379,7 +380,7 @@ def stop_chat_lifetime_scheduler():
         try:
             scheduler.shutdown()
             scheduler = None
-            log.info("Chat lifetime scheduler stopped")
+            log.info("Scheduler stopped")
         except Exception as e:
             log.error(f"Error stopping scheduler: {str(e)}")
 
