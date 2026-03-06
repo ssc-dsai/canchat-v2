@@ -57,7 +57,7 @@ def _patch_common_scheduler_dependencies(
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_TIMEZONE", "America/Toronto")
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS", 300)
     monkeypatch.setattr(scheduler, "USE_REDIS_LOCKS", True)
-    monkeypatch.setattr(scheduler, "WEBSOCKET_REDIS_URL", "redis://test")
+    monkeypatch.setattr(scheduler, "REDIS_URL", "redis://test")
     monkeypatch.setattr(scheduler, "RedisLock", FakeLock)
     monkeypatch.setattr(scheduler, "renew_lock_periodically", _no_op_lock_renewal)
 
