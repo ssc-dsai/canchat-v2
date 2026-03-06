@@ -336,16 +336,49 @@ async def crew_mcp_query(sid, data):
         log.info("Starting crew execution in thread pool executor via WebSocket")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            result = await loop.run_in_executor(
+            crew_result = await loop.run_in_executor(
                 executor,
                 crew_mcp_manager.run_intelligent_crew,
                 query,
                 selected_tools,
             )
 
+        # Unpack the (result_str, token_usage, mcp_process) tuple returned by run_intelligent_crew
+        if isinstance(crew_result, tuple) and len(crew_result) == 3:
+            result, token_usage, mcp_process = crew_result
+        else:
+            result = str(crew_result)
+            token_usage = {}
+            mcp_process = None
+
         log.info(
             f"Crew execution finished via WebSocket. Result length: {len(result) if result else 0}"
         )
+
+        # Log token consumption to message_metrics
+        try:
+            from open_webui.models.message_metrics import MessageMetrics
+            from types import SimpleNamespace
+
+            if token_usage and token_usage.get("total_tokens", 0) > 0:
+                user_obj = SimpleNamespace(
+                    id=user_session.get("id"),
+                    domain=user_session.get("domain", ""),
+                )
+                crewai_model = (
+                    f"azure/{crew_mcp_manager.azure_config.deployment}"
+                    if crew_mcp_manager.azure_config.deployment
+                    else "crewai"
+                )
+                MessageMetrics.insert_new_metrics(
+                    user=user_obj,
+                    model=crewai_model,
+                    usage=token_usage,
+                    chat_id=chat_id,
+                    mcp_tool=mcp_process,
+                )
+        except Exception as metrics_err:
+            log.warning(f"crew-mcp-query: Failed to log token metrics: {metrics_err}")
 
         used_tools = [tool["name"] for tool in tools]
 

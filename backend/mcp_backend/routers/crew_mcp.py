@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_verified_user
 from open_webui.models.chats import Chats
+from open_webui.models.message_metrics import MessageMetrics
 from open_webui.socket.main import get_event_emitter
 from open_webui.utils.task import truncate_title_by_chars
 
@@ -398,12 +399,37 @@ async def run_crew_query(
         loop = asyncio.get_event_loop()
         log.info("Starting crew execution in thread pool executor")
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            result = await loop.run_in_executor(
+            crew_result = await loop.run_in_executor(
                 executor,
                 crew_mcp_manager.run_intelligent_crew,
                 request.query,
                 selected_tools,
             )
+
+        # Unpack the (result_str, token_usage, mcp_process) tuple returned by run_intelligent_crew
+        result, token_usage, mcp_process = crew_result
+
+        # Log token consumption to the metrics DB so Crew AI usage is tracked alongside
+        # standard CanChat token consumption.
+        if token_usage and token_usage.get("total_tokens", 0) > 0:
+            try:
+                crewai_model = (
+                    f"azure/{crew_mcp_manager.azure_config.deployment}"
+                    if crew_mcp_manager.azure_config.deployment
+                    else "crewai"
+                )
+                MessageMetrics.insert_new_metrics(
+                    user=user,
+                    model=crewai_model,
+                    usage=token_usage,
+                    chat_id=request.chat_id,
+                    mcp_tool=mcp_process,
+                )
+                log.info(
+                    f"Logged CrewAI token usage: {token_usage} for MCP process: {mcp_process}, model: {crewai_model}"
+                )
+            except Exception as metric_err:
+                log.warning(f"Failed to log CrewAI token usage: {metric_err}")
 
         log.info(
             f"Crew execution finished. Result type: {type(result)}, length: {len(result) if result else 0}"
@@ -537,12 +563,41 @@ async def run_multi_server_crew_query(
 
         loop = asyncio.get_event_loop()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            result = await loop.run_in_executor(
+            crew_result = await loop.run_in_executor(
                 executor,
                 crew_mcp_manager.run_intelligent_crew,
                 request.query,
                 selected_tools,
             )
+
+        # Unpack the (result_str, token_usage, mcp_process) tuple
+        if isinstance(crew_result, tuple) and len(crew_result) == 3:
+            result, token_usage, mcp_process = crew_result
+        else:
+            result = str(crew_result)
+            token_usage = {}
+            mcp_process = None
+
+        # Log token consumption so Crew AI usage appears in CanChat metrics DB
+        if token_usage and token_usage.get("total_tokens", 0) > 0:
+            try:
+                crewai_model = (
+                    f"azure/{crew_mcp_manager.azure_config.deployment}"
+                    if crew_mcp_manager.azure_config.deployment
+                    else "crewai"
+                )
+                MessageMetrics.insert_new_metrics(
+                    user=user,
+                    model=crewai_model,
+                    usage=token_usage,
+                    chat_id=request.chat_id,
+                    mcp_tool=mcp_process,
+                )
+                log.info(
+                    f"Logged CrewAI token usage (multi): {token_usage} for MCP process: {mcp_process}"
+                )
+            except Exception as metric_err:
+                log.warning(f"Failed to log CrewAI token usage (multi): {metric_err}")
 
         return CrewMCPResponse(
             result=result, tools_used=[tool["name"] for tool in tools], success=True

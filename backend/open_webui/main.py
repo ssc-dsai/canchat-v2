@@ -381,10 +381,11 @@ async def lifespan(app: FastAPI):
             f"Redis distributed locking validated and ready: {redis_lock_manager.redis_url}"
         )
     except Exception as e:
-        log.error(
-            f"FATAL: Redis validation failed. Application cannot start without distributed locking. Error: {e}"
+        log.warning(
+            f"Redis validation failed — distributed locking unavailable. "
+            f"Continuing without Redis (single-instance / local dev mode). Error: {e}"
         )
-        raise
+        app.state.redis_lock_manager = None
 
     if RESET_CONFIG_ON_START:
         reset_config()
