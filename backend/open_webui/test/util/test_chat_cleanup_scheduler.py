@@ -56,8 +56,7 @@ def _patch_common_scheduler_dependencies(
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_CRON", "0 2 * * *")
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_TIMEZONE", "America/Toronto")
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS", 300)
-    monkeypatch.setattr(scheduler, "CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", False)
-    monkeypatch.setattr(scheduler, "WEBSOCKET_MANAGER", "redis")
+    monkeypatch.setattr(scheduler, "USE_REDIS_LOCKS", True)
     monkeypatch.setattr(scheduler, "WEBSOCKET_REDIS_URL", "redis://test")
     monkeypatch.setattr(scheduler, "RedisLock", FakeLock)
     monkeypatch.setattr(scheduler, "renew_lock_periodically", _no_op_lock_renewal)
@@ -141,13 +140,12 @@ def test_automated_cleanup_uses_executor_for_heavy_work(monkeypatch):
     assert fake_loop.run_in_executor_called > 0
 
 
-def test_automated_cleanup_runs_without_redis_when_local_override_enabled(monkeypatch):
+def test_automated_cleanup_runs_without_redis_locks(monkeypatch):
     """
-    Local single-instance override should allow cleanup execution without Redis locking.
+    When USE_REDIS_LOCKS is False, cleanup should still run without distributed locking.
     """
     _patch_common_scheduler_dependencies(monkeypatch, lock_acquired=True)
-    monkeypatch.setattr(scheduler, "WEBSOCKET_MANAGER", "")
-    monkeypatch.setattr(scheduler, "CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", True)
+    monkeypatch.setattr(scheduler, "USE_REDIS_LOCKS", False)
 
     calls = {"cleanup": 0}
 
@@ -219,7 +217,7 @@ def test_get_schedule_info_includes_cron_timezone_for_scheduled_job(monkeypatch)
     monkeypatch.setattr(scheduler, "CHAT_LIFETIME_DAYS", ConfigValue(30))
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_CRON", "0 4 * * *")
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_TIMEZONE", "America/Toronto")
-    monkeypatch.setattr(scheduler, "WEBSOCKET_MANAGER", "redis")
+    monkeypatch.setattr(scheduler, "USE_REDIS_LOCKS", True)
 
     class FakeJob:
         def __init__(self):
@@ -242,38 +240,16 @@ def test_get_schedule_info_includes_cron_timezone_for_scheduled_job(monkeypatch)
     assert info["next_run"] == "2026-02-19T04:00:00-05:00"
 
 
-def test_get_schedule_info_reports_blocked_when_websocket_manager_not_redis(
-    monkeypatch,
-):
+def test_get_schedule_info_shows_scheduled_when_redis_unavailable(monkeypatch):
     """
-    Schedule info should clearly report blocked automation when distributed locking is unavailable.
-    """
-    monkeypatch.setattr(scheduler, "CHAT_LIFETIME_ENABLED", ConfigValue(True))
-    monkeypatch.setattr(scheduler, "CHAT_LIFETIME_DAYS", ConfigValue(30))
-    monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_CRON", "0 2 * * *")
-    monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_TIMEZONE", "Etc/UTC")
-    monkeypatch.setattr(scheduler, "WEBSOCKET_MANAGER", "")
-    monkeypatch.setattr(scheduler, "CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", False)
-
-    info = scheduler.get_schedule_info()
-
-    assert info["status"] == "Blocked"
-    assert info["next_run"] is None
-    assert info["schedule_cron"] == "0 2 * * *"
-    assert info["schedule_timezone"] == "Etc/UTC"
-    assert "WEBSOCKET_MANAGER" in info["reason"]
-
-
-def test_get_schedule_info_not_blocked_when_local_override_enabled(monkeypatch):
-    """
-    Status should be schedulable when non-Redis local override is enabled.
+    When USE_REDIS_LOCKS is False, schedule info should still report Scheduled
+    since cleanup runs without distributed lock.
     """
     monkeypatch.setattr(scheduler, "CHAT_LIFETIME_ENABLED", ConfigValue(True))
     monkeypatch.setattr(scheduler, "CHAT_LIFETIME_DAYS", ConfigValue(30))
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_CRON", "0 2 * * *")
     monkeypatch.setattr(scheduler, "CHAT_CLEANUP_SCHEDULE_TIMEZONE", "Etc/UTC")
-    monkeypatch.setattr(scheduler, "WEBSOCKET_MANAGER", "")
-    monkeypatch.setattr(scheduler, "CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", True)
+    monkeypatch.setattr(scheduler, "USE_REDIS_LOCKS", False)
 
     class FakeJob:
         def __init__(self):
@@ -288,7 +264,8 @@ def test_get_schedule_info_not_blocked_when_local_override_enabled(monkeypatch):
     info = scheduler.get_schedule_info()
 
     assert info["status"] == "Scheduled"
-    assert "reason" not in info
+    assert info["schedule_cron"] == "0 2 * * *"
+    assert info["schedule_timezone"] == "Etc/UTC"
 
 
 def test_describe_cron_schedule_returns_raw_cron():

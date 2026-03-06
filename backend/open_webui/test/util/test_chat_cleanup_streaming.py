@@ -233,10 +233,6 @@ def test_admin_cleanup_endpoint_requires_distributed_lock(monkeypatch):
         "open_webui.config.CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL",
         300,
     )
-    monkeypatch.setattr(
-        "open_webui.config.CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS",
-        False,
-    )
 
     class DummyLock:
         def __init__(self, redis_url, lock_name, timeout_secs):
@@ -249,7 +245,7 @@ def test_admin_cleanup_endpoint_requires_distributed_lock(monkeypatch):
         async def release_lock(self):
             return False
 
-    monkeypatch.setattr("open_webui.env.WEBSOCKET_MANAGER", "redis")
+    monkeypatch.setattr("open_webui.env.USE_REDIS_LOCKS", True)
     monkeypatch.setattr("open_webui.env.WEBSOCKET_REDIS_URL", "redis://test")
     monkeypatch.setattr("open_webui.socket.utils.RedisLock", DummyLock)
 
@@ -294,10 +290,6 @@ def test_admin_cleanup_endpoint_returns_conflict_when_lock_already_held(monkeypa
         "open_webui.config.CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL",
         300,
     )
-    monkeypatch.setattr(
-        "open_webui.config.CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS",
-        False,
-    )
 
     class DummyLock:
         def __init__(self, redis_url, lock_name, timeout_secs):
@@ -310,7 +302,7 @@ def test_admin_cleanup_endpoint_returns_conflict_when_lock_already_held(monkeypa
         async def release_lock(self):
             return False
 
-    monkeypatch.setattr("open_webui.env.WEBSOCKET_MANAGER", "redis")
+    monkeypatch.setattr("open_webui.env.USE_REDIS_LOCKS", True)
     monkeypatch.setattr("open_webui.env.WEBSOCKET_REDIS_URL", "redis://test")
     monkeypatch.setattr("open_webui.socket.utils.RedisLock", DummyLock)
 
@@ -329,7 +321,11 @@ def test_admin_cleanup_endpoint_returns_conflict_when_lock_already_held(monkeypa
         assert exc.status_code == 409
 
 
-def test_admin_cleanup_endpoint_allows_local_override_without_redis(monkeypatch):
+def test_admin_cleanup_endpoint_runs_without_redis_locks(monkeypatch):
+    """
+    When USE_REDIS_LOCKS is False, admin cleanup should return 503 because
+    the API endpoint requires distributed locking for safety.
+    """
     monkeypatch.setattr(
         "open_webui.config.CHAT_LIFETIME_ENABLED", SimpleNamespace(value=True)
     )
@@ -344,14 +340,13 @@ def test_admin_cleanup_endpoint_allows_local_override_without_redis(monkeypatch)
         "open_webui.config.CHAT_CLEANUP_PRESERVE_ARCHIVED",
         SimpleNamespace(value=False),
     )
-    monkeypatch.setattr("open_webui.config.CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS", True)
-    monkeypatch.setattr("open_webui.env.WEBSOCKET_MANAGER", "")
+    monkeypatch.setattr("open_webui.env.USE_REDIS_LOCKS", False)
 
-    async def fake_cleanup(**kwargs):
-        return {"chats_deleted": 0, "errors": []}
+    try:
+        asyncio.run(retrieval.api_cleanup_expired_chats(user=None))
+        assert False, "Expected HTTPException"
+    except Exception as exc:
+        from fastapi import HTTPException
 
-    monkeypatch.setattr(retrieval, "cleanup_expired_chats_streaming", fake_cleanup)
-
-    result = asyncio.run(retrieval.api_cleanup_expired_chats(user=None))
-
-    assert result["status"] == "success"
+        assert isinstance(exc, HTTPException)
+        assert exc.status_code == 503
