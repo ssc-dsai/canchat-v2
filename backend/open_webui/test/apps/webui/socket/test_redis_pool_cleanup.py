@@ -428,7 +428,7 @@ class TestAutomatedRedisPoolCleanup:
         FakeLock.acquire_error = lock_error
 
         monkeypatch.setattr(sched_mod, "USE_REDIS_LOCKS", True)
-        monkeypatch.setattr(sched_mod, "WEBSOCKET_REDIS_URL", "redis://test")
+        monkeypatch.setattr(sched_mod, "REDIS_URL", "redis://test")
         monkeypatch.setattr(sched_mod, "REDIS_POOL_CLEANUP_ENABLED", True)
         monkeypatch.setattr(sched_mod, "REDIS_POOL_CLEANUP_SCHEDULE_CRON", "0 0 * * *")
         monkeypatch.setattr(
@@ -523,7 +523,7 @@ class TestRedisPoolCleanupSchedule:
         monkeypatch.setattr(sched_mod, "REDIS_POOL_CLEANUP_LOCK_TIMEOUT", 60)
         monkeypatch.setattr(sched_mod, "REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL", False)
         monkeypatch.setattr(sched_mod, "USE_REDIS_LOCKS", True)
-        monkeypatch.setattr(sched_mod, "WEBSOCKET_REDIS_URL", "redis://test")
+        monkeypatch.setattr(sched_mod, "REDIS_URL", "redis://test")
         return sched_mod
 
     def test_schedule_creates_job_with_correct_cron(self, monkeypatch):
