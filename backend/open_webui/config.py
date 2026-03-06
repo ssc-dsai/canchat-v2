@@ -1384,6 +1384,11 @@ REDIS_POOL_CLEANUP_LOCK_TIMEOUT = int(
     os.environ.get("REDIS_POOL_CLEANUP_LOCK_TIMEOUT", "1800")
 )
 
+# Lock renewal interval in seconds for Redis pool cleanup (default: 300 seconds/5 minutes)
+REDIS_POOL_CLEANUP_LOCK_RENEWAL_INTERVAL = int(
+    os.environ.get("REDIS_POOL_CLEANUP_LOCK_RENEWAL_INTERVAL", "300")
+)
+
 # When enabled, cleanup also removes disconnected entries from SESSION_POOL.
 # Default is False for safety to avoid removing sessions during connect/join races.
 # Leaving the option to clean up session pool if similar issues arise in the future.

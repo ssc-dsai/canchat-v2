@@ -21,6 +21,7 @@ from open_webui.config import (
     REDIS_POOL_CLEANUP_SCHEDULE_CRON,
     REDIS_POOL_CLEANUP_SCHEDULE_TIMEZONE,
     REDIS_POOL_CLEANUP_LOCK_TIMEOUT,
+    REDIS_POOL_CLEANUP_LOCK_RENEWAL_INTERVAL,
     REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL,
 )
 from open_webui.socket.utils import RedisLock, renew_lock_periodically
@@ -223,11 +224,14 @@ async def automated_redis_pool_cleanup():
 
     This task:
     1. Acquires a Redis distributed lock to prevent concurrent runs
-    2. Filters USER_POOL SIDs using live Socket.IO connection state
-    3. Optionally prunes disconnected SESSION_POOL entries (configurable)
-    4. Releases the lock
+    2. Maintains lock renewal during long-running cleanup operations
+    3. Filters USER_POOL SIDs using live Socket.IO connection state
+    4. Optionally prunes disconnected SESSION_POOL entries (configurable)
+    5. Releases the lock
     """
     lock = None
+    lock_renewal_task = None
+    lock_lost_flag = threading.Event()
 
     try:
         if WEBSOCKET_MANAGER != "redis":
@@ -253,17 +257,46 @@ async def automated_redis_pool_cleanup():
 
         log.info("Starting scheduled Redis pool cleanup")
 
+        # Start lock renewal task to keep lock alive during long-running cleanup
+        if lock:
+            lock_renewal_task = asyncio.create_task(
+                renew_lock_periodically(
+                    lock,
+                    renewal_interval_secs=REDIS_POOL_CLEANUP_LOCK_RENEWAL_INTERVAL,
+                    lock_name="redis_pool_cleanup_lock",
+                    on_lock_lost=lock_lost_flag.set,
+                )
+            )
+
         from open_webui.socket.main import flush_user_and_session_pools
 
-        stats = flush_user_and_session_pools(
-            prune_session_pool=REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL
+        loop = asyncio.get_event_loop()
+        stats = await loop.run_in_executor(
+            None,
+            lambda: flush_user_and_session_pools(
+                prune_session_pool=REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL
+            ),
         )
+
+        if lock_lost_flag.is_set():
+            log.error(
+                "Redis pool cleanup lock lost during execution; cleanup operation may have continued. "
+                "Consider increasing REDIS_POOL_CLEANUP_LOCK_TIMEOUT if this happens frequently."
+            )
 
         log.info(f"Scheduled Redis pool cleanup completed: {stats}")
 
     except Exception as e:
         log.error(f"Redis pool cleanup failed: {e}", exc_info=True)
     finally:
+        if lock_renewal_task:
+            lock_renewal_task.cancel()
+            try:
+                await lock_renewal_task
+            except asyncio.CancelledError:
+                pass
+
+        # Always release the lock if we own it
         if lock and lock.lock_obtained:
             released = await lock.release_lock()
             if released:
@@ -306,7 +339,9 @@ def schedule_redis_pool_cleanup():
             replace_existing=True,
             max_instances=1,
             coalesce=True,
-            misfire_grace_time=300,
+            misfire_grace_time=max(
+                1, int(CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS)
+            ),
         )
 
         log.info(
