@@ -3022,7 +3022,7 @@ class TestChat:
                             "done": True,
                         },
                     ],
-                    "title": f"New Chat",
+                    "title": "New Chat",
                 },
                 created_at=current_time,
                 updated_at=current_time,
@@ -3046,6 +3046,112 @@ class TestChat:
                 initial_chats.append(ChatModel.model_validate(initial_chat))
 
                 assert chat_models == initial_chats
+
+        @pytest.mark.asyncio
+        async def test_invalid_user_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            initial_chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=str(uuid.uuid4()),
+                title="New Chat",
+                chat={
+                    "history": {
+                        "messages": {
+                            "0bc9697b-6972-4971-b135-d85be3778b0c": {
+                                "id": "0bc9697b-6972-4971-b135-d85be3778b0c",
+                                "parentId": None,
+                                "childrenIds": ["fd1bd5bf-25e6-45ff-ad30-9e1801ceab37"],
+                                "role": "user",
+                                "content": "Blahblahblah",
+                                "timestamp": 1771950743,
+                                "models": ["Gemini Flash 2.5"],
+                            },
+                            "fd1bd5bf-25e6-45ff-ad30-9e1801ceab37": {
+                                "parentId": "0bc9697b-6972-4971-b135-d85be3778b0c",
+                                "id": "fd1bd5bf-25e6-45ff-ad30-9e1801ceab37",
+                                "childrenIds": [],
+                                "role": "assistant",
+                                "content": "To do the following....",
+                                "model": "Gemini Flash 2.5",
+                                "modelName": "Gemini Flash 2.5",
+                                "modelIdx": 0,
+                                "userContext": None,
+                                "timestamp": 1771950744,
+                                "lastSentence": "So, if your PGPORT is 5432, you'll access PostgreSQL via localhost:5432.",
+                                "usage": {
+                                    "completion_tokens": 1042,
+                                    "prompt_tokens": 549,
+                                    "total_tokens": 1591,
+                                    "completion_tokens_details": {
+                                        "reasoning_tokens": 172,
+                                        "text_tokens": 870,
+                                    },
+                                    "prompt_tokens_details": {"text_tokens": 549},
+                                },
+                                "done": True,
+                            },
+                        }
+                    },
+                    "messages": [
+                        {
+                            "id": "0bc9697b-6972-4971-b135-d85be3778b0c",
+                            "parentId": None,
+                            "childrenIds": ["fd1bd5bf-25e6-45ff-ad30-9e1801ceab37"],
+                            "role": "user",
+                            "content": "Blahblahblah apple",
+                            "timestamp": 1771950743,
+                            "models": ["Gemini Flash 2.5"],
+                        },
+                        {
+                            "parentId": "0bc9697b-6972-4971-b135-d85be3778b0c",
+                            "id": "fd1bd5bf-25e6-45ff-ad30-9e1801ceab37",
+                            "childrenIds": [],
+                            "role": "assistant",
+                            "content": "To do the following....",
+                            "model": "Gemini Flash 2.5",
+                            "modelName": "Gemini Flash 2.5",
+                            "modelIdx": 0,
+                            "userContext": None,
+                            "timestamp": 1771950744,
+                            "lastSentence": "So, if your PGPORT is 5432, you'll access PostgreSQL via localhost:5432.",
+                            "usage": {
+                                "completion_tokens": 1042,
+                                "prompt_tokens": 549,
+                                "total_tokens": 1591,
+                                "completion_tokens_details": {
+                                    "reasoning_tokens": 172,
+                                    "text_tokens": 870,
+                                },
+                                "prompt_tokens_details": {"text_tokens": 549},
+                            },
+                            "done": True,
+                        },
+                    ],
+                    "title": "New Chat",
+                },
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=False,
+                meta={"tags": ["apple"]},
+                folder_id=None,
+            )
+
+            async with db_connector.get_async_db() as db:
+                db.add(initial_chat)
+                await db.commit()
+
+                chat_models = await chat_table.get_chats_by_user_id_and_search_text(
+                    user_id="InvalidUserId",
+                    search_text="apple",
+                )
+
+                assert len(chat_models) == 0
 
         @pytest.mark.parametrize(
             argnames="search_text, skip, limit, include_archived",
