@@ -500,6 +500,9 @@ class ChatTable:
                 select(Chat)
                 .where(Chat.id.in_(chat_ids), Chat.archived == False)
                 .order_by(Chat.updated_at.desc())
+                # TODO: Implement or remove.
+                # .limit(limit)
+                # .offset(skip)
             )
             return [ChatModel.model_validate(chat) for chat in all_chats.all()]
 
@@ -539,6 +542,7 @@ class ChatTable:
         async with self.__db.get_async_db() as db:
             all_chats = await db.scalars(
                 select(Chat)
+                # TODO: Implement or remove limit and skip.
                 # .limit(limit).offset(skip)
                 .order_by(Chat.updated_at.desc())
             )
@@ -582,16 +586,18 @@ class ChatTable:
         limit: int = 60,
     ) -> list[ChatModel]:
         """
-        Filters chats based on a search query using Python, allowing pagination using skip and limit.
-        """
-        search_text = search_text.lower().strip()
+        Filters chats based on a search query, allowing pagination using skip and limit. The earch query is a sentence that is searched for in the content of each message.Tags can be passed in the format of `tag:<tag_id>`.
 
-        if not search_text:
+        Note: The search is case-insensitive and assumes that the search is a fragment of a sentence where spaces are used to seperate words. Tags can be identified anywhere and are seperated out of the text used to perform the search.
+        """
+        search_text_clean = search_text.lower().strip()
+
+        if not search_text_clean:
             return await self.get_chat_list_by_user_id(
                 user_id, include_archived, skip, limit
             )
 
-        search_text_words = search_text.split(" ")
+        search_text_words = search_text_clean.split(" ")
 
         # search_text might contain 'tag:tag_name' format so we need to extract the tag_name, split the search_text and remove the tags
         tag_ids = [
@@ -604,7 +610,7 @@ class ChatTable:
             word for word in search_text_words if not word.startswith("tag:")
         ]
 
-        search_text = " ".join(search_text_words)
+        search_text_clean = " ".join(search_text_words)
 
         async with self.__db.get_async_db() as db:
             query = select(Chat).where(Chat.user_id == user_id)
@@ -620,7 +626,7 @@ class ChatTable:
                 # SQLite case: using JSON1 extension for JSON searching
                 query = query.filter(
                     (
-                        Chat.title.ilike(f"%{search_text}%")
+                        Chat.title.ilike(f"%{search_text_clean}%")
                         | text(
                             """
                             EXISTS (
@@ -631,7 +637,7 @@ class ChatTable:
                             """
                         )
                     ).params(  # Case-insensitive search in title
-                        search_text=search_text
+                        search_text=search_text_clean
                     )
                 )
 
@@ -669,7 +675,7 @@ class ChatTable:
                 # PostgreSQL relies on proper JSON query for search
                 query = query.filter(
                     (
-                        Chat.title.ilike(f"%{search_text}%")
+                        Chat.title.ilike(f"%{search_text_clean}%")
                         | text(
                             """
                             EXISTS (
@@ -680,7 +686,7 @@ class ChatTable:
                             """
                         )
                     ).params(  # Case-insensitive search in title
-                        search_text=search_text
+                        search_text=search_text_clean
                     )
                 )
 

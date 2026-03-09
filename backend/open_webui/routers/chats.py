@@ -130,7 +130,7 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
     try:
         chat = await CHATS.import_chat(user.id, form_data)
         if chat:
-            tags = chat.meta.get("tags", [])
+            tags: list[str] = chat.meta.get("tags", [])
             for tag_id in tags:
                 tag_id = tag_id.replace(" ", "_").lower()
                 tag_name = " ".join([word.capitalize() for word in tag_id.split("_")])
