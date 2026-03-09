@@ -1024,11 +1024,10 @@
 								bind:value={selectedMcpProcess}
 								on:change={() => {
 									handleMcpProcessChange();
-									updateRangeMetrics();
 								}}
 								class="block w-52 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
 							>
-								<option value={null}>{$i18n.t('All')}</option>
+								<option value={null}>{$i18n.t('No Filter')}</option>
 								<option value="__mcp_all__">{$i18n.t('MCP — All Tools')}</option>
 								<option value="__non_mcp__">{$i18n.t('Non-MCP Only')}</option>
 								{#each mcpProcesses as process}
