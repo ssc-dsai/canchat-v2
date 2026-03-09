@@ -17,6 +17,12 @@ from open_webui.config import (
     CHAT_CLEANUP_SCHEDULE_TIMEZONE,
     CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS,
     CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS,
+    REDIS_POOL_CLEANUP_ENABLED,
+    REDIS_POOL_CLEANUP_SCHEDULE_CRON,
+    REDIS_POOL_CLEANUP_SCHEDULE_TIMEZONE,
+    REDIS_POOL_CLEANUP_LOCK_TIMEOUT,
+    REDIS_POOL_CLEANUP_LOCK_RENEWAL_INTERVAL,
+    REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL,
 )
 from open_webui.socket.utils import RedisLock, renew_lock_periodically
 
@@ -26,6 +32,7 @@ log.setLevel(SRC_LOG_LEVELS["SCHEDULER"])
 # Global scheduler instance
 scheduler = None
 CLEANUP_JOB_ID = "chat_lifetime_cleanup"
+REDIS_POOL_CLEANUP_JOB_ID = "redis_pool_cleanup"
 
 
 def describe_cron_schedule(cron_expr: str) -> str:
@@ -205,26 +212,169 @@ def update_cleanup_schedule():
         log.error(f"Failed to update cleanup schedule: {str(e)}")
 
 
-def start_chat_lifetime_scheduler():
+####################################
+# Redis User/Session Pool Cleanup
+####################################
+
+
+async def automated_redis_pool_cleanup():
     """
-    Initialize the chat lifetime scheduler.
+    Scheduled task that flushes stale entries from USER_POOL and SESSION_POOL.
+    Uses Redis-based distributed locking when Redis locks are available to ensure
+    only one replica runs the cleanup at a time.
+
+    This task:
+    1. Acquires a Redis distributed lock to prevent concurrent runs
+    2. Maintains lock renewal during long-running cleanup operations
+    3. Filters USER_POOL SIDs using live Socket.IO connection state
+    4. Optionally prunes disconnected SESSION_POOL entries (configurable)
+    5. Releases the lock
+    """
+    lock = None
+    lock_renewal_task = None
+    lock_lost_flag = threading.Event()
+
+    try:
+        if not USE_REDIS_LOCKS:
+            log.debug("Redis pool cleanup skipped: Redis locks are unavailable")
+            return
+
+        lock = RedisLock(
+            redis_url=REDIS_URL,
+            lock_name="redis_pool_cleanup_lock",
+            timeout_secs=REDIS_POOL_CLEANUP_LOCK_TIMEOUT,
+        )
+
+        if not await lock.acquire_lock():
+            if lock.last_error:
+                log.error(
+                    f"Skipping Redis pool cleanup: lock acquisition failed: {lock.last_error}"
+                )
+            else:
+                log.info(
+                    "Another replica is already running Redis pool cleanup - skipping"
+                )
+            return
+
+        log.info("Starting scheduled Redis pool cleanup")
+
+        # Start lock renewal task to keep lock alive during long-running cleanup
+        if lock:
+            lock_renewal_task = asyncio.create_task(
+                renew_lock_periodically(
+                    lock,
+                    renewal_interval_secs=REDIS_POOL_CLEANUP_LOCK_RENEWAL_INTERVAL,
+                    lock_name="redis_pool_cleanup_lock",
+                    on_lock_lost=lock_lost_flag.set,
+                )
+            )
+
+        from open_webui.socket.main import flush_user_and_session_pools
+
+        loop = asyncio.get_event_loop()
+        stats = await loop.run_in_executor(
+            None,
+            lambda: flush_user_and_session_pools(
+                prune_session_pool=REDIS_POOL_CLEANUP_PRUNE_SESSION_POOL
+            ),
+        )
+
+        if lock_lost_flag.is_set():
+            log.error(
+                "Redis pool cleanup lock lost during execution; cleanup operation may have continued. "
+                "Consider increasing REDIS_POOL_CLEANUP_LOCK_TIMEOUT if this happens frequently."
+            )
+
+        log.info(f"Scheduled Redis pool cleanup completed: {stats}")
+
+    except Exception as e:
+        log.error(f"Redis pool cleanup failed: {e}", exc_info=True)
+    finally:
+        if lock_renewal_task:
+            lock_renewal_task.cancel()
+            try:
+                await lock_renewal_task
+            except asyncio.CancelledError:
+                pass
+
+        # Always release the lock if we own it
+        if lock and lock.lock_obtained:
+            released = await lock.release_lock()
+            if released:
+                log.debug("Released Redis pool cleanup lock")
+            else:
+                log.warning("Could not confirm Redis pool cleanup lock release")
+
+
+def schedule_redis_pool_cleanup():
+    """
+    Schedule the Redis session pool cleanup.
+    """
+    try:
+        scheduler_instance = get_scheduler()
+
+        # Remove existing job if it exists
+        if scheduler_instance.get_job(REDIS_POOL_CLEANUP_JOB_ID):
+            scheduler_instance.remove_job(REDIS_POOL_CLEANUP_JOB_ID)
+            log.info("Removed existing Redis pool cleanup schedule")
+
+        if not REDIS_POOL_CLEANUP_ENABLED:
+            log.info("Redis pool cleanup disabled (REDIS_POOL_CLEANUP_ENABLED=false)")
+            return
+
+        if not USE_REDIS_LOCKS:
+            log.info("Redis pool cleanup not scheduled: Redis locks are unavailable")
+            return
+
+        trigger = CronTrigger.from_crontab(
+            REDIS_POOL_CLEANUP_SCHEDULE_CRON,
+            timezone=REDIS_POOL_CLEANUP_SCHEDULE_TIMEZONE,
+        )
+        scheduler_instance.add_job(
+            automated_redis_pool_cleanup,
+            trigger=trigger,
+            id=REDIS_POOL_CLEANUP_JOB_ID,
+            name="Redis User/Session Pool Cleanup",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=max(
+                1, int(CHAT_CLEANUP_SCHEDULER_MISFIRE_GRACE_SECONDS)
+            ),
+        )
+
+        log.info(
+            f"Scheduled Redis pool cleanup with cron "
+            f"'{REDIS_POOL_CLEANUP_SCHEDULE_CRON}' "
+            f"(timezone: {REDIS_POOL_CLEANUP_SCHEDULE_TIMEZONE})"
+        )
+
+    except Exception as e:
+        log.error(f"Failed to update Redis pool cleanup schedule: {str(e)}")
+
+
+def start_scheduler():
+    """
+    Initialize the application scheduler.
     This should be called once when the application starts.
+    Sets up all scheduled tasks including chat lifetime cleanup and Redis pool cleanup.
     """
     try:
         if USE_REDIS_LOCKS:
-            log.info("Initializing chat lifetime scheduler using Redis Locks...")
-        elif not USE_REDIS_LOCKS:
-            log.info("Initializing chat lifetime scheduler not using Redis Locks...")
+            log.info("Initializing scheduler using Redis Locks...")
+        else:
+            log.info("Initializing scheduler not using Redis Locks...")
         get_scheduler()  # Initialize scheduler
-        update_cleanup_schedule()  # Set up initial schedule
-        log.info("Chat lifetime scheduler initialization complete")
+        update_cleanup_schedule()  # Set up chat lifetime cleanup schedule
+        schedule_redis_pool_cleanup()  # Set up Redis pool cleanup schedule
+        log.info("Scheduler initialization complete")
     except Exception as e:
-        log.error(f"Failed to start chat lifetime scheduler: {str(e)}")
+        log.error(f"Failed to start scheduler: {str(e)}")
 
 
-def stop_chat_lifetime_scheduler():
+def stop_scheduler():
     """
-    Stop the chat lifetime scheduler.
+    Stop the application scheduler.
     This should be called when the application shuts down.
     """
     global scheduler
@@ -232,7 +382,7 @@ def stop_chat_lifetime_scheduler():
         try:
             scheduler.shutdown()
             scheduler = None
-            log.info("Chat lifetime scheduler stopped")
+            log.info("Scheduler stopped")
         except Exception as e:
             log.error(f"Error stopping scheduler: {str(e)}")
 

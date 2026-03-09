@@ -174,6 +174,136 @@ async def periodic_usage_pool_cleanup():
     log.info("Periodic usage pool cleanup task exited gracefully")
 
 
+def flush_user_and_session_pools(prune_session_pool: bool = False):
+    """
+    Flush stale entries from USER_POOL and SESSION_POOL in Redis.
+
+    The USER_POOL (keyed by user_id → list of socket SIDs) and SESSION_POOL
+    (keyed by SID → user session data) can grow indefinitely because disconnected
+    sessions may leave behind stale entries. This function uses live Socket.IO
+    connection state as the source of truth and removes disconnected SIDs from
+    USER_POOL. Optional SESSION_POOL pruning can be enabled for aggressive cleanup.
+
+    This is designed to be called as a scheduled task to prevent unbounded memory/Redis growth and keep the "users online" list accurate.
+
+    Returns a dict with cleanup statistics.
+    """
+    stats = {
+        "users_before": 0,
+        "users_after": 0,
+        "sessions_before": 0,
+        "sessions_after": 0,
+        "active_sids_detected": 0,
+        "stale_user_entries_removed": 0,
+        "stale_sids_removed": 0,
+        "orphaned_sessions_removed": 0,
+        "temp_tokens_removed": 0,
+    }
+
+    try:
+        sid_connection_cache = {}
+
+        def _is_sid_connected(sid: str) -> bool:
+            if sid in sid_connection_cache:
+                return sid_connection_cache[sid]
+
+            try:
+                connected = bool(sio.manager.is_connected(sid, namespace="/"))
+            except Exception as e:
+                log.debug(
+                    f"Unable to resolve Socket.IO connection state for sid={sid}: {e}"
+                )
+                connected = False
+
+            sid_connection_cache[sid] = connected
+            return connected
+
+        # --- Phase 1: Clean USER_POOL using live connection state ---
+        user_pool_keys = list(USER_POOL.keys())
+        stats["users_before"] = len(user_pool_keys)
+
+        for user_id in user_pool_keys:
+            try:
+                sids = USER_POOL.get(user_id, [])
+                if not isinstance(sids, list):
+                    sids = []
+
+                active_sids = []
+                seen_sids = set()
+                for sid in sids:
+                    if not isinstance(sid, str):
+                        continue
+
+                    if sid in seen_sids:
+                        continue
+                    seen_sids.add(sid)
+
+                    if _is_sid_connected(sid):
+                        active_sids.append(sid)
+
+                removed_count = len(sids) - len(active_sids)
+                stats["stale_sids_removed"] += removed_count
+                # Update USER_POOL with only active SIDs for this user
+                if active_sids:
+                    USER_POOL[user_id] = active_sids
+                else:
+                    # No active sessions left for this user —> remove the user entry
+                    try:
+                        del USER_POOL[user_id]
+                    except KeyError:
+                        pass
+                    stats["stale_user_entries_removed"] += 1
+            except Exception as e:
+                log.warning(f"Error cleaning USER_POOL entry for user {user_id}: {e}")
+
+        stats["users_after"] = len(list(USER_POOL.keys()))
+        stats["active_sids_detected"] = len(
+            [sid for sid, connected in sid_connection_cache.items() if connected]
+        )
+
+        # --- Phase 2: Clean SESSION_POOL temp tokens and optionally stale sessions ---
+        session_keys = list(SESSION_POOL.keys())
+        stats["sessions_before"] = len(session_keys)
+
+        for sid_key in session_keys:
+            if not isinstance(sid_key, str):
+                continue
+
+            # Remove temporary token entries (prefixed with _temp_token_)
+            if sid_key.startswith("_temp_token_"):
+                try:
+                    del SESSION_POOL[sid_key]
+                    stats["temp_tokens_removed"] += 1
+                except KeyError:
+                    pass
+                continue
+
+            if prune_session_pool and not _is_sid_connected(sid_key):
+                try:
+                    del SESSION_POOL[sid_key]
+                    stats["orphaned_sessions_removed"] += 1
+                except KeyError:
+                    pass
+
+        stats["sessions_after"] = len(list(SESSION_POOL.keys()))
+
+        log.info(
+            f"Redis session pool cleanup completed: "
+            f"USER_POOL {stats['users_before']}→{stats['users_after']} "
+            f"(removed {stats['stale_user_entries_removed']} users, "
+            f"{stats['stale_sids_removed']} stale SIDs), "
+            f"SESSION_POOL {stats['sessions_before']}→{stats['sessions_after']} "
+            f"(removed {stats['orphaned_sessions_removed']} disconnected sessions, "
+            f"{stats['temp_tokens_removed']} temp tokens, "
+            f"prune_session_pool={prune_session_pool})"
+        )
+
+    except Exception as e:
+        log.error(f"Error during Redis session pool cleanup: {e}", exc_info=True)
+
+    return stats
+
+
 app = socketio.ASGIApp(
     sio,
     socketio_path="/ws/socket.io",
@@ -540,9 +670,12 @@ async def disconnect(sid):
         del SESSION_POOL[sid]
 
         user_id = user["id"]
-        USER_POOL[user_id] = [_sid for _sid in USER_POOL[user_id] if _sid != sid]
+        current_sids = USER_POOL.get(user_id, [])
+        remaining_sids = [_sid for _sid in current_sids if _sid != sid]
 
-        if len(USER_POOL[user_id]) == 0:
+        if len(remaining_sids) > 0:
+            USER_POOL[user_id] = remaining_sids
+        elif user_id in USER_POOL:
             del USER_POOL[user_id]
 
         await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
