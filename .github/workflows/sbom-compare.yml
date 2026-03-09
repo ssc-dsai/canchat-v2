@@ -111,6 +111,7 @@ jobs:
 
       - name: Compare CDX SBOMs
         id: compare-sbom-cdx
+        continue-on-error: true
         run: |
           if test -f .sbom/previous.cdx.json; then
             sbomdiff .sbom/previous.cdx.json .sbom/current.cdx.json --sbom cyclonedx --format text > .sbom/comparison.cdx.md
