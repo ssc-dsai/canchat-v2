@@ -834,22 +834,30 @@ class ChatTable:
     async def add_chat_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str
     ) -> ChatModel | None:
-        tag = await self.__tags.get_tag_by_name_and_user_id(tag_name, user_id)
-        if tag is None:
-            tag = await self.__tags.insert_new_tag(tag_name, user_id)
         try:
             async with self.__db.get_async_db() as db:
-                if tag and (chat := await db.get(Chat, id)):
-                    tag_id = tag.id
-                    tags: list[str] = chat.meta.get("tags", [])
-                    if tag_id not in tags:
-                        tags.append(tag_id)
-                        chat.meta["tags"] = tags
+                # Ensure chat exists and belongs to user before creating new tag.
+                if (
+                    chat := await db.get(Chat, id)
+                ) is not None and chat.user_id == user_id:
 
-                        flag_modified(chat, "meta")
-                        await db.commit()
-                        await db.refresh(chat)
-                    return ChatModel.model_validate(chat)
+                    tag = await self.__tags.get_tag_by_name_and_user_id(
+                        tag_name, user_id
+                    )
+                    if tag is None:
+                        tag = await self.__tags.insert_new_tag(tag_name, user_id)
+
+                    if tag:
+                        tag_id = tag.id
+                        tags: list[str] = chat.meta.get("tags", [])
+                        if tag_id not in tags:
+                            tags.append(tag_id)
+                            chat.meta["tags"] = tags
+
+                            flag_modified(chat, "meta")
+                            await db.commit()
+                            await db.refresh(chat)
+                        return ChatModel.model_validate(chat)
                 return None
         except Exception:
             return None
@@ -894,7 +902,7 @@ class ChatTable:
             count = await db.scalar(query)
             count = count if count else 0
             # Debugging output for inspection
-            print(f"Count of chats for tag '{tag_name}':", count)
+            log.debug(f"Count of chats for tag '{tag_name}':", count)
 
             return count
 

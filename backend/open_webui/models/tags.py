@@ -51,6 +51,10 @@ class TagTable:
         self.__db = db_connector
 
     async def insert_new_tag(self, name: str, user_id: str) -> TagModel | None:
+        # Don't allow empty name or user_id
+        if not name or not user_id:
+            return None
+
         async with self.__db.get_async_db() as db:
             id = name.replace(" ", "_").lower()
             tag = TagModel(**{"id": id, "user_id": user_id, "name": name})

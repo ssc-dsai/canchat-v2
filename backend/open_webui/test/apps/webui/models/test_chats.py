@@ -3524,169 +3524,287 @@ class TestChat:
 
                 assert len(tag_models) == 0
 
-    # TODO: Add tests for skip and limit.
-    @pytest.mark.asyncio
-    async def test_get_chat_list_by_user_id_and_tag_name(
-        self,
-        chat_table: ChatTable,
-        db_connector: AsyncDatabaseConnector,
-    ):
-        tag_name = "first_tag"
-        user_id = str(uuid.uuid4())
-        current_time = int(time.time())
+    class TestGetChatListByUserIdAndTagName:
+        # TODO: Add tests for skip and limit.
+        @pytest.mark.asyncio
+        async def test_valid_user_id_and_tag_name(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            tag_name = "first_tag"
+            user_id = str(uuid.uuid4())
+            current_time = int(time.time())
 
-        chats = [
-            Chat(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                title="New Chat",
-                chat={},
-                created_at=current_time,
-                updated_at=current_time,
-                share_id=None,
-                archived=False,
-                pinned=None,
-                meta={"tags": [tag_name, "news", "bob"]},
-                folder_id=None,
-            ),
-            Chat(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                title="New Chat",
-                chat={},
-                created_at=current_time,
-                updated_at=current_time,
-                share_id=None,
-                archived=False,
-                pinned=None,
-                meta={"tags": ["news", "bob"]},
-                folder_id=None,
-            ),
-            Chat(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                title="New Chat",
-                chat={},
-                created_at=current_time,
-                updated_at=current_time,
-                share_id=None,
-                archived=False,
-                pinned=None,
-                meta={"tags": [tag_name, "news", "bob"]},
-                folder_id=None,
-            ),
-            Chat(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                title="New Chat",
-                chat={},
-                created_at=current_time,
-                updated_at=current_time,
-                share_id=None,
-                archived=True,
-                pinned=None,
-                meta={"tags": [tag_name, "news", "bob"]},
-                folder_id=None,
-            ),
-        ]
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": ["news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=True,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+            ]
 
-        async with db_connector.get_async_db() as db:
-            for chat in chats:
+            async with db_connector.get_async_db() as db:
+                for chat in chats:
+                    db.add(chat)
+                await db.commit()
+
+                c = await chat_table.get_chat_list_by_user_id_and_tag_name(
+                    user_id=user_id, tag_name="first_tag"
+                )
+
+                assert len(c) == 3
+
+        # TODO: Add tests for skip and limit.
+        @pytest.mark.asyncio
+        async def test_invalid_user_id_and_valid_tag_name(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            tag_name = "first_tag"
+            user_id = str(uuid.uuid4())
+            current_time = int(time.time())
+
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": ["news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=True,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+            ]
+
+            async with db_connector.get_async_db() as db:
+                for chat in chats:
+                    db.add(chat)
+                await db.commit()
+
+                c = await chat_table.get_chat_list_by_user_id_and_tag_name(
+                    user_id="InvalidUserId", tag_name="first_tag"
+                )
+
+                assert len(c) == 0
+
+        # TODO: Add tests for skip and limit.
+        @pytest.mark.asyncio
+        async def test_valid_user_id_and_invalid_tag_name(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            tag_name = "first_tag"
+            user_id = str(uuid.uuid4())
+            current_time = int(time.time())
+
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": ["news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=True,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+            ]
+
+            async with db_connector.get_async_db() as db:
+                for chat in chats:
+                    db.add(chat)
+                await db.commit()
+
+                c = await chat_table.get_chat_list_by_user_id_and_tag_name(
+                    user_id=user_id, tag_name="InvalidTagName"
+                )
+
+                assert len(c) == 0
+
+    class TestAddChatTagByIdAndUserIdAndTagName:
+        @pytest.mark.asyncio
+        async def test_valid_chat_id_and_user_id_and_tag_name(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=str(uuid.uuid4()),
+                title="New Chat",
+                chat={},
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=None,
+                meta={"tags": ["test_tag", "tag_2", "last_tag"]},
+                folder_id=None,
+            )
+
+            new_tag = "This is the new Tag."
+
+            async with db_connector.get_async_db() as db:
                 db.add(chat)
-            await db.commit()
+                await db.commit()
+                await db.refresh(chat)
 
-            c = await chat_table.get_chat_list_by_user_id_and_tag_name(
-                user_id=user_id, tag_name="first_tag"
-            )
+                c = await chat_table.add_chat_tag_by_id_and_user_id_and_tag_name(
+                    id=chat.id, user_id=chat.user_id, tag_name=new_tag
+                )
 
-            assert len(c) == 3
+                assert c
+                assert new_tag.replace(" ", "_").lower() in c.meta.get("tags", [])
 
-    @pytest.mark.asyncio
-    async def test_add_chat_tag_by_id_and_user_id_and_tag_name(
-        self,
-        chat_table: ChatTable,
-        db_connector: AsyncDatabaseConnector,
-    ):
-        current_time = int(time.time())
-        chat = Chat(
-            id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
-            title="New Chat",
-            chat={},
-            created_at=current_time,
-            updated_at=current_time,
-            share_id=None,
-            archived=False,
-            pinned=None,
-            meta={"tags": ["test_tag", "tag_2", "last_tag"]},
-            folder_id=None,
-        )
+                await db.refresh(chat)
+                assert ChatModel.model_validate(chat) == c
 
-        new_tag = "This is the new Tag."
-
-        async with db_connector.get_async_db() as db:
-            db.add(chat)
-            await db.commit()
-            await db.refresh(chat)
-
-            c = await chat_table.add_chat_tag_by_id_and_user_id_and_tag_name(
-                id=chat.id, user_id=chat.user_id, tag_name=new_tag
-            )
-
-            assert c
-            assert new_tag.replace(" ", "_").lower() in c.meta.get("tags", [])
-
-            await db.refresh(chat)
-            assert ChatModel.model_validate(chat) == c
-
-    @pytest.mark.asyncio
-    async def test_add_chat_tag_by_id_and_user_id_and_tag_name_no_chat(
-        self,
-        chat_table: ChatTable,
-        db_connector: AsyncDatabaseConnector,
-    ):
-        current_time = int(time.time())
-        chat = Chat(
-            id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
-            title="New Chat",
-            chat={},
-            created_at=current_time,
-            updated_at=current_time,
-            share_id=None,
-            archived=False,
-            pinned=None,
-            meta={"tags": ["test_tag", "tag_2", "last_tag"]},
-            folder_id=None,
-        )
-
-        new_tag = "This is the new Tag."
-
-        async with db_connector.get_async_db() as db:
-            db.add(chat)
-            await db.commit()
-            await db.refresh(chat)
-
-            c = await chat_table.add_chat_tag_by_id_and_user_id_and_tag_name(
-                id="BadChatID", user_id=chat.user_id, tag_name=new_tag
-            )
-
-            assert c is None
-
-    @pytest.mark.asyncio
-    async def test_count_chats_by_tag_name_and_user_id(
-        self,
-        chat_table: ChatTable,
-        db_connector: AsyncDatabaseConnector,
-    ):
-        tag_name = "first_tag"
-        user_id = str(uuid.uuid4())
-        current_time = int(time.time())
-
-        chats = [
-            Chat(
+        @pytest.mark.asyncio
+        async def test_invalid_chat_id_and_valid_user_id_and_tag_name(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            chat = Chat(
                 id=str(uuid.uuid4()),
-                user_id=user_id,
+                user_id=str(uuid.uuid4()),
                 title="New Chat",
                 chat={},
                 created_at=current_time,
@@ -3694,60 +3812,318 @@ class TestChat:
                 share_id=None,
                 archived=False,
                 pinned=None,
-                meta={"tags": [tag_name, "news", "bob"]},
+                meta={"tags": ["test_tag", "tag_2", "last_tag"]},
                 folder_id=None,
-            ),
-            Chat(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                title="New Chat",
-                chat={},
-                created_at=current_time,
-                updated_at=current_time,
-                share_id=None,
-                archived=False,
-                pinned=None,
-                meta={"tags": ["news", "bob"]},
-                folder_id=None,
-            ),
-            Chat(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                title="New Chat",
-                chat={},
-                created_at=current_time,
-                updated_at=current_time,
-                share_id=None,
-                archived=False,
-                pinned=None,
-                meta={"tags": [tag_name, "news", "bob"]},
-                folder_id=None,
-            ),
-            Chat(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                title="New Chat",
-                chat={},
-                created_at=current_time,
-                updated_at=current_time,
-                share_id=None,
-                archived=True,
-                pinned=None,
-                meta={"tags": [tag_name, "news", "bob"]},
-                folder_id=None,
-            ),
-        ]
+            )
 
-        async with db_connector.get_async_db() as db:
-            for chat in chats:
+            new_tag = "This is the new Tag."
+
+            async with db_connector.get_async_db() as db:
                 db.add(chat)
-            await db.commit()
+                await db.commit()
+                await db.refresh(chat)
 
-            c = await chat_table.count_chats_by_tag_name_and_user_id(
-                user_id=user_id, tag_name="first_tag"
+                c = await chat_table.add_chat_tag_by_id_and_user_id_and_tag_name(
+                    id="BadChatID", user_id=chat.user_id, tag_name=new_tag
+                )
+
+                assert c is None
+
+        @pytest.mark.asyncio
+        async def test_invalid_user_id_and_valid_chat_id_and_tag_name(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=str(uuid.uuid4()),
+                title="New Chat",
+                chat={},
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=None,
+                meta={"tags": ["test_tag", "tag_2", "last_tag"]},
+                folder_id=None,
             )
 
-            assert c == 2
+            new_tag = "This is the new Tag."
+
+            async with db_connector.get_async_db() as db:
+                db.add(chat)
+                await db.commit()
+                await db.refresh(chat)
+
+                c = await chat_table.add_chat_tag_by_id_and_user_id_and_tag_name(
+                    id=chat.id, user_id="InvalidUserId", tag_name=new_tag
+                )
+
+                assert c is None
+
+        @pytest.mark.asyncio
+        async def test_valid_chat_id_and_user_id_and_empty_tag_name(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=str(uuid.uuid4()),
+                title="New Chat",
+                chat={},
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=None,
+                meta={"tags": ["test_tag", "tag_2", "last_tag"]},
+                folder_id=None,
+            )
+
+            async with db_connector.get_async_db() as db:
+                db.add(chat)
+                await db.commit()
+                await db.refresh(chat)
+
+                c = await chat_table.add_chat_tag_by_id_and_user_id_and_tag_name(
+                    id=chat.id, user_id=chat.user_id, tag_name=""
+                )
+
+                assert c is None
+
+    class TestCountChatsByTagNameAndUserId:
+
+        @pytest.mark.asyncio
+        async def test_valid_tag_and_user_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            tag_name = "first_tag"
+            user_id = str(uuid.uuid4())
+            current_time = int(time.time())
+
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": ["news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=True,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+            ]
+
+            async with db_connector.get_async_db() as db:
+                for chat in chats:
+                    db.add(chat)
+                await db.commit()
+
+                c = await chat_table.count_chats_by_tag_name_and_user_id(
+                    user_id=user_id, tag_name="first_tag"
+                )
+
+                assert c == 2
+
+        @pytest.mark.asyncio
+        async def test_valid_tag_and_invalid_user_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            tag_name = "first_tag"
+            user_id = str(uuid.uuid4())
+            current_time = int(time.time())
+
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": ["news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=True,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+            ]
+
+            async with db_connector.get_async_db() as db:
+                for chat in chats:
+                    db.add(chat)
+                await db.commit()
+
+                c = await chat_table.count_chats_by_tag_name_and_user_id(
+                    user_id="InvalidUserId", tag_name="first_tag"
+                )
+
+                assert c == 0
+
+        @pytest.mark.asyncio
+        async def test_unknown_tag_and_user_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            tag_name = "first_tag"
+            user_id = str(uuid.uuid4())
+            current_time = int(time.time())
+
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": ["news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="New Chat",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=True,
+                    pinned=None,
+                    meta={"tags": [tag_name, "news", "bob"]},
+                    folder_id=None,
+                ),
+            ]
+
+            async with db_connector.get_async_db() as db:
+                for chat in chats:
+                    db.add(chat)
+                await db.commit()
+
+                c = await chat_table.count_chats_by_tag_name_and_user_id(
+                    user_id=user_id, tag_name=""
+                )
+
+                assert c == 0
 
     @pytest.mark.asyncio
     async def test_delete_tag_by_id_and_user_id_and_tag_name(
