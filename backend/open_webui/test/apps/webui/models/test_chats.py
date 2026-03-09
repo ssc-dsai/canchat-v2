@@ -3068,6 +3068,12 @@ class TestChat:
                 ("apple", 10, 100, True),
                 ("apple", 100, 100, False),
                 ("apple", 100, 100, True),
+                ("", 2, 10, False),
+                ("", 2, 10, True),
+                ("", 10, 100, False),
+                ("", 10, 100, True),
+                ("", 100, 100, False),
+                ("", 100, 100, True),
             ],
         )
         @pytest.mark.asyncio
@@ -3173,6 +3179,10 @@ class TestChat:
 
                     Checks for an occurrence of the split search_text
                     """
+
+                    # Empty search term returns all.
+                    if not text_to_search:
+                        return True
 
                     messages: list[dict[str, str | int | None]] = chat.chat.get(
                         "messages", []
