@@ -3426,98 +3426,103 @@ class TestChat:
 
                 assert c is None
 
-    @pytest.mark.asyncio
-    async def test_get_chat_tags_by_id_and_user_id(
-        self,
-        chat_table: ChatTable,
-        db_connector: AsyncDatabaseConnector,
-    ):
-        current_time = int(time.time())
-        user_id = str(uuid.uuid4())
+    class TestGetChatTagsByIdAndUserId:
+        @pytest.mark.asyncio
+        async def test_valid_chat_id_and_valid_user_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            user_id = str(uuid.uuid4())
 
-        tag_names = ["Test First", "Investments", "This is a test"]
+            tag_names = ["Test First", "Investments", "This is a test"]
 
-        tags = [
-            Tag(id=tag.replace(" ", "_").lower(), name=tag, user_id=user_id, meta={})
-            for tag in tag_names
-        ]
+            tags = [
+                Tag(
+                    id=tag.replace(" ", "_").lower(), name=tag, user_id=user_id, meta={}
+                )
+                for tag in tag_names
+            ]
 
-        chat = Chat(
-            id=str(uuid.uuid4()),
-            user_id=user_id,
-            title="New Chat",
-            chat={},
-            created_at=current_time,
-            updated_at=current_time,
-            share_id=None,
-            archived=False,
-            pinned=None,
-            meta={"tags": [tag.id for tag in tags]},
-            folder_id=None,
-        )
-
-        async with db_connector.get_async_db() as db:
-            for tag in tags:
-                db.add(tag)
-
-            db.add(chat)
-            await db.commit()
-            for tag in tags:
-                await db.refresh(tag)
-            await db.refresh(chat)
-
-            tag_models = await chat_table.get_chat_tags_by_id_and_user_id(
-                id=chat.id, user_id=chat.user_id
+            chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                title="New Chat",
+                chat={},
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=None,
+                meta={"tags": [tag.id for tag in tags]},
+                folder_id=None,
             )
 
-            assert len(tag_models) == len(tags)
-            assert [TagModel.model_validate(tag) for tag in tags] == tag_models
+            async with db_connector.get_async_db() as db:
+                for tag in tags:
+                    db.add(tag)
 
-    @pytest.mark.asyncio
-    async def test_get_chat_tags_by_id_and_user_id_bad_user_id(
-        self,
-        chat_table: ChatTable,
-        db_connector: AsyncDatabaseConnector,
-    ):
-        current_time = int(time.time())
-        user_id = str(uuid.uuid4())
+                db.add(chat)
+                await db.commit()
+                for tag in tags:
+                    await db.refresh(tag)
+                await db.refresh(chat)
 
-        tag_names = ["Test First", "Investments", "This is a test"]
+                tag_models = await chat_table.get_chat_tags_by_id_and_user_id(
+                    id=chat.id, user_id=chat.user_id
+                )
 
-        tags = [
-            Tag(id=tag.replace(" ", "_").lower(), name=tag, user_id=user_id, meta={})
-            for tag in tag_names
-        ]
+                assert len(tag_models) == len(tags)
+                assert [TagModel.model_validate(tag) for tag in tags] == tag_models
 
-        chat = Chat(
-            id=str(uuid.uuid4()),
-            user_id=user_id,
-            title="New Chat",
-            chat={},
-            created_at=current_time,
-            updated_at=current_time,
-            share_id=None,
-            archived=False,
-            pinned=None,
-            meta={"tags": [tag.id for tag in tags]},
-            folder_id=None,
-        )
+        @pytest.mark.asyncio
+        async def test_valid_chat_id_and_invalid_user_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            user_id = str(uuid.uuid4())
 
-        async with db_connector.get_async_db() as db:
-            for tag in tags:
-                db.add(tag)
+            tag_names = ["Test First", "Investments", "This is a test"]
 
-            db.add(chat)
-            await db.commit()
-            for tag in tags:
-                await db.refresh(tag)
-            await db.refresh(chat)
+            tags = [
+                Tag(
+                    id=tag.replace(" ", "_").lower(), name=tag, user_id=user_id, meta={}
+                )
+                for tag in tag_names
+            ]
 
-            tag_models = await chat_table.get_chat_tags_by_id_and_user_id(
-                id=chat.id, user_id="BadUserID"
+            chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                title="New Chat",
+                chat={},
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=None,
+                meta={"tags": [tag.id for tag in tags]},
+                folder_id=None,
             )
 
-            assert len(tag_models) == 0
+            async with db_connector.get_async_db() as db:
+                for tag in tags:
+                    db.add(tag)
+
+                db.add(chat)
+                await db.commit()
+                for tag in tags:
+                    await db.refresh(tag)
+                await db.refresh(chat)
+
+                tag_models = await chat_table.get_chat_tags_by_id_and_user_id(
+                    id=chat.id, user_id="BadUserID"
+                )
+
+                assert len(tag_models) == 0
 
     # TODO: Add tests for skip and limit.
     @pytest.mark.asyncio
