@@ -362,7 +362,7 @@ def start_scheduler():
     try:
         if USE_REDIS_LOCKS:
             log.info("Initializing scheduler using Redis Locks...")
-        elif not USE_REDIS_LOCKS:
+        else:
             log.info("Initializing scheduler not using Redis Locks...")
         get_scheduler()  # Initialize scheduler
         update_cleanup_schedule()  # Set up chat lifetime cleanup schedule
