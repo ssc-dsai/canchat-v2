@@ -4236,40 +4236,42 @@ class TestChat:
 
                 assert not c
 
-    @pytest.mark.asyncio
-    async def test_delete_all_tags_by_id_and_user_id(
-        self,
-        chat_table: ChatTable,
-        db_connector: AsyncDatabaseConnector,
-    ):
-        current_time = int(time.time())
-        chat = Chat(
-            id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
-            title="New Chat",
-            chat={},
-            created_at=current_time,
-            updated_at=current_time,
-            share_id=None,
-            archived=False,
-            pinned=None,
-            meta={"tags": ["FirstTag", "News", "Bob"]},
-            folder_id=None,
-        )
+    class TestDeleteAllTagsByIdAndUserId:
 
-        async with db_connector.get_async_db() as db:
-            db.add(chat)
-            await db.commit()
-            await db.refresh(chat)
-
-            c = await chat_table.delete_all_tags_by_id_and_user_id(
-                id=chat.id, user_id=chat.user_id
+        @pytest.mark.asyncio
+        async def test_delete_all_tags_by_id_and_user_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=str(uuid.uuid4()),
+                title="New Chat",
+                chat={},
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=None,
+                meta={"tags": ["FirstTag", "News", "Bob"]},
+                folder_id=None,
             )
 
-            assert c
+            async with db_connector.get_async_db() as db:
+                db.add(chat)
+                await db.commit()
+                await db.refresh(chat)
 
-            await db.refresh(chat)
-            assert chat.meta.get("tags", None) == []
+                c = await chat_table.delete_all_tags_by_id_and_user_id(
+                    id=chat.id, user_id=chat.user_id
+                )
+
+                assert c
+
+                await db.refresh(chat)
+                assert chat.meta.get("tags", None) == []
 
     # @pytest.mark.asyncio
     # async def test_get_domain_by_domain(
