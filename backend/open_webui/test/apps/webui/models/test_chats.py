@@ -4125,44 +4125,46 @@ class TestChat:
 
                 assert c == 0
 
-    @pytest.mark.asyncio
-    async def test_delete_tag_by_id_and_user_id_and_tag_name(
-        self,
-        chat_table: ChatTable,
-        db_connector: AsyncDatabaseConnector,
-    ):
-        tag_to_remove = "first_tag"
-        current_time = int(time.time())
-        chat = Chat(
-            id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
-            title="New Chat",
-            chat={},
-            created_at=current_time,
-            updated_at=current_time,
-            share_id=None,
-            archived=False,
-            pinned=None,
-            meta={"tags": [tag_to_remove, "news", "bob"]},
-            folder_id=None,
-        )
+    class TestDeleteTagByIdAndUserIdAndTagName:
 
-        async with db_connector.get_async_db() as db:
-            db.add(chat)
-            await db.commit()
-            await db.refresh(chat)
-
-            assert tag_to_remove in chat.meta.get("tags", [])
-
-            c = await chat_table.delete_tag_by_id_and_user_id_and_tag_name(
-                id=chat.id, user_id=chat.user_id, tag_name="first_tag"
+        @pytest.mark.asyncio
+        async def test_valid_chat_id_and_user_id_and_tag_name(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            tag_to_remove = "first_tag"
+            current_time = int(time.time())
+            chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=str(uuid.uuid4()),
+                title="New Chat",
+                chat={},
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=None,
+                meta={"tags": [tag_to_remove, "news", "bob"]},
+                folder_id=None,
             )
 
-            assert c
+            async with db_connector.get_async_db() as db:
+                db.add(chat)
+                await db.commit()
+                await db.refresh(chat)
 
-            await db.refresh(chat)
-            assert chat.meta.get("tags", None)
-            assert tag_to_remove not in chat.meta.get("tags", [])
+                assert tag_to_remove in chat.meta.get("tags", [])
+
+                c = await chat_table.delete_tag_by_id_and_user_id_and_tag_name(
+                    id=chat.id, user_id=chat.user_id, tag_name="first_tag"
+                )
+
+                assert c
+
+                await db.refresh(chat)
+                assert chat.meta.get("tags", None)
+                assert tag_to_remove not in chat.meta.get("tags", [])
 
     @pytest.mark.asyncio
     async def test_delete_all_tags_by_id_and_user_id(
