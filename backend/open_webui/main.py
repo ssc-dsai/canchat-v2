@@ -496,7 +496,7 @@ async def lifespan(app: FastAPI):
             stop_scheduler()
             log.info("Scheduler cleanup completed")
         except Exception as e:
-            log.error(f"Error during chat lifetime scheduler cleanup: {e}")
+            log.error(f"Error during scheduler cleanup: {e}")
 
 
 app = FastAPI(
