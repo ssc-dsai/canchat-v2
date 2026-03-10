@@ -5,6 +5,7 @@
 	import {
 		getDomains,
 		getModels,
+		getMcpProcesses,
 		getTotalUsers,
 		getDailyUsers,
 		getTotalPrompts,
@@ -66,6 +67,7 @@
 	// Data variables
 	let domains: string[] = [];
 	let models: string[] = [];
+	let mcpProcesses: string[] = [];
 	let totalUsers: number = 0,
 		totalPrompts: number = 0,
 		totalTokens: number = 0,
@@ -74,6 +76,7 @@
 		dailyTokens: number = 0;
 	let selectedDomain: string | null = null; // Allow null for "no domain"
 	let selectedModel: string | null = null; // Allow null for "no model"
+	let selectedMcpProcess: string | null = null; // Allow null for "all MCP processes"
 
 	// Export functionality variables
 	let isExporting = false;
@@ -279,10 +282,20 @@
 				totalUsers = await getTotalUsers(localStorage.token, updatedDomain);
 				totalPrompts = await getTotalPrompts(localStorage.token, updatedDomain);
 				// Pass date range to getTotalTokens for proper filtering
-				totalTokens = await getTotalTokens(localStorage.token, updatedDomain, startDate, endDate);
+				totalTokens = await getTotalTokens(
+					localStorage.token,
+					updatedDomain,
+					startDate,
+					endDate,
+					selectedMcpProcess ?? undefined
+				);
 				dailyUsers = await getDailyUsers(localStorage.token, updatedDomain);
 				dailyPrompts = await getDailyPrompts(localStorage.token, updatedDomain);
-				dailyTokens = await getDailyTokens(localStorage.token, updatedDomain);
+				dailyTokens = await getDailyTokens(
+					localStorage.token,
+					updatedDomain,
+					selectedMcpProcess ?? undefined
+				);
 			} catch (err) {
 				console.error('Error fetching summary metrics:', err);
 			} finally {
@@ -318,7 +331,12 @@
 					updatedDomain
 				);
 				dailyPromptsData = await getHistoricalPrompts(localStorage.token, days, updatedDomain);
-				dailyTokensData = await getHistoricalTokens(localStorage.token, days, updatedDomain);
+				dailyTokensData = await getHistoricalTokens(
+					localStorage.token,
+					days,
+					updatedDomain,
+					selectedMcpProcess ?? undefined
+				);
 
 				// Fetch model-specific historical data if a model is selected
 				if (selectedModel) {
@@ -713,6 +731,14 @@
 			// Get models based on user role
 			models = await getModels(localStorage.token);
 
+			// Load MCP processes for the MCP toggle/process filter on the Tokens tab
+			try {
+				mcpProcesses = await getMcpProcesses(localStorage.token);
+			} catch (mcpErr) {
+				console.warn('Could not load MCP processes:', mcpErr);
+				mcpProcesses = [];
+			}
+
 			// Note: For analysts, the models list shows all available models
 			// but the actual metrics data will be filtered by domain in the API calls
 			// This allows analysts to see what models are available for selection
@@ -763,6 +789,13 @@
 	function handleModelChange(event) {
 		const newModel = event.target.value || null;
 		selectedModel = newModel;
+		updateCharts(selectedDomain, selectedModel);
+	}
+
+	// Handler for MCP process selection changes (Tokens tab)
+	// Note: selectedMcpProcess is already updated by bind:value before this fires,
+	// so we do not read event.target.value (which would give the string "null" instead of JS null).
+	function handleMcpProcessChange() {
 		updateCharts(selectedDomain, selectedModel);
 	}
 
@@ -973,6 +1006,32 @@
 							>
 								{#each models as model}
 									<option value={model}>{model}</option>
+								{/each}
+							</select>
+						</div>
+					{/if}
+					<!-- MCP Process Selector (shown only on tokens tab) -->
+					{#if activeTab === 'tokens' && mcpProcesses.length > 0}
+						<div>
+							<label
+								class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
+								for="mcp-process-select"
+							>
+								{$i18n.t('Select MCP Process:')}
+							</label>
+							<select
+								id="mcp-process-select"
+								bind:value={selectedMcpProcess}
+								on:change={() => {
+									handleMcpProcessChange();
+								}}
+								class="block w-52 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+							>
+								<option value={null}>{$i18n.t('No Filter')}</option>
+								<option value="__mcp_all__">{$i18n.t('MCP — All Tools')}</option>
+								<option value="__non_mcp__">{$i18n.t('Non-MCP Only')}</option>
+								{#each mcpProcesses as process}
+									<option value={process}>{process}</option>
 								{/each}
 							</select>
 						</div>
