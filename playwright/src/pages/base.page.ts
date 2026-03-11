@@ -74,7 +74,7 @@ export class BasePage {
 		this.menuAdminPanel = this.page.getByRole('menuitem', {
 			name: this.t['Admin Panel'] || 'Admin Panel'
 		});
-		this.menuSignOut = this.page.getByRole('menuitem', { name: /Sign Out|Déconnexion/i });
+		this.menuSignOut = this.page.getByRole('menuitem', { name: this.t['Sign Out'] || 'Sign Out' });
 		this.setDefaultModel = this.page.getByRole('button', {
 			name: this.t['Set as default'] || 'Set as default'
 		});
