@@ -15,12 +15,11 @@ on:
     branches:
       - main
       - dev
-      - SBOM-compare-remove-write-permission
+
   pull_request:
     branches:
       - main
       - dev
-      - SBOM-compare-remove-write-permission
 
 permissions:
     actions: read
