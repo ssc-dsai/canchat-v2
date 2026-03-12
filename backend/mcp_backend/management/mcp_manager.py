@@ -19,6 +19,16 @@ log = logging.getLogger(__name__)
 # Ensure MCP manager logs are visible
 log.setLevel(logging.INFO)
 
+
+def _is_builtin_server(name: str) -> bool:
+    """Return True for servers that are part of the built-in MCP configuration.
+
+    Built-in servers are: time_server, news_server, and any *_sharepoint_server
+    (one per department, discovered automatically).
+    """
+    return name in ("time_server", "news_server") or name.endswith("_sharepoint_server")
+
+
 # Define allowed executables for MCP servers
 ALLOWED_EXECUTABLES = frozenset(
     [
@@ -336,13 +346,7 @@ class FastMCPManager:
                 "command": config.get("command", []),
                 "working_dir": config.get("working_dir"),
                 "url": config.get("url"),
-                "is_builtin": name
-                in [
-                    "time_server",
-                    "news_server",
-                    "mpo_sharepoint_server",
-                    "pmo_sharepoint_server",
-                ],  # Mark built-in servers
+                "is_builtin": _is_builtin_server(name),  # Mark built-in servers
             }
             servers.append(server_info)
 
@@ -377,11 +381,6 @@ class FastMCPManager:
                             tools = await client.list_tools()
 
                             for tool in tools:
-                                # Mark if this is a built-in server
-                                is_builtin = server_name in [
-                                    "time_server",
-                                    "news_server",
-                                ]
                                 tool_dict = {
                                     "name": tool.name,
                                     "description": tool.description,
@@ -394,7 +393,7 @@ class FastMCPManager:
                                     "mcp_server_idx": list(
                                         self.server_configs.keys()
                                     ).index(server_name),
-                                    "is_builtin": is_builtin,
+                                    "is_builtin": _is_builtin_server(server_name),
                                 }
                                 all_tools.append(tool_dict)
                 else:
@@ -411,13 +410,6 @@ class FastMCPManager:
                             log.info(f"Got {len(tools)} tools from {server_name}")
 
                             for tool in tools:
-                                # Mark if this is a built-in server
-                                is_builtin = server_name in [
-                                    "time_server",
-                                    "news_server",
-                                    "mpo_sharepoint_server",
-                                    "pmo_sharepoint_server",
-                                ]
                                 tool_dict = {
                                     "name": tool.name,
                                     "description": tool.description,
@@ -430,7 +422,7 @@ class FastMCPManager:
                                     "mcp_server_idx": list(
                                         self.server_configs.keys()
                                     ).index(server_name),
-                                    "is_builtin": is_builtin,
+                                    "is_builtin": _is_builtin_server(server_name),
                                 }
                                 all_tools.append(tool_dict)
                                 log.debug(f"Added tool {tool.name} from {server_name}")
@@ -564,77 +556,42 @@ class FastMCPManager:
         else:
             log.warning(f"News server not found at {news_server_path}")
 
-        # Add configuration for MPO SharePoint server (stdio)
-        mpo_sharepoint_server_path = (
-            backend_dir / "mcp_backend" / "servers" / "mpo_sharepoint_server.py"
-        )
+        # ---------------------------------------------------------------------------
+        # ADDING A NEW SHAREPOINT DEPARTMENT — zero code changes required here.
+        #
+        # To onboard a new department:
+        #   1. Copy backend/mcp_backend/servers/template_department_sharepoint_server.py
+        #      and rename it to {dept}_sharepoint_server.py  (e.g. fin_sharepoint_server.py)
+        #   2. Replace {DEPT_UPPER} in the copy with the department prefix (e.g. FIN)
+        #   3. Set the required env vars: {DEPT_UPPER}_SHP_ID_APP, _ID_APP_SECRET,
+        #      _TENANT_ID, _SITE_URL (and optionally _ORG_NAME, _DOC_LIBRARY,
+        #      _DEFAULT_SEARCH_FOLDERS)
+        #
+        # This loop discovers and starts every *_sharepoint_server.py automatically.
+        # No changes to this file, crew_mcp_integration.py, or any frontend code needed.
+        # ---------------------------------------------------------------------------
+        servers_dir = backend_dir / "mcp_backend" / "servers"
+        for server_file in sorted(servers_dir.glob("*_sharepoint_server.py")):
+            if server_file.stem.startswith("template_"):
+                continue  # skip template/example files
+            server_name = server_file.stem  # e.g. "mpo_sharepoint_server"
+            log.info(f"Found SharePoint server script: {server_file}")
 
-        log.info(f"Looking for MPO SharePoint server at: {mpo_sharepoint_server_path}")
-        log.info(f"MPO SharePoint server exists: {mpo_sharepoint_server_path.exists()}")
-
-        if mpo_sharepoint_server_path.exists():
             self.add_server_config(
-                name="mpo_sharepoint_server",
-                command=["python", str(mpo_sharepoint_server_path)],
+                name=server_name,
+                command=["python", str(server_file)],
                 working_dir=str(backend_dir),
-                env=dict(os.environ),  # Pass current environment variables
+                env=dict(os.environ),
                 transport="stdio",
             )
 
-            # Start the MPO SharePoint server
-            log.info(f"About to start MPO SharePoint server...")
-            start_result = await self.start_server("mpo_sharepoint_server")
-            log.info(f"MPO SharePoint server start_server returned: {start_result}")
+            log.info(f"About to start {server_name}...")
+            start_result = await self.start_server(server_name)
+            log.info(f"{server_name} start_server returned: {start_result}")
             if start_result:
-                log.info("MPO SharePoint server started successfully")
+                log.info(f"{server_name} started successfully")
             else:
-                log.error("MPO SharePoint server failed to start")
-        else:
-            log.warning(
-                f"MPO SharePoint server not found at {mpo_sharepoint_server_path}"
-            )
-
-        # Add configuration for PMO SharePoint server (stdio)
-        pmo_sharepoint_server_path = (
-            backend_dir / "mcp_backend" / "servers" / "pmo_sharepoint_server.py"
-        )
-
-        log.info(f"Looking for PMO SharePoint server at: {pmo_sharepoint_server_path}")
-        log.info(f"PMO SharePoint server exists: {pmo_sharepoint_server_path.exists()}")
-
-        if pmo_sharepoint_server_path.exists():
-            self.add_server_config(
-                name="pmo_sharepoint_server",
-                command=["python", str(pmo_sharepoint_server_path)],
-                working_dir=str(backend_dir),
-                env=dict(os.environ),  # Pass current environment variables
-                transport="stdio",
-            )
-
-            # Start the PMO SharePoint server
-            log.info(f"About to start PMO SharePoint server...")
-            start_result = await self.start_server("pmo_sharepoint_server")
-            log.info(f"PMO SharePoint server start_server returned: {start_result}")
-            if start_result:
-                log.info("PMO SharePoint server started successfully")
-            else:
-                log.error("PMO SharePoint server failed to start")
-        else:
-            log.warning(
-                f"PMO SharePoint server not found at {pmo_sharepoint_server_path}"
-            )
-
-        # Legacy SharePoint server (keep for backward compatibility)
-        sharepoint_server_path = (
-            backend_dir / "mcp_backend" / "servers" / "fastmcp_sharepoint_server.py"
-        )
-
-        if sharepoint_server_path.exists():
-            log.info(
-                "Legacy SharePoint server found but skipping (using MPO-specific server instead)"
-            )
-        else:
-            log.info("No legacy SharePoint server found")
+                log.error(f"{server_name} failed to start")
 
     async def initialize_external_servers(self):
         """Initialize external MCP servers from database"""
@@ -722,13 +679,6 @@ class FastMCPManager:
 
                         tool_list = []
                         for tool in tools:
-                            # Mark if this is a built-in server
-                            is_builtin = server_name in [
-                                "time_server",
-                                "news_server",
-                                "mpo_sharepoint_server",
-                                "pmo_sharepoint_server",
-                            ]
                             tool_dict = {
                                 "name": tool.name,
                                 "description": tool.description,
@@ -738,7 +688,7 @@ class FastMCPManager:
                                     else tool.inputSchema
                                 ),
                                 "mcp_server_name": server_name,
-                                "is_builtin": is_builtin,
+                                "is_builtin": _is_builtin_server(server_name),
                             }
                             tool_list.append(tool_dict)
 
@@ -753,13 +703,6 @@ class FastMCPManager:
 
                         tool_list = []
                         for tool in tools:
-                            # Mark if this is a built-in server
-                            is_builtin = server_name in [
-                                "time_server",
-                                "news_server",
-                                "mpo_sharepoint_server",
-                                "pmo_sharepoint_server",
-                            ]
                             tool_dict = {
                                 "name": tool.name,
                                 "description": tool.description,
@@ -769,7 +712,7 @@ class FastMCPManager:
                                     else tool.inputSchema
                                 ),
                                 "mcp_server_name": server_name,
-                                "is_builtin": is_builtin,
+                                "is_builtin": _is_builtin_server(server_name),
                             }
                             tool_list.append(tool_dict)
 
