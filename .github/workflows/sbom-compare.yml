@@ -22,7 +22,6 @@ on:
 
 permissions:
     actions: read
-    contents: write
 
 jobs:
   sbom-compare:
@@ -30,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2  # Fetch the previous commit for comparison
           ref: ${{ github.head_ref }}  # For PRs, checkout the head branch
