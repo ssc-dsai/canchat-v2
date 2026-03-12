@@ -46,7 +46,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Import the multi-department generic server
 from generic_sharepoint_server_multi_dept import run_department_server
 
-
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,

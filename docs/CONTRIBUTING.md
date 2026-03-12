@@ -13,10 +13,12 @@ CANChat has a department-aware SharePoint RAG integration built on the [Model Co
 ### What you need to do (two steps only)
 
 1. **Create a server file** — copy the template and rename it:
+
    ```
    cp backend/mcp_backend/servers/template_department_sharepoint_server.py \
       backend/mcp_backend/servers/{dept}_sharepoint_server.py
    ```
+
    Then open the new file and replace every `{DEPT_UPPER}` placeholder with your department prefix (e.g. `FIN`).
 
 2. **Set environment variables** in your `.env` / Azure Key Vault / Terraform secret store:
@@ -36,28 +38,27 @@ That's it. On next startup the server is discovered and registered automatically
 
 ### What happens automatically
 
-| What | Where |
-|---|---|
-| Server process started | `backend/mcp_backend/management/mcp_manager.py` |
-| CrewAI adapter initialised | `backend/mcp_backend/integration/crew_mcp_integration.py` |
-| MCP API endpoint exposes the server | `backend/mcp_backend/routers/mcp.py` |
-| Admin UI lists and describes the server | `src/lib/components/admin/Settings/MCP.svelte` |
+| What                                         | Where                                                      |
+| -------------------------------------------- | ---------------------------------------------------------- |
+| Server process started                       | `backend/mcp_backend/management/mcp_manager.py`            |
+| CrewAI adapter initialised                   | `backend/mcp_backend/integration/crew_mcp_integration.py`  |
+| MCP API endpoint exposes the server          | `backend/mcp_backend/routers/mcp.py`                       |
+| Admin UI lists and describes the server      | `src/lib/components/admin/Settings/MCP.svelte`             |
 | Permissions UI shows a toggle for the server | `src/lib/components/admin/Users/Groups/Permissions.svelte` |
-| Chat tool names/descriptions localised | `src/lib/utils/mcp-tools.ts` |
+| Chat tool names/descriptions localised       | `src/lib/utils/mcp-tools.ts`                               |
 
 ### Naming convention
 
-| Item | Pattern | Example |
-|---|---|---|
-| Server file | `{dept_lower}_sharepoint_server.py` | `fin_sharepoint_server.py` |
-| MCP server name | `{dept_lower}_sharepoint_server` | `fin_sharepoint_server` |
-| Env var prefix | `{DEPT_UPPER}_SHP_` | `FIN_SHP_` |
-| Tool names exposed to the LLM | `{dept_lower}_{action}` | `fin_search_documents_fast` |
+| Item                          | Pattern                             | Example                     |
+| ----------------------------- | ----------------------------------- | --------------------------- |
+| Server file                   | `{dept_lower}_sharepoint_server.py` | `fin_sharepoint_server.py`  |
+| MCP server name               | `{dept_lower}_sharepoint_server`    | `fin_sharepoint_server`     |
+| Env var prefix                | `{DEPT_UPPER}_SHP_`                 | `FIN_SHP_`                  |
+| Tool names exposed to the LLM | `{dept_lower}_{action}`             | `fin_search_documents_fast` |
 
 > **Note:** `template_department_sharepoint_server.py` is the canonical reference and is intentionally excluded from auto-discovery at runtime.
 
 ---
-
 
 ## 📌 Key Points
 
