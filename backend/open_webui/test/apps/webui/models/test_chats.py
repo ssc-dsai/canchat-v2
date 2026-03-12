@@ -16,6 +16,8 @@ from open_webui.models.chats import (
 from open_webui.models.tags import Tag, TagModel
 from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.exc import ObjectDeletedError
+import contextlib
 
 
 class TestChat:
@@ -4239,7 +4241,7 @@ class TestChat:
     class TestDeleteAllTagsByIdAndUserId:
 
         @pytest.mark.asyncio
-        async def test_delete_all_tags_by_id_and_user_id(
+        async def test_valid_ids(
             self,
             chat_table: ChatTable,
             db_connector: AsyncDatabaseConnector,
@@ -4273,92 +4275,185 @@ class TestChat:
                 await db.refresh(chat)
                 assert chat.meta.get("tags", None) == []
 
-    # @pytest.mark.asyncio
-    # async def test_get_domain_by_domain(
-    #     self,
-    #     domain_table: DomainTable,
-    #     db_connector: AsyncDatabaseConnector,
-    # ):
-    #     current_time = int(time.time())
-    #     new_domain = Domain(
-    #         id=str(uuid.uuid4),
-    #         domain="test.example.domain",
-    #         created_at=current_time,
-    #         updated_at=current_time,
-    #     )
+    class TestDeleteChatsById:
 
-    #     async with db_connector.get_async_db() as db:
-    #         db.add(new_domain)
-    #         await db.commit()
-    #         await db.refresh(new_domain)
+        @pytest.mark.asyncios
+        async def test_valid_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=str(uuid.uuid4()),
+                title="Test Chat for Unit Testing",
+                chat={},
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=None,
+                meta={},
+                folder_id=None,
+            )
 
-    #         domain = await domain_table.get_domain_by_domain(
-    #             domain_name=new_domain.domain
-    #         )
+            async with db_connector.get_async_db() as db:
+                db.add(chat)
+                await db.commit()
+                await db.refresh(chat)
 
-    #         assert domain
-    #         assert DomainModel.model_validate(new_domain) == domain
+                is_deleted = await chat_table.delete_chat_by_id(id=chat.id)
+                assert is_deleted
 
-    # @pytest.mark.asyncio
-    # async def test_update_domain_by_id(
-    #     self,
-    #     domain_table: DomainTable,
-    #     db_connector: AsyncDatabaseConnector,
-    # ):
-    #     current_time = int(time.time())
-    #     new_domain = Domain(
-    #         id=str(uuid.uuid4),
-    #         domain="test.example.domain",
-    #         created_at=current_time,
-    #         updated_at=current_time,
-    #     )
+                c = await db.scalar(select(Chat).where(Chat.id == chat.id))
+                assert c is None
 
-    #     async with db_connector.get_async_db() as db:
-    #         db.add(new_domain)
-    #         await db.commit()
-    #         await db.refresh(new_domain)
+    class TestDeleteChatsByIdAndUserId:
 
-    #         domain = await domain_table.update_domain_by_id(
-    #             domain_id=new_domain.id,
-    #             form_data=DomainForm(domain="new.domain.example"),
-    #         )
-    #         assert domain
+        @pytest.mark.asyncios
+        async def test_valid_ids(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            chat = Chat(
+                id=str(uuid.uuid4()),
+                user_id=str(uuid.uuid4()),
+                title="Test Chat for Unit Testing",
+                chat={},
+                created_at=current_time,
+                updated_at=current_time,
+                share_id=None,
+                archived=False,
+                pinned=None,
+                meta={},
+                folder_id=None,
+            )
 
-    #         await db.refresh(new_domain)
+            async with db_connector.get_async_db() as db:
+                db.add(chat)
+                await db.commit()
+                await db.refresh(chat)
 
-    #         assert DomainModel.model_validate(new_domain) == domain
+                is_deleted = await chat_table.delete_chat_by_id_and_user_id(
+                    id=chat.id, user_id=chat.user_id
+                )
+                assert is_deleted
 
-    # @pytest.mark.asyncio
-    # async def test_delete_domain_by_id(
-    #     self,
-    #     domain_table: DomainTable,
-    #     db_connector: AsyncDatabaseConnector,
-    # ):
-    #     current_time = int(time.time())
-    #     new_domain = Domain(
-    #         id=str(uuid.uuid4),
-    #         domain="test.example.domain",
-    #         created_at=current_time,
-    #         updated_at=current_time,
-    #     )
+                c = await db.scalar(
+                    select(Chat).where(Chat.id == chat.id, Chat.user_id == chat.user_id)
+                )
+                assert c is None
 
-    #     async with db_connector.get_async_db() as db:
-    #         db.add(new_domain)
-    #         await db.commit()
-    #         await db.refresh(new_domain)
+    class TestDeleteChatsByUserId:
 
-    #         domain = await domain_table.delete_domain_by_id(domain_id=new_domain.id)
-    #         assert domain
+        @pytest.mark.asyncios
+        async def test_valid_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            user_id = str(uuid.uuid4())
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="Test Chat for Unit Testing",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={},
+                    folder_id=None,
+                )
+                for _ in range(5)
+            ]
 
-    #         d = await db.scalar(select(Domain).where(Domain.id == new_domain.id))
-    #         assert not d
+            async with db_connector.get_async_db() as db:
+                for chat in chats:
+                    db.add(chat)
+                await db.commit()
+                for chat in chats:
+                    await db.refresh(chat)
 
-    # @pytest.mark.asyncio
-    # async def test_delete_domain_by_id_no_domain(
-    #     self,
-    #     domain_table: DomainTable,
-    # ):
-    #     id = "ThisIsAnIdThatDoesntExist"
+                chats_in_db = await db.execute(
+                    select(Chat).where(Chat.user_id == user_id)
+                )
+                assert len(chats_in_db.fetchall()) == len(chats)
 
-    #     domain = await domain_table.delete_domain_by_id(domain_id=id)
-    #     assert not domain
+                is_deleted = await chat_table.delete_chats_by_user_id(user_id=user_id)
+                assert is_deleted
+
+                c = await db.execute(select(Chat).where(Chat.user_id == user_id))
+                assert len(c.fetchall()) == 0
+
+    class TestDeleteChatsByUserIdAndFolderId:
+
+        @pytest.mark.asyncios
+        async def test_valid_ids(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            user_id = str(uuid.uuid4())
+            folder_ids = [str(uuid.uuid4()) for _ in range(3)]
+
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    title="Test Chat for Unit Testing",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={},
+                    folder_id=random.choice(folder_ids),
+                )
+                for _ in range(10)
+            ]
+
+            async with db_connector.get_async_db() as db:
+                for chat in chats:
+                    db.add(chat)
+                await db.commit()
+                for chat in chats:
+                    await db.refresh(chat)
+
+                # Choose a folder_id
+                folder_id = random.choice(folder_ids)
+                chats_in_folder = [
+                    chat.id for chat in chats if chat.folder_id == folder_id
+                ]
+                while len(chats_in_folder) == 0:
+                    folder_id = random.choice(folder_ids)
+                    chats_in_folder = [
+                        chat.id for chat in chats if chat.folder_id == folder_id
+                    ]
+
+                chats_in_folder_db = await db.execute(
+                    select(Chat).where(
+                        Chat.user_id == user_id, Chat.folder_id == folder_id
+                    )
+                )
+                assert len(chats_in_folder_db.fetchall()) == len(chats_in_folder)
+
+                is_deleted = await chat_table.delete_chats_by_user_id_and_folder_id(
+                    user_id=user_id, folder_id=folder_id
+                )
+                assert is_deleted
+
+                c = await db.execute(
+                    select(Chat).where(
+                        Chat.user_id == user_id, Chat.folder_id == folder_id
+                    )
+                )
+                assert len(c.fetchall()) == 0
