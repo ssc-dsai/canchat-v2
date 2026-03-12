@@ -483,6 +483,9 @@
 								input.focus();
 							}
 						}}
+						deleteHandler={() => {
+							showDeleteConfirm = true;
+						}}
 						buttonClass="dark:hover:bg-gray-850 rounded-lg touch-auto"
 						onClose={() => {
 							// Do nothing - menu closing should not affect selection
