@@ -227,6 +227,12 @@ That's it—you're all set up!
 
 ## How to Contribute
 
+### Developer Onboarding — Key Architecture Notes
+
+Before diving in, read **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)** for project conventions. In particular:
+
+> **Adding a new SharePoint department?** You only need two things: a server file and environment variables — no application code changes required. See [docs/CONTRIBUTING.md — MCP SharePoint Integration](docs/CONTRIBUTING.md#-mcp-sharepoint-integration--adding-a-new-department) for the full guide.
+
 ### Code of Conduct
 
 This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT). By participating, you are expected to uphold this code. Please report unacceptable behavior to the [maintainers](mailto:dsaiclientengagement.sdiaclientmobilisation@ssc-spc.gc.ca).
