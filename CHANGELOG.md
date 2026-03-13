@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.7-ccv2-1.12.5] - 2026-02-26
 
+### Added
+
+- **📝 Log Web Search Metrics**: Added detailed logging metrics on web search.
+
 ### Fixed
 
 - **🌐 Web Search Query**: Fixed timeout handling during web search partial results.
