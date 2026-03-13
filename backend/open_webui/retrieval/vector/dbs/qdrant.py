@@ -54,12 +54,16 @@ _collection_lock_manager = get_collection_lock_manager()
 
 class QdrantClient:
     def __init__(self):
-        self._client: Optional[AsyncQdrantClient] = None
-        self._client_loop_id: Optional[int] = None
+        # Keep one async client per event loop to avoid closing a client that
+        # is still serving requests on another loop.
+        self._clients_by_loop: dict[int, AsyncQdrantClient] = {}
+        # Loop objects are stored alongside clients so _prune_closed_loops() can
+        # call loop.is_closed() and evict entries for loops that have since ended.
+        self._loops_by_id: dict[int, asyncio.AbstractEventLoop] = {}
+        self._fallback_client: Optional[AsyncQdrantClient] = None
         # NOTE: threading.Lock is intentional here because these sections only do
         # fast synchronous reference swaps. Never add await calls while holding it.
         self._client_lock = threading.Lock()
-        self._cleanup_tasks: set[asyncio.Task] = set()
 
     def _build_client(self) -> AsyncQdrantClient:
         return AsyncQdrantClient(
@@ -91,105 +95,104 @@ class QdrantClient:
         except Exception as e:
             log.debug(f"Error closing stale Qdrant client: {type(e).__name__}: {e}")
 
-    def _swap_client_for_current_loop(
-        self,
-    ) -> tuple[AsyncQdrantClient, Optional[AsyncQdrantClient]]:
-        """Return a client for the current asyncio loop.
+    def _prune_closed_loops(self) -> None:
+        """Remove entries for closed event loops. Must be called with _client_lock held.
 
-        Fast path returns the cached client when the loop matches. On loop
-        mismatch (or no client) this synchronously swaps in a new client under
-        `self._client_lock` and returns (new_client, old_client). Caller must
-        close the stale client (await or schedule cleanup).
+        Stale clients are closed asynchronously on the current running loop (if any)
+        so this method never blocks the caller. On the no-running-loop path the
+        client is simply de-referenced and left to the GC.
+        """
+        stale_ids = [
+            loop_id for loop_id, loop in self._loops_by_id.items() if loop.is_closed()
+        ]
+        if not stale_ids:
+            return
+
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        for loop_id in stale_ids:
+            client = self._clients_by_loop.pop(loop_id, None)
+            self._loops_by_id.pop(loop_id, None)
+            if client is not None and current_loop is not None:
+                # create_task is synchronous and safe to call while holding the
+                # threading.Lock because we are on the running loop's thread.
+                current_loop.create_task(self._close_client(client))
+
+        log.info(
+            f"Pruned {len(stale_ids)} stale Qdrant client(s) for closed loops: "
+            f"remaining_active={len(self._clients_by_loop)}"
+        )
+
+    def _get_or_create_client_for_current_loop(self) -> AsyncQdrantClient:
+        """Return a client bound to the current asyncio loop.
+
+        Clients are pooled per loop id to avoid cross-loop replacement races.
         """
         try:
-            current_loop_id = id(asyncio.get_running_loop())
+            current_loop = asyncio.get_running_loop()
+            current_loop_id = id(current_loop)
         except RuntimeError:
-            # No running loop in this thread — treat loop id as `None`.
+            current_loop = None
             current_loop_id = None
 
-        # Keep this section short and synchronous; do not await while holding the lock.
         with self._client_lock:
-            # Fast path: cached client already matches the current loop.
-            if self._client is not None and self._client_loop_id == current_loop_id:
-                return self._client, None
+            self._prune_closed_loops()
 
-            # Swap: create a new client for the current loop and return the old one.
-            old_client = self._client
-            old_loop_id = self._client_loop_id
+            if current_loop_id is None:
+                if self._fallback_client is None:
+                    self._fallback_client = self._build_client()
+                return self._fallback_client
 
-            # Build the new client (caller will close the old one).
-            self._client = self._build_client()
-            self._client_loop_id = current_loop_id
+            client = self._clients_by_loop.get(current_loop_id)
+            if client is not None:
+                return client
 
-            if old_client is not None:
+            client = self._build_client()
+            self._clients_by_loop[current_loop_id] = client
+            self._loops_by_id[current_loop_id] = current_loop
+
+            if len(self._clients_by_loop) > 1:
                 log.info(
-                    "Swapped Qdrant client due to event-loop change: "
-                    f"old_loop={old_loop_id}, new_loop={current_loop_id}"
+                    "Created additional loop-scoped Qdrant client: "
+                    f"loop_id={current_loop_id}, active_loops={len(self._clients_by_loop)}"
                 )
 
-            return self._client, old_client
-
-    def _track_cleanup_task(self, task: asyncio.Task) -> None:
-        """Track fire-and-forget cleanup tasks so shutdown can await them."""
-        with self._client_lock:
-            self._cleanup_tasks.add(task)
-
-        def _on_done(done_task: asyncio.Task) -> None:
-            with self._client_lock:
-                self._cleanup_tasks.discard(done_task)
-            try:
-                exc = done_task.exception()
-            except asyncio.CancelledError:
-                return
-            if exc:
-                log.debug(
-                    "Background stale-client cleanup task failed: "
-                    f"{type(exc).__name__}: {exc}"
-                )
-
-        task.add_done_callback(_on_done)
+            return client
 
     async def _get_client(self) -> AsyncQdrantClient:
-        client, stale_client = self._swap_client_for_current_loop()
-        if stale_client is not None and stale_client is not client:
-            await self._close_client(stale_client)
-        return client
+        return self._get_or_create_client_for_current_loop()
 
     @property
     def client(self):
         """
         Compatibility accessor.
 
-        Returns a loop-aware cached client synchronously and schedules cleanup
-        of stale client instances when called within a running event loop.
+        Returns a loop-aware cached client synchronously.
         """
-        client, stale_client = self._swap_client_for_current_loop()
-        if stale_client is not None and stale_client is not client:
-            try:
-                task = asyncio.get_running_loop().create_task(
-                    self._close_client(stale_client)
-                )
-                self._track_cleanup_task(task)
-            except RuntimeError:
-                pass
-        return client
+        return self._get_or_create_client_for_current_loop()
 
     async def close(self):
-        """Close the currently cached client, if any."""
+        """Close all cached loop-scoped clients, if any."""
         with self._client_lock:
-            pending_cleanup_tasks = tuple(
-                task for task in self._cleanup_tasks if not task.done()
-            )
+            clients = list(self._clients_by_loop.values())
+            fallback_client = self._fallback_client
+            self._clients_by_loop.clear()
+            self._loops_by_id.clear()
+            self._fallback_client = None
 
-        if pending_cleanup_tasks:
-            await asyncio.gather(*pending_cleanup_tasks, return_exceptions=True)
+        if fallback_client is not None:
+            clients.append(fallback_client)
 
-        stale_client = None
-        with self._client_lock:
-            stale_client = self._client
-            self._client = None
-            self._client_loop_id = None
-        await self._close_client(stale_client)
+        # Close each client once even if structures referenced the same object.
+        seen = set()
+        for client in clients:
+            if id(client) in seen:
+                continue
+            seen.add(id(client))
+            await self._close_client(client)
 
     @staticmethod
     def _build_filter(filter_data: Optional[dict]) -> Optional[Filter]:
