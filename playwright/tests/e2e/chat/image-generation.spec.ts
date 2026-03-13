@@ -2,10 +2,10 @@ import { test, expect } from '../../../src/fixtures/base-fixture';
 import { describeLocalImage } from '../../../src/utils/openai';
 
 test.describe('Feature: Image Generation', () => {
-	test('user can generate images using dall-e-2', async ({
+	test.skip('user can generate images using dall-e-2', async ({
+		//dall-e has been deprecated, skipping test for now.
 		adminPage,
-		userPage,
-		locale
+		userPage
 	}, testInfo) => {
 		test.setTimeout(240000);
 		console.log('Testing: user can generate images using dall-e-2');
