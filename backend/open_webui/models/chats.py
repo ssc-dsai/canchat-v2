@@ -1002,13 +1002,14 @@ class ChatTable:
         try:
             async with self.__db.get_async_db() as db:
 
-                chats_by_user = await db.scalars(
-                    select(Chat).where(Chat.user_id == user_id)
-                )
-                shared_chat_ids = [f"shared-{chat.id}" for chat in chats_by_user.all()]
-
                 _ = await db.execute(
-                    delete(Chat).where(Chat.user_id.in_(shared_chat_ids))
+                    delete(Chat).where(
+                        Chat.user_id.in_(
+                            # The user_id of a shared chat is `shared-<id>` where `<id>`
+                            # is the id of the original chat.
+                            select("shared-" + Chat.id).where(Chat.user_id == user_id)
+                        )
+                    )
                 )
                 await db.commit()
 
