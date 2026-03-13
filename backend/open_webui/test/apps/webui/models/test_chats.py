@@ -16,8 +16,6 @@ from open_webui.models.chats import (
 from open_webui.models.tags import Tag, TagModel
 from sqlalchemy import select
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.orm.exc import ObjectDeletedError
-import contextlib
 
 
 class TestChat:
@@ -4457,3 +4455,77 @@ class TestChat:
                     )
                 )
                 assert len(c.fetchall()) == 0
+
+    class TestDeleteSharedChatsByUserId:
+
+        @pytest.mark.asyncio
+        async def test_valid_id(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+        ):
+            current_time = int(time.time())
+            user_ids = [str(uuid.uuid4()) for _ in range(3)]
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=random.choice(user_ids),
+                    title="Test Chat for Unit Testing",
+                    chat={},
+                    created_at=current_time,
+                    updated_at=current_time,
+                    share_id=None,
+                    archived=False,
+                    pinned=None,
+                    meta={},
+                    folder_id=None,
+                )
+                for _ in range(10)
+            ]
+
+            shared_chats: list[Chat] = list()
+            # create shared chats
+            for chat in random.choices(chats, k=6):
+                shared_chat = Chat(**ChatModel.model_validate(chat).model_dump())
+                shared_chat.user_id = f"shared-{chat.id}"
+                shared_chat.id = str(uuid.uuid4())
+                shared_chats.append(shared_chat)
+                chat.share_id = shared_chat.id
+
+            async with db_connector.get_async_db() as db:
+                db.add_all(chats + shared_chats)
+                await db.commit()
+                for chat in chats + shared_chats:
+                    await db.refresh(chat)
+
+                # pick a user which has shared chats
+                user_id = random.choice(
+                    list(set([chat.user_id for chat in chats if chat.share_id]))
+                )
+
+                s = await db.scalars(
+                    select(Chat).where(
+                        Chat.id.in_(
+                            select(Chat.share_id).where(
+                                Chat.user_id == user_id, Chat.share_id.isnot(None)
+                            )
+                        )
+                    )
+                )
+                assert len(s.fetchall()) > 0
+
+                shared_chat_model = await chat_table.delete_shared_chats_by_user_id(
+                    user_id=user_id
+                )
+                assert shared_chat_model
+
+                s = await db.scalars(
+                    select(Chat).where(
+                        Chat.id.in_(
+                            select(Chat.share_id).where(
+                                Chat.user_id == user_id, Chat.share_id.isnot(None)
+                            )
+                        )
+                    )
+                )
+                assert len(s.fetchall()) == 0

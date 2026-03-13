@@ -294,12 +294,15 @@ class ChatTable:
         return None
 
     async def insert_shared_chat_by_chat_id(self, chat_id: str) -> ChatModel | None:
+        """
+        A shared chat is a chat object with a unique id and the user_id set to `shared-<id>`
+        of where `<id>` is the id of the chat object being shared.
+        """
         async with self.__db.get_async_db() as db:
             # Get the existing chat to share
             if chat := await db.get(Chat, chat_id):
                 # Check if the chat is already shared
                 if chat.share_id:
-                    # BUG: There's a mismatch between the generated shared user_id in the created shared_chat and what's being put here.
                     return await self.get_chat_by_id_and_user_id(
                         chat.share_id, f"shared-{chat.id}"
                     )
