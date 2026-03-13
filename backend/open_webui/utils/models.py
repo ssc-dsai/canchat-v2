@@ -1,26 +1,17 @@
-import time
 import logging
 import sys
+import time
 
 from fastapi import Request
-
-from open_webui.routers import openai, ollama
-from open_webui.functions import get_function_models
-
-
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-
-
-from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.access_control import has_access
-
-
 from open_webui.config import (
     DEFAULT_ARENA_MODEL,
 )
-
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL, SRC_LOG_LEVELS
+from open_webui.functions import get_function_models
+from open_webui.models.db_services import FUNCTIONS, MODELS
+from open_webui.routers import ollama, openai
+from open_webui.utils.access_control import has_access
+from open_webui.utils.plugin import load_function_module_by_id
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -43,6 +34,11 @@ async def get_all_base_models(request: Request):
                 "id": model["model"],
                 "name": model["name"],
                 "object": "model",
+                **(
+                    {"context_length": model["context_length"]}
+                    if "context_length" in model
+                    else {}
+                ),
                 "created": int(time.time()),
                 "owned_by": "ollama",
                 "ollama": model,
@@ -99,16 +95,16 @@ async def get_all_models(request):
         models = models + arena_models
 
     global_action_ids = [
-        function.id for function in await Functions.get_global_action_functions()
+        function.id for function in await FUNCTIONS.get_global_action_functions()
     ]
     enabled_action_ids = [
         function.id
-        for function in await Functions.get_functions_by_type(
+        for function in await FUNCTIONS.get_functions_by_type(
             "action", active_only=True
         )
     ]
 
-    custom_models = await Models.get_all_models()
+    custom_models = await MODELS.get_all_models()
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             for model in models:
@@ -135,6 +131,7 @@ async def get_all_models(request):
         ):
             owned_by = "openai"
             pipe = None
+            context_length = None
             action_ids = []
 
             for model in models:
@@ -145,6 +142,8 @@ async def get_all_models(request):
                     owned_by = model["owned_by"]
                     if "pipe" in model:
                         pipe = model["pipe"]
+                    if "context_length" in model:
+                        context_length = model["context_length"]
                     break
 
             if custom_model.meta:
@@ -162,6 +161,11 @@ async def get_all_models(request):
                     "info": custom_model.model_dump(),
                     "preset": True,
                     **({"pipe": pipe} if pipe is not None else {}),
+                    **(
+                        {"context_length": context_length}
+                        if context_length is not None
+                        else {}
+                    ),
                     "action_ids": action_ids,
                 }
             )
@@ -208,7 +212,7 @@ async def get_all_models(request):
 
         model["actions"] = []
         for action_id in action_ids:
-            action_function = await Functions.get_function_by_id(action_id)
+            action_function = await FUNCTIONS.get_function_by_id(action_id)
             if action_function is None:
                 raise Exception(f"Action not found: {action_id}")
 
@@ -233,7 +237,7 @@ async def check_model_access(user, model):
         ):
             raise Exception("Model not found")
     else:
-        model_info = await Models.get_model_by_id(model.get("id"))
+        model_info = await MODELS.get_model_by_id(model.get("id"))
         if not model_info:
             raise Exception("Model not found")
         elif not (

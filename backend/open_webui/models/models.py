@@ -1,18 +1,13 @@
 import logging
 import time
 
-from open_webui.internal.db import JSONField, get_async_db
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db_utils import AsyncDatabaseConnector, JSONField
 from open_webui.models.base import Base
-from open_webui.models.users import Users, UserResponse
-
-
+from open_webui.models.users import UserResponse, UsersTable
 from pydantic import BaseModel, ConfigDict
-
-from sqlalchemy import BigInteger, Boolean, delete, JSON, select, Text, update
+from sqlalchemy import JSON, BigInteger, Boolean, Text, delete, select, update
 from sqlalchemy.orm import Mapped, mapped_column
-
-from open_webui.utils.access_control import has_access
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -141,6 +136,16 @@ class ModelForm(BaseModel):
 
 
 class ModelsTable:
+
+    __db: AsyncDatabaseConnector
+    __users: UsersTable
+
+    def __init__(
+        self, db_connector: AsyncDatabaseConnector, users_table: UsersTable
+    ) -> None:
+        self.__db = db_connector
+        self.__users = users_table
+
     async def insert_new_model(
         self, form_data: ModelForm, user_id: str
     ) -> ModelModel | None:
@@ -153,7 +158,7 @@ class ModelsTable:
             }
         )
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 result = Model(**model.model_dump())
                 db.add(result)
                 await db.commit()
@@ -168,17 +173,17 @@ class ModelsTable:
             return None
 
     async def get_all_models(self) -> list[ModelModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             models = await db.scalars(select(Model))
             return [ModelModel.model_validate(model) for model in models.all()]
 
     async def get_models(self) -> list[ModelUserResponse]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             models: list[ModelUserResponse] = []
             for model in (
                 await db.scalars(select(Model).where(Model.base_model_id != None))
             ).all():
-                user = await Users.get_user_by_id(model.user_id)
+                user = await self.__users.get_user_by_id(model.user_id)
                 models.append(
                     ModelUserResponse.model_validate(
                         {
@@ -190,13 +195,15 @@ class ModelsTable:
             return models
 
     async def get_base_models(self) -> list[ModelModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             models = await db.scalars(select(Model).filter(Model.base_model_id == None))
             return [ModelModel.model_validate(model) for model in models.all()]
 
     async def get_models_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
+        from open_webui.utils.access_control import has_access
+
         models = await self.get_models()
         return [
             model
@@ -207,14 +214,14 @@ class ModelsTable:
 
     async def get_model_by_id(self, id: str) -> ModelModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 model = await db.get(Model, id)
                 return ModelModel.model_validate(model)
         except Exception:
             return None
 
     async def toggle_model_by_id(self, id: str) -> ModelModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 if model := await db.scalar(select(Model).where(Model.id == id)):
                     model.is_active = not model.is_active
@@ -231,7 +238,7 @@ class ModelsTable:
         self, id: str, model_form: ModelForm
     ) -> ModelModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 _ = await db.execute(
                     update(Model)
                     .where(Model.id == id)
@@ -249,7 +256,7 @@ class ModelsTable:
 
     async def delete_model_by_id(self, id: str) -> bool:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 _ = await db.execute(delete(Model).where(Model.id == id))
                 await db.commit()
 
@@ -259,13 +266,10 @@ class ModelsTable:
 
     async def delete_all_models(self) -> bool:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 _ = await db.execute(delete(Model))
                 await db.commit()
 
                 return True
         except Exception:
             return False
-
-
-Models = ModelsTable()

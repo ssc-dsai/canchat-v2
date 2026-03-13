@@ -57,7 +57,6 @@ from open_webui.routers import (
     groups,
     files,
     functions,
-    memories,
     metrics,
     models,
     knowledge,
@@ -76,11 +75,9 @@ from open_webui.routers.retrieval import (
     load_reranker_model,
 )
 
-from open_webui.internal.db import Session, get_async_db
-
-from open_webui.models.functions import Functions
-from open_webui.models.models import Models
-from open_webui.models.users import Users
+from open_webui.internal.db import DB_SESSION, get_async_db
+from open_webui.models.db_services import USERS, MODELS, FUNCTIONS
+from open_webui.models.users import UserModel
 
 from open_webui.config import (
     # Ollama
@@ -319,9 +316,6 @@ from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
 
-if SAFE_MODE:
-    print("SAFE MODE ENABLED")
-    Functions.deactivate_all_functions()
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -346,7 +340,8 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(rf"""
+print(
+    rf"""
   ___                    __        __   _     _   _ ___
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
 | | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
@@ -358,13 +353,43 @@ print(rf"""
 v{VERSION} - building the best open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
-""")
+"""
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Validate Redis lock manager health (already initialized during import)
+    # The lock manager creation will fail fast if REDIS_URL is not set or Redis is unavailable
+    try:
+        from open_webui.retrieval.vector.locks import get_collection_lock_manager
+
+        redis_lock_manager = get_collection_lock_manager()
+
+        # Perform async health check to verify connectivity
+        if not await redis_lock_manager.health_check():
+            raise RuntimeError(
+                "Redis health check failed during startup. "
+                "Distributed locking requires Redis to be available and responsive."
+            )
+
+        app.state.redis_lock_manager = redis_lock_manager
+        log.info(
+            f"Redis distributed locking validated and ready: {redis_lock_manager.redis_url}"
+        )
+    except Exception as e:
+        log.warning(
+            f"Redis validation failed — distributed locking unavailable. "
+            f"Continuing without Redis (single-instance / local dev mode). Error: {e}"
+        )
+        app.state.redis_lock_manager = None
+
     if RESET_CONFIG_ON_START:
         reset_config()
+
+    if SAFE_MODE:
+        print("SAFE MODE ENABLED")
+        await FUNCTIONS.deactivate_all_functions()
 
     # Initialize metrics service
     try:
@@ -430,14 +455,14 @@ async def lifespan(app: FastAPI):
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
 
-    # Initialize chat lifetime scheduler
+    # Initialize scheduler (chat cleanup, Redis pool cleanup, etc.)
     try:
-        from open_webui.scheduler import start_chat_lifetime_scheduler
+        from open_webui.scheduler import start_scheduler
 
-        start_chat_lifetime_scheduler()
-        log.info("Chat lifetime scheduler initialized")
+        start_scheduler()
+        log.info("Scheduler initialized")
     except Exception as e:
-        log.error(f"Failed to initialize chat lifetime scheduler: {e}")
+        log.error(f"Failed to initialize scheduler: {e}")
 
     # Add task completion callback to log if it exits
     def on_cleanup_done(task):
@@ -490,14 +515,32 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 log.error(f"Error during MCP manager cleanup: {e}")
 
-        # Cleanup chat lifetime scheduler
+        # Cleanup scheduler
         try:
-            from open_webui.scheduler import stop_chat_lifetime_scheduler
+            from open_webui.scheduler import stop_scheduler
 
-            stop_chat_lifetime_scheduler()
-            log.info("Chat lifetime scheduler cleanup completed")
+            stop_scheduler()
+            log.info("Scheduler cleanup completed")
         except Exception as e:
-            log.error(f"Error during chat lifetime scheduler cleanup: {e}")
+            log.error(f"Error during scheduler cleanup: {e}")
+
+        # Cleanup cached Qdrant client
+        try:
+            from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+
+            if VECTOR_DB_CLIENT and hasattr(VECTOR_DB_CLIENT, "close"):
+                await VECTOR_DB_CLIENT.close()
+                log.info("Qdrant client cleanup completed")
+        except Exception as e:
+            log.error(f"Error during Qdrant client cleanup: {e}")
+
+        # Cleanup Redis lock manager
+        if hasattr(app.state, "redis_lock_manager") and app.state.redis_lock_manager:
+            try:
+                await app.state.redis_lock_manager.close()
+                log.info("Redis lock manager cleanup completed")
+            except Exception as e:
+                log.error(f"Error during Redis lock manager cleanup: {e}")
 
 
 app = FastAPI(
@@ -913,7 +956,7 @@ async def commit_session_after_request(request: Request, call_next):
     try:
         response = await call_next(request)
         # log.debug("Commit session after request")
-        Session.commit()
+        DB_SESSION.commit()
 
         # Ensure we always return a response
         if response is None:
@@ -930,7 +973,7 @@ async def commit_session_after_request(request: Request, call_next):
             f"Error in commit_session_after_request middleware for {request.url.path}: {e}"
         )
         try:
-            Session.rollback()
+            DB_SESSION.rollback()
         except Exception as rollback_error:
             log.error(f"Error during session rollback: {rollback_error}")
         return JSONResponse(
@@ -1070,7 +1113,6 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledg
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
-app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
@@ -1108,7 +1150,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                     filtered_models.append(model)
                 continue
 
-            model_info = await Models.get_model_by_id(model["id"])
+            model_info = await MODELS.get_model_by_id(model["id"])
             if model_info:
                 if user.id == model_info.user_id or await has_access(
                     user.id, type="read", access_control=model_info.access_control
@@ -1157,7 +1199,7 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
 async def chat_completion(
     request: Request,
     form_data: dict,
-    user=Depends(get_verified_user),
+    user: UserModel = Depends(get_verified_user),
 ):
     if not request.app.state.MODELS:
         await get_all_models(request)
@@ -1274,11 +1316,11 @@ async def get_app_config(request: Request):
                 detail="Invalid token",
             )
         if data is not None and "id" in data:
-            user = await Users.get_user_by_id(data["id"])
+            user = await USERS.get_user_by_id(data["id"])
 
     onboarding = False
     if user is None:
-        user_count = await Users.get_num_users()
+        user_count = await USERS.get_num_users()
         onboarding = user_count == 0
 
     return {
@@ -1447,6 +1489,51 @@ async def healthcheck_with_db():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection failed",
+        )
+
+
+@app.get("/health/redis")
+async def healthcheck_redis():
+    """
+    Redis readiness endpoint for orchestration (Kubernetes, load balancers).
+    Returns 503 if Redis is unhealthy or circuit is OPEN.
+    """
+    try:
+        from open_webui.retrieval.vector.locks import get_collection_lock_manager
+
+        manager = get_collection_lock_manager()
+        metrics = manager.get_health_metrics()
+
+        # Fail if circuit is open (persistent Redis issues)
+        if metrics["circuit_state"] == "open":
+            log.warning(
+                f"[HEALTH:REDIS] Circuit OPEN: {metrics['consecutive_failures']} "
+                f"consecutive failures, {metrics['recovery_attempts']} recovery attempts"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Redis circuit open. State: {metrics}",
+            )
+
+        # Fail if Redis not initialized
+        if not metrics["redis_initialized"]:
+            log.warning("[HEALTH:REDIS] Redis not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Redis not initialized",
+            )
+
+        return {
+            "status": True,
+            "redis": metrics,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Redis health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Redis health check error: {str(e)}",
         )
 
 

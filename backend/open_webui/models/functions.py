@@ -1,12 +1,12 @@
 import logging
 import time
 
-from open_webui.internal.db import JSONField, get_async_db
-from open_webui.models.base import Base
-from open_webui.models.users import Users
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db_utils import AsyncDatabaseConnector, JSONField
+from open_webui.models.base import Base
+from open_webui.models.users import UsersTable
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, delete, select, String, Text, update
+from sqlalchemy import BigInteger, Boolean, String, Text, delete, select, update
 from sqlalchemy.orm import Mapped, mapped_column
 
 log = logging.getLogger(__name__)
@@ -83,6 +83,16 @@ class FunctionValves(BaseModel):
 
 
 class FunctionsTable:
+
+    __db: AsyncDatabaseConnector
+    __users: UsersTable
+
+    def __init__(
+        self, db_connector: AsyncDatabaseConnector, users_table: UsersTable
+    ) -> None:
+        self.__db = db_connector
+        self.__users = users_table
+
     async def insert_new_function(
         self, user_id: str, type: str, form_data: FunctionForm
     ) -> FunctionModel | None:
@@ -96,7 +106,7 @@ class FunctionsTable:
                     "created_at": int(time.time()),
                 }
             )
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 result = Function(**function.model_dump())
                 db.add(result)
                 await db.commit()
@@ -111,7 +121,7 @@ class FunctionsTable:
 
     async def get_function_by_id(self, id: str) -> FunctionModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 if function := await db.get(Function, id):
                     return FunctionModel.model_validate(function)
                 return None
@@ -119,7 +129,7 @@ class FunctionsTable:
             return None
 
     async def get_functions(self, active_only: bool = False) -> list[FunctionModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             query = select(Function)
             if active_only:
                 query = query.where(Function.is_active == True)
@@ -133,7 +143,7 @@ class FunctionsTable:
     async def get_functions_by_type(
         self, type: str, active_only: bool = False
     ) -> list[FunctionModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             query = select(Function).where(Function.type == type)
             if active_only:
                 query = query.where(Function.is_active == True)
@@ -146,7 +156,7 @@ class FunctionsTable:
     async def get_global_filter_functions(
         self, sorted: bool = False
     ) -> list[FunctionModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             functions = await db.scalars(
                 select(Function).where(
                     Function.type == "filter",
@@ -168,7 +178,7 @@ class FunctionsTable:
     async def get_global_action_functions(
         self, sorted: bool = False
     ) -> list[FunctionModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             functions = await db.scalars(
                 select(Function).where(
                     Function.type == "action",
@@ -188,7 +198,7 @@ class FunctionsTable:
                 ]
 
     async def get_function_valves_by_id(self, id: str) -> dict | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 function = await db.get(Function, id)
                 return function.valves if function.valves else None
@@ -199,7 +209,7 @@ class FunctionsTable:
     async def update_function_valves_by_id(
         self, id: str, valves: dict
     ) -> FunctionValves | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 if function := await db.get(Function, id):
                     function.valves = valves
@@ -215,7 +225,7 @@ class FunctionsTable:
         self, id: str, user_id: str
     ) -> dict | None:
         try:
-            if user := await Users.get_user_by_id(user_id):
+            if user := await self.__users.get_user_by_id(user_id):
                 user_settings = user.settings.model_dump() if user.settings else {}
 
                 # Check if user has "functions" and "valves" settings
@@ -234,7 +244,7 @@ class FunctionsTable:
         self, id: str, user_id: str, valves: dict
     ) -> dict | None:
         try:
-            if user := await Users.get_user_by_id(user_id):
+            if user := await self.__users.get_user_by_id(user_id):
                 user_settings = user.settings.model_dump() if user.settings else {}
 
                 # Check if user has "functions" and "valves" settings
@@ -246,7 +256,9 @@ class FunctionsTable:
                 user_settings["functions"]["valves"][id] = valves
 
                 # Update the user settings in the database
-                _ = await Users.update_user_by_id(user_id, {"settings": user_settings})
+                _ = await self.__users.update_user_by_id(
+                    user_id, {"settings": user_settings}
+                )
 
                 return user_settings["functions"]["valves"][id]
             return None
@@ -257,7 +269,7 @@ class FunctionsTable:
     async def update_function_by_id(
         self, id: str, updated: dict
     ) -> FunctionModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 if function := await db.scalar(
                     select(Function).where(Function.id == id)
@@ -275,7 +287,7 @@ class FunctionsTable:
                 return None
 
     async def deactivate_all_functions(self) -> bool | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 _ = await db.execute(
                     update(Function).values(
@@ -290,7 +302,7 @@ class FunctionsTable:
                 return None
 
     async def delete_function_by_id(self, id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 _ = await db.execute(delete(Function).where(Function.id == id))
                 await db.commit()
@@ -298,6 +310,3 @@ class FunctionsTable:
                 return True
             except Exception:
                 return False
-
-
-Functions = FunctionsTable()

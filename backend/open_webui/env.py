@@ -5,6 +5,7 @@ import os
 import pkgutil
 import sys
 import shutil
+import redis
 from pathlib import Path
 
 import markdown
@@ -332,6 +333,21 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+USE_REDIS_LOCKS = False
+
+try:
+    # Set a socket timeout so the app doesn't hang if Redis is unreachable
+    redis_health_client = redis.Redis.from_url(REDIS_URL, socket_connect_timeout=2)
+
+    if redis_health_client.ping():
+        USE_REDIS_LOCKS = True
+        log.info("Redis is up. Redis locks are ENABLED.")
+        redis_health_client.close()
+
+except (redis.ConnectionError, redis.TimeoutError, Exception) as e:
+    log.warning(f"Redis is unavailable ({e}). " "Redis locks are DISABLED.")
+    USE_REDIS_LOCKS = False
 
 ####################################
 # WEBUI_AUTH (Required for security)

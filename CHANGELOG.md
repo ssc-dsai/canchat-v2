@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.12.5] - 2026-02-26
+
+### Fixed
+
+- **🌐 Web Search Query**: Fixed timeout handling during web search partial results.
+
+## [0.5.7-ccv2-1.12.4] - 2026-02-25
+
+### Fixed
+
+- **🔧 Chat Input**: Corrected chat input size and alignment.
+- **💬 Verbose Chat Titles**: Resolved overly verbose chat titles.
+- **🧹 Lingering Prompts**: Cleared lingering prompts when switching to a new chat.
+- **📝 Markdown Links**: Escaped tildes in markdown links to prevent strikethrough.
+- **🌐 Web Search Context**: Applied truncation to web search context limits.
+- **🔧 Chat Cleanup Scheduler**: Resolved chat cleanup scheduler issue.
+- **🔌 WebSocket Manager**: Restored WebSocket manager fallback when Redis is unavailable.
+- **♿ Accessibility Landmarks**: Added landmarks to chat, navigation role to sidebar, and page heading to chat.
+- **🌐 Web Search Query**: Resolved web search query persistence issue.
+
+## [0.5.7-ccv2-1.12.3] - 2026-02-18
+
+### Fixed
+
+- **🔧 Ollama Model Addition**: Fixed a crash when an admin user attempts to add a new Ollama model.
+- **🔄 Model Deletion Refresh**: Refetch models after deleting to ensure the list stays up to date.
+- **🏷️ Save as Copy Label**: Updated "Save as Copy" button label translation to match casing for consistency.
+- **🔧 MCP Function Call**: Fixed MCP missing function call to allow for iteration.
+- **🌐 Web Search NoneType Error**: Fixed web search NoneType return error.
+- **⏳ Web Search Timeout**: Fixed timeout issues on web search.
+- **🛠️ Menu Tools Selection**: Fixed menu tools selection by adding sanitization, guardrails, and translation to the input.
+
+## [0.5.7-ccv2-1.12.2] - 2026-02-06
+
+### Fixed
+
+- **🔧 Navigation Bar Issue**: Fixed inconsistency on new chat in navbar.
+
+## [0.5.7-ccv2-1.12.1] - 2026-02-05
+
+### Fixed
+
+- **🧼 Changelog Sanitization**: Fixed changelog issue for env variables.
+
+## [0.5.7-ccv2-1.12.0] - 2026-02-05
+
+### Added
+
+- **🏷️ Protected Label**: Added a Protected B label.
+- **🧪 Test Coverage**: Added additional tests.
+
+### Changed
+
+- **🚫 Role Badge Behavior**: Disabled role changes via role badge clicks.
+- **🔍 SharePoint Search**: Enhanced MCP SharePoint search functionality.
+- **🔢 Metrics Formatting**: Improved formatting of large numbers in the metrics dashboard.
+
+### Fixed
+
+- **🧼 Input Sanitization**: Fixed multiple unsanitized input issues.
+- **🧭 Navigation Bar Layout**: Fixed overlapping items in the navigation bar.
+- **🧩 Code Block Extension**: Fixed duplicate codeBlock extension.
+- **📦 Chat Components**: Fixed missing imports.
+- **🌐 i18n Context**: Fixed i18n store context error.
+- **💬 MCP Tooltip**: Fixed MCP indicator tooltip emitting a JSON tool descriptor.
+- **🌍 Translations**: Fixed missing translations and MCP error translation display.
+- **📤 File Upload Translation**: Fixed translation issue after successful file uploads.
+- **📌 Dependency Pinning**: Fixed missing dependency version pinning.
+- **🖱️ Chat Button Hover**: Fixed missing elements on hover.
+- **📁 Archive Modal**: Fixed crash when exiting the archive chat modal.
+- **🧪 Pytest Configuration**: Fixed pytest framework setup.
+- **🧵 Web Search Threading**: Fixed web search blocking the main thread.
+- **♿ Accessibility Labels**: Fixed multiple accessibility labeling issues.
+- **🔐 MCP WebSocket Token Sync**: Ensured WebSocket sessions always use the latest access token.
+- **💡 Next Message Tooltip**: Added missing tooltip.
+- **🔄 New Chat Button Refresh**: New Chat button to clear the chat ID on click, forcing a refresh.
+
+### Removed
+
+- **🧹 Web Search Caching**: Removed web search caching.
+
 ## [0.5.7-ccv2-1.11.5] - 2026-01-09
 
 ### Fixed
