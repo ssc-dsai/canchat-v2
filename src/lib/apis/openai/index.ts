@@ -1,4 +1,8 @@
 import { OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import i18next from 'i18next';
+
+const getFetchErrorMessage = (err: any) =>
+	err?.message === 'Failed to fetch' ? i18next.t('Failed to fetch') : err?.message;
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
@@ -227,7 +231,7 @@ export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
+			error = `OpenAI: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Unable to load OpenAI models. Please try again.')}`;
 			return [];
 		});
 
@@ -262,7 +266,7 @@ export const verifyOpenAIConnection = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
+			error = `OpenAI: ${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('OpenAI connection check failed. Please try again.')}`;
 			return [];
 		});
 
@@ -318,11 +322,21 @@ export const generateOpenAIChatCompletion = async (
 		body: JSON.stringify(body)
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				try {
+					throw await res.json();
+				} catch (_jsonError) {
+					const errorText = await res.text().catch(() => '');
+					throw {
+						message:
+							errorText?.trim() || `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`
+					};
+				}
+			}
 			return res.json();
 		})
 		.catch((err) => {
-			error = `${err?.detail ?? 'Network Problem'}`;
+			error = `${err?.detail ?? err?.error?.message ?? getFetchErrorMessage(err) ?? i18next.t('Chat completion failed. Please try again.')}`;
 			return null;
 		});
 

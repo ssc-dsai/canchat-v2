@@ -193,7 +193,6 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             "chat",
             "chatidtag",
             "document",
-            "memory",
             "model",
             "prompt",
             "tag",

@@ -37,6 +37,7 @@
 		$i18n.t('MCP: MPO SharePoint');
 		$i18n.t('MCP: MPO SharePoint (By ID)');
 		$i18n.t('Fast search MPO SharePoint documents (sub-1 second)');
+		$i18n.t('List files in MPO SharePoint folders');
 		$i18n.t('Retrieve MPO SharePoint document by ID from search results');
 		$i18n.t('Search and retrieve MPO SharePoint documents');
 
@@ -44,8 +45,11 @@
 		$i18n.t('MCP: PMO SharePoint');
 		$i18n.t('MCP: PMO SharePoint (By ID)');
 		$i18n.t('Fast search PMO SharePoint documents (sub-1 second)');
+		$i18n.t('List files in PMO SharePoint folders');
 		$i18n.t('Retrieve PMO SharePoint document by ID from search results');
 		$i18n.t('Search and retrieve PMO SharePoint documents');
+		$i18n.t('MCP tools disabled - Web Search is active');
+		$i18n.t('MCP tools disabled - Wiki Grounding is active');
 	};
 
 	export let screenCaptureHandler: Function;
@@ -80,6 +84,7 @@
 	let show = false;
 
 	let showImageGeneration = false;
+	const hoverOnlyTooltipOptions = { trigger: 'mouseenter' };
 
 	$: showImageGeneration =
 		$config?.features?.enable_image_generation &&
@@ -134,6 +139,13 @@
 	$: if (tooltipContent && wikiGroundingTooltip) {
 		updateTooltipContent();
 	}
+
+	const clearSelectedToolIds = () => {
+		selectedToolIds = [];
+		Object.keys(tools).forEach((toolId) => {
+			tools[toolId].enabled = false;
+		});
+	};
 </script>
 
 <Dropdown
@@ -164,11 +176,20 @@
 			transition={flyAndScale}
 		>
 			{#if Object.keys(tools).length > 0}
-				<div class="relative">
-					<div
-						class="max-h-28 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500 pr-1"
-					>
-						{#each Object.keys(tools) as toolId}
+				<div
+					class="max-h-[10rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500"
+				>
+					{#each Object.keys(tools) as toolId}
+						<Tooltip
+							content={tools[toolId].isMcp && webSearchEnabled
+								? $i18n.t('MCP tools disabled - Web Search is active')
+								: tools[toolId].isMcp && wikiGroundingEnabled
+									? $i18n.t('MCP tools disabled - Wiki Grounding is active')
+									: getToolTooltipContent(tools[toolId], $i18n)}
+							placement="right"
+							className="w-full"
+							tippyOptions={hoverOnlyTooltipOptions}
+						>
 							<button
 								role="menuitem"
 								aria-label={tools[toolId].isMcp
@@ -196,57 +217,24 @@
 									}
 								}}
 							>
-								<div class="flex-1">
-									<Tooltip
-										content={getToolTooltipContent(tools[toolId], $i18n)}
-										placement="right"
-										className="flex flex-1 gap-2 items-center"
-										tippyOptions={{
-											placement: 'right',
-											offset: [0, 0],
-											flip: false,
-											getReferenceClientRect: () => {
-												const menu = document.querySelector(
-													'[data-melt-dropdown-menu][data-state="open"]'
-												);
-												if (menu) {
-													const menuRect = menu.getBoundingClientRect();
-													const buttonRect = event?.target
-														?.closest('button')
-														?.getBoundingClientRect();
-													if (buttonRect) {
-														return {
-															width: 0,
-															height: buttonRect.height,
-															top: buttonRect.top,
-															bottom: buttonRect.bottom,
-															left: menuRect.right,
-															right: menuRect.right
-														};
-													}
-												}
-												return { width: 0, height: 0, top: 0, bottom: 0, left: 0, right: 0 };
-											}
-										}}
-									>
-										<div class="flex-shrink-0">
+								<div class="flex-1 flex gap-2 items-center">
+									<div class="flex-shrink-0">
+										{#if tools[toolId].isMcp}
+											<Cog6Solid />
+										{:else}
+											<WrenchSolid />
+										{/if}
+									</div>
+
+									<div class="flex flex-col items-start min-w-0 flex-1">
+										<div class="text-sm font-medium leading-tight">
 											{#if tools[toolId].isMcp}
-												<Cog6Solid />
+												{getMCPToolName(tools[toolId].originalName, $i18n)}
 											{:else}
-												<WrenchSolid />
+												{tools[toolId].name}
 											{/if}
 										</div>
-
-										<div class="flex flex-col items-start min-w-0 flex-1">
-											<div class="text-sm font-medium leading-tight">
-												{#if tools[toolId].isMcp}
-													{getMCPToolName(tools[toolId].originalName, $i18n)}
-												{:else}
-													{tools[toolId].name}
-												{/if}
-											</div>
-										</div>
-									</Tooltip>
+									</div>
 								</div>
 
 								<div class=" flex-shrink-0">
@@ -277,40 +265,45 @@
 									/>
 								</div>
 							</button>
-						{/each}
-					</div>
-					<!-- Scroll indicator gradient -->
-					<div
-						class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-gray-850 to-transparent pointer-events-none opacity-80"
-					></div>
+						</Tooltip>
+					{/each}
 				</div>
 
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
 			{#if showImageGeneration}
-				<button
-					role="menuitem"
-					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-					on:click={() => {
-						imageGenerationEnabled = !imageGenerationEnabled;
-					}}
+				<Tooltip
+					content={$i18n.t('Image Generation')}
+					placement="right"
+					tippyOptions={hoverOnlyTooltipOptions}
 				>
-					<div class="flex-1 flex items-center gap-2">
-						<PhotoSolid />
-						<div class=" line-clamp-1">{$i18n.t('Image')}</div>
-					</div>
+					<button
+						role="menuitem"
+						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+						on:click={() => {
+							imageGenerationEnabled = !imageGenerationEnabled;
+						}}
+					>
+						<div class="flex-1 flex items-center gap-2">
+							<PhotoSolid />
+							<div class=" line-clamp-1">{$i18n.t('Image')}</div>
+						</div>
 
-					<Switch state={imageGenerationEnabled} ariaLabel={$i18n.t('Toggle Image Generation')} />
-				</button>
+						<Switch state={imageGenerationEnabled} ariaLabel={$i18n.t('Toggle Image Generation')} />
+					</button>
+				</Tooltip>
 			{/if}
 
 			{#if showWebSearch}
 				<Tooltip
 					content={wikiGroundingEnabled
 						? $i18n.t('Web Search disabled - Wiki Grounding is active')
-						: $i18n.t('Web Search (Beta)')}
+						: hasMcpToolsEnabled
+							? $i18n.t('Web Search disabled - MCP tools are active')
+							: $i18n.t('Web Search (Beta)')}
 					placement="right"
+					tippyOptions={hoverOnlyTooltipOptions}
 				>
 					<button
 						role="menuitem"
@@ -323,14 +316,9 @@
 							if (!wikiGroundingEnabled && !hasMcpToolsEnabled) {
 								webSearchEnabled = !webSearchEnabled;
 								if (webSearchEnabled) {
+									clearSelectedToolIds();
 									wikiGroundingEnabled = false;
-									// Disable all MCP tools
 									wikiGroundingMode = 'off';
-									Object.keys(tools).forEach((toolId) => {
-										if (tools[toolId].isMcp) {
-											tools[toolId].enabled = false;
-										}
-									});
 								}
 							}
 						}}
@@ -397,16 +385,11 @@
 									wikiGroundingMode = 'off';
 									wikiGroundingEnabled = false;
 								} else {
+									clearSelectedToolIds();
 									wikiGroundingMode = 'on';
 									wikiGroundingEnabled = true;
 									webSearchEnabled = false;
 								}
-								// Disable all MCP tools
-								Object.keys(tools).forEach((toolId) => {
-									if (tools[toolId].isMcp) {
-										tools[toolId].enabled = false;
-									}
-								});
 							}
 						}}
 					>

@@ -60,3 +60,25 @@ def test_validate_path_multiple_bases(tmp_path):
 
     with pytest.raises(ValueError, match="outside of expected directories"):
         validate_path(str(file_in_dir2), [str(dir1)])
+
+
+def test_validate_path_pathlike_base_dir(tmp_path):
+    base_dir = tmp_path
+    valid_file = base_dir / "safe_file.txt"
+    valid_file.touch()
+
+    validated = validate_path(valid_file, base_dir)
+    assert validated == str(valid_file.resolve())
+
+
+def test_validate_path_pathlike_multiple_bases(tmp_path):
+    dir1 = tmp_path / "dir1"
+    dir1.mkdir()
+    dir2 = tmp_path / "dir2"
+    dir2.mkdir()
+
+    file_in_dir2 = dir2 / "file.txt"
+    file_in_dir2.touch()
+
+    validated = validate_path(file_in_dir2, [dir1, dir2])
+    assert validated == str(file_in_dir2.resolve())

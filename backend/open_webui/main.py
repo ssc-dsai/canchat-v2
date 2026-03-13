@@ -57,7 +57,6 @@ from open_webui.routers import (
     groups,
     files,
     functions,
-    memories,
     metrics,
     models,
     knowledge,
@@ -360,6 +359,31 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Validate Redis lock manager health (already initialized during import)
+    # The lock manager creation will fail fast if REDIS_URL is not set or Redis is unavailable
+    try:
+        from open_webui.retrieval.vector.locks import get_collection_lock_manager
+
+        redis_lock_manager = get_collection_lock_manager()
+
+        # Perform async health check to verify connectivity
+        if not await redis_lock_manager.health_check():
+            raise RuntimeError(
+                "Redis health check failed during startup. "
+                "Distributed locking requires Redis to be available and responsive."
+            )
+
+        app.state.redis_lock_manager = redis_lock_manager
+        log.info(
+            f"Redis distributed locking validated and ready: {redis_lock_manager.redis_url}"
+        )
+    except Exception as e:
+        log.warning(
+            f"Redis validation failed — distributed locking unavailable. "
+            f"Continuing without Redis (single-instance / local dev mode). Error: {e}"
+        )
+        app.state.redis_lock_manager = None
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -385,60 +409,60 @@ async def lifespan(app: FastAPI):
         log.error(f"Failed to initialize the metrics service: {e}")
 
     # Initialize FastMCP manager
-    # try:
-    #     from mcp_backend.management.mcp_manager import get_mcp_manager
+    try:
+        from mcp_backend.management.mcp_manager import get_mcp_manager
 
-    #     app.state.mcp_manager = get_mcp_manager()
-    #     log.info("FastMCP manager initialized")
+        app.state.mcp_manager = get_mcp_manager()
+        log.info("FastMCP manager initialized")
 
-    #     # Initialize all MCP servers (built-in and external) if enabled
-    #     if app.state.config.ENABLE_MCP_API:
-    #         await app.state.mcp_manager.initialize_all_servers()
-    #         log.info("All MCP servers initialized")
+        # Initialize all MCP servers (built-in and external) if enabled
+        if app.state.config.ENABLE_MCP_API:
+            await app.state.mcp_manager.initialize_all_servers()
+            log.info("All MCP servers initialized")
 
-    #         # Note: Built-in MCP servers use stdio transport and are managed internally
-    #         # External MCP servers are loaded from database and managed via API
+            # Note: Built-in MCP servers use stdio transport and are managed internally
+            # External MCP servers are loaded from database and managed via API
 
-    # except Exception as e:
-    #     log.error(f"Failed to initialize FastMCP manager: {e}")
+    except Exception as e:
+        log.error(f"Failed to initialize FastMCP manager: {e}")
 
     # Initialize Wikipedia grounding models in background
-    # async def initialize_wiki_grounding():
-    #     """Initialize Wikipedia grounding models in background to avoid first-user delay"""
-    #     try:
-    #         from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
+    async def initialize_wiki_grounding():
+        """Initialize Wikipedia grounding models in background to avoid first-user delay"""
+        try:
+            from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
 
-    #         log.info(
-    #             "Starting background initialization of Wikipedia grounding models..."
-    #         )
-    #         success = await get_wiki_search_grounder().initialize()
-    #         if success:
-    #             log.info(
-    #                 "Wikipedia grounding models initialized successfully in background"
-    #             )
-    #         else:
-    #             log.warning(
-    #                 "Wikipedia grounding models failed to initialize in background"
-    #             )
-    #     except Exception as e:
-    #         log.error(
-    #             f"Error during background Wikipedia grounding initialization: {e}"
-    #         )
+            log.info(
+                "Starting background initialization of Wikipedia grounding models..."
+            )
+            success = await get_wiki_search_grounder().initialize()
+            if success:
+                log.info(
+                    "Wikipedia grounding models initialized successfully in background"
+                )
+            else:
+                log.warning(
+                    "Wikipedia grounding models failed to initialize in background"
+                )
+        except Exception as e:
+            log.error(
+                f"Error during background Wikipedia grounding initialization: {e}"
+            )
 
     # Start background initialization (non-blocking)
-    # wiki_init_task = asyncio.create_task(initialize_wiki_grounding())
+    wiki_init_task = asyncio.create_task(initialize_wiki_grounding())
 
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
 
-    # Initialize chat lifetime scheduler
+    # Initialize scheduler (chat cleanup, Redis pool cleanup, etc.)
     try:
-        from open_webui.scheduler import start_chat_lifetime_scheduler
+        from open_webui.scheduler import start_scheduler
 
-        start_chat_lifetime_scheduler()
-        log.info("Chat lifetime scheduler initialized")
+        start_scheduler()
+        log.info("Scheduler initialized")
     except Exception as e:
-        log.error(f"Failed to initialize chat lifetime scheduler: {e}")
+        log.error(f"Failed to initialize scheduler: {e}")
 
     # Add task completion callback to log if it exits
     def on_cleanup_done(task):
@@ -460,17 +484,17 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         # Cancel background tasks if they're still running
-        # if not wiki_init_task.done():
-        #     log.info("Cancelling Wikipedia grounding initialization task")
-        #     wiki_init_task.cancel()
-        #     try:
-        #         await wiki_init_task
-        #     except asyncio.CancelledError:
-        #         log.info(
-        #             "Wikipedia grounding initialization task cancelled successfully"
-        #         )
-        #     except Exception as e:
-        #         log.error(f"Error cancelling Wikipedia initialization task: {e}")
+        if not wiki_init_task.done():
+            log.info("Cancelling Wikipedia grounding initialization task")
+            wiki_init_task.cancel()
+            try:
+                await wiki_init_task
+            except asyncio.CancelledError:
+                log.info(
+                    "Wikipedia grounding initialization task cancelled successfully"
+                )
+            except Exception as e:
+                log.error(f"Error cancelling Wikipedia initialization task: {e}")
 
         # Cancel the cleanup task if it's still running
         if not cleanup_task.done():
@@ -484,21 +508,39 @@ async def lifespan(app: FastAPI):
                 log.error(f"Error cancelling cleanup task: {e}")
 
         # Cleanup MCP manager and all its server processes
-        # if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
-        #     try:
-        #         await app.state.mcp_manager.cleanup()
-        #         log.info("MCP manager cleanup completed")
-        #     except Exception as e:
-        #         log.error(f"Error during MCP manager cleanup: {e}")
+        if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
+            try:
+                await app.state.mcp_manager.cleanup()
+                log.info("MCP manager cleanup completed")
+            except Exception as e:
+                log.error(f"Error during MCP manager cleanup: {e}")
 
-        # # Cleanup chat lifetime scheduler
-        # try:
-        #     from open_webui.scheduler import stop_chat_lifetime_scheduler
+        # Cleanup scheduler
+        try:
+            from open_webui.scheduler import stop_scheduler
 
-        #     stop_chat_lifetime_scheduler()
-        #     log.info("Chat lifetime scheduler cleanup completed")
-        # except Exception as e:
-        #     log.error(f"Error during chat lifetime scheduler cleanup: {e}")
+            stop_scheduler()
+            log.info("Scheduler cleanup completed")
+        except Exception as e:
+            log.error(f"Error during scheduler cleanup: {e}")
+
+        # Cleanup cached Qdrant client
+        try:
+            from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+
+            if VECTOR_DB_CLIENT and hasattr(VECTOR_DB_CLIENT, "close"):
+                await VECTOR_DB_CLIENT.close()
+                log.info("Qdrant client cleanup completed")
+        except Exception as e:
+            log.error(f"Error during Qdrant client cleanup: {e}")
+
+        # Cleanup Redis lock manager
+        if hasattr(app.state, "redis_lock_manager") and app.state.redis_lock_manager:
+            try:
+                await app.state.redis_lock_manager.close()
+                log.info("Redis lock manager cleanup completed")
+            except Exception as e:
+                log.error(f"Error during Redis lock manager cleanup: {e}")
 
 
 app = FastAPI(
@@ -1071,7 +1113,6 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledg
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
-app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
@@ -1448,6 +1489,51 @@ async def healthcheck_with_db():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection failed",
+        )
+
+
+@app.get("/health/redis")
+async def healthcheck_redis():
+    """
+    Redis readiness endpoint for orchestration (Kubernetes, load balancers).
+    Returns 503 if Redis is unhealthy or circuit is OPEN.
+    """
+    try:
+        from open_webui.retrieval.vector.locks import get_collection_lock_manager
+
+        manager = get_collection_lock_manager()
+        metrics = manager.get_health_metrics()
+
+        # Fail if circuit is open (persistent Redis issues)
+        if metrics["circuit_state"] == "open":
+            log.warning(
+                f"[HEALTH:REDIS] Circuit OPEN: {metrics['consecutive_failures']} "
+                f"consecutive failures, {metrics['recovery_attempts']} recovery attempts"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Redis circuit open. State: {metrics}",
+            )
+
+        # Fail if Redis not initialized
+        if not metrics["redis_initialized"]:
+            log.warning("[HEALTH:REDIS] Redis not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Redis not initialized",
+            )
+
+        return {
+            "status": True,
+            "redis": metrics,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Redis health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Redis health check error: {str(e)}",
         )
 
 
