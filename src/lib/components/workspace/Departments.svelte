@@ -16,6 +16,12 @@
 		return Math.floor(new Date(dateString).getTime() / 1000);
 	}
 
+	function getYAxisSubLabel(item: { domain?: string; department?: string }): string {
+		return item.domain && item.department && selectedDomains.includes(item.domain)
+			? `${item.department}`
+			: '';
+	}
+
 	// Handler for start date changes - ensures end date is always after start date
 	function handleStartDateChange(event) {
 		const newStartDate = event.target.value;
@@ -33,8 +39,41 @@
 		updateCharts(selectedDomains);
 	}
 
+	const yAxisSubLabelPlugin = {
+		id: 'yAxisSubLabel',
+		afterDraw: (chart: {
+			ctx: CanvasRenderingContext2D;
+			chartArea?: { left: number };
+			scales?: { y?: { getPixelForTick: (index: number) => number } };
+		}) => {
+			const yScale = chart.scales?.y;
+			const labels = departmentUsageData.map((item) => getYAxisSubLabel(item));
+			const ctx = chart.ctx;
+			const isDark = document.documentElement.classList.contains('dark');
+			const color = isDark ? '#9ca3af' : '#6b7280';
+			const fontSize = 11;
+			const offsetY = 18;
+
+			ctx.save();
+			ctx.textAlign = 'right';
+			ctx.textBaseline = 'top';
+			ctx.fillStyle = color;
+			ctx.font = `${fontSize}px sans-serif`;
+
+			labels.forEach((text, index) => {
+				if (!text) return;
+				const y = yScale.getPixelForTick(index) + offsetY;
+				// Position at the left edge of the chart's plotting area with a small padding
+				const x = (chart.chartArea?.left ?? 0) - 12;
+				ctx.fillText(text, x, y);
+			});
+
+			ctx.restore();
+		}
+	};
+
 	// Register all Chart.js components
-	Chart.register(...registerables, ChartDataLabels);
+	Chart.register(...registerables, ChartDataLabels, yAxisSubLabelPlugin);
 	const i18n = getContext('i18n') as any;
 	let unsubscribe: () => void;
 	let componentLoaded = false;
@@ -58,7 +97,14 @@
 				display: true,
 				labels: {
 					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937',
-					font: { size: 14 }
+					font: { size: 14 },
+					generateLabels: (c) => {
+						const items = Chart.defaults.plugins.legend.labels.generateLabels(c);
+						return items.map((i) => {
+							i.text = `${i.text} ${i.text === $i18n.t('Active Users') ? $i18n.t('(Users who engaged during selected period)') : $i18n.t('(All enrolled users to date)')}`;
+							return i;
+						});
+					}
 				},
 				onClick: null // Disable the default click behavior
 			},
@@ -71,9 +117,9 @@
 			datalabels: {
 				display: true,
 				color: document.documentElement.classList.contains('dark') ? '#ffffff' : '#1f2937',
-				anchor: 'center',
-				align: 'center',
-				offset: -4,
+				anchor: 'end',
+				align: 'right',
+				offset: 6,
 				formatter: (value) => (value === 0 ? null : value),
 				font: {
 					weight: 'bold',
@@ -83,11 +129,47 @@
 		},
 		scales: {
 			x: {
+				type: 'linear',
+				position: 'bottom',
+				offset: false,
+				beginAtZero: true,
 				ticks: {
 					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937',
 					font: { size: 14 }
 				},
 				grid: {
+					drawOnChartArea: false,
+					color: document.documentElement.classList.contains('dark')
+						? 'rgba(255, 255, 255, 0.1)'
+						: 'rgba(0, 0, 0, 0.1)'
+				}
+			},
+			// Mirror x-axis on top to ensure matching scale as bottom axis
+			xTop: {
+				type: 'linear',
+				position: 'top',
+				offset: false,
+				beginAtZero: true,
+				afterBuildTicks: (axis: {
+					chart?: { scales?: { x?: { min: number; max: number; ticks: unknown[] } } };
+					min: number;
+					max: number;
+					ticks: unknown[];
+				}) => {
+					const bottomAxis = axis.chart?.scales?.x;
+					if (!bottomAxis) return;
+
+					// Mirror limits/ticks so top and bottom axes always render identically.
+					axis.min = bottomAxis.min;
+					axis.max = bottomAxis.max;
+					axis.ticks = [...bottomAxis.ticks];
+				},
+				ticks: {
+					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937',
+					font: { size: 14 }
+				},
+				grid: {
+					drawOnChartArea: false,
 					color: document.documentElement.classList.contains('dark')
 						? 'rgba(255, 255, 255, 0.1)'
 						: 'rgba(0, 0, 0, 0.1)'
@@ -95,6 +177,10 @@
 			},
 			y: {
 				beginAtZero: true,
+				afterFit: (scale: { width?: number }) => {
+					// Increase the y-axis label space to prevent text cutoff
+					scale.width = 330;
+				},
 				ticks: {
 					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937',
 					font: { size: 14 }
@@ -130,6 +216,9 @@
 		chartOptions.scales.x.ticks.color = textColor;
 		chartOptions.scales.x.ticks.font = { size: 14 };
 		chartOptions.scales.x.grid.color = gridColor;
+		chartOptions.scales.xTop.ticks.color = textColor;
+		chartOptions.scales.xTop.ticks.font = { size: 14 };
+		chartOptions.scales.xTop.grid.color = gridColor;
 		chartOptions.scales.y.ticks.color = textColor;
 		chartOptions.scales.y.ticks.font = { size: 14 };
 		chartOptions.scales.y.grid.color = gridColor;
@@ -146,6 +235,9 @@
 				chart.options.scales.x.ticks.color = textColor;
 				chart.options.scales.x.ticks.font = { size: 14 };
 				chart.options.scales.x.grid.color = gridColor;
+				chart.options.scales.xTop.ticks.color = textColor;
+				chart.options.scales.xTop.ticks.font = { size: 14 };
+				chart.options.scales.xTop.grid.color = gridColor;
 				chart.options.scales.y.ticks.color = textColor;
 				chart.options.scales.y.ticks.font = { size: 14 };
 				chart.options.scales.y.grid.color = gridColor;
@@ -222,20 +314,20 @@
 			userByDepartmentChart = new Chart(departmentCtx, {
 				type: 'bar',
 				data: {
-					labels: departmentUsageData.map((item) => item.department),
+					labels: departmentUsageData.map((item) => item.domain),
 					datasets: [
 						{
 							label: '',
 							data: departmentUsageData.map((item) => item.active_users),
-							borderColor: 'rgba(255, 99, 132, 0.5)',
-							backgroundColor: 'rgba(255, 99, 132, 0.5)',
+							borderColor: '#1115d9',
+							backgroundColor: '#1115d9',
 							borderWidth: 2
 						},
 						{
 							label: '',
 							data: departmentUsageData.map((item) => item.total_users),
-							borderColor: 'rgba(54, 162, 235, 0.5)',
-							backgroundColor: 'rgba(54, 162, 235, 0.5)',
+							borderColor: '#393947',
+							backgroundColor: '#393947',
 							borderWidth: 2
 						}
 					]
@@ -360,11 +452,18 @@
 	<div class="flex flex-col h-screen">
 		<div class="p-4 lg:p-6 flex-shrink-0">
 			<div class="mb-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-				<h2 class="text-2xl min-w-[320px] font-extrabold text-gray-900 dark:text-gray-100">
-					{$i18n.t('Department Usage Dashboard')}
-				</h2>
+				<div class="flex flex-col max-w-2xl">
+					<h2 class="text-2xl min-w-[320px] font-extrabold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Department Usage Dashboard')}
+					</h2>
+					<p class="text-gray-600 dark:text-gray-400 mt-1">
+						{$i18n.t(
+							'Analyze user activity across departments over time. Understand how teams are adopting and using CANChat across reporting periods.'
+						)}
+					</p>
+				</div>
 
-				<div class="flex flex-nowrap items-center gap-3">
+				<div class="flex flex-nowrap gap-3">
 					<div>
 						<label
 							class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
@@ -433,8 +532,10 @@
 								bind:selected={selectedDomains}
 								options={[$i18n.t('All'), ...domains]}
 								allowUserOptions="append"
+								removeAllTitle={$i18n.t('Clear')}
+								ulSelectedStyle="max-height: 66px; overflow-y: auto; overflow-x: hidden;"
 								placeholder={$i18n.t('Domains')}
-								style="min-height: 36px; width: 100%;"
+								style="min-height: 36px; width: 550px;"
 								on:change={(e) => {
 									handleDomainChange(e);
 								}}
@@ -455,7 +556,7 @@
 				{:else}
 					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
 						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-							{$i18n.t('Department Users Over Time')}
+							{$i18n.t('Usage Over Time')}
 						</h5>
 						<div>
 							<canvas id="departmentUsageChart"></canvas>
@@ -489,5 +590,18 @@
 	:global(.dark .multiselect > ul) {
 		background-color: var(--color-gray-800, #333) !important;
 		border-color: #4b5563 !important;
+	}
+
+	/* clear-all button replaced by text */
+	:global(div.multiselect button.remove-all) {
+		padding: 0 6px;
+	}
+	:global(div.multiselect button.remove-all svg) {
+		display: none;
+	}
+	:global(div.multiselect button.remove-all)::after {
+		content: attr(title);
+		font-size: 0.9rem;
+		color: inherit;
 	}
 </style>
