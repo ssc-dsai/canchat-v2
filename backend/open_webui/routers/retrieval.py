@@ -1167,7 +1167,7 @@ async def process_web(
 
 
 def search_web(
-    request: Request, engine: str, query: str, request_timeout: Optional[int] = None
+    request: Request, engine: str, query: str, request_timeout: int | None = None
 ) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
@@ -1186,7 +1186,7 @@ def search_web(
         request (Request): FastAPI request object with app config.
         engine (str): Configured web search engine identifier.
         query (str): The query to search for
-        request_timeout (Optional[int]): Optional per-request timeout override in seconds.
+        request_timeout (int | None): Optional per-request timeout override in seconds.
             If not provided, providers use the configured default request timeout.
     """
 
@@ -2904,7 +2904,7 @@ def get_knowledge_base_file_ids() -> set:
     return kb_file_ids
 
 
-def get_chat_batch_for_cleanup(
+async def get_chat_batch_for_cleanup(
     max_age_days: int = None,
     preserve_pinned: bool = True,
     preserve_archived: bool = False,
@@ -2922,10 +2922,8 @@ def get_chat_batch_for_cleanup(
     Returns:
         list: Batch of chat objects to process
     """
-    from open_webui.models.chats import Chats
-
     try:
-        return Chats.get_chats_for_cleanup_batch(
+        return await CHATS.get_chats_for_cleanup_batch(
             max_age_days=max_age_days,
             preserve_pinned=preserve_pinned,
             preserve_archived=preserve_archived,
@@ -3029,7 +3027,7 @@ async def cleanup_orphaned_files(
 
 
 async def delete_chats_with_retry(
-    chat_ids: list, max_retries: int = 3, context_label: Optional[str] = None
+    chat_ids: list, max_retries: int = 3, context_label: str | None = None
 ) -> dict:
     """
     Delete a list of chats with retry logic for transient errors.
@@ -3043,13 +3041,11 @@ async def delete_chats_with_retry(
     Returns:
         dict: Result with deleted_count and any errors
     """
-    from open_webui.models.chats import Chats
-
     deletion_result = None
 
     for retry in range(max_retries):
         try:
-            deletion_result = Chats.delete_chat_list(
+            deletion_result = await CHATS.delete_chat_list(
                 chat_ids, log_context=context_label
             )
             break  # Success, exit retry loop
@@ -3882,7 +3878,7 @@ async def cleanup_expired_chats_streaming(
     preserve_pinned: bool = True,
     preserve_archived: bool = False,
     force_cleanup_all: bool = False,
-    should_continue: Optional[Callable[[], bool]] = None,
+    should_continue: Callable[[], bool] | None = None,
 ) -> dict:
     """
     Dispatcher function for memory-efficient chat cleanup operations.
@@ -3955,7 +3951,7 @@ async def cleanup_expired_chats_streaming(
                 break
 
             # Delegate batch retrieval to service layer
-            chat_batch = get_chat_batch_for_cleanup(
+            chat_batch = await get_chat_batch_for_cleanup(
                 max_age_days=None if force_cleanup_all else max_age_days,
                 preserve_pinned=preserve_pinned,
                 preserve_archived=preserve_archived,

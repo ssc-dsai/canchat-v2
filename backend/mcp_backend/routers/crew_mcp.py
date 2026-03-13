@@ -98,7 +98,7 @@ router = APIRouter()
 # Request/Response models
 class CrewMCPQuery(BaseModel):
     query: str
-    llm_config: dict[str, Any | None] = None
+    llm_config: dict[str, Any] | None = None
     selected_tools: list | None = None  # List of selected tool IDs from frontend
     chat_id: str | None = None  # Chat ID for title and tag generation
     model: str | None = None  # Model used for the query

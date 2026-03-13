@@ -1199,7 +1199,7 @@ class ChatTable:
         self,
         chat_ids: list[str],
         batch_size: int = 100,
-        log_context: Optional[str] = None,
+        log_context: str | None = None,
     ) -> dict:
         """
         Delete multiple chats by their IDs and return deletion summary.

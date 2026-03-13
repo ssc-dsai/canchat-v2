@@ -10,7 +10,6 @@ from open_webui.models.folders import FolderTable
 from open_webui.models.functions import FunctionsTable
 from open_webui.models.groups import GroupTable
 from open_webui.models.knowledge import KnowledgeTable
-from open_webui.models.memories import MemoriesTable
 from open_webui.models.message_metrics import MessageMetricsTable
 from open_webui.models.messages import MessageTable
 from open_webui.models.models import ModelsTable
@@ -27,7 +26,6 @@ DOMAINS = DomainTable(ASYNC_DATABASE_CONNECTOR)
 EXPORT_LOGS = ExportLogsTable(ASYNC_DATABASE_CONNECTOR)
 FEEDBACKS = FeedbackTable(ASYNC_DATABASE_CONNECTOR)
 FILES = FilesTable(ASYNC_DATABASE_CONNECTOR)
-MEMORIES = MemoriesTable(ASYNC_DATABASE_CONNECTOR)
 MESSAGE_METRICS = MessageMetricsTable(ASYNC_DATABASE_CONNECTOR)
 MESSAGES = MessageTable(ASYNC_DATABASE_CONNECTOR)
 TAGS = TagTable(ASYNC_DATABASE_CONNECTOR)

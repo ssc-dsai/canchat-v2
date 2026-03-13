@@ -134,6 +134,7 @@ async def get_total_tokens(
         await MESSAGE_METRICS.get_message_tokens_sum(domain)
         if domain
         else await MESSAGE_METRICS.get_message_tokens_sum()
+    )
     # Convert dates to timestamps if provided
     start_timestamp = None
     end_timestamp = None
@@ -158,7 +159,7 @@ async def get_total_tokens(
         except ValueError:
             pass
 
-    total_tokens = MessageMetrics.get_message_tokens_sum(
+    total_tokens = await MESSAGE_METRICS.get_message_tokens_sum(
         domain=domain,
         start_timestamp=start_timestamp,
         end_timestamp=end_timestamp,
@@ -175,7 +176,9 @@ async def get_total_tokens(
 
 @router.get("/daily/tokens")
 async def get_daily_tokens(
-    domain: str | None = None, mcp_tool: str | None = None, user=Depends(get_metrics_user)
+    domain: str | None = None,
+    mcp_tool: str | None = None,
+    user=Depends(get_metrics_user),
 ):
     # For analyst role, enforce domain restriction
     if user.role == "analyst":
@@ -185,7 +188,9 @@ async def get_daily_tokens(
     # Admin and global_analyst can see all domains or filter by domain
 
     total_daily_tokens = (
-        await MESSAGE_METRICS.get_daily_message_tokens_sum(domain=domain, mcp_tool=mcp_tool)
+        await MESSAGE_METRICS.get_daily_message_tokens_sum(
+            domain=domain, mcp_tool=mcp_tool
+        )
         if domain
         else await MESSAGE_METRICS.get_daily_message_tokens_sum()
     )
@@ -242,7 +247,9 @@ async def get_historical_tokens(
     if mcp_tool == "":
         mcp_tool = None
 
-    historical_data = await MESSAGE_METRICS.get_historical_tokens_data(days, domain, mcp_tool)
+    historical_data = await MESSAGE_METRICS.get_historical_tokens_data(
+        days, domain, mcp_tool
+    )
 
     return {"historical_tokens": historical_data}
 

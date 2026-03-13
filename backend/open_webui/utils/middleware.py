@@ -28,7 +28,6 @@ from open_webui.env import (
 )
 from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
 from open_webui.models.db_services import CHATS, FUNCTIONS, MESSAGE_METRICS, USERS
-from open_webui.models.message_metrics import MessageMetrics
 from open_webui.models.users import UserModel
 from open_webui.retrieval.utils import get_sources_from_files
 from open_webui.routers.images import GenerateImageForm, image_generations
