@@ -1102,9 +1102,9 @@ class ChatTable:
             log.error(f"Error getting chats for cleanup: {e}")
             return []
 
-    def get_chats_for_cleanup_batch(
+    async def get_chats_for_cleanup_batch(
         self,
-        max_age_days: int = None,
+        max_age_days: int | None = None,
         preserve_pinned: bool = True,
         preserve_archived: bool = False,
         batch_size: int = 50,
@@ -1125,36 +1125,36 @@ class ChatTable:
             List of ChatModel objects for this batch (up to batch_size)
         """
         try:
-            with get_db() as db:
-                query = db.query(Chat)
+            async with self.__db.get_async_db() as db:
+                query = select(Chat)
 
                 # Apply age filter if specified
                 if max_age_days is not None:
                     import time
 
                     cutoff_timestamp = int(time.time()) - (max_age_days * 24 * 60 * 60)
-                    query = query.filter(Chat.updated_at < cutoff_timestamp)
+                    query = query.where(Chat.updated_at < cutoff_timestamp)
 
                 # Apply preservation filters
                 if preserve_pinned:
-                    query = query.filter(
+                    query = query.where(
                         or_(Chat.pinned == False, Chat.pinned.is_(None))
                     )
 
                 if preserve_archived:
-                    query = query.filter(Chat.archived == False)
+                    query = query.where(Chat.archived == False)
 
                 # Exclude shared chats (user_id starting with "shared-")
-                query = query.filter(~Chat.user_id.like("shared-%"))
+                query = query.where(~Chat.user_id.like("shared-%"))
 
                 # Order by created_at to ensure consistent results
                 query = query.order_by(Chat.created_at.asc())
 
                 # Get just this batch
-                batch = query.offset(offset).limit(batch_size).all()
+                batch = await db.scalars(query.offset(offset).limit(batch_size))
 
                 # Convert to ChatModel objects
-                result_chats = []
+                result_chats: list[ChatModel] = []
                 for chat in batch:
                     try:
                         chat_model = ChatModel.model_validate(chat)
