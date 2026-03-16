@@ -16,15 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **📎 RAG Max File Default**: RAG max file has now a max default of 5 files.
 - **📦 Dependencies Update**: Updated dependencies requirements.
-- **📊 Metrics Date Range Filtering**: Date range filtering for metrics dashboard.
 - **🧹 Chat Cleanup Defaults**: Updated default values for chat cleanup.
-- **🔒 Redis Lock for Chat Cleanup**: Modified the Redis lock for chat cleanup.
+- **🔒 Chat Cleanup Lock**: Now uses a centralized lock system for chat cleanup to improve reliability.
 
 ### Fixed
 
+- **📊 Metrics Date Range Filtering**: Date range filtering for metrics dashboard for accuracy and speed.
 - **🖼️ Image Generation Path Validation**: Posix path validation in image generation to prevent cache crashes.
-- **📊 Date Range Filtering**: Fixed date range filtering.
-- **🔄 Qdrant Race Condition**: Fixed Qdrant race condition.
+- **🔄 Document Search Reliability**: Fixed a timing issue that could cause intermittent failures during document search.
 - **☑️ Select All Behavior**: Fixed select all adding pinned and folder items as well.
 
 ### Removed
