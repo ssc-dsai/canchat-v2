@@ -1200,7 +1200,7 @@ class ChatTable:
         chat_ids: list[str],
         batch_size: int = 100,
         log_context: str | None = None,
-    ) -> dict:
+    ) -> dict[str, int | list[str]]:
         """
         Delete multiple chats by their IDs and return deletion summary.
         Uses batching for large datasets to prevent memory issues.

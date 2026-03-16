@@ -1,5 +1,4 @@
 import time
-from typing import Any
 import uuid
 from logging import getLogger
 
@@ -10,7 +9,6 @@ from pydantic import BaseModel
 from sqlalchemy import BigInteger, Text, func, select
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import Select
-
 
 logger = getLogger(__name__)
 

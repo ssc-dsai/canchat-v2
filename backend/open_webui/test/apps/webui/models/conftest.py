@@ -11,7 +11,6 @@ from open_webui.models.folders import FolderTable
 from open_webui.models.functions import FunctionsTable
 from open_webui.models.groups import GroupTable
 from open_webui.models.knowledge import KnowledgeTable
-from open_webui.models.memories import MemoriesTable
 from open_webui.models.message_metrics import MessageMetricsTable
 from open_webui.models.messages import MessageTable
 from open_webui.models.models import ModelsTable
@@ -104,14 +103,6 @@ def group_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
 def knowledge_table(db_connector: AsyncDatabaseConnector, users_table: UsersTable):
 
     yield KnowledgeTable(db_connector=db_connector, users_table=users_table)
-
-
-@pytest.fixture(scope="function")
-def memories_table(
-    db_connector: AsyncDatabaseConnector,
-):
-
-    yield MemoriesTable(db_connector=db_connector)
 
 
 @pytest.fixture(scope="function")
