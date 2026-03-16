@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.13.0] - 2026-03-16
+
+### Added
+
+- **🧹 Automated User Pool Cleanup**: Added automated user pool cleanup.
+- **🗑️ Chat Item Delete Button**: Added back delete button in chat item menu.
+
+### Changed
+
+- **📎 RAG Max File Default**: RAG max file has now a max default of 5 files.
+- **📦 Dependencies Update**: Updated dependencies requirements.
+- **📊 Metrics Date Range Filtering**: Date range filtering for metrics dashboard.
+- **🧹 Chat Cleanup Defaults**: Updated default values for chat cleanup.
+- **🔒 Redis Lock for Chat Cleanup**: Modified the Redis lock for chat cleanup.
+
+### Fixed
+
+- **🖼️ Image Generation Path Validation**: Posix path validation in image generation to prevent cache crashes.
+- **📊 Date Range Filtering**: Fixed date range filtering.
+- **🔄 Qdrant Race Condition**: Fixed Qdrant race condition.
+- **☑️ Select All Behavior**: Fixed select all adding pinned and folder items as well.
+
+### Removed
+
+- **🧠 Personalized Memory Setting**: Removed the personalized memory feature in settings.
+
 ## [0.5.7-ccv2-1.12.5] - 2026-02-26
 
 ### Fixed
