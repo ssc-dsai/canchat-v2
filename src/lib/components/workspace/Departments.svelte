@@ -531,7 +531,6 @@
 							<MultiSelect
 								bind:selected={selectedDomains}
 								options={[$i18n.t('All'), ...domains]}
-								allowUserOptions="append"
 								removeAllTitle={$i18n.t('Clear')}
 								ulSelectedStyle="max-height: 66px; overflow-y: auto; overflow-x: hidden;"
 								placeholder={$i18n.t('Domains')}
