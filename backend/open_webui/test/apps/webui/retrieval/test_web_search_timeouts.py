@@ -176,6 +176,9 @@ def test_remaining_timeout_propagates_to_search_and_loader(monkeypatch):
         def load(self):
             return [retrieval.Document(page_content="hello", metadata={})]
 
+        def lazy_load(self):
+            return iter(self.load())
+
     # Capture timeout passed to web loader fetch path
     def fake_get_web_loader(
         urls, verify_ssl=True, requests_per_second=2, request_timeout=None

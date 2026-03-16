@@ -298,7 +298,16 @@
 	};
 
 	const selectAllChats = () => {
-		const allChatIds = [...($chats || []), ...($pinnedChats || [])].map((chat) => chat.id);
+		const folderChatIds = Object.values(folders).flatMap((folder) =>
+			(folder.items?.chats ?? []).map((chat) => chat.id)
+		);
+		const allChatIds = [
+			...new Set([
+				...($chats || []).map((chat) => chat.id),
+				...($pinnedChats || []).map((chat) => chat.id),
+				...folderChatIds
+			])
+		];
 		selectedChatIds = allChatIds;
 	};
 
@@ -932,6 +941,8 @@
 				{#if !search && folders}
 					<Folders
 						{folders}
+						{selectedChatIds}
+						showBulkActions={selectedChatIds.length > 0}
 						on:import={(e) => {
 							const { folderId, items } = e.detail;
 							importChatHandler(items, false, folderId);
@@ -941,6 +952,16 @@
 						}}
 						on:change={async () => {
 							initChatList();
+						}}
+						on:select={(e) => {
+							toggleChatSelection(e.detail);
+						}}
+						on:unselect={(e) => {
+							toggleChatSelection(e.detail);
+						}}
+						on:tag={(e) => {
+							const { type, name, chatId } = e.detail;
+							tagEventHandler(type, name, chatId);
 						}}
 					/>
 				{/if}
