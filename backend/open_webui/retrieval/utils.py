@@ -1,5 +1,6 @@
 import logging
 import os
+import asyncio
 from typing import Any
 
 import requests
@@ -31,9 +32,12 @@ class AsyncVectorSearchRetriever(BaseRetriever):
         *,
         run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
+        # Embedding providers can perform blocking network or CPU work.
+        # Keep that work off the event loop while preserving async DB calls.
+        query_vector = await asyncio.to_thread(self.embedding_function, query)
         result = await VECTOR_DB_CLIENT.search(
             collection_name=self.collection_name,
-            vectors=[self.embedding_function(query)],
+            vectors=[query_vector],
             limit=self.top_k,
         )
 
@@ -186,9 +190,18 @@ def merge_and_sort_query_results(
     combined_metadatas = []
 
     for data in query_results:
-        combined_distances.extend(data["distances"][0])
-        combined_documents.extend(data["documents"][0])
-        combined_metadatas.extend(data["metadatas"][0])
+        distances = data.get("distances") or []
+        documents = data.get("documents") or []
+        metadatas = data.get("metadatas") or []
+
+        # Indexing can complete asynchronously across files; skip empty batches
+        # so retrieval does not crash while data is still becoming available.
+        if not distances or not documents or not metadatas:
+            continue
+
+        combined_distances.extend(distances[0])
+        combined_documents.extend(documents[0])
+        combined_metadatas.extend(metadatas[0])
 
     # Create a list of tuples (distance, document, metadata)
     combined = list(zip(combined_distances, combined_documents, combined_metadatas))
@@ -245,7 +258,8 @@ async def query_collection(
 ) -> dict:
     results = []
     for query in queries:
-        query_embedding = embedding_function(query)
+        # Some embedding backends are synchronous (requests-based).
+        query_embedding = await asyncio.to_thread(embedding_function, query)
         for collection_name in collection_names:
             if collection_name:
                 # Use the clean reindex utility function

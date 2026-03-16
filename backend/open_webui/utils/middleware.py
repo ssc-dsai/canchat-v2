@@ -5,7 +5,6 @@ import logging
 import re
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Optional
 from uuid import uuid4
@@ -1201,26 +1200,17 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body["messages"])]
 
         try:
-            # Offload get_sources_from_files to a separate thread and run async function
-            # NOTE: Do we need this to run in its own thread now?
-            loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
-                sources = await loop.run_in_executor(
-                    executor,
-                    lambda: asyncio.run(
-                        get_sources_from_files(
-                            request=request,
-                            files=files,
-                            queries=queries,
-                            embedding_function=request.app.state.EMBEDDING_FUNCTION,
-                            k=request.app.state.config.TOP_K,
-                            reranking_function=request.app.state.rf,
-                            r=request.app.state.config.RELEVANCE_THRESHOLD,
-                            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                            full_context=request.app.state.config.RAG_FULL_CONTEXT,
-                        )
-                    ),
-                )
+            sources = await get_sources_from_files(
+                request=request,
+                files=files,
+                queries=queries,
+                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                k=request.app.state.config.TOP_K,
+                reranking_function=request.app.state.rf,
+                r=request.app.state.config.RELEVANCE_THRESHOLD,
+                hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                full_context=request.app.state.config.RAG_FULL_CONTEXT,
+            )
         except Exception as e:
             log.exception(e)
 
