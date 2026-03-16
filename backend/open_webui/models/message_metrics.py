@@ -257,8 +257,8 @@ class MessageMetricsTable:
                     query = query.filter(MessageMetric.user_domain == domain)
                 if model:
                     query = query.filter(MessageMetric.model == model)
-                results = query.scalars().all()
-                for created_at in results:
+                results = query.all()
+                for (created_at,) in results:
                     date_str = time.strftime("%Y-%m-%d", time.gmtime(created_at))
                     if date_str in expected_dates:
                         expected_dates[date_str] += 1
