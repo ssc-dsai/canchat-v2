@@ -2089,80 +2089,46 @@ class TestChat:
             chat_table: ChatTable,
             db_connector: AsyncDatabaseConnector,
         ):
-            user_id = str(uuid.uuid4())
+            user_ids = [str(uuid.uuid4()) for _ in range(3)]
             current_time = int(time.time())
 
             chats = [
                 Chat(
                     id=str(uuid.uuid4()),
-                    user_id=user_id,
+                    user_id=random.choice(user_ids),
                     title="New Chat",
                     chat={},
                     created_at=current_time,
-                    updated_at=current_time,
+                    updated_at=current_time + i * 10 + random.randint(10, 200),
                     share_id=None,
-                    archived=True,
+                    archived=random.randint(0, 1) % 2,
                     pinned=None,
                     meta={"tags": ["news", "bob"]},
                     folder_id=None,
-                ),
-                Chat(
-                    id=str(uuid.uuid4()),
-                    user_id=user_id,
-                    title="New Chat",
-                    chat={},
-                    created_at=current_time,
-                    updated_at=current_time,
-                    share_id=None,
-                    archived=False,
-                    pinned=None,
-                    meta={"tags": ["news", "bob"]},
-                    folder_id=None,
-                ),
-                Chat(
-                    id=str(uuid.uuid4()),
-                    user_id=user_id,
-                    title="New Chat",
-                    chat={},
-                    created_at=current_time,
-                    updated_at=current_time,
-                    share_id=None,
-                    archived=False,
-                    pinned=None,
-                    meta={"tags": ["news", "bob"]},
-                    folder_id=None,
-                ),
-                Chat(
-                    id=str(uuid.uuid4()),
-                    user_id=user_id,
-                    title="New Chat",
-                    chat={},
-                    created_at=current_time,
-                    updated_at=current_time,
-                    share_id=None,
-                    archived=True,
-                    pinned=None,
-                    meta={"tags": ["news", "bob"]},
-                    folder_id=None,
-                ),
+                )
+                for i in range(20)
             ]
 
             async with db_connector.get_async_db() as db:
-                for chat in chats:
-                    db.add(chat)
+                db.add_all(chats)
                 await db.commit()
+
+                user_id = random.choice(
+                    [chat.user_id for chat in chats if chat.archived]
+                )
+                archived_chats = [
+                    chat for chat in chats if chat.user_id == user_id and chat.archived
+                ]
+                archived_chats.sort(key=lambda chat: chat.updated_at, reverse=True)
 
                 archived_chat_models = (
                     await chat_table.get_archived_chat_list_by_user_id(user_id=user_id)
                 )
-                assert len(archived_chat_models) == 2
+                assert len(archived_chat_models) == len(archived_chats)
 
-                archived_chats = [
-                    ChatModel.model_validate(chat) for chat in chats if chat.archived
+                assert archived_chat_models == [
+                    ChatModel.model_validate(chat) for chat in archived_chats
                 ]
-                archived_chats.sort(key=lambda chat: chat.updated_at)
-
-                assert archived_chat_models == archived_chats
 
     class TestGetChatListByUserId:
         @pytest.mark.parametrize(
