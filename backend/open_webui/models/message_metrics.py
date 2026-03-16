@@ -1,4 +1,5 @@
 import time
+from typing import TypeVar
 import uuid
 from logging import getLogger
 
@@ -166,7 +167,11 @@ class MessageMetricsTable:
             logger.error(f"Failed to get daily messages number: {e}")
             return 0
 
-    def _apply_mcp_filter[T](self, query: Select[T], mcp_tool: str | None) -> Select[T]:
+    # Create generic type for _apply_mcp_filter until PEP 695 can be used
+    # in python 3.12+.
+    T = TypeVar("T")
+
+    def _apply_mcp_filter(self, query: Select[T], mcp_tool: str | None) -> Select[T]:
         """Apply mcp_tool filter to a SQLAlchemy query.
 
         Sentinel values:
