@@ -123,16 +123,12 @@ def async_session_maker(
             case url if url.startswith("postgresql"):
                 if engine:
                     connection = engine.connect()
-                    connection.execute(
-                        text(
-                            f"""
+                    connection.execute(text(f"""
             SELECT pg_terminate_backend(pg_stat_activity.pid)
             FROM pg_stat_activity
             WHERE pg_stat_activity.datname = '{db_name}'
               AND pid <> pg_backend_pid();
-        """
-                        )
-                    )
+        """))
                     connection.execute(text(f"DROP DATABASE {db_name}"))
                     connection.close()
                     engine.dispose()
