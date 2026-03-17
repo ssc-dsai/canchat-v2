@@ -628,36 +628,47 @@ class ChatTable:
             if dialect_name == "sqlite":
                 # SQLite case: using JSON1 extension for JSON searching
                 query = query.filter(
-                    (Chat.title.ilike(f"%{search_text_clean}%") | text("""
+                    (
+                        Chat.title.ilike(f"%{search_text_clean}%")
+                        | text(
+                            """
                             EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.chat, '$.messages') AS message
                                 WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
                             )
-                            """)).params(  # Case-insensitive search in title
+                            """
+                        )
+                    ).params(  # Case-insensitive search in title
                         search_text=search_text_clean
                     )
                 )
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(text("""
+                    query = query.filter(
+                        text(
+                            """
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.meta, '$.tags') AS tag
                             )
-                            """))
+                            """
+                        )
+                    )
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(f"""
+                                text(
+                                    f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_each(Chat.meta, '$.tags') AS tag
                                         WHERE tag.value = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """
+                                ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
@@ -666,36 +677,47 @@ class ChatTable:
             elif dialect_name == "postgresql":
                 # PostgreSQL relies on proper JSON query for search
                 query = query.filter(
-                    (Chat.title.ilike(f"%{search_text_clean}%") | text("""
+                    (
+                        Chat.title.ilike(f"%{search_text_clean}%")
+                        | text(
+                            """
                             EXISTS (
                                 SELECT 1
                                 FROM json_array_elements(Chat.chat->'messages') AS message
                                 WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
                             )
-                            """)).params(  # Case-insensitive search in title
+                            """
+                        )
+                    ).params(  # Case-insensitive search in title
                         search_text=search_text_clean
                     )
                 )
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(text("""
+                    query = query.filter(
+                        text(
+                            """
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
-                            """))
+                            """
+                        )
+                    )
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(f"""
+                                text(
+                                    f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_array_elements_text(Chat.meta->'tags') AS tag
                                         WHERE tag = :tag_id_{tag_idx}
                                     )
-                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """
+                                ).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
@@ -1000,7 +1022,6 @@ class ChatTable:
         max_age_days: int | None = None,
         preserve_pinned: bool = True,
         preserve_archived: bool = False,
-        batch_size: int = 100,
     ) -> list[ChatModel]:
         """
         Get chats for cleanup, optionally filtered by age.
@@ -1038,43 +1059,9 @@ class ChatTable:
                 # Order by created_at to ensure consistent pagination
                 statement = statement.order_by(Chat.created_at.asc())
 
-                offset = 0
-                result_chats: list[ChatModel] = []
+                chats = await db.scalars(statement)
 
-                log.info("Starting paginated chat cleanup query...")
-
-                while True:
-                    # Get batch of chats
-                    batch = await db.scalars(statement.offset(offset).limit(batch_size))
-
-                    if not batch:
-                        break  # No more chats to process
-
-                    # Convert batch to ChatModel objects
-                    for chat in batch.all():
-                        try:
-                            chat_model = ChatModel.model_validate(chat)
-                            result_chats.append(chat_model)
-                        except Exception as e:
-                            log.error(
-                                f"Error converting chat {chat.id} to ChatModel: {e}"
-                            )
-                            continue
-
-                    # Clear batch from memory
-                    del batch
-                    offset += batch_size
-
-                    # Log progress every 1000 records
-                    if offset % 1000 == 0:
-                        log.info(
-                            f"Processed {offset} chats so far, found {len(result_chats)} for cleanup"
-                        )
-
-                log.info(
-                    f"Completed paginated chat cleanup query. Total chats for cleanup: {len(result_chats)}"
-                )
-                return result_chats
+                return [ChatModel.model_validate(chat) for chat in chats]
 
         except Exception as e:
             log.error(f"Error getting chats for cleanup: {e}")

@@ -3491,13 +3491,15 @@ class TestChat:
                 assert len(tag_models) == 0
 
     class TestGetChatListByUserIdAndTagName:
-        # TODO: Add tests for skip and limit.
+
         @pytest.mark.asyncio
         async def test_valid_user_id_and_tag_name(
             self,
             chat_table: ChatTable,
             db_connector: AsyncDatabaseConnector,
         ):
+            # TODO: Add tests for skip and limit.
+
             tag_name = "first_tag"
             user_id = str(uuid.uuid4())
             current_time = int(time.time())
@@ -3568,13 +3570,14 @@ class TestChat:
 
                 assert len(c) == 3
 
-        # TODO: Add tests for skip and limit.
         @pytest.mark.asyncio
         async def test_invalid_user_id_and_valid_tag_name(
             self,
             chat_table: ChatTable,
             db_connector: AsyncDatabaseConnector,
         ):
+            # TODO: Add tests for skip and limit.
+
             tag_name = "first_tag"
             user_id = str(uuid.uuid4())
             current_time = int(time.time())
@@ -3642,7 +3645,6 @@ class TestChat:
                 c = await chat_table.get_chat_list_by_user_id_and_tag_name(
                     user_id="InvalidUserId", tag_name="first_tag"
                 )
-
                 assert len(c) == 0
 
         # TODO: Add tests for skip and limit.
@@ -4495,3 +4497,82 @@ class TestChat:
                     )
                 )
                 assert len(s.fetchall()) == 0
+
+    class TestGetChatsForCleanup:
+        @pytest.mark.parametrize(
+            argnames="max_age_days, preserve_pinned, preserve_archived",
+            argvalues=[
+                (None, False, False),
+                (None, True, False),
+                (None, True, True),
+                (5, False, False),
+                (5, True, False),
+                (5, True, True),
+            ],
+        )
+        @pytest.mark.asyncio
+        async def test_valid_params(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+            max_age_days: int | None,
+            preserve_pinned: bool,
+            preserve_archived: bool,
+        ):
+            current_time = int(time.time())
+            user_ids = [str(uuid.uuid4()) for _ in range(3)]
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=random.choice(user_ids),
+                    title="Test Chat for Unit Testing",
+                    chat={},
+                    created_at=(
+                        current_time + i * 10 - random.randint(0, 10) * (24 * 60 * 60)
+                    ),
+                    updated_at=current_time
+                    + i * 10
+                    - random.randint(0, 20) * (24 * 60 * 60),
+                    share_id=None,
+                    archived=random.choice([True, False]),
+                    pinned=random.choice([True, False, None]),
+                    meta={},
+                    folder_id=None,
+                )
+                for i in range(1000)
+            ]
+
+            chats.sort(key=lambda chat: chat.created_at)
+
+            async with db_connector.get_async_db() as db:
+                db.add_all(chats)
+                await db.commit()
+
+            start_time = int(time.time())
+            chat_models_for_cleanup = await chat_table.get_chats_for_cleanup(
+                max_age_days=max_age_days,
+                preserve_archived=preserve_archived,
+                preserve_pinned=preserve_pinned,
+            )
+            assert len(chat_models_for_cleanup) > 0
+
+            chats_for_cleanup = [
+                ChatModel.model_validate(chat)
+                for chat in chats
+                if (
+                    max_age_days is None
+                    or chat.updated_at < start_time - (max_age_days * 24 * 60 * 60)
+                )
+                and (
+                    # If preserve_archived, ensure chat is not archived, else all chats.
+                    (preserve_archived and not chat.archived)
+                    or not preserve_archived
+                )
+                and (
+                    # If preserve_pinned, ensure chat.pinned is not not or pinned, else all chats.
+                    (preserve_pinned and (chat.pinned is None or not chat.pinned))
+                    or not preserve_pinned
+                )
+            ]
+
+            assert chat_models_for_cleanup == chats_for_cleanup
