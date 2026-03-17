@@ -1112,32 +1112,6 @@ class ChatTable:
             log.error(f"Error getting chat batch for cleanup: {e}")
             return []
 
-    # Backward compatibility methods
-    async def get_expired_chats(
-        self,
-        max_age_days: int,
-        preserve_pinned: bool = True,
-        preserve_archived: bool = False,
-    ) -> list[ChatModel]:
-        """
-        Deprecated: Use get_chats_for_cleanup() instead.
-        Get chats that are older than max_age_days.
-        """
-        return await self.get_chats_for_cleanup(
-            max_age_days, preserve_pinned, preserve_archived
-        )
-
-    async def get_all_chats_for_cleanup(
-        self, preserve_pinned: bool = True, preserve_archived: bool = False
-    ) -> list[ChatModel]:
-        """
-        Deprecated: Use get_chats_for_cleanup() instead.
-        Get all chats for cleanup (ignoring age restrictions).
-        """
-        return await self.get_chats_for_cleanup(
-            None, preserve_pinned, preserve_archived
-        )
-
     async def delete_chat_list(
         self,
         chat_ids: list[str],

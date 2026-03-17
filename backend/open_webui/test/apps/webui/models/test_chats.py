@@ -4576,3 +4576,95 @@ class TestChat:
             ]
 
             assert chat_models_for_cleanup == chats_for_cleanup
+
+    class TestGetChatsForCleanupBatch:
+        @pytest.mark.parametrize(
+            argnames="max_age_days, preserve_pinned, preserve_archived, batch_size, offset",
+            argvalues=[
+                (None, False, False, 50, 0),
+                (None, True, False, 50, 0),
+                (None, True, True, 50, 0),
+                (5, False, False, 50, 0),
+                (5, True, False, 50, 0),
+                (5, True, True, 50, 0),
+                (None, False, False, 200, 50),
+                (None, True, False, 200, 50),
+                (None, True, True, 200, 50),
+                (5, False, False, 200, 50),
+                (5, True, False, 200, 50),
+                (5, True, True, 200, 50),
+            ],
+        )
+        @pytest.mark.asyncio
+        async def test_valid_params(
+            self,
+            chat_table: ChatTable,
+            db_connector: AsyncDatabaseConnector,
+            max_age_days: int | None,
+            preserve_pinned: bool,
+            preserve_archived: bool,
+            batch_size: int,
+            offset: int,
+        ):
+            current_time = int(time.time())
+            user_ids = [str(uuid.uuid4()) for _ in range(3)]
+            chats = [
+                Chat(
+                    id=str(uuid.uuid4()),
+                    user_id=random.choice(user_ids),
+                    title="Test Chat for Unit Testing",
+                    chat={},
+                    created_at=(
+                        current_time + i * 10 - random.randint(0, 10) * (24 * 60 * 60)
+                    ),
+                    updated_at=(
+                        current_time + i * 10 - random.randint(0, 20) * (24 * 60 * 60)
+                    ),
+                    share_id=None,
+                    archived=random.choice([True, False]),
+                    pinned=random.choice([True, False, None]),
+                    meta={},
+                    folder_id=None,
+                )
+                for i in range(1000)
+            ]
+
+            chats.sort(key=lambda chat: chat.created_at)
+
+            async with db_connector.get_async_db() as db:
+                db.add_all(chats)
+                await db.commit()
+
+            start_time = int(time.time())
+            chat_models_for_cleanup = await chat_table.get_chats_for_cleanup_batch(
+                max_age_days=max_age_days,
+                preserve_archived=preserve_archived,
+                preserve_pinned=preserve_pinned,
+                batch_size=batch_size,
+                offset=offset,
+            )
+            assert len(chat_models_for_cleanup) > 0
+
+            chats_for_cleanup = [
+                ChatModel.model_validate(chat)
+                for chat in chats
+                if (
+                    max_age_days is None
+                    or chat.updated_at < start_time - (max_age_days * 24 * 60 * 60)
+                )
+                and (
+                    # If preserve_archived, ensure chat is not archived, else all chats.
+                    (preserve_archived and not chat.archived)
+                    or not preserve_archived
+                )
+                and (
+                    # If preserve_pinned, ensure chat.pinned is not not or pinned, else all chats.
+                    (preserve_pinned and (chat.pinned is None or not chat.pinned))
+                    or not preserve_pinned
+                )
+            ]
+
+            assert (
+                chat_models_for_cleanup
+                == chats_for_cleanup[offset : offset + batch_size]
+            )

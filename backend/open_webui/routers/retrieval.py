@@ -3630,16 +3630,13 @@ async def cleanup_expired_chats(
         # Get expired chats
         if force_cleanup_all:
             # Get all chats regardless of age
-            expired_chats = await CHATS.get_all_chats_for_cleanup(
-                preserve_pinned=preserve_pinned,
-                preserve_archived=preserve_archived,
+            expired_chats = await CHATS.get_chats_for_cleanup(
+                None, preserve_pinned, preserve_archived
             )
         else:
             # Get only expired chats based on age
-            expired_chats = await CHATS.get_expired_chats(
-                max_age_days=max_age_days,
-                preserve_pinned=preserve_pinned,
-                preserve_archived=preserve_archived,
+            expired_chats = await CHATS.get_chats_for_cleanup(
+                max_age_days, preserve_pinned, preserve_archived
             )
 
         log.info(f"Retrieved {len(expired_chats)} expired chats")
