@@ -7,10 +7,11 @@ from open_webui.internal.db import JSONField, get_db
 from open_webui.models.base import Base
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
+from open_webui.models.domains import Domain
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, func
 
 # Add logger for the users module
 logger = getLogger(__name__)
@@ -438,6 +439,48 @@ class UsersTable:
         except Exception as e:
             logger.error(f"Failed to get range metrics: {e}")
             return {"total_users": 0, "active_users": 0}
+
+    def get_users_count_by_domain(
+        self,
+        start_timestamp: int,
+        end_timestamp: int,
+        domain: list[str],
+        is_active: bool = False,
+    ):
+        """Return user counts grouped by domain for a date range."""
+        with get_db() as db:
+            # Choose timestamp field based on is_active flag
+            timestamp_field = User.last_active_at if is_active else User.created_at
+
+            query = db.query(
+                User.domain,
+                Domain.description.label("description"),
+                func.count(User.id).label("user_count"),
+            ).select_from(User)
+
+            # Apply timestamp filters based on is_active flag
+            if is_active:
+                # For active users, filter by both start and end timestamps
+                query = query.filter(
+                    timestamp_field >= start_timestamp, timestamp_field < end_timestamp
+                )
+            else:
+                # For total enrolled users, only filter by end timestamp
+                query = query.filter(timestamp_field < end_timestamp)
+
+            if "All" not in domain and "Tous" not in domain:
+                query = query.filter(User.domain.in_(domain))
+
+            rows = (
+                query.outerjoin(Domain, User.domain == Domain.domain)
+                .group_by(User.domain, Domain.description)
+                .all()
+            )
+
+        return [
+            {"domain": domain, "department": description, "user_count": user_count}
+            for domain, description, user_count in rows
+        ]
 
 
 Users = UsersTable()
