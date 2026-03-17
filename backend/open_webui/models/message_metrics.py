@@ -246,7 +246,6 @@ class MessageMetricsTable:
         counting the number of MessageMetric per day for the given number of days (UTC).
         """
         try:
-            result: list[dict[str, str | int]] = []
             current_time = int(time.time())
             today_midnight = current_time - (current_time % 86400)
 
@@ -262,12 +261,7 @@ class MessageMetricsTable:
                 expected_dates[date_str] = 0
 
             async with self.__db.get_async_db() as db:
-                query = select(
-                    func.strftime(
-                        "%Y-%m-%d", func.datetime(MessageMetric.created_at, "unixepoch")
-                    ).label("date"),
-                    func.count(MessageMetric.id).label("count"),
-                ).where(
+                query = select(MessageMetric.created_at).where(
                     MessageMetric.created_at >= start_timestamp,
                     MessageMetric.created_at < end_timestamp,
                 )
@@ -275,11 +269,11 @@ class MessageMetricsTable:
                     query = query.where(MessageMetric.user_domain == domain)
                 if model:
                     query = query.where(MessageMetric.model == model)
-                query = query.group_by("date")
-                results = await db.execute(query)
-                for date_str, count in results:
+                results = await db.scalars(query)
+                for created_at in results:
+                    date_str = time.strftime("%Y-%m-%d", time.gmtime(created_at))
                     if date_str in expected_dates:
-                        expected_dates[date_str] = count if count else 0
+                        expected_dates[date_str] += 1
 
             # Output as a sorted list (oldest to newest)
             return [
@@ -321,10 +315,8 @@ class MessageMetricsTable:
 
             async with self.__db.get_async_db() as db:
                 query = select(
-                    func.strftime(
-                        "%Y-%m-%d", func.datetime(MessageMetric.created_at, "unixepoch")
-                    ).label("date"),
-                    func.sum(MessageMetric.total_tokens).label("count"),
+                    MessageMetric.created_at,
+                    MessageMetric.total_tokens,
                 ).where(
                     MessageMetric.created_at >= start_timestamp,
                     MessageMetric.created_at < end_timestamp,
@@ -332,11 +324,15 @@ class MessageMetricsTable:
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
                 query = self._apply_mcp_filter(query, mcp_tool)
-                query = query.group_by("date")
                 results = await db.execute(query)
-                for date_str, count in results:
+
+                for created_at, tokens in results:
+                    date_str = time.strftime("%Y-%m-%d", time.gmtime(created_at))
                     if date_str in expected_dates:
-                        expected_dates[date_str] = round(count, 2) if count else 0
+                        expected_dates[date_str] += tokens if tokens else 0
+
+            for date_str in expected_dates:
+                expected_dates[date_str] = round(expected_dates[date_str], 2)
 
             return [
                 {"date": date, "count": expected_dates[date]}
@@ -345,6 +341,8 @@ class MessageMetricsTable:
         except Exception as e:
             logger.error(f"Failed to get historical tokens data: {e}")
             fallback = []
+            current_time = int(time.time())
+            today_midnight = current_time - (current_time % 86400)
             for offset in reversed(range(days)):
                 day_start = today_midnight - (offset * 86400)
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
