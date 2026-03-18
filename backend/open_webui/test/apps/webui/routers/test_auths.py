@@ -7,11 +7,10 @@ class TestAuths(AbstractPostgresTest):
 
     def setup_class(cls):
         super().setup_class()
-        from open_webui.models.auths_table import Auths
-        from open_webui.models.users import Users
+        from open_webui.models.db_services import AUTHS, USERS
 
-        cls.users = Users
-        cls.auths = Auths
+        cls.users = USERS
+        cls.auths = AUTHS
 
     def setup_method(self):
         super().setup_method()
@@ -21,7 +20,7 @@ class TestAuths(AbstractPostgresTest):
         open_webui.main.app.state.config.ENABLE_LOGIN_FORM = True
 
         # Insert user 1 for tests relying on mock_webui_user default
-        await self.users.insert_new_user(
+        self.users.insert_new_user(
             "1", "John Doe", "john.doe@openwebui.com", "/user.png", "user"
         )
 

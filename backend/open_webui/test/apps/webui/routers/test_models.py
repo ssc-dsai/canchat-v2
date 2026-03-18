@@ -7,11 +7,10 @@ class TestModels(AbstractPostgresTest):
 
     def setup_class(cls):
         super().setup_class()
-        from open_webui.models.models import Model
-        from open_webui.models.users import Users
+        from open_webui.models.db_services import MODELS, USERS
 
-        cls.models = Model
-        cls.users = Users
+        cls.models = MODELS
+        cls.users = USERS
 
     def setup_method(self):
         super().setup_method()

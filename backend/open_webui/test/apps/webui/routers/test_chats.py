@@ -7,18 +7,18 @@ from open_webui.test.util.mock_user import mock_webui_user
 class TestChats(AbstractPostgresTest):
     BASE_PATH = "/api/v1/chats/"
 
+    @classmethod
     def setup_class(cls):
         super().setup_class()
-        from open_webui.models.chats import Chats, ChatForm
-        from open_webui.models.users import Users
+        from open_webui.models.chats import ChatForm
+        from open_webui.models.db_services import CHATS, USERS
 
-        cls.chats = Chats
+        cls.chats = CHATS
         cls.chat_form = ChatForm
-        cls.users = Users
+        cls.users = USERS
 
     def setup_method(self):
         super().setup_method()
-        from open_webui.models.chats import ChatForm, Chats
 
         self.users.insert_new_user(
             "1", "User 1", "user1@example.com", "/user1.png", "user"
@@ -99,9 +99,9 @@ class TestChats(AbstractPostgresTest):
 
     def test_get_user_archived_chats(self):
         self.chats.archive_all_chats_by_user_id("2")
-        from open_webui.internal.db import Session
+        from open_webui.internal.db import DB_SESSION
 
-        Session.commit()
+        DB_SESSION.commit()
         with mock_webui_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/all/archived"))
         assert response.status_code == 200
