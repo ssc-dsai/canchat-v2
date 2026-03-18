@@ -1,15 +1,14 @@
 import logging
-import time
-from typing import List, Optional
-import uuid
 import re
+import time
+import uuid
 
-from open_webui.internal.db import get_db
-from open_webui.models.base import Base
 from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.internal.db_utils import AsyncDatabaseConnector
+from open_webui.models.base import Base
 from pydantic import BaseModel, ConfigDict, validator
-from sqlalchemy import BigInteger, Column, String, Text, JSON, func
+from sqlalchemy import BigInteger, String, Text, select
+from sqlalchemy.orm import Mapped, mapped_column
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -23,11 +22,11 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Domain(Base):
     __tablename__ = "domain"
 
-    id = Column(String, primary_key=True)
-    domain = Column(String, unique=True, nullable=False)
-    description = Column(Text, nullable=True)
-    created_at = Column(BigInteger)
-    updated_at = Column(BigInteger)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    domain: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[int] = mapped_column(BigInteger)
+    updated_at: Mapped[int] = mapped_column(BigInteger)
 
 
 class DomainModel(BaseModel):
@@ -35,14 +34,14 @@ class DomainModel(BaseModel):
 
     id: str
     domain: str
-    description: Optional[str] = None
-    created_at: Optional[int] = None
-    updated_at: Optional[int] = None
+    description: str | None = None
+    created_at: int | None = None
+    updated_at: int | None = None
 
 
 class DomainForm(BaseModel):
     domain: str
-    description: Optional[str] = None
+    description: str | None = None
 
     @validator("domain")
     def validate_domain(cls, v):
@@ -73,8 +72,14 @@ class DomainForm(BaseModel):
 
 
 class DomainTable:
-    def insert_new_domain(self, form_data: DomainForm) -> Optional[DomainModel]:
-        with get_db() as db:
+
+    __db: AsyncDatabaseConnector
+
+    def __init__(self, db_connector: AsyncDatabaseConnector) -> None:
+        self.__db = db_connector
+
+    async def insert_new_domain(self, form_data: DomainForm) -> DomainModel | None:
+        async with self.__db.get_async_db() as db:
             domain_id = str(uuid.uuid4())
             timestamp = int(time.time())
             domain = Domain(
@@ -89,38 +94,37 @@ class DomainTable:
 
             try:
                 db.add(domain)
-                db.commit()
-                db.refresh(domain)
+                await db.commit()
+                await db.refresh(domain)
                 return DomainModel.model_validate(domain)
             except Exception as e:
                 log.error(f"Error creating domain: {e}")
-                db.rollback()
+                await db.rollback()
                 return None
 
-    def get_domains(self) -> list[DomainModel]:
-        with get_db() as db:
-            return [
-                DomainModel.model_validate(domain)
-                for domain in db.query(Domain)
-                .order_by(Domain.description, Domain.domain)
-                .all()
-            ]
+    async def get_domains(self) -> list[DomainModel]:
+        async with self.__db.get_async_db() as db:
+            domains = await db.scalars(
+                select(Domain).order_by(Domain.description, Domain.domain)
+            )
 
-    def get_domain_by_id(self, domain_id: str) -> Optional[DomainModel]:
-        with get_db() as db:
-            domain = db.query(Domain).filter_by(id=domain_id).first()
+            return [DomainModel.model_validate(domain) for domain in domains.all()]
+
+    async def get_domain_by_id(self, domain_id: str) -> DomainModel | None:
+        async with self.__db.get_async_db() as db:
+            domain = await db.scalar(select(Domain).where(Domain.id == domain_id))
             return DomainModel.model_validate(domain) if domain else None
 
-    def get_domain_by_domain(self, domain_name: str) -> Optional[DomainModel]:
-        with get_db() as db:
-            domain = db.query(Domain).filter_by(domain=domain_name).first()
+    async def get_domain_by_domain(self, domain_name: str) -> DomainModel | None:
+        async with self.__db.get_async_db() as db:
+            domain = await db.scalar(select(Domain).where(Domain.domain == domain_name))
             return DomainModel.model_validate(domain) if domain else None
 
-    def update_domain_by_id(
+    async def update_domain_by_id(
         self, domain_id: str, form_data: DomainForm
-    ) -> Optional[DomainModel]:
-        with get_db() as db:
-            domain = db.query(Domain).filter_by(id=domain_id).first()
+    ) -> DomainModel | None:
+        async with self.__db.get_async_db() as db:
+            domain = await db.scalar(select(Domain).where(Domain.id == domain_id))
             if not domain:
                 return None
 
@@ -129,41 +133,34 @@ class DomainTable:
             domain.updated_at = int(time.time())
 
             try:
-                db.commit()
-                db.refresh(domain)
+                await db.commit()
+                await db.refresh(domain)
                 return DomainModel.model_validate(domain)
             except Exception as e:
                 log.error(f"Error updating domain: {e}")
-                db.rollback()
+                await db.rollback()
                 return None
 
-    def delete_domain_by_id(self, domain_id: str) -> bool:
-        with get_db() as db:
-            domain = db.query(Domain).filter_by(id=domain_id).first()
+    async def delete_domain_by_id(self, domain_id: str) -> bool:
+        async with self.__db.get_async_db() as db:
+            domain = await db.scalar(select(Domain).where(Domain.id == domain_id))
             if not domain:
                 return False
 
             try:
-                db.delete(domain)
-                db.commit()
+                await db.delete(domain)
+                await db.commit()
                 return True
             except Exception as e:
                 log.error(f"Error deleting domain: {e}")
-                db.rollback()
+                await db.rollback()
                 return False
 
-    def get_available_domains(self) -> List[DomainModel]:
+    async def get_available_domains(self) -> list[DomainModel]:
         """Get list of all available domains from the domains table only"""
         # Get domains from domains table only
-        return self.get_domains()
+        return await self.get_domains()
 
-    def get_available_domains_list(self) -> List[str]:
+    async def get_available_domains_list(self) -> list[str]:
         """Get list of all available domain names as strings from domains table only"""
-        return [domain.domain for domain in self.get_domains()]
-
-    def get_available_domains_list(self) -> list[str]:
-        """Get list of all available domain names as strings"""
-        return [domain.domain for domain in self.get_available_domains()]
-
-
-Domains = DomainTable()
+        return [domain.domain for domain in await self.get_domains()]

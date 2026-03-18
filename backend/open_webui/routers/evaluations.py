@@ -1,17 +1,14 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
-from pydantic import BaseModel
-
-from open_webui.models.users import Users, UserModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.models.db_services import FEEDBACKS, USERS
 from open_webui.models.feedbacks import (
+    FeedbackForm,
     FeedbackModel,
     FeedbackResponse,
-    FeedbackForm,
-    Feedbacks,
 )
-
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.models.users import UserModel
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -58,16 +55,16 @@ async def update_config(
 
 
 class FeedbackUserResponse(FeedbackResponse):
-    user: Optional[UserModel] = None
+    user: UserModel | None = None
 
 
 @router.get("/feedbacks/all", response_model=list[FeedbackUserResponse])
 async def get_all_feedbacks(user=Depends(get_admin_user)):
     """Get all feedbacks (original behavior)"""
-    feedbacks = Feedbacks.get_all_feedbacks()
+    feedbacks = await FEEDBACKS.get_all_feedbacks()
     return [
         FeedbackUserResponse(
-            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
+            **feedback.model_dump(), user=await USERS.get_user_by_id(feedback.user_id)
         )
         for feedback in feedbacks
     ]
@@ -79,15 +76,15 @@ async def get_all_feedbacks_paginated(
     user=Depends(get_admin_user),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(10, ge=1, le=100, description="Items per page"),
-    search: Optional[str] = Query(None, description="Search query"),
+    search: str | None = Query(None, description="Search query"),
 ):
     """Get paginated feedbacks with optional search"""
-    feedbacks = Feedbacks.get_all_feedbacks_paginated(
+    feedbacks = await FEEDBACKS.get_all_feedbacks_paginated(
         page=page, limit=limit, search=search
     )
     return [
         FeedbackUserResponse(
-            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
+            **feedback.model_dump(), user=await USERS.get_user_by_id(feedback.user_id)
         )
         for feedback in feedbacks
     ]
@@ -96,19 +93,19 @@ async def get_all_feedbacks_paginated(
 @router.get("/feedbacks/count")
 async def get_feedbacks_count(
     user=Depends(get_admin_user),
-    search: Optional[str] = Query(None, description="Search query"),
+    search: str | None = Query(None, description="Search query"),
 ):
     """Get total count of feedbacks with optional search filter"""
-    return {"count": Feedbacks.get_feedbacks_count(search=search)}
+    return {"count": await FEEDBACKS.get_feedbacks_count(search=search)}
 
 
 @router.get("/feedbacks/all/export", response_model=list[FeedbackUserResponse])
 async def export_all_feedbacks(user=Depends(get_admin_user)):
     """Export all feedbacks for admin use"""
-    feedbacks = Feedbacks.get_all_feedbacks()
+    feedbacks = await FEEDBACKS.get_all_feedbacks()
     return [
         FeedbackUserResponse(
-            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
+            **feedback.model_dump(), user=await USERS.get_user_by_id(feedback.user_id)
         )
         for feedback in feedbacks
     ]
@@ -117,19 +114,19 @@ async def export_all_feedbacks(user=Depends(get_admin_user)):
 @router.delete("/feedbacks/all")
 async def delete_all_feedbacks(user=Depends(get_admin_user)):
     """Delete all feedbacks (admin only)"""
-    success = Feedbacks.delete_all_feedbacks()
+    success = await FEEDBACKS.delete_all_feedbacks()
     return success
 
 
 @router.get("/feedbacks/user", response_model=list[FeedbackUserResponse])
 async def get_feedbacks(user=Depends(get_verified_user)):
-    feedbacks = Feedbacks.get_feedbacks_by_user_id(user.id)
+    feedbacks = await FEEDBACKS.get_feedbacks_by_user_id(user.id)
     return feedbacks
 
 
 @router.delete("/feedbacks", response_model=bool)
 async def delete_feedbacks(user=Depends(get_verified_user)):
-    success = Feedbacks.delete_feedbacks_by_user_id(user.id)
+    success = await FEEDBACKS.delete_feedbacks_by_user_id(user.id)
     return success
 
 
@@ -139,7 +136,7 @@ async def create_feedback(
     form_data: FeedbackForm,
     user=Depends(get_verified_user),
 ):
-    feedback = Feedbacks.insert_new_feedback(user_id=user.id, form_data=form_data)
+    feedback = await FEEDBACKS.insert_new_feedback(user_id=user.id, form_data=form_data)
     if not feedback:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -151,7 +148,7 @@ async def create_feedback(
 
 @router.get("/feedback/{id}", response_model=FeedbackModel)
 async def get_feedback_by_id(id: str, user=Depends(get_verified_user)):
-    feedback = Feedbacks.get_feedback_by_id_and_user_id(id=id, user_id=user.id)
+    feedback = await FEEDBACKS.get_feedback_by_id_and_user_id(id=id, user_id=user.id)
 
     if not feedback:
         raise HTTPException(
@@ -165,7 +162,7 @@ async def get_feedback_by_id(id: str, user=Depends(get_verified_user)):
 async def update_feedback_by_id(
     id: str, form_data: FeedbackForm, user=Depends(get_verified_user)
 ):
-    feedback = Feedbacks.update_feedback_by_id_and_user_id(
+    feedback = await FEEDBACKS.update_feedback_by_id_and_user_id(
         id=id, user_id=user.id, form_data=form_data
     )
 
@@ -180,9 +177,11 @@ async def update_feedback_by_id(
 @router.delete("/feedback/{id}")
 async def delete_feedback_by_id(id: str, user=Depends(get_verified_user)):
     if user.role == "admin":
-        success = Feedbacks.delete_feedback_by_id(id=id)
+        success = await FEEDBACKS.delete_feedback_by_id(id=id)
     else:
-        success = Feedbacks.delete_feedback_by_id_and_user_id(id=id, user_id=user.id)
+        success = await FEEDBACKS.delete_feedback_by_id_and_user_id(
+            id=id, user_id=user.id
+        )
 
     if not success:
         raise HTTPException(

@@ -1,12 +1,12 @@
 import logging
 import uuid
-from typing import Optional
 
-from open_webui.internal.db import get_db
-from open_webui.models.auths import Auth, AuthModel
-from open_webui.models.users import UserModel, Users
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.utils.auth import verify_password
+from open_webui.internal.db_utils import AsyncDatabaseConnector
+from open_webui.models.auths import Auth, AuthModel
+from open_webui.models.groups import GroupTable
+from open_webui.models.users import UserModel, UsersTable
+from sqlalchemy import delete, select, update
 
 """
 The Auths service which provides the ability to interact with the DB.
@@ -23,17 +23,33 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 class AuthsTable:
-    def insert_new_auth(
+
+    __db: AsyncDatabaseConnector
+    __groups: GroupTable
+    __users: UsersTable
+
+    def __init__(
+        self,
+        db_connector: AsyncDatabaseConnector,
+        groups: GroupTable,
+        users_table: UsersTable,
+    ) -> None:
+        self.__db = db_connector
+        self.__groups = groups
+        self.__users = users_table
+
+    async def insert_new_auth(
         self,
         email: str,
         password: str,
         name: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
-        oauth_sub: Optional[str] = None,
+        oauth_sub: str | None = None,
         domain: str = "*",
-    ) -> Optional[UserModel]:
-        with get_db() as db:
+    ) -> UserModel | None:
+        async with self.__db.get_async_db() as db:
+
             log.info("insert_new_auth")
 
             id = str(uuid.uuid4())
@@ -49,7 +65,7 @@ class AuthsTable:
             result = Auth(**auth.model_dump())
             db.add(result)
 
-            user = Users.insert_new_user(
+            user = await self.__users.insert_new_user(
                 id,
                 name,
                 email,
@@ -59,22 +75,29 @@ class AuthsTable:
                 domain,
             )
 
-            db.commit()
-            db.refresh(result)
+            await db.commit()
+            await db.refresh(result)
 
             if result and user:
                 return user
             else:
                 return None
 
-    def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
+    async def authenticate_user(self, email: str, password: str) -> UserModel | None:
         log.info(f"authenticate_user: {email}")
         try:
-            with get_db() as db:
-                auth = db.query(Auth).filter_by(email=email, active=True).first()
+            async with self.__db.get_async_db() as db:
+
+                result = await db.execute(
+                    select(Auth).where(Auth.email == email, Auth.active)
+                )
+
+                auth = result.scalars().first()
                 if auth:
+                    from open_webui.utils.auth import verify_password
+
                     if verify_password(password, auth.password):
-                        user = Users.get_user_by_id(auth.id)
+                        user = await self.__users.get_user_by_id(auth.id)
                         return user
                     else:
                         return None
@@ -83,64 +106,66 @@ class AuthsTable:
         except Exception:
             return None
 
-    def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
+    async def authenticate_user_by_api_key(self, api_key: str) -> UserModel | None:
         log.info(f"authenticate_user_by_api_key: {api_key}")
         # if no api_key, return None
         if not api_key:
             return None
 
         try:
-            user = Users.get_user_by_api_key(api_key)
+            user = await self.__users.get_user_by_api_key(api_key)
             return user if user else None
         except Exception:
-            return False
+            return None
 
-    def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
+    async def authenticate_user_by_trusted_header(self, email: str) -> UserModel | None:
         log.info(f"authenticate_user_by_trusted_header: {email}")
         try:
-            with get_db() as db:
-                auth = db.query(Auth).filter_by(email=email, active=True).first()
+            async with self.__db.get_async_db() as db:
+                auth = await db.scalar(
+                    select(Auth).where(Auth.email == email, Auth.active == True)
+                )
+
                 if auth:
-                    user = Users.get_user_by_id(auth.id)
+                    user = await self.__users.get_user_by_id(auth.id)
                     return user
         except Exception:
             return None
 
-    def update_user_password_by_id(self, id: str, new_password: str) -> bool:
+    async def update_user_password_by_id(self, id: str, new_password: str) -> bool:
         try:
-            with get_db() as db:
-                result = (
-                    db.query(Auth).filter_by(id=id).update({"password": new_password})
+            async with self.__db.get_async_db() as db:
+                result = await db.execute(
+                    update(Auth).where(Auth.id == id).values(password=new_password)
                 )
-                db.commit()
-                return True if result == 1 else False
+                await db.commit()
+                return result.rowcount == 1
         except Exception:
             return False
 
-    def update_email_by_id(self, id: str, email: str) -> bool:
+    async def update_email_by_id(self, id: str, email: str) -> bool:
         try:
-            with get_db() as db:
-                result = db.query(Auth).filter_by(id=id).update({"email": email})
-                db.commit()
-                return True if result == 1 else False
+            async with self.__db.get_async_db() as db:
+                result = await db.execute(
+                    update(Auth).where(Auth.id == id).values(email=email)
+                )
+                await db.commit()
+                return result.rowcount == 1
         except Exception:
             return False
 
-    def delete_auth_by_id(self, id: str) -> bool:
+    async def delete_auth_by_user_id(self, user_id: str) -> bool:
         try:
-            with get_db() as db:
-                # Delete User
-                result = Users.delete_user_by_id(id)
+            async with self.__db.get_async_db() as db:
+                user = await self.__users.get_user_by_id(user_id)
 
-                if result:
-                    db.query(Auth).filter_by(id=id).delete()
-                    db.commit()
-
+                if user:
+                    _ = await db.execute(delete(Auth).where(Auth.email == user.email))
+                    await db.commit()
+                    _ = await self.__groups.remove_user_from_all_groups(user_id)
+                    _ = await self.__users.delete_user_by_id(user_id)
                     return True
                 else:
                     return False
         except Exception:
             return False
-
-
-Auths = AuthsTable()

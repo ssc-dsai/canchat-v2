@@ -643,7 +643,7 @@ class FastMCPManager:
             from mcp_backend.models.mcp_servers import MCPServers
 
             # Get all active external servers from database
-            servers = MCPServers.get_user_created_servers()
+            servers = await MCPServers.get_user_created_servers()
 
             for server in servers:
                 if not server.is_active:

@@ -1,17 +1,16 @@
 from pathlib import Path
-from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.config import CACHE_DIR
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.models.db_services import FUNCTIONS
 from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
     FunctionResponse,
-    Functions,
 )
-from open_webui.utils.plugin import load_function_module_by_id, replace_imports
-from open_webui.config import CACHE_DIR
-from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.plugin import load_function_module_by_id, replace_imports
 
 router = APIRouter()
 
@@ -22,7 +21,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[FunctionResponse])
 async def get_functions(user=Depends(get_verified_user)):
-    return Functions.get_functions()
+    return await FUNCTIONS.get_functions()
 
 
 ############################
@@ -31,8 +30,8 @@ async def get_functions(user=Depends(get_verified_user)):
 
 
 @router.get("/export", response_model=list[FunctionModel])
-async def get_functions(user=Depends(get_admin_user)):
-    return Functions.get_functions()
+async def export_functions(user=Depends(get_admin_user)):
+    return await FUNCTIONS.get_functions()
 
 
 ############################
@@ -40,7 +39,7 @@ async def get_functions(user=Depends(get_admin_user)):
 ############################
 
 
-@router.post("/create", response_model=Optional[FunctionResponse])
+@router.post("/create", response_model=FunctionResponse | None)
 async def create_new_function(
     request: Request, form_data: FunctionForm, user=Depends(get_admin_user)
 ):
@@ -52,20 +51,24 @@ async def create_new_function(
 
     form_data.id = form_data.id.lower()
 
-    function = Functions.get_function_by_id(form_data.id)
+    function = await FUNCTIONS.get_function_by_id(form_data.id)
     if function is None:
         try:
             form_data.content = replace_imports(form_data.content)
-            function_module, function_type, frontmatter = load_function_module_by_id(
-                form_data.id,
-                content=form_data.content,
+            function_module, function_type, frontmatter = (
+                await load_function_module_by_id(
+                    form_data.id,
+                    content=form_data.content,
+                )
             )
             form_data.meta.manifest = frontmatter
 
             FUNCTIONS = request.app.state.FUNCTIONS
             FUNCTIONS[form_data.id] = function_module
 
-            function = Functions.insert_new_function(user.id, function_type, form_data)
+            function = await FUNCTIONS.insert_new_function(
+                user.id, function_type, form_data
+            )
 
             function_cache_dir = Path(CACHE_DIR) / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -95,9 +98,9 @@ async def create_new_function(
 ############################
 
 
-@router.get("/id/{id}", response_model=Optional[FunctionModel])
+@router.get("/id/{id}", response_model=FunctionModel | None)
 async def get_function_by_id(id: str, user=Depends(get_admin_user)):
-    function = Functions.get_function_by_id(id)
+    function = await FUNCTIONS.get_function_by_id(id)
 
     if function:
         return function
@@ -113,11 +116,11 @@ async def get_function_by_id(id: str, user=Depends(get_admin_user)):
 ############################
 
 
-@router.post("/id/{id}/toggle", response_model=Optional[FunctionModel])
+@router.post("/id/{id}/toggle", response_model=FunctionModel | None)
 async def toggle_function_by_id(id: str, user=Depends(get_admin_user)):
-    function = Functions.get_function_by_id(id)
+    function = await FUNCTIONS.get_function_by_id(id)
     if function:
-        function = Functions.update_function_by_id(
+        function = await FUNCTIONS.update_function_by_id(
             id, {"is_active": not function.is_active}
         )
 
@@ -140,11 +143,11 @@ async def toggle_function_by_id(id: str, user=Depends(get_admin_user)):
 ############################
 
 
-@router.post("/id/{id}/toggle/global", response_model=Optional[FunctionModel])
+@router.post("/id/{id}/toggle/global", response_model=FunctionModel | None)
 async def toggle_global_by_id(id: str, user=Depends(get_admin_user)):
-    function = Functions.get_function_by_id(id)
+    function = await FUNCTIONS.get_function_by_id(id)
     if function:
-        function = Functions.update_function_by_id(
+        function = await FUNCTIONS.update_function_by_id(
             id, {"is_global": not function.is_global}
         )
 
@@ -167,13 +170,13 @@ async def toggle_global_by_id(id: str, user=Depends(get_admin_user)):
 ############################
 
 
-@router.post("/id/{id}/update", response_model=Optional[FunctionModel])
+@router.post("/id/{id}/update", response_model=FunctionModel | None)
 async def update_function_by_id(
     request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user)
 ):
     try:
         form_data.content = replace_imports(form_data.content)
-        function_module, function_type, frontmatter = load_function_module_by_id(
+        function_module, function_type, frontmatter = await load_function_module_by_id(
             id, content=form_data.content
         )
         form_data.meta.manifest = frontmatter
@@ -184,7 +187,7 @@ async def update_function_by_id(
         updated = {**form_data.model_dump(exclude={"id"}), "type": function_type}
         print(updated)
 
-        function = Functions.update_function_by_id(id, updated)
+        function = await FUNCTIONS.update_function_by_id(id, updated)
 
         if function:
             return function
@@ -210,7 +213,7 @@ async def update_function_by_id(
 async def delete_function_by_id(
     request: Request, id: str, user=Depends(get_admin_user)
 ):
-    result = Functions.delete_function_by_id(id)
+    result = await FUNCTIONS.delete_function_by_id(id)
 
     if result:
         FUNCTIONS = request.app.state.FUNCTIONS
@@ -225,12 +228,12 @@ async def delete_function_by_id(
 ############################
 
 
-@router.get("/id/{id}/valves", response_model=Optional[dict])
+@router.get("/id/{id}/valves", response_model=dict | None)
 async def get_function_valves_by_id(id: str, user=Depends(get_admin_user)):
-    function = Functions.get_function_by_id(id)
+    function = await FUNCTIONS.get_function_by_id(id)
     if function:
         try:
-            valves = Functions.get_function_valves_by_id(id)
+            valves = await FUNCTIONS.get_function_valves_by_id(id)
             return valves
         except Exception as e:
             raise HTTPException(
@@ -249,16 +252,18 @@ async def get_function_valves_by_id(id: str, user=Depends(get_admin_user)):
 ############################
 
 
-@router.get("/id/{id}/valves/spec", response_model=Optional[dict])
+@router.get("/id/{id}/valves/spec", response_model=dict | None)
 async def get_function_valves_spec_by_id(
     request: Request, id: str, user=Depends(get_admin_user)
 ):
-    function = Functions.get_function_by_id(id)
+    function = await FUNCTIONS.get_function_by_id(id)
     if function:
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
         else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
+            function_module, function_type, frontmatter = (
+                await load_function_module_by_id(id)
+            )
             request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "Valves"):
@@ -277,16 +282,18 @@ async def get_function_valves_spec_by_id(
 ############################
 
 
-@router.post("/id/{id}/valves/update", response_model=Optional[dict])
+@router.post("/id/{id}/valves/update", response_model=dict | None)
 async def update_function_valves_by_id(
     request: Request, id: str, form_data: dict, user=Depends(get_admin_user)
 ):
-    function = Functions.get_function_by_id(id)
+    function = await FUNCTIONS.get_function_by_id(id)
     if function:
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
         else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
+            function_module, function_type, frontmatter = (
+                await load_function_module_by_id(id)
+            )
             request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "Valves"):
@@ -295,7 +302,7 @@ async def update_function_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 valves = Valves(**form_data)
-                Functions.update_function_valves_by_id(id, valves.model_dump())
+                await FUNCTIONS.update_function_valves_by_id(id, valves.model_dump())
                 return valves.model_dump()
             except Exception as e:
                 print(e)
@@ -321,12 +328,12 @@ async def update_function_valves_by_id(
 ############################
 
 
-@router.get("/id/{id}/valves/user", response_model=Optional[dict])
+@router.get("/id/{id}/valves/user", response_model=dict | None)
 async def get_function_user_valves_by_id(id: str, user=Depends(get_verified_user)):
-    function = Functions.get_function_by_id(id)
+    function = await FUNCTIONS.get_function_by_id(id)
     if function:
         try:
-            user_valves = Functions.get_user_valves_by_id_and_user_id(id, user.id)
+            user_valves = await FUNCTIONS.get_user_valves_by_id_and_user_id(id, user.id)
             return user_valves
         except Exception as e:
             raise HTTPException(
@@ -340,16 +347,18 @@ async def get_function_user_valves_by_id(id: str, user=Depends(get_verified_user
         )
 
 
-@router.get("/id/{id}/valves/user/spec", response_model=Optional[dict])
+@router.get("/id/{id}/valves/user/spec", response_model=dict | None)
 async def get_function_user_valves_spec_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    function = Functions.get_function_by_id(id)
+    function = await FUNCTIONS.get_function_by_id(id)
     if function:
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
         else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
+            function_module, function_type, frontmatter = (
+                await load_function_module_by_id(id)
+            )
             request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "UserValves"):
@@ -363,17 +372,19 @@ async def get_function_user_valves_spec_by_id(
         )
 
 
-@router.post("/id/{id}/valves/user/update", response_model=Optional[dict])
+@router.post("/id/{id}/valves/user/update", response_model=dict | None)
 async def update_function_user_valves_by_id(
     request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-    function = Functions.get_function_by_id(id)
+    function = await FUNCTIONS.get_function_by_id(id)
 
     if function:
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
         else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
+            function_module, function_type, frontmatter = (
+                await load_function_module_by_id(id)
+            )
             request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "UserValves"):
@@ -382,7 +393,7 @@ async def update_function_user_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
-                Functions.update_user_valves_by_id_and_user_id(
+                _ = await FUNCTIONS.update_user_valves_by_id_and_user_id(
                     id, user.id, user_valves.model_dump()
                 )
                 return user_valves.model_dump()

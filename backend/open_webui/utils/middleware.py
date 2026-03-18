@@ -1,84 +1,66 @@
-import time
-import logging
-import sys
-import requests
-import re
-import tiktoken
-
 import asyncio
-from typing import Optional
-import json
 import inspect
-from uuid import uuid4
+import json
+import logging
+import re
+import sys
+import time
 from datetime import datetime
+from typing import Optional
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from open_webui.models.message_metrics import MessageMetrics
+import requests
+import tiktoken
 from fastapi import Request
-
-from starlette.responses import StreamingResponse
-
-
-from open_webui.models.chats import Chats
-from open_webui.models.users import Users
-from open_webui.socket.main import (
-    get_event_call,
-    get_event_emitter,
-    get_active_status_by_user_id,
-)
-from open_webui.routers.tasks import (
-    generate_queries,
-    generate_title,
-    generate_image_prompt,
-    generate_chat_tags,
-)
-from open_webui.routers.retrieval import process_web_search, SearchForm
-from open_webui.routers.images import image_generations, GenerateImageForm
-
-
-from open_webui.utils.webhook import post_webhook
-
-
-from open_webui.models.users import UserModel
-from open_webui.models.functions import Functions
-
-from open_webui.retrieval.utils import get_sources_from_files
-
-
-from open_webui.utils.chat import generate_chat_completion
-from open_webui.utils.task import (
-    get_task_model_id,
-    rag_template,
-    tools_function_calling_generation_template,
-    extract_title_from_response,
-    truncate_title_by_chars,
-)
-
-from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
-from open_webui.utils.misc import (
-    get_message_list,
-    add_or_update_system_message,
-    get_last_user_message,
-    prepend_to_first_user_message_content,
-)
-from open_webui.utils.tools import get_tools_async
-from open_webui.utils.plugin import load_function_module_by_id
-
-
-from open_webui.tasks import create_task
-
 from open_webui.config import (
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     RAG_CONTEXT_FALLBACK_MAX_TOKENS,
     RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE,
     TIKTOKEN_ENCODING_NAME,
 )
-from open_webui.env import (
-    SRC_LOG_LEVELS,
-    GLOBAL_LOG_LEVEL,
-    ENABLE_REALTIME_CHAT_SAVE,
-)
 from open_webui.constants import TASKS
+from open_webui.env import (
+    ENABLE_REALTIME_CHAT_SAVE,
+    GLOBAL_LOG_LEVEL,
+    SRC_LOG_LEVELS,
+)
+from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
+from open_webui.models.db_services import CHATS, FUNCTIONS, MESSAGE_METRICS, USERS
+from open_webui.models.users import UserModel
+from open_webui.retrieval.utils import get_sources_from_files
+from open_webui.routers.images import GenerateImageForm, image_generations
+from open_webui.routers.retrieval import SearchForm, process_web_search
+from open_webui.routers.tasks import (
+    generate_chat_tags,
+    generate_image_prompt,
+    generate_queries,
+    generate_title,
+)
+from open_webui.socket.main import (
+    get_active_status_by_user_id,
+    get_event_call,
+    get_event_emitter,
+)
+from open_webui.tasks import create_task
+from open_webui.utils.chat import generate_chat_completion
+from open_webui.utils.misc import (
+    add_or_update_system_message,
+    get_last_user_message,
+    get_message_list,
+    prepend_to_first_user_message_content,
+)
+from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.task import (
+    extract_title_from_response,
+    get_task_model_id,
+    rag_template,
+    tools_function_calling_generation_template,
+    truncate_title_by_chars,
+)
+from open_webui.utils.tools import get_tools_async
+from open_webui.utils.webhook import post_webhook
+from starlette.responses import StreamingResponse
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -210,43 +192,38 @@ def convert_wikipedia_url_for_language(
 async def chat_completion_filter_functions_handler(request, body, model, extra_params):
     skip_files = None
 
-    def get_filter_function_ids(model):
-        def get_priority(function_id):
-            function = Functions.get_function_by_id(function_id)
-            if function is not None and hasattr(function, "valves"):
-                # TODO: Fix FunctionModel
-                return (function.valves if function.valves else {}).get("priority", 0)
-            return 0
+    async def get_filter_function_ids(model):
 
-        filter_ids = [
-            function.id for function in Functions.get_global_filter_functions()
-        ]
+        # Get filter functions sorted by valve priority.
+        functions = await FUNCTIONS.get_global_filter_functions(sorted=True)
+        filter_ids = [function.id for function in functions]
         if "info" in model and "meta" in model["info"]:
             filter_ids.extend(model["info"]["meta"].get("filterIds", []))
             filter_ids = list(set(filter_ids))
 
         enabled_filter_ids = [
             function.id
-            for function in Functions.get_functions_by_type("filter", active_only=True)
+            for function in await FUNCTIONS.get_functions_by_type(
+                "filter", active_only=True
+            )
         ]
 
         filter_ids = [
             filter_id for filter_id in filter_ids if filter_id in enabled_filter_ids
         ]
 
-        filter_ids.sort(key=get_priority)
         return filter_ids
 
-    filter_ids = get_filter_function_ids(model)
+    filter_ids = await get_filter_function_ids(model)
     for filter_id in filter_ids:
-        filter = Functions.get_function_by_id(filter_id)
+        filter = await FUNCTIONS.get_function_by_id(filter_id)
         if not filter:
             continue
 
         if filter_id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[filter_id]
         else:
-            function_module, _, _ = load_function_module_by_id(filter_id)
+            function_module, _, _ = await load_function_module_by_id(filter_id)
             request.app.state.FUNCTIONS[filter_id] = function_module
 
         # Check if the function has a file_handler variable
@@ -255,7 +232,7 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
 
         # Apply valves to the function
         if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            valves = Functions.get_function_valves_by_id(filter_id)
+            valves = await FUNCTIONS.get_function_valves_by_id(filter_id)
             function_module.valves = function_module.Valves(
                 **(valves if valves else {})
             )
@@ -278,7 +255,7 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
                 if "__user__" in params and hasattr(function_module, "UserValves"):
                     try:
                         params["__user__"]["valves"] = function_module.UserValves(
-                            **Functions.get_user_valves_by_id_and_user_id(
+                            **await FUNCTIONS.get_user_valves_by_id_and_user_id(
                                 filter_id, params["__user__"]["id"]
                             )
                         )
@@ -303,7 +280,7 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
 async def chat_completion_tools_handler(
     request: Request, body: dict, user: UserModel, models, extra_params: dict
 ) -> tuple[dict, dict]:
-    async def get_content_from_response(response) -> Optional[str]:
+    async def get_content_from_response(response) -> str | None:
         content = None
         if hasattr(response, "body_iterator"):
             async for chunk in response.body_iterator:
@@ -1617,10 +1594,10 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
 
 async def process_chat_response(
-    request, response, form_data, user, events, metadata, tasks
+    request, response, form_data, user: UserModel, events, metadata, tasks
 ):
     async def background_tasks_handler():
-        message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
+        message_map = await CHATS.get_messages_by_chat_id(metadata["chat_id"])
         message = message_map.get(metadata["message_id"]) if message_map else None
 
         if message:
@@ -1649,7 +1626,9 @@ async def process_chat_response(
                                 # Truncate title to reasonable length (max 50 characters)
                                 title = truncate_title_by_chars(title, max_chars=50)
 
-                            Chats.update_chat_title_by_id(metadata["chat_id"], title)
+                            _ = await CHATS.update_chat_title_by_id(
+                                metadata["chat_id"], title
+                            )
 
                             await event_emitter(
                                 {
@@ -1660,7 +1639,9 @@ async def process_chat_response(
                     elif len(messages) == 2:
                         title = messages[0].get("content", "New Chat")
 
-                        Chats.update_chat_title_by_id(metadata["chat_id"], title)
+                        _ = await CHATS.update_chat_title_by_id(
+                            metadata["chat_id"], title
+                        )
 
                         await event_emitter(
                             {
@@ -1696,8 +1677,8 @@ async def process_chat_response(
 
                         try:
                             tags = json.loads(tags_string).get("tags", [])
-                            Chats.update_chat_tags_by_id(
-                                metadata["chat_id"], tags, user
+                            _ = await CHATS.update_chat_tags_by_id(
+                                metadata["chat_id"], tags, user.id
                             )
 
                             await event_emitter(
@@ -1723,7 +1704,7 @@ async def process_chat_response(
     if not isinstance(response, StreamingResponse):
         if event_emitter:
             if "selected_model_id" in response:
-                Chats.upsert_message_to_chat_by_id_and_message_id(
+                _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
                     {
@@ -1742,7 +1723,7 @@ async def process_chat_response(
                         }
                     )
 
-                    title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                    title = await CHATS.get_chat_title_by_id(metadata["chat_id"])
 
                     await event_emitter(
                         {
@@ -1756,7 +1737,7 @@ async def process_chat_response(
                     )
 
                     # Save message in the database
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -1766,7 +1747,7 @@ async def process_chat_response(
 
                     # Send a webhook notification if the user is not active
                     if get_active_status_by_user_id(user.id) is None:
-                        webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                        webhook_url = await USERS.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             post_webhook(
                                 webhook_url,
@@ -1790,7 +1771,7 @@ async def process_chat_response(
                             )
 
                             # Save sources in the database
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                            _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
                                 {
@@ -1819,7 +1800,7 @@ async def process_chat_response(
                     "total_tokens": 0,
                 }
 
-            MessageMetrics.insert_new_metrics(
+            await MESSAGE_METRICS.insert_new_metrics(
                 user,
                 model_used,
                 usage_data,
@@ -1841,7 +1822,7 @@ async def process_chat_response(
 
         # Handle as a background task
         async def post_response_handler(response, events):
-            message = Chats.get_message_by_id_and_message_id(
+            message = await CHATS.get_message_by_id_and_message_id(
                 metadata["chat_id"], metadata["message_id"]
             )
             content = message.get("content", "") if message else ""
@@ -1870,7 +1851,7 @@ async def process_chat_response(
                     )
 
                     # Save message in the database
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -1912,7 +1893,7 @@ async def process_chat_response(
                                 or metadata["selected_model_id"]
                                 or form_data["model"]
                             )
-                            MessageMetrics.insert_new_metrics(
+                            await MESSAGE_METRICS.insert_new_metrics(
                                 user,
                                 model_used,
                                 data["usage"],
@@ -1921,7 +1902,7 @@ async def process_chat_response(
                             metrics_recorded = True
 
                         if "selected_model_id" in data:
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                            _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
                                 {
@@ -2006,7 +1987,7 @@ async def process_chat_response(
 
                                 if ENABLE_REALTIME_CHAT_SAVE:
                                     # Save message in the database
-                                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                                         metadata["chat_id"],
                                         metadata["message_id"],
                                         {
@@ -2031,12 +2012,12 @@ async def process_chat_response(
                         else:
                             continue
 
-                title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                title = await CHATS.get_chat_title_by_id(metadata["chat_id"])
                 data = {"done": True, "content": content, "title": title}
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -2046,7 +2027,7 @@ async def process_chat_response(
 
                 # Send a webhook notification if the user is not active
                 if get_active_status_by_user_id(user.id) is None:
-                    webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                    webhook_url = await USERS.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         post_webhook(
                             webhook_url,
@@ -2076,7 +2057,7 @@ async def process_chat_response(
                     )
 
                     # Save sources in the database
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -2097,7 +2078,7 @@ async def process_chat_response(
                         "prompt_tokens": 0,  # 0 to indicate no usage data was available
                         "total_tokens": 0,
                     }
-                    MessageMetrics.insert_new_metrics(
+                    await MESSAGE_METRICS.insert_new_metrics(
                         user,
                         model_used,
                         fallback_usage,
@@ -2111,7 +2092,7 @@ async def process_chat_response(
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {

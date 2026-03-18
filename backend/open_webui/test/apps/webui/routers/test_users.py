@@ -8,37 +8,20 @@ class TestUsers(AbstractPostgresTest):
     @classmethod
     def setup_class(cls):
         super().setup_class()
-        from open_webui.models.users import Users
+        from open_webui.models.db_services import USERS
 
-        cls.users = Users
+        cls.users = USERS
 
-    def setup_method(self):
-        super().setup_method()
-        self.users.insert_new_user(
+    async def setup_method(self):
+        await super().setup_method()
+        _ = await self.users.insert_new_user(
             id="1",
             name="user 1",
             email="user1@openwebui.com",
             profile_image_url="/user1.png",
             role="user",
         )
-        self.users.insert_new_user(
-            id="2",
-            name="user 2",
-            email="user2@openwebui.com",
-            profile_image_url="/user2.png",
-            role="user",
-        )
-
-    def setup_method(self):
-        super().setup_method()
-        self.users.insert_new_user(
-            id="1",
-            name="user 1",
-            email="user1@openwebui.com",
-            profile_image_url="/user1.png",
-            role="user",
-        )
-        self.users.insert_new_user(
+        _ = await self.users.insert_new_user(
             id="2",
             name="user 2",
             email="user2@openwebui.com",

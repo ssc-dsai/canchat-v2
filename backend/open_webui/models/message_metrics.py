@@ -1,12 +1,15 @@
 import time
-from typing import Optional
+from typing import TypeVar
 import uuid
-from pydantic import BaseModel
-from sqlalchemy import Column, Text, BigInteger, func
-
-from open_webui.internal.db import get_db
-from open_webui.models.base import Base
 from logging import getLogger
+
+from open_webui.internal.db_utils import AsyncDatabaseConnector
+from open_webui.models.base import Base
+from open_webui.models.users import UserModel
+from pydantic import BaseModel
+from sqlalchemy import BigInteger, Text, func, select
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import Select
 
 logger = getLogger(__name__)
 
@@ -14,18 +17,18 @@ logger = getLogger(__name__)
 class MessageMetric(Base):
     __tablename__ = "message_metrics"
 
-    id = Column(Text, primary_key=True)
-    user_id = Column(Text)
-    user_domain = Column(Text)
-    model = Column(Text)
-    completion_tokens = Column(BigInteger)
-    prompt_tokens = Column(BigInteger)
-    total_tokens = Column(BigInteger)
-    chat_id = Column(Text, nullable=True)
-    mcp_tool = Column(
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    user_id: Mapped[str] = mapped_column(Text)
+    user_domain: Mapped[str] = mapped_column(Text)
+    model: Mapped[str] = mapped_column(Text)
+    completion_tokens: Mapped[int] = mapped_column(BigInteger)
+    prompt_tokens: Mapped[int] = mapped_column(BigInteger)
+    total_tokens: Mapped[int] = mapped_column(BigInteger)
+    chat_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    mcp_tool: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )  # MCP toggle/process name, None for non-MCP calls
-    created_at = Column(BigInteger)
+    created_at: Mapped[int] = mapped_column(BigInteger)
 
 
 class MessageMetricsModel(BaseModel):
@@ -36,8 +39,8 @@ class MessageMetricsModel(BaseModel):
     completion_tokens: float
     prompt_tokens: float
     total_tokens: float
-    chat_id: Optional[str] = None
-    mcp_tool: Optional[str] = None  # MCP toggle/process name, None for non-MCP calls
+    chat_id: str | None = None
+    mcp_tool: str | None = None  # MCP toggle/process name, None for non-MCP calls
     created_at: int
 
 
@@ -48,15 +51,21 @@ class UsageModel(BaseModel):
 
 
 class MessageMetricsTable:
-    def insert_new_metrics(
+
+    __db: AsyncDatabaseConnector
+
+    def __init__(self, db_connector: AsyncDatabaseConnector) -> None:
+        self.__db = db_connector
+
+    async def insert_new_metrics(
         self,
-        user: dict,
+        user: UserModel,
         model: str,
         usage: dict,
-        chat_id: Optional[str] = None,
-        mcp_tool: Optional[str] = None,
+        chat_id: str | None = None,
+        mcp_tool: str | None = None,
     ):
-        with get_db() as db:
+        async with self.__db.get_async_db() as db:
             id = str(uuid.uuid4())
             ts = int(time.time())
             tokens = UsageModel(**usage)
@@ -78,83 +87,91 @@ class MessageMetricsTable:
 
             result = MessageMetric(**metrics.model_dump())
             db.add(result)
-            db.commit()
-            db.refresh(result)
+            await db.commit()
+            await db.refresh(result)
 
-    def get_used_models(self) -> list[str]:
+    async def get_used_models(self) -> list[str]:
         try:
-            with get_db() as db:
-                models = db.query(MessageMetric.model).distinct().all()
-                return [model[0] for model in models if model[0]]
+            async with self.__db.get_async_db() as db:
+                models = await db.scalars(select(MessageMetric.model).distinct())
+                return [model for model in models.all()]
         except Exception as e:
             logger.error(f"Failed to get used models: {e}")
             return []
 
-    def get_domains(self) -> list[str]:
+    async def get_domains(self) -> list[str]:
         try:
-            with get_db() as db:
-                domains = db.query(MessageMetric.user_domain).distinct().all()
-                return [domain[0] for domain in domains if domain[0]]
+            async with self.__db.get_async_db() as db:
+                domains = await db.scalars(select(MessageMetric.user_domain).distinct())
+                return [domain for domain in domains.all()]
         except Exception as e:
             logger.error(f"Failed to get domains: {e}")
             return []
 
-    def get_mcp_processes(self) -> list[str]:
+    async def get_mcp_processes(self) -> list[str]:
         """Return the distinct MCP toggle/process names that have been logged."""
         try:
-            with get_db() as db:
-                processes = (
-                    db.query(MessageMetric.mcp_tool)
-                    .filter(MessageMetric.mcp_tool.isnot(None))
-                    .distinct()
-                    .all()
+            async with self.__db.get_async_db() as db:
+                processes = await db.execute(
+                    select(MessageMetric.mcp_tool.distinct()).where(
+                        MessageMetric.mcp_tool.isnot(None)
+                    )
                 )
-                return [p[0] for p in processes if p[0]]
+                return [p[0] for p in processes if p[0] is not None]
         except Exception as e:
             logger.error(f"Failed to get MCP processes: {e}")
             return []
 
-    def get_messages_number(
-        self, domain: Optional[str] = None, model: Optional[str] = None
-    ) -> Optional[int]:
+    async def get_messages_number(
+        self, domain: str | None = None, model: str | None = None
+    ) -> int | None:
         try:
-            with get_db() as db:
-                query = db.query(MessageMetric)
+            async with self.__db.get_async_db() as db:
+                query = select(func.count()).select_from(MessageMetric)
                 if domain:
-                    query = query.filter(MessageMetric.user_domain == domain)
+                    query = query.where(MessageMetric.user_domain == domain)
                 if model:
-                    query = query.filter(MessageMetric.model == model)
-                return query.count()
+                    query = query.where(MessageMetric.model == model)
+                return await db.scalar(query)
         except Exception as e:
             logger.error(f"Failed to get messages number: {e}")
             return 0
 
-    def get_daily_messages_number(
-        self, domain: Optional[str] = None, model: Optional[str] = None
-    ) -> Optional[int]:
+    async def get_daily_messages_number(
+        self, domain: str | None = None, model: str | None = None
+    ) -> int | None:
         try:
-            with get_db() as db:
+            async with self.__db.get_async_db() as db:
+                # Use the same time calculation as historical data for consistency
                 current_time = int(time.time())
                 end_time = current_time
                 # Calculate start of the current day in UTC
                 start_time = current_time - (current_time % 86400)
                 # Build the query to count messages for the current day
-                query = db.query(MessageMetric).filter(
-                    MessageMetric.created_at >= start_time,
-                    MessageMetric.created_at < end_time,
+                query = (
+                    select(func.count())
+                    .select_from(MessageMetric)
+                    .where(
+                        MessageMetric.created_at >= start_time,
+                        MessageMetric.created_at < end_time,
+                    )
                 )
 
                 if domain:
-                    query = query.filter(MessageMetric.user_domain == domain)
+                    query = query.where(MessageMetric.user_domain == domain)
                 if model:
-                    query = query.filter(MessageMetric.model == model)
+                    query = query.where(MessageMetric.model == model)
 
-                return query.count()
+                return await db.scalar(query)
         except Exception as e:
             logger.error(f"Failed to get daily messages number: {e}")
             return 0
 
-    def _apply_mcp_filter(self, query, mcp_tool: Optional[str]):
+    # Create generic type for _apply_mcp_filter until PEP 695 can be used
+    # in python 3.12+.
+    T = TypeVar("T")
+
+    def _apply_mcp_filter(self, query: Select[T], mcp_tool: str | None) -> Select[T]:
         """Apply mcp_tool filter to a SQLAlchemy query.
 
         Sentinel values:
@@ -164,23 +181,23 @@ class MessageMetricsTable:
           None / falsy   → no filter
         """
         if mcp_tool == "__mcp_all__":
-            return query.filter(MessageMetric.mcp_tool.isnot(None))
+            return query.where(MessageMetric.mcp_tool.isnot(None))
         elif mcp_tool == "__non_mcp__":
-            return query.filter(MessageMetric.mcp_tool.is_(None))
+            return query.where(MessageMetric.mcp_tool.is_(None))
         elif mcp_tool:
-            return query.filter(MessageMetric.mcp_tool == mcp_tool)
+            return query.where(MessageMetric.mcp_tool == mcp_tool)
         return query
 
-    def get_message_tokens_sum(
+    async def get_message_tokens_sum(
         self,
-        domain: Optional[str] = None,
-        start_timestamp: Optional[int] = None,
-        end_timestamp: Optional[int] = None,
-        mcp_tool: Optional[str] = None,
-    ) -> Optional[int]:
+        domain: str | None = None,
+        start_timestamp: int | None = None,
+        end_timestamp: int | None = None,
+        mcp_tool: str | None = None,
+    ) -> int | None:
         try:
-            with get_db() as db:
-                query = db.query(MessageMetric)
+            async with self.__db.get_async_db() as db:
+                query = select(func.sum(MessageMetric.total_tokens))
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
                 if start_timestamp:
@@ -188,27 +205,25 @@ class MessageMetricsTable:
                 if end_timestamp:
                     query = query.filter(MessageMetric.created_at <= end_timestamp)
                 query = self._apply_mcp_filter(query, mcp_tool)
-                result = query.with_entities(
-                    func.sum(MessageMetric.total_tokens),
-                ).first()
-                return round(result[0], 2) if result and result[0] else 0
+                result = await db.scalar(query)
+                return round(result, 2) if result else 0
         except Exception as e:
             logger.error(f"Failed to get message tokens number: {e}")
             return 0  # Return 0 instead of None
 
-    def get_daily_message_tokens_sum(
+    async def get_daily_message_tokens_sum(
         self,
         days: int = 1,
-        domain: Optional[str] = None,
-        mcp_tool: Optional[str] = None,
-    ) -> Optional[int]:
+        domain: str | None = None,
+        mcp_tool: str | None = None,
+    ) -> int | None:
         try:
-            with get_db() as db:
+            async with self.__db.get_async_db() as db:
                 current_time = int(time.time())
                 end_time = current_time
                 start_time = current_time - (current_time % 86400)
 
-                query = db.query(MessageMetric).filter(
+                query = select(func.sum(MessageMetric.total_tokens)).where(
                     MessageMetric.created_at >= start_time,
                     MessageMetric.created_at < end_time,
                 )
@@ -217,18 +232,15 @@ class MessageMetricsTable:
                     query = query.filter(MessageMetric.user_domain == domain)
                 query = self._apply_mcp_filter(query, mcp_tool)
 
-                result = query.with_entities(
-                    func.sum(MessageMetric.total_tokens),
-                ).first()
-
-                return round(result[0], 2) if result and result[0] else 0
+                result = await db.scalar(query)
+                return round(result, 2) if result and result else 0
         except Exception as e:
             logger.error(f"Failed to get daily message tokens number: {e}")
             return 0  # Return 0 instead of None
 
-    def get_historical_messages_data(
-        self, days: int = 7, domain: Optional[str] = None, model: Optional[str] = None
-    ) -> list[dict]:
+    async def get_historical_messages_data(
+        self, days: int = 7, domain: str | None = None, model: str | None = None
+    ) -> list[dict[str, str | int]]:
         """
         Returns a list of dicts with 'date' and 'count' for each day in the range (oldest to newest),
         counting the number of MessageMetric per day for the given number of days (UTC).
@@ -248,17 +260,17 @@ class MessageMetricsTable:
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 expected_dates[date_str] = 0
 
-            with get_db() as db:
-                query = db.query(MessageMetric.created_at).filter(
+            async with self.__db.get_async_db() as db:
+                query = select(MessageMetric.created_at).where(
                     MessageMetric.created_at >= start_timestamp,
                     MessageMetric.created_at < end_timestamp,
                 )
                 if domain:
-                    query = query.filter(MessageMetric.user_domain == domain)
+                    query = query.where(MessageMetric.user_domain == domain)
                 if model:
-                    query = query.filter(MessageMetric.model == model)
-                results = query.all()
-                for (created_at,) in results:
+                    query = query.where(MessageMetric.model == model)
+                results = await db.scalars(query)
+                for created_at in results:
                     date_str = time.strftime("%Y-%m-%d", time.gmtime(created_at))
                     if date_str in expected_dates:
                         expected_dates[date_str] += 1
@@ -278,12 +290,12 @@ class MessageMetricsTable:
                 fallback.append({"date": date_str, "count": 0})
             return fallback
 
-    def get_historical_tokens_data(
+    async def get_historical_tokens_data(
         self,
         days: int = 7,
-        domain: Optional[str] = None,
-        mcp_tool: Optional[str] = None,
-    ) -> list[dict]:
+        domain: str | None = None,
+        mcp_tool: str | None = None,
+    ) -> list[dict[str, str | int]]:
         """
         Returns a list of dicts with 'date' and 'count' for each day in the range (oldest to newest),
         summing the total tokens per day for the given number of days (UTC).
@@ -301,18 +313,19 @@ class MessageMetricsTable:
                 date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
                 expected_dates[date_str] = 0
 
-            with get_db() as db:
-                query = db.query(
+            async with self.__db.get_async_db() as db:
+                query = select(
                     MessageMetric.created_at,
                     MessageMetric.total_tokens,
-                ).filter(
+                ).where(
                     MessageMetric.created_at >= start_timestamp,
                     MessageMetric.created_at < end_timestamp,
                 )
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
                 query = self._apply_mcp_filter(query, mcp_tool)
-                results = query.all()
+                results = await db.execute(query)
+
                 for created_at, tokens in results:
                     date_str = time.strftime("%Y-%m-%d", time.gmtime(created_at))
                     if date_str in expected_dates:
@@ -336,20 +349,27 @@ class MessageMetricsTable:
                 fallback.append({"date": date_str, "count": 0})
             return fallback
 
-    def get_range_metrics(
+    async def get_range_metrics(
         self,
         start_timestamp: int,
         end_timestamp: int,
-        domain: str = None,
-        model: str = None,
-    ) -> dict:
+        domain: str | None = None,
+        model: str | None = None,
+    ) -> dict[str, int]:
         """Get message metrics for a specific date range"""
         try:
-            with get_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Build query with range filters
-                query = db.query(MessageMetric).filter(
-                    MessageMetric.created_at >= start_timestamp,
-                    MessageMetric.created_at < end_timestamp,
+                query = (
+                    select(
+                        func.count(),
+                        func.sum(MessageMetric.total_tokens),
+                    )
+                    .select_from(MessageMetric)
+                    .filter(
+                        MessageMetric.created_at >= start_timestamp,
+                        MessageMetric.created_at < end_timestamp,
+                    )
                 )
 
                 # Apply domain filter if specified
@@ -360,36 +380,29 @@ class MessageMetricsTable:
                 if model:
                     query = query.filter(MessageMetric.model == model)
 
-                # Count total prompts
-                total_prompts = query.count()
+                result = (await db.execute(query)).first()
 
-                # Sum total tokens
-                tokens_sum = query.with_entities(
-                    func.sum(MessageMetric.total_tokens)
-                ).first()
-
-                total_tokens = (
-                    round(tokens_sum[0], 2) if tokens_sum and tokens_sum[0] else 0
-                )
+                total_prompts = result[0] if result else 0
+                total_tokens = round(result[1], 2) if result and result[1] else 0
 
                 return {"total_prompts": total_prompts, "total_tokens": total_tokens}
         except Exception as e:
             logger.error(f"Failed to get range metrics: {e}")
             return {"total_prompts": 0, "total_tokens": 0}
 
-    def get_model_token_usage(
-        self, start_timestamp: int, end_timestamp: int, domain: str = None
-    ) -> list[dict]:
+    async def get_model_token_usage(
+        self, start_timestamp: int, end_timestamp: int, domain: str | None = None
+    ) -> list[dict[str, int | str]]:
         """Get token usage by model for a specific date range"""
         try:
-            with get_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Base query with filters
                 query = (
-                    db.query(
+                    select(
                         MessageMetric.model,
                         func.sum(MessageMetric.total_tokens).label("tokens"),
                     )
-                    .filter(
+                    .where(
                         MessageMetric.created_at >= start_timestamp,
                         MessageMetric.created_at < end_timestamp,
                     )
@@ -397,16 +410,15 @@ class MessageMetricsTable:
                 )
 
                 if domain:
-                    query = query.filter(MessageMetric.user_domain == domain)
+                    query = query.where(MessageMetric.user_domain == domain)
 
                 # Execute query and process results
-                results = query.all()
+                results = await db.execute(query)
 
                 # Format the results as a list of dictionaries
                 model_usage = [
                     {"model": model, "tokens": round(tokens, 2) if tokens else 0}
-                    for model, tokens in results
-                    if model  # Filter out None models
+                    for model, tokens in results.all()
                 ]
 
                 return model_usage
@@ -414,38 +426,42 @@ class MessageMetricsTable:
             logger.error(f"Failed to get model token usage: {e}")
             return []
 
-    def get_historical_daily_data(
+    async def get_historical_daily_data(
         self,
         start_timestamp: int,
         end_timestamp: int,
-        domain: str = None,
-        model: str = None,
-    ) -> list[dict]:
+        domain: str | None = None,
+        model: str | None = None,
+    ) -> list[dict[str, int]]:
         """Get historical daily prompt data for a specific date range"""
         try:
-            result = []
+            result: list[dict[str, int]] = []
 
             # Get daily data for each day in the range
             current_day = start_timestamp
             while current_day < end_timestamp:
                 next_day = current_day + 86400  # add one day in seconds
 
-                with get_db() as db:
-                    query = db.query(MessageMetric).filter(
-                        MessageMetric.created_at >= current_day,
-                        MessageMetric.created_at < next_day,
+                async with self.__db.get_async_db() as db:
+                    query = (
+                        select(func.count())
+                        .select_from(MessageMetric)
+                        .where(
+                            MessageMetric.created_at >= current_day,
+                            MessageMetric.created_at < next_day,
+                        )
                     )
 
                     if domain:
-                        query = query.filter(MessageMetric.user_domain == domain)
+                        query = query.where(MessageMetric.user_domain == domain)
 
                     if model:
-                        query = query.filter(MessageMetric.model == model)
+                        query = query.where(MessageMetric.model == model)
 
-                    count = query.count()
+                    count = await db.scalar(query)
 
                     day_str = time.strftime("%Y-%m-%d", time.gmtime(current_day))
-                    result.append({"date": day_str, "prompts": count})
+                    result.append({"date": day_str, "prompts": count if count else 0})
 
                 current_day = next_day
 
@@ -454,40 +470,40 @@ class MessageMetricsTable:
             logger.error(f"Failed to get historical daily data: {e}")
             return []
 
-    def get_historical_daily_tokens(
+    async def get_historical_daily_tokens(
         self,
         start_timestamp: int,
         end_timestamp: int,
-        domain: str = None,
-        model: str = None,
-        mcp_tool: str = None,
-    ) -> list[dict]:
+        domain: str | None = None,
+        model: str | None = None,
+        mcp_tool: str | None = None,
+    ) -> list[dict[str, str | int]]:
         """Get historical daily token usage data for a specific date range"""
         try:
-            result = []
+            result: list[dict[str, str | int]] = []
 
             # Get daily data for each day in the range
             current_day = start_timestamp
             while current_day < end_timestamp:
                 next_day = current_day + 86400  # add one day in seconds
 
-                with get_db() as db:
-                    query = db.query(func.sum(MessageMetric.total_tokens)).filter(
+                async with self.__db.get_async_db() as db:
+                    query = select(func.sum(MessageMetric.total_tokens)).where(
                         MessageMetric.created_at >= current_day,
                         MessageMetric.created_at < next_day,
                     )
 
                     if domain:
-                        query = query.filter(MessageMetric.user_domain == domain)
+                        query = query.where(MessageMetric.user_domain == domain)
 
                     if model:
-                        query = query.filter(MessageMetric.model == model)
+                        query = query.where(MessageMetric.model == model)
 
                     query = self._apply_mcp_filter(query, mcp_tool)
 
-                    tokens_sum = query.first()
+                    tokens_sum = await db.scalar(query)
                     tokens_count = (
-                        round(tokens_sum[0], 2) if tokens_sum and tokens_sum[0] else 0
+                        round(tokens_sum, 2) if tokens_sum and tokens_sum else 0
                     )
 
                     day_str = time.strftime("%Y-%m-%d", time.gmtime(current_day))
@@ -502,39 +518,37 @@ class MessageMetricsTable:
 
     # This function is here and not with Users model since the values needed are in the message metrics table.
     # Values are grouped by date and user_id without sql due to limitations with timestamps and being database agnostic.
-    def get_historical_daily_users(
-        self, days: int = 7, domain: Optional[str] = None, model: Optional[str] = None
-    ) -> list[dict]:
+    async def get_historical_daily_users(
+        self, days: int = 7, domain: str | None = None, model: str | None = None
+    ) -> list[dict[str, str | int]]:
         try:
             current_time = int(time.time())
             today_midnight = current_time - (current_time % 86400)
             start_time = today_midnight - (days * 86400)
             end_time = today_midnight + 86400
 
-            with get_db() as db:
-                query = db.query(
-                    MessageMetric.user_id, MessageMetric.created_at
-                ).filter(
+            async with self.__db.get_async_db() as db:
+                query = select(MessageMetric.user_id, MessageMetric.created_at).where(
                     MessageMetric.created_at >= start_time,
                     MessageMetric.created_at < end_time,
                 )
 
                 if domain:
-                    query = query.filter(MessageMetric.user_domain == domain)
+                    query = query.where(MessageMetric.user_domain == domain)
                 if model:
-                    query = query.filter(MessageMetric.model == model)
+                    query = query.where(MessageMetric.model == model)
 
-                results = query.all()
+                results = await db.execute(query)
 
                 # Group user_ids by date string
-                day_to_users = {}
-                for user_id, created_at in results:
+                day_to_users: dict[str, set[str]] = {}
+                for user_id, created_at in results.all():
                     date_str = time.strftime("%Y-%m-%d", time.gmtime(created_at))
                     if date_str not in day_to_users:
                         day_to_users[date_str] = set()
                     day_to_users[date_str].add(user_id)
 
-                output = []
+                output: list[dict[str, str | int]] = []
                 for day in range(days):
                     day_start = today_midnight - (day * 86400)
                     date_str = time.strftime("%Y-%m-%d", time.gmtime(day_start))
@@ -546,7 +560,7 @@ class MessageMetricsTable:
         except Exception as e:
             logger.error(f"Failed to get historical daily user counts: {e}")
             # Fallback: return zeros for each day
-            fallback = []
+            fallback: list[dict[str, str | int]] = []
             current_time = int(time.time())
             today_midnight = current_time - (current_time % 86400)
             for day in range(days):
@@ -555,9 +569,9 @@ class MessageMetricsTable:
                 fallback.append({"date": date_str, "count": 0})
             return sorted(fallback, key=lambda x: x["date"])
 
-    def get_inter_prompt_latency_histogram(
-        self, domain: Optional[str] = None, model: Optional[str] = None
-    ) -> dict:
+    async def get_inter_prompt_latency_histogram(
+        self, domain: str | None = None, model: str | None = None
+    ) -> dict[str, list[str] | list[int] | int]:
         """
         Calculate inter-prompt latency histogram for user behavior analysis.
 
@@ -567,32 +581,33 @@ class MessageMetricsTable:
         Only considers second or subsequent prompts in a chat session.
         """
         try:
-            with get_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Query all metrics with chat_id, ordered by chat_id and created_at
-                query = db.query(
-                    MessageMetric.chat_id, MessageMetric.created_at
-                ).filter(MessageMetric.chat_id.isnot(None))
+                query = select(MessageMetric.chat_id, MessageMetric.created_at).where(
+                    MessageMetric.chat_id.isnot(None)
+                )
 
                 if domain:
-                    query = query.filter(MessageMetric.user_domain == domain)
+                    query = query.where(MessageMetric.user_domain == domain)
                 if model:
-                    query = query.filter(MessageMetric.model == model)
+                    query = query.where(MessageMetric.model == model)
 
                 query = query.order_by(MessageMetric.chat_id, MessageMetric.created_at)
-                results = query.all()
+                results = await db.execute(query)
 
                 if not results:
                     return self._get_empty_histogram()
 
                 # Group by chat_id and calculate inter-prompt latencies
-                chat_sessions = {}
-                for chat_id, created_at in results:
-                    if chat_id not in chat_sessions:
-                        chat_sessions[chat_id] = []
-                    chat_sessions[chat_id].append(created_at)
+                chat_sessions: dict[str, list[int]] = {}
+                for chat_id, created_at in results.all():
+                    if chat_id:
+                        if chat_id not in chat_sessions:
+                            chat_sessions[chat_id] = []
+                        chat_sessions[chat_id].append(created_at)
 
                 # Calculate latencies between consecutive prompts in each session
-                latencies = []
+                latencies: list[int] = []
                 for chat_id, timestamps in chat_sessions.items():
                     if len(timestamps) >= 2:  # Need at least 2 prompts
                         for i in range(1, len(timestamps)):
@@ -612,7 +627,7 @@ class MessageMetricsTable:
             logger.error(f"Failed to get inter-prompt latency histogram: {e}")
             return self._get_empty_histogram()
 
-    def _get_empty_histogram(self) -> dict:
+    def _get_empty_histogram(self) -> dict[str, list[str] | list[int] | int]:
         """Return empty histogram structure"""
         bins = [
             "0-2s",
@@ -629,7 +644,9 @@ class MessageMetricsTable:
         ]
         return {"bins": bins, "counts": [0] * len(bins), "total_latencies": 0}
 
-    def _create_latency_histogram(self, latencies: list) -> dict:
+    def _create_latency_histogram(
+        self, latencies: list[int]
+    ) -> dict[str, list[str] | list[int] | int]:
         """Create histogram from latency values in milliseconds"""
         # Define bin edges in milliseconds (logarithmic scale)
         bin_edges = [
@@ -673,34 +690,34 @@ class MessageMetricsTable:
 
         return {"bins": bin_labels, "counts": counts, "total_latencies": len(latencies)}
 
-    def get_export_data(
+    async def get_export_data(
         self,
         start_timestamp: int,
         end_timestamp: int,
-        domain: Optional[str] = None,
-    ) -> list[dict]:
+        domain: str | None = None,
+    ) -> list[dict[str, str | int | None]]:
         """
         Get raw metrics data for export in a specific date range.
         Returns all message metrics within the specified timeframe.
         """
         try:
-            with get_db() as db:
-                query = db.query(MessageMetric).filter(
+            async with self.__db.get_async_db() as db:
+                query = select(MessageMetric).where(
                     MessageMetric.created_at >= start_timestamp,
                     MessageMetric.created_at < end_timestamp,
                 )
 
                 if domain:
-                    query = query.filter(MessageMetric.user_domain == domain)
+                    query = query.where(MessageMetric.user_domain == domain)
 
                 # Order by created_at for chronological export
                 query = query.order_by(MessageMetric.created_at)
 
-                results = query.all()
+                results = await db.scalars(query)
 
                 # Convert to list of dictionaries for CSV export
-                export_data = []
-                for result in results:
+                export_data: list[dict[str, str | int | None]] = []
+                for result in results.all():
                     export_data.append(
                         {
                             "id": result.id,
@@ -720,6 +737,3 @@ class MessageMetricsTable:
         except Exception as e:
             logger.error(f"Failed to get export data: {e}")
             return []
-
-
-MessageMetrics = MessageMetricsTable()

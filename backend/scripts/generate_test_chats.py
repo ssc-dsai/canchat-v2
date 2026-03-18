@@ -17,6 +17,7 @@ import sys
 import time
 import types
 from pathlib import Path
+from typing import Any
 
 
 def _bootstrap_path() -> None:
@@ -78,11 +79,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def list_users() -> int:
+async def list_users() -> int:
     """Print available users for operator discovery and selection."""
-    from open_webui.models.users import Users
+    from open_webui.models.db_services import USERS
 
-    users = Users.get_users(limit=200)
+    users = await USERS.get_users(limit=200)
     if not users:
         print("No users found in DB.")
         return 1
@@ -93,26 +94,26 @@ def list_users() -> int:
     return 0
 
 
-def resolve_user_id(user_id: str | None, user_email: str | None) -> str:
+async def resolve_user_id(user_id: str | None, user_email: str | None) -> str:
     """Resolve the target user ID by explicit ID, email, or first DB user fallback."""
-    from open_webui.models.users import Users
+    from open_webui.models.db_services import USERS
 
     if user_id and user_email:
         raise SystemExit("Use either --user-id or --user-email, not both.")
 
     if user_id:
-        user = Users.get_user_by_id(user_id)
+        user = await USERS.get_user_by_id(user_id)
         if not user:
             raise SystemExit(f"User not found: {user_id}")
         return user.id
 
     if user_email:
-        user = Users.get_user_by_email(user_email)
+        user = await USERS.get_user_by_email(user_email)
         if not user:
             raise SystemExit(f"User not found by email: {user_email}")
         return user.id
 
-    first_user = Users.get_first_user()
+    first_user = await USERS.get_first_user()
     if not first_user:
         raise SystemExit(
             "No users found in DB. Create/login a user first, then rerun with --list-users."
@@ -120,7 +121,7 @@ def resolve_user_id(user_id: str | None, user_email: str | None) -> str:
     return first_user.id
 
 
-def build_chat_payload(index: int, title_prefix: str) -> dict:
+def build_chat_payload(index: int, title_prefix: str) -> dict[str, Any]:
     """Build a minimal valid chat payload for test-seeded chat rows."""
     message_id = f"seed-msg-{index}"
     return {
@@ -164,27 +165,27 @@ def backdate_chats(chat_ids: list[str], age_days: int) -> None:
         db.commit()
 
 
-def main() -> int:
+async def main() -> int:
     """Create synthetic chats for one user and optionally backdate them."""
     args = parse_args()
     if args.list_users:
-        return list_users()
+        return await list_users()
 
     if args.count <= 0:
         raise SystemExit("--count must be > 0")
 
-    from open_webui.models.chats import ChatForm, Chats
-    from open_webui.models.users import Users
+    from open_webui.models.chats import ChatForm
+    from open_webui.models.db_services import CHATS, USERS
 
-    target_user_id = resolve_user_id(args.user_id, args.user_email)
-    target_user = Users.get_user_by_id(target_user_id)
+    target_user_id = await resolve_user_id(args.user_id, args.user_email)
+    target_user = await USERS.get_user_by_id(target_user_id)
     if not target_user:
         raise SystemExit(f"Resolved user ID not found: {target_user_id}")
 
     created_chat_ids: list[str] = []
     for i in range(1, args.count + 1):
         payload = build_chat_payload(i, args.title_prefix)
-        created = Chats.insert_new_chat(target_user_id, ChatForm(chat=payload))
+        created = await CHATS.insert_new_chat(target_user_id, ChatForm(chat=payload))
         if created:
             created_chat_ids.append(created.id)
 

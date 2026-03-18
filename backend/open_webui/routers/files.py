@@ -2,30 +2,23 @@ import logging
 import os
 import uuid
 from pathlib import Path
-from typing import Optional
-from pydantic import BaseModel
 from urllib.parse import quote
 
-from open_webui.storage.provider import Storage
-
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import FileResponse, StreamingResponse
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.models.db_services import FILES
 from open_webui.models.files import (
     FileForm,
     FileModel,
     FileModelResponse,
-    Files,
 )
-from open_webui.routers.retrieval import process_file, ProcessFileForm
-
-from open_webui.env import SRC_LOG_LEVELS
-from open_webui.constants import ERROR_MESSAGES
-
-
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
-from fastapi.responses import FileResponse, StreamingResponse
-from starlette.concurrency import run_in_threadpool
-
-
+from open_webui.routers.retrieval import ProcessFileForm, process_file
+from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -59,7 +52,7 @@ async def upload_file(
             Storage.upload_file, file.file, filename
         )
 
-        file_item = Files.insert_new_file(
+        file_item = await FILES.insert_new_file(
             user.id,
             FileForm(
                 **{
@@ -76,8 +69,9 @@ async def upload_file(
         )
 
         try:
-            await process_file(request, ProcessFileForm(file_id=id))
-            file_item = Files.get_file_by_id(id=id)
+            # Run the async process_file in the thread pool executor
+            _ = await process_file(request, ProcessFileForm(file_id=id))
+            file_item = await FILES.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file_item.id}")
@@ -112,9 +106,9 @@ async def upload_file(
 @router.get("/", response_model=list[FileModelResponse])
 async def list_files(user=Depends(get_verified_user)):
     if user.role == "admin":
-        files = Files.get_files()
+        files = await FILES.get_files()
     else:
-        files = Files.get_files_by_user_id(user.id)
+        files = await FILES.get_files_by_user_id(user.id)
     return files
 
 
@@ -125,7 +119,7 @@ async def list_files(user=Depends(get_verified_user)):
 
 @router.delete("/all")
 async def delete_all_files(user=Depends(get_admin_user)):
-    result = Files.delete_all_files()
+    result = await FILES.delete_all_files()
     if result:
         try:
             Storage.delete_all_files()
@@ -149,9 +143,9 @@ async def delete_all_files(user=Depends(get_admin_user)):
 ############################
 
 
-@router.get("/{id}", response_model=Optional[FileModel])
+@router.get("/{id}", response_model=FileModel | None)
 async def get_file_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = await FILES.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         return file
@@ -169,7 +163,7 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.get("/{id}/data/content")
 async def get_file_data_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = await FILES.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         return {"content": file.data.get("content", "")}
@@ -193,14 +187,14 @@ class ContentForm(BaseModel):
 async def update_file_data_content_by_id(
     request: Request, id: str, form_data: ContentForm, user=Depends(get_verified_user)
 ):
-    file = Files.get_file_by_id(id)
+    file = await FILES.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
             await process_file(
                 request, ProcessFileForm(file_id=id, content=form_data.content)
             )
-            file = Files.get_file_by_id(id=id)
+            file = await FILES.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
@@ -220,7 +214,7 @@ async def update_file_data_content_by_id(
 
 @router.get("/{id}/content")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = await FILES.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
             file_path = Storage.get_file(file.path)
@@ -265,7 +259,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.get("/{id}/content/html")
 async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = await FILES.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
             file_path = Storage.get_file(file.path)
@@ -296,7 +290,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.get("/{id}/content/{file_name}")
 async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = await FILES.get_file_by_id(id)
 
     if file and (file.user_id == user.id or user.role == "admin"):
         file_path = file.path
@@ -348,7 +342,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.delete("/{id}")
 async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+    file = await FILES.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
         # Clean up vectors from Qdrant before deleting file record
         try:
@@ -370,7 +364,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
             log.exception(f"Error during vector cleanup for file {file.id}: {e}")
             # Continue with file deletion even if vector cleanup fails
 
-        result = Files.delete_file_by_id(id)
+        result = await FILES.delete_file_by_id(id)
         if result:
             try:
                 Storage.delete_file(file.path)

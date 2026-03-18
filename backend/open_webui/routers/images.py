@@ -6,26 +6,20 @@ import mimetypes
 import re
 import uuid
 from pathlib import Path
-from typing import Optional
 
 import requests
-
-
-from fastapi import Depends, HTTPException, Request, APIRouter
-from pydantic import BaseModel
-
-
+from fastapi import APIRouter, Depends, HTTPException, Request
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS, ENABLE_FORWARD_USER_INFO_HEADERS
-
+from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.misc import validate_path
 from open_webui.utils.images.comfyui import (
     ComfyUIGenerateImageForm,
     ComfyUIWorkflow,
     comfyui_generate_image,
 )
+from open_webui.utils.misc import validate_path
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])
@@ -71,9 +65,9 @@ class OpenAIConfigForm(BaseModel):
 class Automatic1111ConfigForm(BaseModel):
     AUTOMATIC1111_BASE_URL: str
     AUTOMATIC1111_API_AUTH: str
-    AUTOMATIC1111_CFG_SCALE: Optional[str | float | int]
-    AUTOMATIC1111_SAMPLER: Optional[str]
-    AUTOMATIC1111_SCHEDULER: Optional[str]
+    AUTOMATIC1111_CFG_SCALE: str | float | int | None
+    AUTOMATIC1111_SAMPLER: str | None
+    AUTOMATIC1111_SCHEDULER: str | None
 
 
 class ComfyUIConfigForm(BaseModel):
@@ -374,11 +368,11 @@ def get_models(request: Request, user=Depends(get_verified_user)):
 
 
 class GenerateImageForm(BaseModel):
-    model: Optional[str] = None
+    model: str | None = None
     prompt: str
-    size: Optional[str] = None
+    size: str | None = None
     n: int = 1
-    negative_prompt: Optional[str] = None
+    negative_prompt: str | None = None
 
 
 def save_b64_image(b64_str):

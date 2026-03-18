@@ -1,25 +1,20 @@
 import asyncio
-import socketio
 import logging
 import sys
 import time
 
-from open_webui.models.users import Users, UserNameResponse
-from open_webui.models.channels import Channels
-from open_webui.models.chats import Chats
-
+import socketio
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
+    GLOBAL_LOG_LEVEL,
+    SRC_LOG_LEVELS,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
 )
-from open_webui.utils.auth import decode_token
+from open_webui.models.db_services import CHANNELS, CHATS, USERS
+from open_webui.models.users import UserNameResponse
 from open_webui.socket.utils import RedisDict, RedisLock
-
-from open_webui.env import (
-    GLOBAL_LOG_LEVEL,
-    SRC_LOG_LEVELS,
-)
+from open_webui.utils.auth import decode_token
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -548,7 +543,7 @@ async def connect(sid, environ, auth):
         data = decode_token(auth["token"])
 
         if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
+            user = await USERS.get_user_by_id(data["id"])
             log.info(
                 f"WebSocket connect:  Authenticated user {user.id if user else 'None'}"
             )
@@ -598,7 +593,7 @@ async def user_join(sid, data):
     if data is None or "id" not in data:
         return
 
-    user = Users.get_user_by_id(data["id"])
+    user = await USERS.get_user_by_id(data["id"])
     if not user:
         return
 
@@ -633,7 +628,7 @@ async def user_join(sid, data):
         USER_POOL[user.id] = [sid]
 
     # Join all the channels
-    channels = Channels.get_channels_by_user_id(user.id)
+    channels = await CHANNELS.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
@@ -652,12 +647,12 @@ async def join_channel(sid, data):
     if data is None or "id" not in data:
         return
 
-    user = Users.get_user_by_id(data["id"])
+    user = await USERS.get_user_by_id(data["id"])
     if not user:
         return
 
     # Join all the channels
-    channels = Channels.get_channels_by_user_id(user.id)
+    channels = await CHANNELS.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
@@ -736,14 +731,14 @@ def get_event_emitter(request_info):
             )
 
         if "type" in event_data and event_data["type"] == "status":
-            Chats.add_message_status_to_chat_by_id_and_message_id(
+            _ = await CHATS.add_message_status_to_chat_by_id_and_message_id(
                 request_info["chat_id"],
                 request_info["message_id"],
                 event_data.get("data", {}),
             )
 
         if "type" in event_data and event_data["type"] == "message":
-            message = Chats.get_message_by_id_and_message_id(
+            message = await CHATS.get_message_by_id_and_message_id(
                 request_info["chat_id"],
                 request_info["message_id"],
             )
@@ -751,7 +746,7 @@ def get_event_emitter(request_info):
             content = message.get("content", "")
             content += event_data.get("data", {}).get("content", "")
 
-            Chats.upsert_message_to_chat_by_id_and_message_id(
+            _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                 request_info["chat_id"],
                 request_info["message_id"],
                 {
@@ -762,7 +757,7 @@ def get_event_emitter(request_info):
         if "type" in event_data and event_data["type"] == "replace":
             content = event_data.get("data", {}).get("content", "")
 
-            Chats.upsert_message_to_chat_by_id_and_message_id(
+            _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                 request_info["chat_id"],
                 request_info["message_id"],
                 {
