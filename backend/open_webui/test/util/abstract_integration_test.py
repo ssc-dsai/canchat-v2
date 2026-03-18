@@ -44,14 +44,14 @@ class AbstractIntegrationTest:
     def setup_class(cls):
         pass
 
-    def setup_method(self):
+    async def setup_method(self):
         pass
 
     @classmethod
     def teardown_class(cls):
         pass
 
-    def teardown_method(self):
+    async def teardown_method(self):
         pass
 
 
@@ -166,8 +166,8 @@ class AbstractPostgresTest(AbstractIntegrationTest):
                 time.sleep(3)
                 retries -= 1
 
-    def setup_method(self):
-        super().setup_method()
+    async def setup_method(self):
+        await super().setup_method()
         self._check_db_connection()
 
     @classmethod
@@ -175,7 +175,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
         super().teardown_class()
         cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(force=True)
 
-    def teardown_method(self):
+    async def teardown_method(self):
         from open_webui.internal.db import DB_SESSION
 
         # rollback everything not yet committed

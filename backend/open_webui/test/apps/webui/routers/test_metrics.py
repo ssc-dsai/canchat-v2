@@ -47,28 +47,13 @@ class TestMcpTokenMetrics(AbstractPostgresTest):
 
     # ── per-test setup / teardown ─────────────────────────────────────────────
 
-    def setup_method(self):
-        super().setup_method()
+    async def setup_method(self):
+        await super().setup_method()
 
-    def teardown_method(self):
+    async def teardown_method(self):
+        await super().teardown_method()
         """Extend parent teardown to also clear the message_metrics table."""
         from open_webui.internal.db import DB_SESSION
-
-        DB_SESSION.commit()
-
-        # Tables cleaned up by the parent class
-        parent_tables = [
-            "auth",
-            "chat",
-            "chatidtag",
-            "document",
-            "model",
-            "prompt",
-            "tag",
-            '"user"',
-        ]
-        for table in parent_tables:
-            DB_SESSION.execute(text(f"TRUNCATE TABLE {table}"))
 
         # Our new table
         DB_SESSION.execute(text("TRUNCATE TABLE message_metrics"))
