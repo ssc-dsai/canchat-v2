@@ -31,6 +31,25 @@ _pmo_sharepoint_server_adapter = None
 _adapters_initialized = False
 
 
+def _extract_token_usage(crew_output) -> dict:
+    """
+    Extract token usage from a CrewAI CrewOutput object.
+    Returns a dict with prompt_tokens, completion_tokens, total_tokens.
+    Returns empty totals if the information is unavailable.
+    """
+    try:
+        usage = getattr(crew_output, "token_usage", None)
+        if usage is not None:
+            return {
+                "prompt_tokens": int(getattr(usage, "prompt_tokens", 0) or 0),
+                "completion_tokens": int(getattr(usage, "completion_tokens", 0) or 0),
+                "total_tokens": int(getattr(usage, "total_tokens", 0) or 0),
+            }
+    except Exception as exc:
+        logger.warning(f"Could not extract token usage from crew output: {exc}")
+    return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+
 # Azure OpenAI Configuration
 class AzureConfig(BaseModel):
     """Azure OpenAI configuration from environment variables"""
@@ -289,7 +308,10 @@ class CrewMCPManager:
             logger.info("Executing CrewAI crew...")
             result = time_crew.kickoff()
             logger.info("CrewAI crew execution completed successfully")
-            return str(result)
+
+            # Extract token usage from the crew result
+            token_usage = _extract_token_usage(result)
+            return str(result), token_usage
 
         except Exception as e:
             logger.error(f"Error in CrewAI MCP integration: {e}")
@@ -356,7 +378,10 @@ class CrewMCPManager:
             # Execute the crew
             logger.info("Executing CrewAI news crew...")
             result = news_crew.kickoff()
-            return str(result)
+
+            # Extract token usage from the crew result
+            token_usage = _extract_token_usage(result)
+            return str(result), token_usage
 
         except Exception as e:
             logger.error(f"Error in CrewAI MCP news integration: {e}")
@@ -522,7 +547,8 @@ class CrewMCPManager:
             except Exception as e:
                 logger.warning(f"Failed to cleanup adapter: {e}")
 
-            return str(result)
+            token_usage = _extract_token_usage(result)
+            return str(result), token_usage
 
         except Exception as e:
             error_msg = str(e)
@@ -539,12 +565,19 @@ class CrewMCPManager:
                     + "1. You're in a local development environment where OAuth2 proxy is not configured\n"
                     + "2. Your authentication token has expired\n"
                     + "3. You don't have the necessary SharePoint permissions\n\n"
-                    + "For local development, SharePoint integration requires deployment to environments with proper OAuth2 configuration (dev/staging/production)."
+                    + "For local development, SharePoint integration requires deployment to environments with proper OAuth2 configuration (dev/staging/production).",
+                    {},
                 )
             elif "No documents found" in error_msg or "no results" in error_msg:
-                return "I searched the available SharePoint documents but could not find information related to your query. The documents may not contain this information, or it might be located in a different location."
+                return (
+                    "I searched the available SharePoint documents but could not find information related to your query. The documents may not contain this information, or it might be located in a different location.",
+                    {},
+                )
             else:
-                return f"I encountered an issue while searching SharePoint documents: {error_msg}. Please try rephrasing your query or contact support if the problem persists."
+                return (
+                    f"I encountered an issue while searching SharePoint documents: {error_msg}. Please try rephrasing your query or contact support if the problem persists.",
+                    {},
+                )
 
     def run_pmo_sharepoint_crew(
         self, query: str = "Search SharePoint documents"
@@ -705,7 +738,8 @@ class CrewMCPManager:
             except Exception as e:
                 logger.warning(f"Failed to cleanup adapter: {e}")
 
-            return str(result)
+            token_usage = _extract_token_usage(result)
+            return str(result), token_usage
 
         except Exception as e:
             error_msg = str(e)
@@ -722,14 +756,21 @@ class CrewMCPManager:
                     + "1. You're in a local development environment where OAuth2 proxy is not configured\n"
                     + "2. Your authentication token has expired\n"
                     + "3. You don't have the necessary SharePoint permissions\n\n"
-                    + "For local development, SharePoint integration requires deployment to environments with proper OAuth2 configuration (dev/staging/production)."
+                    + "For local development, SharePoint integration requires deployment to environments with proper OAuth2 configuration (dev/staging/production).",
+                    {},
                 )
             elif "No documents found" in error_msg or "no results" in error_msg:
-                return "I searched the available SharePoint documents but could not find information related to your query. The documents may not contain this information, or it might be located in a different location."
+                return (
+                    "I searched the available SharePoint documents but could not find information related to your query. The documents may not contain this information, or it might be located in a different location.",
+                    {},
+                )
             else:
-                return f"I encountered an issue while searching SharePoint documents: {error_msg}. Please try rephrasing your query or contact support if the problem persists."
+                return (
+                    f"I encountered an issue while searching SharePoint documents: {error_msg}. Please try rephrasing your query or contact support if the problem persists.",
+                    {},
+                )
 
-    def run_intelligent_crew(self, query: str, selected_tools: list = None) -> str:
+    def run_intelligent_crew(self, query: str, selected_tools: list = None) -> tuple:
         """
         Intelligent router crew that analyzes the query and makes smart routing decisions
         to coordinate with appropriate specialist agents (time, news, etc.) based on the
@@ -740,7 +781,10 @@ class CrewMCPManager:
             selected_tools: List of tool IDs selected by the user (optional)
 
         Returns:
-            The crew's response using intelligent routing and coordination
+            A 3-tuple of (result_str, token_usage_dict, mcp_process_name) where:
+            - result_str: the crew's text response
+            - token_usage_dict: dict with prompt_tokens, completion_tokens, total_tokens
+            - mcp_process_name: the MCP server/process that handled the query (or None)
         """
         logger.info(f"Starting intelligent router for query: {query}")
         logger.info(f"Selected tools: {selected_tools}")
@@ -783,13 +827,17 @@ class CrewMCPManager:
                 )
 
                 if specialist == "TIME":
-                    return self.run_time_crew(query)
+                    result_str, token_usage = self.run_time_crew(query)
+                    return result_str, token_usage, "time_server"
                 elif specialist == "NEWS":
-                    return self.run_news_crew(query)
+                    result_str, token_usage = self.run_news_crew(query)
+                    return result_str, token_usage, "news_server"
                 elif specialist == "MPO_SHAREPOINT":
-                    return self.run_mpo_sharepoint_crew(query)
+                    result_str, token_usage = self.run_mpo_sharepoint_crew(query)
+                    return result_str, token_usage, "mpo_sharepoint_server"
                 elif specialist == "PMO_SHAREPOINT":
-                    return self.run_pmo_sharepoint_crew(query)
+                    result_str, token_usage = self.run_pmo_sharepoint_crew(query)
+                    return result_str, token_usage, "pmo_sharepoint_server"
 
             # Multiple specialists - simple routing logic
             logger.info("Multiple specialists available - using simple routing")
@@ -797,15 +845,23 @@ class CrewMCPManager:
             # For multi-specialist queries, just default to first available
             # In practice, the FAST PATH handles 99% of real queries
             if "TIME" in available_specialists:
-                return self.run_time_crew(query)
+                result_str, token_usage = self.run_time_crew(query)
+                return result_str, token_usage, "time_server"
             elif "NEWS" in available_specialists:
-                return self.run_news_crew(query)
+                result_str, token_usage = self.run_news_crew(query)
+                return result_str, token_usage, "news_server"
             elif "MPO_SHAREPOINT" in available_specialists:
-                return self.run_mpo_sharepoint_crew(query)
+                result_str, token_usage = self.run_mpo_sharepoint_crew(query)
+                return result_str, token_usage, "mpo_sharepoint_server"
             elif "PMO_SHAREPOINT" in available_specialists:
-                return self.run_pmo_sharepoint_crew(query)
+                result_str, token_usage = self.run_pmo_sharepoint_crew(query)
+                return result_str, token_usage, "pmo_sharepoint_server"
             else:
-                return "I apologize, but I was unable to process your request at this time."
+                return (
+                    "I apologize, but I was unable to process your request at this time.",
+                    {},
+                    None,
+                )
 
         except Exception as e:
             logger.error(f"Error in intelligent routing: {e}")
@@ -822,21 +878,26 @@ class CrewMCPManager:
 
                 if has_time and not has_news:
                     logger.info("Emergency fallback: TIME only")
-                    return self.run_time_crew(query)
+                    result_str, token_usage = self.run_time_crew(query)
+                    return result_str, token_usage, "time_server"
                 elif has_news and not has_time:
                     logger.info("Emergency fallback: NEWS only")
-                    return self.run_news_crew(query)
+                    result_str, token_usage = self.run_news_crew(query)
+                    return result_str, token_usage, "news_server"
                 elif has_time and has_news:
                     # Both selected - default to time (or could be news, doesn't matter)
                     logger.info("Emergency fallback: TIME (both selected)")
-                    return self.run_time_crew(query)
+                    result_str, token_usage = self.run_time_crew(query)
+                    return result_str, token_usage, "time_server"
                 else:
                     logger.info("Emergency fallback: TIME (default)")
-                    return self.run_time_crew(query)
+                    result_str, token_usage = self.run_time_crew(query)
+                    return result_str, token_usage, "time_server"
             else:
                 # No tools selected - default to time
                 logger.info("Emergency fallback: TIME (no tools selected)")
-                return self.run_time_crew(query)
+                result_str, token_usage = self.run_time_crew(query)
+                return result_str, token_usage, "time_server"
 
     def _combine_specialist_responses(
         self, responses: list, original_query: str

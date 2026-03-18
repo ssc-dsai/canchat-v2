@@ -2,13 +2,12 @@ import logging
 import time
 import uuid
 
-from open_webui.internal.db import get_async_db
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.base import Base
 from open_webui.models.users import User
-
-from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, delete, func, Text, JSON, select
+from sqlalchemy import JSON, BigInteger, Text, delete, func, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 log = logging.getLogger(__name__)
@@ -95,10 +94,15 @@ class FeedbackForm(BaseModel):
 
 
 class FeedbackTable:
+    __db: AsyncDatabaseConnector
+
+    def __init__(self, db_connector: AsyncDatabaseConnector) -> None:
+        self.__db = db_connector
+
     async def insert_new_feedback(
         self, user_id: str, form_data: FeedbackForm
     ) -> FeedbackModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             id = str(uuid.uuid4())
             feedback = FeedbackModel(
                 **{
@@ -126,7 +130,7 @@ class FeedbackTable:
 
     async def get_feedback_by_id(self, id: str) -> FeedbackModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 feedback = await db.scalar(select(Feedback).where(Feedback.id == id))
                 if not feedback:
                     return None
@@ -138,7 +142,7 @@ class FeedbackTable:
         self, id: str, user_id: str
     ) -> FeedbackModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 feedback = await db.scalar(
                     select(Feedback).where(
                         Feedback.id == id, Feedback.user_id == user_id
@@ -151,7 +155,7 @@ class FeedbackTable:
             return None
 
     async def get_all_feedbacks(self) -> list[FeedbackModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             feedbacks = await db.scalars(
                 select(Feedback).order_by(Feedback.updated_at.desc())
             )
@@ -163,7 +167,7 @@ class FeedbackTable:
         self, page: int = 1, limit: int = 10, search: str | None = None
     ) -> list[FeedbackModel]:
         """Get paginated feedbacks with optional search"""
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             # Join with users table to enable username search
             query = select(Feedback).outerjoin(User, Feedback.user_id == User.id)
 
@@ -205,7 +209,7 @@ class FeedbackTable:
 
     async def get_feedbacks_count(self, search: str = None) -> int:
         """Get total count of feedbacks with optional search filter"""
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             # Join with users table to enable username search
             query = (
                 select(func.count())
@@ -238,7 +242,7 @@ class FeedbackTable:
             return count if count else 0
 
     async def get_feedbacks_by_type(self, type: str) -> list[FeedbackModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             feedbacks = await db.scalars(
                 select(Feedback)
                 .where(Feedback.type == type)
@@ -249,7 +253,7 @@ class FeedbackTable:
             ]
 
     async def get_feedbacks_by_user_id(self, user_id: str) -> list[FeedbackModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             feedbacks = await db.scalars(
                 select(Feedback)
                 .filter_by(type=type)
@@ -262,7 +266,7 @@ class FeedbackTable:
     async def update_feedback_by_id(
         self, id: str, form_data: FeedbackForm
     ) -> FeedbackModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             feedback = await db.scalar(select(Feedback).where(Feedback.id == id))
             if not feedback:
                 return None
@@ -282,7 +286,7 @@ class FeedbackTable:
     async def update_feedback_by_id_and_user_id(
         self, id: str, user_id: str, form_data: FeedbackForm
     ) -> FeedbackModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             feedback = await db.scalar(
                 select(Feedback).where(Feedback.id == id, Feedback.user_id == user_id)
             )
@@ -302,7 +306,7 @@ class FeedbackTable:
             return FeedbackModel.model_validate(feedback)
 
     async def delete_feedback_by_id(self, id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             feedback = await db.scalar(select(Feedback).where(Feedback.id == id))
             if not feedback:
                 return False
@@ -311,7 +315,7 @@ class FeedbackTable:
             return True
 
     async def delete_feedback_by_id_and_user_id(self, id: str, user_id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             feedback = await db.scalar(
                 select(Feedback).where(Feedback.id == id, Feedback.user_id == user_id)
             )
@@ -322,16 +326,13 @@ class FeedbackTable:
             return True
 
     async def delete_feedbacks_by_user_id(self, user_id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             _ = await db.execute(delete(Feedback).where(Feedback.user_id == user_id))
             await db.commit()
             return True
 
     async def delete_all_feedbacks(self) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             _ = await db.execute(delete(Feedback))
             await db.commit()
             return True
-
-
-Feedbacks = FeedbackTable()

@@ -5,17 +5,17 @@ from open_webui.test.util.mock_user import mock_webui_user
 class TestModels(AbstractPostgresTest):
     BASE_PATH = "/api/v1/models/"
 
+    @classmethod
     def setup_class(cls):
         super().setup_class()
-        from open_webui.models.models import Model
-        from open_webui.models.users import Users
+        from open_webui.models.db_services import MODELS, USERS
 
-        cls.models = Model
-        cls.users = Users
+        cls.models = MODELS
+        cls.users = USERS
 
-    def setup_method(self):
-        super().setup_method()
-        self.users.insert_new_user(
+    async def setup_method(self):
+        await super().setup_method()
+        _ = await self.users.insert_new_user(
             "2", "Admin User", "admin@example.com", "/admin.png", "admin"
         )
 

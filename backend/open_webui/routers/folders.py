@@ -1,22 +1,15 @@
 import logging
-from pydantic import BaseModel
 
-
+from fastapi import APIRouter, Depends, HTTPException, status
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.models.db_services import CHATS, FOLDERS
 from open_webui.models.folders import (
     FolderForm,
     FolderModel,
-    Folders,
 )
-from open_webui.models.chats import Chats
-
-from open_webui.env import SRC_LOG_LEVELS
-from open_webui.constants import ERROR_MESSAGES
-
-
-from fastapi import APIRouter, Depends, HTTPException, status
-
-
 from open_webui.utils.auth import get_verified_user
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -32,7 +25,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[FolderModel])
 async def get_folders(user=Depends(get_verified_user)):
-    folders = await Folders.get_folders_by_user_id(user.id)
+    folders = await FOLDERS.get_folders_by_user_id(user.id)
 
     return [
         {
@@ -40,7 +33,7 @@ async def get_folders(user=Depends(get_verified_user)):
             "items": {
                 "chats": [
                     {"title": chat.title, "id": chat.id}
-                    for chat in await Chats.get_chats_by_folder_id_and_user_id(
+                    for chat in await CHATS.get_chats_by_folder_id_and_user_id(
                         folder.id, user.id
                     )
                 ]
@@ -57,7 +50,7 @@ async def get_folders(user=Depends(get_verified_user)):
 
 @router.post("/")
 async def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
-    folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
+    folder = await FOLDERS.get_folder_by_parent_id_and_user_id_and_name(
         None, user.id, form_data.name
     )
 
@@ -68,7 +61,7 @@ async def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
         )
 
     try:
-        folder = await Folders.insert_new_folder(user.id, form_data.name)
+        folder = await FOLDERS.insert_new_folder(user.id, form_data.name)
         return folder
     except Exception as e:
         log.exception(e)
@@ -86,7 +79,7 @@ async def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
 
 @router.get("/{id}", response_model=FolderModel | None)
 async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
-    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await FOLDERS.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         return folder
     else:
@@ -105,9 +98,9 @@ async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
 async def update_folder_name_by_id(
     id: str, form_data: FolderForm, user=Depends(get_verified_user)
 ):
-    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await FOLDERS.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
+        existing_folder = await FOLDERS.get_folder_by_parent_id_and_user_id_and_name(
             folder.parent_id, user.id, form_data.name
         )
         if existing_folder:
@@ -117,7 +110,7 @@ async def update_folder_name_by_id(
             )
 
         try:
-            folder = await Folders.update_folder_name_by_id_and_user_id(
+            folder = await FOLDERS.update_folder_name_by_id_and_user_id(
                 id, user.id, form_data.name
             )
 
@@ -149,9 +142,9 @@ class FolderParentIdForm(BaseModel):
 async def update_folder_parent_id_by_id(
     id: str, form_data: FolderParentIdForm, user=Depends(get_verified_user)
 ):
-    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await FOLDERS.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
+        existing_folder = await FOLDERS.get_folder_by_parent_id_and_user_id_and_name(
             form_data.parent_id, user.id, folder.name
         )
 
@@ -162,7 +155,7 @@ async def update_folder_parent_id_by_id(
             )
 
         try:
-            folder = await Folders.update_folder_parent_id_by_id_and_user_id(
+            folder = await FOLDERS.update_folder_parent_id_by_id_and_user_id(
                 id, user.id, form_data.parent_id
             )
             return folder
@@ -193,10 +186,10 @@ class FolderIsExpandedForm(BaseModel):
 async def update_folder_is_expanded_by_id(
     id: str, form_data: FolderIsExpandedForm, user=Depends(get_verified_user)
 ):
-    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await FOLDERS.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            folder = await Folders.update_folder_is_expanded_by_id_and_user_id(
+            folder = await FOLDERS.update_folder_is_expanded_by_id_and_user_id(
                 id, user.id, form_data.is_expanded
             )
             return folder
@@ -221,10 +214,10 @@ async def update_folder_is_expanded_by_id(
 
 @router.delete("/{id}")
 async def delete_folder_by_id(id: str, user=Depends(get_verified_user)):
-    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await FOLDERS.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            result = await Folders.delete_folder_by_id_and_user_id(id, user.id)
+            result = await FOLDERS.delete_folder_by_id_and_user_id(id, user.id)
             if result:
                 return result
             else:

@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from typing import Optional
-
-from open_webui.models.domains import DomainTable, DomainForm, DomainModel, Domains
+from open_webui.models.db_services import DOMAINS
+from open_webui.models.domains import DomainForm, DomainModel
 from open_webui.utils.auth import get_admin_user
 
 router = APIRouter()
@@ -15,7 +13,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[DomainModel])
 async def get_domains(user=Depends(get_admin_user)):
-    return await Domains.get_domains()
+    return await DOMAINS.get_domains()
 
 
 ############################
@@ -26,7 +24,7 @@ async def get_domains(user=Depends(get_admin_user)):
 @router.get("/available", response_model=list[str])
 async def get_available_domains(user=Depends(get_admin_user)):
     """Get all available domains (predefined + from users)"""
-    return await Domains.get_available_domains_list()
+    return await DOMAINS.get_available_domains_list()
 
 
 ############################
@@ -37,13 +35,13 @@ async def get_available_domains(user=Depends(get_admin_user)):
 @router.post("/create", response_model=DomainModel)
 async def create_domain(form_data: DomainForm, user=Depends(get_admin_user)):
     # Check if domain already exists
-    if await Domains.get_domain_by_domain(form_data.domain):
+    if await DOMAINS.get_domain_by_domain(form_data.domain):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Domain '{form_data.domain}' already exists",
         )
 
-    domain = await Domains.insert_new_domain(form_data)
+    domain = await DOMAINS.insert_new_domain(form_data)
     if domain:
         return domain
     else:
@@ -60,7 +58,7 @@ async def create_domain(form_data: DomainForm, user=Depends(get_admin_user)):
 
 @router.get("/id/{domain_id}", response_model=DomainModel)
 async def get_domain_by_id(domain_id: str, user=Depends(get_admin_user)):
-    domain = await Domains.get_domain_by_id(domain_id)
+    domain = await DOMAINS.get_domain_by_id(domain_id)
     if domain:
         return domain
     else:
@@ -78,7 +76,7 @@ async def get_domain_by_id(domain_id: str, user=Depends(get_admin_user)):
 async def update_domain_by_id(
     domain_id: str, form_data: DomainForm, user=Depends(get_admin_user)
 ):
-    domain = await Domains.update_domain_by_id(domain_id, form_data)
+    domain = await DOMAINS.update_domain_by_id(domain_id, form_data)
     if domain:
         return domain
     else:
@@ -94,7 +92,7 @@ async def update_domain_by_id(
 
 @router.delete("/id/{domain_id}/delete")
 async def delete_domain_by_id(domain_id: str, user=Depends(get_admin_user)):
-    result = await Domains.delete_domain_by_id(domain_id)
+    result = await DOMAINS.delete_domain_by_id(domain_id)
     if result:
         return {"message": "Domain deleted successfully"}
     else:

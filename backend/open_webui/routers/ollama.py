@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 import os
-import random
+import secrets
 import re
 import time
 from typing import Optional, Union
@@ -30,7 +30,8 @@ from pydantic import BaseModel, ConfigDict
 from starlette.background import BackgroundTask
 
 
-from open_webui.models.models import Models
+from open_webui.models.users import UserModel
+from open_webui.models.db_services import MODELS
 from open_webui.utils.misc import (
     calculate_sha256,
     validate_path,
@@ -78,6 +79,38 @@ async def send_get_request(url, key=None):
         # Handle connection error here
         log.error(f"Connection error: {e}")
         return None
+
+
+async def send_post_request_json(url, payload, key=None):
+    """Send a POST request and return the JSON response (non-streaming)."""
+    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            async with session.post(
+                url,
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    **({"Authorization": f"Bearer {key}"} if key else {}),
+                },
+            ) as response:
+                return await response.json()
+    except Exception as e:
+        log.error(f"Connection error: {e}")
+        return None
+
+
+def extract_context_length(show_response: dict) -> Optional[int]:
+    """Extract context length from an Ollama /api/show response."""
+    if not show_response:
+        return None
+
+    model_info = show_response.get("model_info", {})
+    for key, value in model_info.items():
+        if key.endswith(".context_length"):
+            return int(value)
+
+    return None
 
 
 async def cleanup_response(
@@ -329,6 +362,22 @@ async def get_all_models(request: Request):
             )
         }
 
+        # Fetch context length for each model via /api/show
+        async def _fetch_model_context_length(model):
+            url_idx = model["urls"][0]
+            url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+            key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
+            show_resp = await send_post_request_json(
+                f"{url}/api/show", {"name": model["model"]}, key
+            )
+            ctx = extract_context_length(show_resp)
+            if ctx is not None:
+                model["context_length"] = ctx
+
+        await asyncio.gather(
+            *[_fetch_model_context_length(m) for m in models["models"]]
+        )
+
     else:
         models = {"models": []}
 
@@ -342,7 +391,7 @@ async def get_filtered_models(models, user):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("models", []):
-        model_info = await Models.get_model_by_id(model["model"])
+        model_info = await MODELS.get_model_by_id(model["model"])
         if model_info:
             if user.id == model_info.user_id or await has_access(
                 user.id, type="read", access_control=model_info.access_control
@@ -701,7 +750,7 @@ async def show_model_info(
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
         )
 
-    url_idx = random.choice(models[form_data.name]["urls"])
+    url_idx = secrets.choice(models[form_data.name]["urls"])
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
@@ -765,7 +814,7 @@ async def embed(
             model = f"{model}:latest"
 
         if model in models:
-            url_idx = random.choice(models[model]["urls"])
+            url_idx = secrets.choice(models[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -834,7 +883,7 @@ async def embeddings(
             model = f"{model}:latest"
 
         if model in models:
-            url_idx = random.choice(models[model]["urls"])
+            url_idx = secrets.choice(models[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -909,7 +958,7 @@ async def generate_completion(
             model = f"{model}:latest"
 
         if model in models:
-            url_idx = random.choice(models[model]["urls"])
+            url_idx = secrets.choice(models[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -957,7 +1006,7 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
                 status_code=400,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model),
             )
-        url_idx = random.choice(models[model].get("urls", []))
+        url_idx = secrets.choice(models[model].get("urls", []))
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     return url, url_idx
 
@@ -967,9 +1016,9 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
 async def generate_chat_completion(
     request: Request,
     form_data: dict,
-    url_idx: Optional[int] = None,
-    user=Depends(get_verified_user),
-    bypass_filter: Optional[bool] = False,
+    url_idx: int | None = None,
+    user: UserModel = Depends(get_verified_user),
+    bypass_filter: bool | None = False,
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
@@ -988,7 +1037,7 @@ async def generate_chat_completion(
         del payload["metadata"]
 
     model_id = payload["model"]
-    model_info = await Models.get_model_by_id(model_id)
+    model_info = await MODELS.get_model_by_id(model_id)
 
     if model_info:
         if model_info.base_model_id:
@@ -1098,7 +1147,7 @@ async def generate_openai_completion(
     if ":" not in model_id:
         model_id = f"{model_id}:latest"
 
-    model_info = await Models.get_model_by_id(model_id)
+    model_info = await MODELS.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -1173,7 +1222,7 @@ async def generate_openai_chat_completion(
     if ":" not in model_id:
         model_id = f"{model_id}:latest"
 
-    model_info = await Models.get_model_by_id(model_id)
+    model_info = await MODELS.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -1281,7 +1330,7 @@ async def get_openai_models(
         # Filter models based on user access control
         filtered_models = []
         for model in models:
-            model_info = await Models.get_model_by_id(model["id"])
+            model_info = await MODELS.get_model_by_id(model["id"])
             if model_info:
                 if user.id == model_info.user_id or await has_access(
                     user.id, type="read", access_control=model_info.access_control

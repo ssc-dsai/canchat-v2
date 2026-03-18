@@ -1,13 +1,12 @@
 import time
-from typing import Optional
 import uuid
-from pydantic import BaseModel
-from sqlalchemy import BigInteger, Integer, select, Text
-from sqlalchemy.orm import Mapped, mapped_column
-
-from open_webui.internal.db import get_async_db
-from open_webui.models.base import Base
 from logging import getLogger
+
+from open_webui.internal.db_utils import AsyncDatabaseConnector
+from open_webui.models.base import Base
+from pydantic import BaseModel
+from sqlalchemy import BigInteger, Integer, Text, select
+from sqlalchemy.orm import Mapped, mapped_column
 
 logger = getLogger(__name__)
 
@@ -48,10 +47,16 @@ class ExportLogForm(BaseModel):
 
 
 class ExportLogsTable:
+
+    __db: AsyncDatabaseConnector
+
+    def __init__(self, db_connector: AsyncDatabaseConnector) -> None:
+        self.__db = db_connector
+
     async def insert_new_export_log(
         self, form_data: ExportLogForm
-    ) -> Optional[ExportLogModel]:
-        async with get_async_db() as db:
+    ) -> ExportLogModel | None:
+        async with self.__db.get_async_db() as db:
             try:
                 id = str(uuid.uuid4())
                 export_timestamp = int(time.time())
@@ -79,7 +84,7 @@ class ExportLogsTable:
                 return None
 
     async def get_export_logs_by_user(self, user_id: str) -> list[ExportLogModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 export_logs = await db.scalars(
                     select(ExportLog).where(ExportLog.user_id == user_id)
@@ -90,13 +95,10 @@ class ExportLogsTable:
                 return []
 
     async def get_all_export_logs(self) -> list[ExportLogModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             try:
                 export_logs = await db.scalars(select(ExportLog))
                 return [ExportLogModel.model_validate(log) for log in export_logs.all()]
             except Exception as e:
                 logger.error(f"Error getting all export logs: {e}")
                 return []
-
-
-ExportLogs = ExportLogsTable()

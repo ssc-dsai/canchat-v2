@@ -9,7 +9,6 @@ Create Date: 2024-10-09 21:02:35.241684
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import table, column
-from sqlalchemy.engine.reflection import Inspector
 
 revision = "1af9b942657b"
 down_revision = "242a2047eae0"
@@ -20,7 +19,7 @@ depends_on = None
 def upgrade():
     # Setup an inspection on the existing table to avoid issues
     conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)
+    inspector = sa.inspect(conn)
 
     # Clean up potential leftover temp table from previous failures
     conn.execute(sa.text("DROP TABLE IF EXISTS _alembic_tmp_tag"))
