@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -247,7 +248,7 @@ class KnowledgeFileIdForm(BaseModel):
 
 
 @router.post("/{id}/file/add", response_model=Optional[KnowledgeFilesResponse])
-async def add_file_to_knowledge_by_id(
+def add_file_to_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
@@ -281,8 +282,10 @@ async def add_file_to_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        await process_file(
-            request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+        asyncio.run(
+            process_file(
+                request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+            )
         )
     except Exception as e:
         log.debug(e)
@@ -359,8 +362,10 @@ async def update_file_from_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        await process_file(
-            request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+        asyncio.run(
+            process_file(
+                request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+            )
         )
     except Exception as e:
         raise HTTPException(
@@ -611,7 +616,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/{id}/files/batch/add", response_model=Optional[KnowledgeFilesResponse])
-async def add_files_to_knowledge_batch(
+def add_files_to_knowledge_batch(
     request: Request,
     id: str,
     form_data: list[KnowledgeFileIdForm],
@@ -647,10 +652,12 @@ async def add_files_to_knowledge_batch(
 
     # Process files
     try:
-        result = await process_files_batch(
-            request=request,
-            form_data=BatchProcessFilesForm(files=files, collection_name=id),
-            user=user,
+        result = asyncio.run(
+            process_files_batch(
+                request=request,
+                form_data=BatchProcessFilesForm(files=files, collection_name=id),
+                user=user,
+            )
         )
     except Exception as e:
         log.error(
