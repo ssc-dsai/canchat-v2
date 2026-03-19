@@ -277,6 +277,7 @@ from open_webui.config import (
 )
 from open_webui.env import (
     CHANGELOG,
+    CHANGELOG_FR,
     GLOBAL_LOG_LEVEL,
     SAFE_MODE,
     SRC_LOG_LEVELS,
@@ -1378,8 +1379,9 @@ async def get_app_version():
 
 
 @app.get("/api/changelog")
-async def get_app_changelog():
-    return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+async def get_app_changelog(locale: str = "en"):
+    source = CHANGELOG_FR if locale.startswith("fr") else CHANGELOG
+    return {key: source[key] for idx, key in enumerate(source) if idx < 5}
 
 
 ############################
