@@ -10,6 +10,7 @@ from typing import Optional
 import json
 import inspect
 from uuid import uuid4
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -1223,17 +1224,25 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body["messages"])]
 
         try:
-            sources = await get_sources_from_files(
-                request=request,
-                files=files,
-                queries=queries,
-                embedding_function=request.app.state.EMBEDDING_FUNCTION,
-                k=request.app.state.config.TOP_K,
-                reranking_function=request.app.state.rf,
-                r=request.app.state.config.RELEVANCE_THRESHOLD,
-                hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                full_context=request.app.state.config.RAG_FULL_CONTEXT,
-            )
+            # Offload get_sources_from_files to a separate thread and run async function
+            loop = asyncio.get_running_loop()
+            with ThreadPoolExecutor() as executor:
+                sources = await loop.run_in_executor(
+                    executor,
+                    lambda: asyncio.run(
+                        get_sources_from_files(
+                            request=request,
+                            files=files,
+                            queries=queries,
+                            embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                            k=request.app.state.config.TOP_K,
+                            reranking_function=request.app.state.rf,
+                            r=request.app.state.config.RELEVANCE_THRESHOLD,
+                            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                            full_context=request.app.state.config.RAG_FULL_CONTEXT,
+                        )
+                    ),
+                )
         except Exception as e:
             log.exception(e)
 
