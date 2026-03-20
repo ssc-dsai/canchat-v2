@@ -25,37 +25,6 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
-if WEBSOCKET_MANAGER == "redis":
-    try:
-        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
-        sio = socketio.AsyncServer(
-            cors_allowed_origins=[],
-            async_mode="asgi",
-            transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
-            allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
-            always_connect=True,
-            client_manager=mgr,
-        )
-    except Exception as e:
-        log.error(
-            f"Failed to initialize Redis websocket manager: {e}. Falling back to local manager."
-        )
-        sio = socketio.AsyncServer(
-            cors_allowed_origins=[],
-            async_mode="asgi",
-            transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
-            allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
-            always_connect=True,
-        )
-else:
-    sio = socketio.AsyncServer(
-        cors_allowed_origins=[],
-        async_mode="asgi",
-        transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
-        allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
-        always_connect=True,
-    )
-
 
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
@@ -66,39 +35,109 @@ async def _lock_noop():
     return True
 
 
-# Dictionary to maintain the user pool
+def _build_socket_server(client_manager=None):
+    server_kwargs = {
+        "cors_allowed_origins": [],
+        "async_mode": "asgi",
+        "transports": (["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
+        "allow_upgrades": ENABLE_WEBSOCKET_SUPPORT,
+        "always_connect": True,
+    }
+    if client_manager is not None:
+        server_kwargs["client_manager"] = client_manager
+    return socketio.AsyncServer(**server_kwargs)
 
-if WEBSOCKET_MANAGER == "redis":
-    log.debug("Using Redis to manage websockets.")
-    try:
-        SESSION_POOL = RedisDict(
-            "open-webui: session_pool", redis_url=WEBSOCKET_REDIS_URL
-        )
-        USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-        USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
 
-        clean_up_lock = RedisLock(
-            redis_url=WEBSOCKET_REDIS_URL,
-            lock_name="usage_cleanup_lock",
-            timeout_secs=TIMEOUT_DURATION * 2,
+def _initialize_socket_state():
+    if WEBSOCKET_MANAGER != "redis":
+        return (
+            "local",
+            _build_socket_server(),
+            {},
+            {},
+            {},
+            _lock_noop,
+            _lock_noop,
+            _lock_noop,
         )
-        acquire_func = clean_up_lock.acquire_lock
-        renew_func = clean_up_lock.renew_lock
-        release_func = clean_up_lock.release_lock
-    except Exception as e:
-        log.error(
-            f"Failed to initialize Redis websocket manager: {e}. Falling back to local manager."
-        )
-        # Fallback to local management if Redis fails
-        SESSION_POOL = {}
-        USER_POOL = {}
-        USAGE_POOL = {}
-        acquire_func = release_func = renew_func = _lock_noop
+
+    max_attempts = 5
+    retry_delay_seconds = TIMEOUT_DURATION
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            session_pool = RedisDict(
+                "open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL
+            )
+            session_pool.redis.ping()
+            user_pool = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
+            usage_pool = RedisDict(
+                "open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL
+            )
+
+            mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+            sio = _build_socket_server(client_manager=mgr)
+
+            clean_up_lock = RedisLock(
+                redis_url=WEBSOCKET_REDIS_URL,
+                lock_name="usage_cleanup_lock",
+                timeout_secs=TIMEOUT_DURATION * 2,
+            )
+
+            return (
+                "redis",
+                sio,
+                session_pool,
+                user_pool,
+                usage_pool,
+                clean_up_lock.acquire_lock,
+                clean_up_lock.renew_lock,
+                clean_up_lock.release_lock,
+            )
+        except Exception as e:
+            if attempt < max_attempts:
+                log.warning(
+                    "Failed to initialize Redis websocket backend (attempt %s/%s): %s. Attempting to re-connect to Redis in %s seconds.",
+                    attempt,
+                    max_attempts,
+                    e,
+                    retry_delay_seconds,
+                )
+                time.sleep(retry_delay_seconds)
+            else:
+                log.error(
+                    "Failed to initialize Redis websocket backend after %s attempts: %s. Falling back to local websocket manager and local pools.",
+                    max_attempts,
+                    e,
+                )
+
+    return (
+        "local",
+        _build_socket_server(),
+        {},
+        {},
+        {},
+        _lock_noop,
+        _lock_noop,
+        _lock_noop,
+    )
+
+
+(
+    effective_websocket_manager,
+    sio,
+    SESSION_POOL,
+    USER_POOL,
+    USAGE_POOL,
+    acquire_func,
+    renew_func,
+    release_func,
+) = _initialize_socket_state()
+
+if effective_websocket_manager == "redis":
+    log.info("Using Redis to manage websockets.")
 else:
-    SESSION_POOL = {}
-    USER_POOL = {}
-    USAGE_POOL = {}
-    acquire_func = release_func = renew_func = _lock_noop
+    log.warning("Using local websocket manager and local pools.")
 
 
 async def periodic_usage_pool_cleanup():
