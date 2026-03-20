@@ -67,7 +67,7 @@ def _initialize_socket_state():
     for attempt in range(1, max_attempts + 1):
         try:
             session_pool = RedisDict(
-                "open-webui: session_pool", redis_url=WEBSOCKET_REDIS_URL
+                "open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL
             )
             session_pool.redis.ping()
             user_pool = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
