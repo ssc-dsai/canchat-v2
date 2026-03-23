@@ -15,11 +15,13 @@ on:
     branches:
       - main
       - dev
+      - fix-sbom-compare-check-both-files
 
   pull_request:
     branches:
       - main
       - dev
+      - fix-sbom-compare-check-both-files
 
 permissions:
     actions: read
