@@ -5,11 +5,21 @@ Tous les changements notables apportés à ce projet seront documentés dans ce 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Versionnage sémantique](https://semver.org/lang/fr/spec/v2.0.0.html).
 
-## [0.5.7-ccv2-1.13.1] - 2026-03-18
+## [0.5.7-ccv2-1.14.0] - 2026-03-23
 
-### Retiré
+### Ajouté
 
-- **🔄 Fiabilité de la recherche de documents** : Retrait du correctif de fiabilité de la recherche de documents qui causait des problèmes intermittents.
+- **🗑️ Fenêtres modales de confirmation de suppression** : Ajout de plusieurs fenêtres modales de confirmation de suppression manquantes.
+- **🌐 Journal des modifications en français** : Ajout du journal des modifications en français.
+
+### Modifié
+
+- **🔐 Générateur de nombres pseudo-aléatoires** : Remplacement du générateur de nombres pseudo-aléatoires faible.
+
+### Corrigé
+
+- **🔄 Initialisation des sockets** : Correction de l'initialisation unifiée des sockets et du bassin Redis/local.
+- **📥 Fenêtre modale d'importation d'utilisateurs CSV** : Correction du chargement et du masquage de la fenêtre modale lors de l'importation d'utilisateurs par CSV.
 
 ## [0.5.7-ccv2-1.13.0] - 2026-03-16
 
