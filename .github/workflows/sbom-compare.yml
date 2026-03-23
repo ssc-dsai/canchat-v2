@@ -15,13 +15,11 @@ on:
     branches:
       - main
       - dev
-      - fix-sbom-compare-check-both-files
 
   pull_request:
     branches:
       - main
       - dev
-      - fix-sbom-compare-check-both-files
 
 permissions:
     actions: read
@@ -128,7 +126,7 @@ jobs:
           if [ -f .sbom/previous.spdx.json ] && [ -f .sbom/current.spdx.json ]; then
             sbomdiff .sbom/previous.spdx.json .sbom/current.spdx.json --sbom spdx --format text > .sbom/comparison.spdx.md
           else
-            echo "Unable to compare SPDX SBOMs. The previous run may have failed." > .sbom/comparison.spdx.md
+            echo "Unable to compare SPDX SBOMs. The previous run may have failed to upload a file." > .sbom/comparison.spdx.md
           fi
 
       - name: Get PR number
