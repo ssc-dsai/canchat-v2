@@ -33,17 +33,7 @@ setup('global setup: seed data & authenticate', async ({ page }) => {
 	await seedUserAccounts(page, adminPage);
 	await saveAuthState(page, 'admin.json');
 
-	// Make one model visible
-	await adminPage.navigateToAdminSettings('Settings', 'Connections'); //temporary
-	await adminPage.openModelSettings('gpt-5-chat-latest');
-	await adminPage.updateModelDescription({
-		en: 'English Description',
-		fr: 'French Description'
-	});
-	await adminPage.updateModelVisibility(adminPage.getTranslation('public'));
-	await adminPage.saveModelSettings();
-	await adminPage.updateChatModel('gpt-5-chat-latest');
-	await adminPage.setDefaultChatModel();
+	await enableAvailableModels(adminPage);
 	await adminPage.signOut();
 
 	await generateUserAuthFiles(page, authPage, adminPage);
@@ -98,4 +88,39 @@ async function generateUserAuthFiles(page: Page, authPage: AuthPage, basePage: a
 async function saveAuthState(page: Page, fileName: string) {
 	await page.context().storageState({ path: path.join(authDir, fileName) });
 	console.log('Authentication state saved.');
+}
+
+async function enableAvailableModels(adminPage: AdminPage) {
+	console.log('Checking Available Models...');
+	// Make multiple models visible
+	await adminPage.navigateToAdminSettings('Settings', 'Connections');
+
+	const modelsToEnable = [
+		'gpt-5-chat-latest',
+		'gpt-5.1-chat-latest',
+		'gpt-5.2-chat-latest',
+		'gpt-5.3-chat-latest'
+	];
+	let defaultModelSet = false;
+
+	for (const model of modelsToEnable) {
+		try {
+			await adminPage.openModelSettings(model);
+			await adminPage.updateModelDescription({
+				en: `${model} English Description`,
+				fr: `${model} French Description`
+			});
+			await adminPage.updateModelVisibility(adminPage.getTranslation('public'));
+			await adminPage.saveModelSettings();
+
+			if (!defaultModelSet) {
+				await adminPage.updateChatModel(model);
+				await adminPage.setDefaultChatModel();
+				defaultModelSet = true;
+			}
+			console.log(`Successfully enabled model: ${model}`);
+		} catch (error) {
+			console.log(`Skipping model ${model} - not available or failed to enable.`);
+		}
+	}
 }

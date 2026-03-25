@@ -2,7 +2,7 @@ import logging
 import sys
 
 from typing import Any
-import random
+import secrets
 import json
 import inspect
 
@@ -89,14 +89,14 @@ async def generate_chat_completion(
 
         selected_model_id = None
         if isinstance(model_ids, list) and model_ids:
-            selected_model_id = random.choice(model_ids)
+            selected_model_id = secrets.choice(model_ids)
         else:
             model_ids = [
                 model["id"]
                 for model in list(request.app.state.MODELS.values())
                 if model.get("owned_by") != "arena"
             ]
-            selected_model_id = random.choice(model_ids)
+            selected_model_id = secrets.choice(model_ids)
 
         form_data["model"] = selected_model_id
 

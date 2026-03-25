@@ -3,7 +3,6 @@ import socketio
 import logging
 import sys
 import time
-import redis
 
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
@@ -26,39 +25,6 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
-effective_websocket_manager = WEBSOCKET_MANAGER
-
-if WEBSOCKET_MANAGER == "redis":
-    try:
-        redis_health_client = redis.Redis.from_url(WEBSOCKET_REDIS_URL)
-        redis_health_client.ping()
-    except Exception as e:
-        log.warning(
-            f"Redis websocket manager is unavailable ({e}). "
-            "Falling back to local websocket manager."
-        )
-        effective_websocket_manager = ""
-
-
-if effective_websocket_manager == "redis":
-    mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
-    sio = socketio.AsyncServer(
-        cors_allowed_origins=[],
-        async_mode="asgi",
-        transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
-        allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
-        always_connect=True,
-        client_manager=mgr,
-    )
-else:
-    sio = socketio.AsyncServer(
-        cors_allowed_origins=[],
-        async_mode="asgi",
-        transports=(["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
-        allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
-        always_connect=True,
-    )
-
 
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
@@ -69,39 +35,109 @@ async def _lock_noop():
     return True
 
 
-# Dictionary to maintain the user pool
+def _build_socket_server(client_manager=None):
+    server_kwargs = {
+        "cors_allowed_origins": [],
+        "async_mode": "asgi",
+        "transports": (["websocket"] if ENABLE_WEBSOCKET_SUPPORT else ["polling"]),
+        "allow_upgrades": ENABLE_WEBSOCKET_SUPPORT,
+        "always_connect": True,
+    }
+    if client_manager is not None:
+        server_kwargs["client_manager"] = client_manager
+    return socketio.AsyncServer(**server_kwargs)
+
+
+def _initialize_socket_state():
+    if WEBSOCKET_MANAGER != "redis":
+        return (
+            "local",
+            _build_socket_server(),
+            {},
+            {},
+            {},
+            _lock_noop,
+            _lock_noop,
+            _lock_noop,
+        )
+
+    max_attempts = 5
+    retry_delay_seconds = TIMEOUT_DURATION
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            session_pool = RedisDict(
+                "open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL
+            )
+            session_pool.redis.ping()
+            user_pool = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
+            usage_pool = RedisDict(
+                "open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL
+            )
+
+            mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+            sio = _build_socket_server(client_manager=mgr)
+
+            clean_up_lock = RedisLock(
+                redis_url=WEBSOCKET_REDIS_URL,
+                lock_name="usage_cleanup_lock",
+                timeout_secs=TIMEOUT_DURATION * 2,
+            )
+
+            return (
+                "redis",
+                sio,
+                session_pool,
+                user_pool,
+                usage_pool,
+                clean_up_lock.acquire_lock,
+                clean_up_lock.renew_lock,
+                clean_up_lock.release_lock,
+            )
+        except Exception as e:
+            if attempt < max_attempts:
+                log.warning(
+                    "Failed to initialize Redis websocket backend (attempt %s/%s): %s. Attempting to re-connect to Redis in %s seconds.",
+                    attempt,
+                    max_attempts,
+                    e,
+                    retry_delay_seconds,
+                )
+                time.sleep(retry_delay_seconds)
+            else:
+                log.error(
+                    "Failed to initialize Redis websocket backend after %s attempts: %s. Falling back to local websocket manager and local pools.",
+                    max_attempts,
+                    e,
+                )
+
+    return (
+        "local",
+        _build_socket_server(),
+        {},
+        {},
+        {},
+        _lock_noop,
+        _lock_noop,
+        _lock_noop,
+    )
+
+
+(
+    effective_websocket_manager,
+    sio,
+    SESSION_POOL,
+    USER_POOL,
+    USAGE_POOL,
+    acquire_func,
+    renew_func,
+    release_func,
+) = _initialize_socket_state()
 
 if effective_websocket_manager == "redis":
-    log.debug("Using Redis to manage websockets.")
-    try:
-        SESSION_POOL = RedisDict(
-            "open-webui: session_pool", redis_url=WEBSOCKET_REDIS_URL
-        )
-        USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-        USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
-
-        clean_up_lock = RedisLock(
-            redis_url=WEBSOCKET_REDIS_URL,
-            lock_name="usage_cleanup_lock",
-            timeout_secs=TIMEOUT_DURATION * 2,
-        )
-        acquire_func = clean_up_lock.acquire_lock
-        renew_func = clean_up_lock.renew_lock
-        release_func = clean_up_lock.release_lock
-    except Exception as e:
-        log.error(
-            f"Failed to initialize Redis websocket manager: {e}. Falling back to local manager."
-        )
-        # Fallback to local management if Redis fails
-        SESSION_POOL = {}
-        USER_POOL = {}
-        USAGE_POOL = {}
-        acquire_func = release_func = renew_func = _lock_noop
+    log.info("Using Redis to manage websockets.")
 else:
-    SESSION_POOL = {}
-    USER_POOL = {}
-    USAGE_POOL = {}
-    acquire_func = release_func = renew_func = _lock_noop
+    log.warning("Using local websocket manager and local pools.")
 
 
 async def periodic_usage_pool_cleanup():
@@ -175,6 +211,136 @@ async def periodic_usage_pool_cleanup():
             log.error(f"Error releasing cleanup lock:  {e}")
 
     log.info("Periodic usage pool cleanup task exited gracefully")
+
+
+def flush_user_and_session_pools(prune_session_pool: bool = False):
+    """
+    Flush stale entries from USER_POOL and SESSION_POOL in Redis.
+
+    The USER_POOL (keyed by user_id → list of socket SIDs) and SESSION_POOL
+    (keyed by SID → user session data) can grow indefinitely because disconnected
+    sessions may leave behind stale entries. This function uses live Socket.IO
+    connection state as the source of truth and removes disconnected SIDs from
+    USER_POOL. Optional SESSION_POOL pruning can be enabled for aggressive cleanup.
+
+    This is designed to be called as a scheduled task to prevent unbounded memory/Redis growth and keep the "users online" list accurate.
+
+    Returns a dict with cleanup statistics.
+    """
+    stats = {
+        "users_before": 0,
+        "users_after": 0,
+        "sessions_before": 0,
+        "sessions_after": 0,
+        "active_sids_detected": 0,
+        "stale_user_entries_removed": 0,
+        "stale_sids_removed": 0,
+        "orphaned_sessions_removed": 0,
+        "temp_tokens_removed": 0,
+    }
+
+    try:
+        sid_connection_cache = {}
+
+        def _is_sid_connected(sid: str) -> bool:
+            if sid in sid_connection_cache:
+                return sid_connection_cache[sid]
+
+            try:
+                connected = bool(sio.manager.is_connected(sid, namespace="/"))
+            except Exception as e:
+                log.debug(
+                    f"Unable to resolve Socket.IO connection state for sid={sid}: {e}"
+                )
+                connected = False
+
+            sid_connection_cache[sid] = connected
+            return connected
+
+        # --- Phase 1: Clean USER_POOL using live connection state ---
+        user_pool_keys = list(USER_POOL.keys())
+        stats["users_before"] = len(user_pool_keys)
+
+        for user_id in user_pool_keys:
+            try:
+                sids = USER_POOL.get(user_id, [])
+                if not isinstance(sids, list):
+                    sids = []
+
+                active_sids = []
+                seen_sids = set()
+                for sid in sids:
+                    if not isinstance(sid, str):
+                        continue
+
+                    if sid in seen_sids:
+                        continue
+                    seen_sids.add(sid)
+
+                    if _is_sid_connected(sid):
+                        active_sids.append(sid)
+
+                removed_count = len(sids) - len(active_sids)
+                stats["stale_sids_removed"] += removed_count
+                # Update USER_POOL with only active SIDs for this user
+                if active_sids:
+                    USER_POOL[user_id] = active_sids
+                else:
+                    # No active sessions left for this user —> remove the user entry
+                    try:
+                        del USER_POOL[user_id]
+                    except KeyError:
+                        pass
+                    stats["stale_user_entries_removed"] += 1
+            except Exception as e:
+                log.warning(f"Error cleaning USER_POOL entry for user {user_id}: {e}")
+
+        stats["users_after"] = len(list(USER_POOL.keys()))
+        stats["active_sids_detected"] = len(
+            [sid for sid, connected in sid_connection_cache.items() if connected]
+        )
+
+        # --- Phase 2: Clean SESSION_POOL temp tokens and optionally stale sessions ---
+        session_keys = list(SESSION_POOL.keys())
+        stats["sessions_before"] = len(session_keys)
+
+        for sid_key in session_keys:
+            if not isinstance(sid_key, str):
+                continue
+
+            # Remove temporary token entries (prefixed with _temp_token_)
+            if sid_key.startswith("_temp_token_"):
+                try:
+                    del SESSION_POOL[sid_key]
+                    stats["temp_tokens_removed"] += 1
+                except KeyError:
+                    pass
+                continue
+
+            if prune_session_pool and not _is_sid_connected(sid_key):
+                try:
+                    del SESSION_POOL[sid_key]
+                    stats["orphaned_sessions_removed"] += 1
+                except KeyError:
+                    pass
+
+        stats["sessions_after"] = len(list(SESSION_POOL.keys()))
+
+        log.info(
+            f"Redis session pool cleanup completed: "
+            f"USER_POOL {stats['users_before']}→{stats['users_after']} "
+            f"(removed {stats['stale_user_entries_removed']} users, "
+            f"{stats['stale_sids_removed']} stale SIDs), "
+            f"SESSION_POOL {stats['sessions_before']}→{stats['sessions_after']} "
+            f"(removed {stats['orphaned_sessions_removed']} disconnected sessions, "
+            f"{stats['temp_tokens_removed']} temp tokens, "
+            f"prune_session_pool={prune_session_pool})"
+        )
+
+    except Exception as e:
+        log.error(f"Error during Redis session pool cleanup: {e}", exc_info=True)
+
+    return stats
 
 
 app = socketio.ASGIApp(
@@ -339,16 +505,49 @@ async def crew_mcp_query(sid, data):
         log.info("Starting crew execution in thread pool executor via WebSocket")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            result = await loop.run_in_executor(
+            crew_result = await loop.run_in_executor(
                 executor,
                 crew_mcp_manager.run_intelligent_crew,
                 query,
                 selected_tools,
             )
 
+        # Unpack the (result_str, token_usage, mcp_process) tuple returned by run_intelligent_crew
+        if isinstance(crew_result, tuple) and len(crew_result) == 3:
+            result, token_usage, mcp_process = crew_result
+        else:
+            result = str(crew_result)
+            token_usage = {}
+            mcp_process = None
+
         log.info(
             f"Crew execution finished via WebSocket. Result length: {len(result) if result else 0}"
         )
+
+        # Log token consumption to message_metrics
+        try:
+            from open_webui.models.message_metrics import MessageMetrics
+            from types import SimpleNamespace
+
+            if token_usage and token_usage.get("total_tokens", 0) > 0:
+                user_obj = SimpleNamespace(
+                    id=user_session.get("id"),
+                    domain=user_session.get("domain", ""),
+                )
+                crewai_model = (
+                    f"azure/{crew_mcp_manager.azure_config.deployment}"
+                    if crew_mcp_manager.azure_config.deployment
+                    else "crewai"
+                )
+                MessageMetrics.insert_new_metrics(
+                    user=user_obj,
+                    model=crewai_model,
+                    usage=token_usage,
+                    chat_id=chat_id,
+                    mcp_tool=mcp_process,
+                )
+        except Exception as metrics_err:
+            log.warning(f"crew-mcp-query: Failed to log token metrics: {metrics_err}")
 
         used_tools = [tool["name"] for tool in tools]
 
@@ -543,9 +742,12 @@ async def disconnect(sid):
         del SESSION_POOL[sid]
 
         user_id = user["id"]
-        USER_POOL[user_id] = [_sid for _sid in USER_POOL[user_id] if _sid != sid]
+        current_sids = USER_POOL.get(user_id, [])
+        remaining_sids = [_sid for _sid in current_sids if _sid != sid]
 
-        if len(USER_POOL[user_id]) == 0:
+        if len(remaining_sids) > 0:
+            USER_POOL[user_id] = remaining_sids
+        elif user_id in USER_POOL:
             del USER_POOL[user_id]
 
         await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})

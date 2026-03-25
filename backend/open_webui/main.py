@@ -277,6 +277,7 @@ from open_webui.config import (
 )
 from open_webui.env import (
     CHANGELOG,
+    CHANGELOG_FR,
     GLOBAL_LOG_LEVEL,
     SAFE_MODE,
     SRC_LOG_LEVELS,
@@ -362,6 +363,31 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Validate Redis lock manager health (already initialized during import)
+    # The lock manager creation will fail fast if REDIS_URL is not set or Redis is unavailable
+    try:
+        from open_webui.retrieval.vector.locks import get_collection_lock_manager
+
+        redis_lock_manager = get_collection_lock_manager()
+
+        # Perform async health check to verify connectivity
+        if not await redis_lock_manager.health_check():
+            raise RuntimeError(
+                "Redis health check failed during startup. "
+                "Distributed locking requires Redis to be available and responsive."
+            )
+
+        app.state.redis_lock_manager = redis_lock_manager
+        log.info(
+            f"Redis distributed locking validated and ready: {redis_lock_manager.redis_url}"
+        )
+    except Exception as e:
+        log.warning(
+            f"Redis validation failed — distributed locking unavailable. "
+            f"Continuing without Redis (single-instance / local dev mode). Error: {e}"
+        )
+        app.state.redis_lock_manager = None
+
     if RESET_CONFIG_ON_START:
         reset_config()
 
@@ -429,14 +455,14 @@ async def lifespan(app: FastAPI):
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
 
-    # Initialize chat lifetime scheduler
+    # Initialize scheduler (chat cleanup, Redis pool cleanup, etc.)
     try:
-        from open_webui.scheduler import start_chat_lifetime_scheduler
+        from open_webui.scheduler import start_scheduler
 
-        start_chat_lifetime_scheduler()
-        log.info("Chat lifetime scheduler initialized")
+        start_scheduler()
+        log.info("Scheduler initialized")
     except Exception as e:
-        log.error(f"Failed to initialize chat lifetime scheduler: {e}")
+        log.error(f"Failed to initialize scheduler: {e}")
 
     # Add task completion callback to log if it exits
     def on_cleanup_done(task):
@@ -489,14 +515,32 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 log.error(f"Error during MCP manager cleanup: {e}")
 
-        # Cleanup chat lifetime scheduler
+        # Cleanup scheduler
         try:
-            from open_webui.scheduler import stop_chat_lifetime_scheduler
+            from open_webui.scheduler import stop_scheduler
 
-            stop_chat_lifetime_scheduler()
-            log.info("Chat lifetime scheduler cleanup completed")
+            stop_scheduler()
+            log.info("Scheduler cleanup completed")
         except Exception as e:
-            log.error(f"Error during chat lifetime scheduler cleanup: {e}")
+            log.error(f"Error during scheduler cleanup: {e}")
+
+        # Cleanup cached Qdrant client
+        try:
+            from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+
+            if VECTOR_DB_CLIENT and hasattr(VECTOR_DB_CLIENT, "close"):
+                await VECTOR_DB_CLIENT.close()
+                log.info("Qdrant client cleanup completed")
+        except Exception as e:
+            log.error(f"Error during Qdrant client cleanup: {e}")
+
+        # Cleanup Redis lock manager
+        if hasattr(app.state, "redis_lock_manager") and app.state.redis_lock_manager:
+            try:
+                await app.state.redis_lock_manager.close()
+                log.info("Redis lock manager cleanup completed")
+            except Exception as e:
+                log.error(f"Error during Redis lock manager cleanup: {e}")
 
 
 app = FastAPI(
@@ -1378,8 +1422,9 @@ async def get_app_version():
 
 
 @app.get("/api/changelog")
-async def get_app_changelog():
-    return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+async def get_app_changelog(locale: str = "en"):
+    source = CHANGELOG_FR if locale.startswith("fr") else CHANGELOG
+    return {key: source[key] for idx, key in enumerate(source) if idx < 5}
 
 
 ############################
@@ -1445,6 +1490,51 @@ def healthcheck_with_db():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection failed",
+        )
+
+
+@app.get("/health/redis")
+async def healthcheck_redis():
+    """
+    Redis readiness endpoint for orchestration (Kubernetes, load balancers).
+    Returns 503 if Redis is unhealthy or circuit is OPEN.
+    """
+    try:
+        from open_webui.retrieval.vector.locks import get_collection_lock_manager
+
+        manager = get_collection_lock_manager()
+        metrics = manager.get_health_metrics()
+
+        # Fail if circuit is open (persistent Redis issues)
+        if metrics["circuit_state"] == "open":
+            log.warning(
+                f"[HEALTH:REDIS] Circuit OPEN: {metrics['consecutive_failures']} "
+                f"consecutive failures, {metrics['recovery_attempts']} recovery attempts"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Redis circuit open. State: {metrics}",
+            )
+
+        # Fail if Redis not initialized
+        if not metrics["redis_initialized"]:
+            log.warning("[HEALTH:REDIS] Redis not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Redis not initialized",
+            )
+
+        return {
+            "status": True,
+            "redis": metrics,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Redis health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Redis health check error: {str(e)}",
         )
 
 
