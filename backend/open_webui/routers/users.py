@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List
+from typing import Optional
 
 from open_webui.models.auths_table import Auths
 from open_webui.models.chats import Chats
@@ -313,7 +313,7 @@ async def update_user_info_by_session_user(
 async def get_users_per_domain(
     start_timestamp: int,
     end_timestamp: int,
-    domain: List[str] = Query(...),
+    domain: Optional[str] = Query(None),
     user=Depends(get_department_usage_user),
 ):
     if user.role not in ["admin", "global_analyst"]:
@@ -321,9 +321,6 @@ async def get_users_per_domain(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
-    if len(domain) == 0:
-        return []
 
     # Fetch lists of dicts from the model
     total_users = Users.get_users_count_by_domain(
@@ -343,18 +340,23 @@ async def get_users_per_domain(
             "department": item.get("department"),
             "total_users": item.get("user_count", 0),
             "active_users": 0,
+            "prompt_users": item.get("prompt_users", 0),
         }
 
     for item in active_users or []:
         key = item.get("domain")
         if key in merged:
             merged[key]["active_users"] = item.get("user_count", 0)
+            merged[key]["prompt_users"] = item.get(
+                "prompt_users", merged[key].get("prompt_users", 0)
+            )
         else:
             merged[key] = {
                 "domain": item.get("domain"),
                 "department": item.get("department"),
                 "total_users": 0,
                 "active_users": item.get("user_count", 0),
+                "prompt_users": item.get("prompt_users", 0),
             }
 
     # Return a sorted list for stable ordering (by department then domain)

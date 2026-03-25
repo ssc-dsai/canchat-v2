@@ -8,6 +8,7 @@ from open_webui.models.base import Base
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
 from open_webui.models.domains import Domain
+from open_webui.models.message_metrics import MessageMetric
 
 
 from pydantic import BaseModel, ConfigDict
@@ -444,7 +445,7 @@ class UsersTable:
         self,
         start_timestamp: int,
         end_timestamp: int,
-        domain: list[str],
+        domain: Optional[str] = None,
         is_active: bool = False,
     ):
         """Return user counts grouped by domain for a date range."""
@@ -468,8 +469,8 @@ class UsersTable:
                 # For total enrolled users, only filter by end timestamp
                 query = query.filter(timestamp_field < end_timestamp)
 
-            if "All" not in domain and "Tous" not in domain:
-                query = query.filter(User.domain.in_(domain))
+            if domain and domain not in {"All", "Tous"}:
+                query = query.filter(User.domain == domain)
 
             rows = (
                 query.outerjoin(Domain, User.domain == Domain.domain)
@@ -477,8 +478,36 @@ class UsersTable:
                 .all()
             )
 
+            prompt_users_query = db.query(
+                MessageMetric.user_domain.label("domain"),
+                func.count(func.distinct(MessageMetric.user_id)).label(
+                    "prompt_user_count"
+                ),
+            ).filter(
+                MessageMetric.created_at >= start_timestamp,
+                MessageMetric.created_at < end_timestamp,
+            )
+
+            if domain and domain not in {"All", "Tous"}:
+                prompt_users_query = prompt_users_query.filter(
+                    MessageMetric.user_domain == domain
+                )
+
+            prompt_user_rows = prompt_users_query.group_by(
+                MessageMetric.user_domain
+            ).all()
+            prompt_users_by_domain = {
+                user_domain: prompt_user_count
+                for user_domain, prompt_user_count in prompt_user_rows
+            }
+
         return [
-            {"domain": domain, "department": description, "user_count": user_count}
+            {
+                "domain": domain,
+                "department": description,
+                "user_count": user_count,
+                "prompt_users": prompt_users_by_domain.get(domain, 0),
+            }
             for domain, description, user_count in rows
         ]
 
