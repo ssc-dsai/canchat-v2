@@ -8,14 +8,14 @@ from open_webui.models.users import Users
 from open_webui.routers.users import get_users_per_domain
 
 
-def test_get_users_per_domain_rejects_non_admin_roles():
+def test_get_users_per_domain_rejects_unprivileged_roles():
     with pytest.raises(HTTPException) as exc:
         asyncio.run(
             get_users_per_domain(
                 start_timestamp=1,
                 end_timestamp=100,
                 domain="example.com",
-                user=SimpleNamespace(role="analyst"),
+                user=SimpleNamespace(role="user"),
             )
         )
 
@@ -126,6 +126,36 @@ def test_get_users_per_domain_merges_and_sorts_data(monkeypatch):
             "active_users": 2,
             "prompt_users": 5,
         },
+    ]
+
+
+@pytest.mark.parametrize("requested_domain", [None, "other.com", "All", "Tous"])
+def test_get_users_per_domain_forces_analyst_domain(monkeypatch, requested_domain):
+    calls = []
+
+    def _fake_get_users_count_by_domain(
+        start_ts, end_ts, domain_filter, is_active=False
+    ):
+        calls.append((start_ts, end_ts, domain_filter, is_active))
+        return []
+
+    monkeypatch.setattr(
+        Users, "get_users_count_by_domain", _fake_get_users_count_by_domain
+    )
+
+    result = asyncio.run(
+        get_users_per_domain(
+            start_timestamp=1,
+            end_timestamp=100,
+            domain=requested_domain,
+            user=SimpleNamespace(role="analyst", domain="analyst.example.com"),
+        )
+    )
+
+    assert result == []
+    assert calls == [
+        (1, 100, "analyst.example.com", False),
+        (1, 100, "analyst.example.com", True),
     ]
 
 
