@@ -298,7 +298,16 @@
 	};
 
 	const selectAllChats = () => {
-		const allChatIds = [...($chats || []), ...($pinnedChats || [])].map((chat) => chat.id);
+		const folderChatIds = Object.values(folders).flatMap((folder) =>
+			(folder.items?.chats ?? []).map((chat) => chat.id)
+		);
+		const allChatIds = [
+			...new Set([
+				...($chats || []).map((chat) => chat.id),
+				...($pinnedChats || []).map((chat) => chat.id),
+				...folderChatIds
+			])
+		];
 		selectedChatIds = allChatIds;
 	};
 

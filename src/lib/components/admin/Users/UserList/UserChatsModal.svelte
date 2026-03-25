@@ -12,6 +12,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getI18n();
 
@@ -19,6 +20,15 @@
 	export let user;
 
 	let chats = null;
+	let showDeleteConfirm = false;
+	let deleteChatId = null;
+	let deleteChatTitle = '';
+
+	const confirmDeleteChat = (chat) => {
+		deleteChatId = chat.id;
+		deleteChatTitle = chat.title;
+		showDeleteConfirm = true;
+	};
 
 	const deleteChatHandler = async (chatId) => {
 		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
@@ -142,7 +152,7 @@
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 															on:click={async () => {
-																deleteChatHandler(chat.id);
+																confirmDeleteChat(chat);
 															}}
 														>
 															<svg
@@ -186,3 +196,15 @@
 		</div>
 	</div>
 </Modal>
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete chat?')}
+	on:confirm={() => {
+		deleteChatHandler(deleteChatId);
+	}}
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will delete')} <span class="font-semibold">{deleteChatTitle}</span>.
+	</div>
+</DeleteConfirmDialog>
