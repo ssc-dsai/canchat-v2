@@ -559,27 +559,37 @@ class FastMCPManager:
         # ---------------------------------------------------------------------------
         # ADDING A NEW SHAREPOINT DEPARTMENT — zero code changes required here.
         #
-        # To onboard a new department:
-        #   1. Copy backend/mcp_backend/servers/template_department_sharepoint_server.py
-        #      and rename it to {dept}_sharepoint_server.py  (e.g. fin_sharepoint_server.py)
-        #   2. Replace {DEPT_UPPER} in the copy with the department prefix (e.g. FIN)
-        #   3. Set the required env vars: {DEPT_UPPER}_SHP_ID_APP, _ID_APP_SECRET,
-        #      _TENANT_ID, _SITE_URL (and optionally _ORG_NAME, _DOC_LIBRARY,
-        #      _DEFAULT_SEARCH_FOLDERS)
+        # To onboard a new department, two config-only steps are needed:
+        #   1. Add the department prefix to SHAREPOINT_DEPARTMENTS env var
+        #      (comma-separated, e.g. SHAREPOINT_DEPARTMENTS=MPO,PMO,FIN)
+        #   2. Set the required env vars: {DEPT}_SHP_SITE_URL and optionally
+        #      {DEPT}_SHP_ORG_NAME, {DEPT}_SHP_DOC_LIBRARY,
+        #      {DEPT}_SHP_DEFAULT_SEARCH_FOLDERS
         #
-        # This loop discovers and starts every *_sharepoint_server.py automatically.
-        # No changes to this file, crew_mcp_integration.py, or any frontend code needed.
+        # No application files need to be created or modified.
         # ---------------------------------------------------------------------------
-        servers_dir = backend_dir / "mcp_backend" / "servers"
-        for server_file in sorted(servers_dir.glob("*_sharepoint_server.py")):
-            if server_file.stem.startswith("template_"):
-                continue  # skip template/example files
-            server_name = server_file.stem  # e.g. "mpo_sharepoint_server"
-            log.info(f"Found SharePoint server script: {server_file}")
+        generic_server_path = (
+            backend_dir
+            / "mcp_backend"
+            / "servers"
+            / "generic_sharepoint_server_multi_dept.py"
+        )
+        _departments_env = os.getenv("SHAREPOINT_DEPARTMENTS", "")
+        _departments = [
+            d.strip().upper() for d in _departments_env.split(",") if d.strip()
+        ]
+        if not _departments:
+            log.warning(
+                "SHAREPOINT_DEPARTMENTS is not set — no SharePoint MCP servers will start. "
+                "Set SHAREPOINT_DEPARTMENTS=MPO,PMO (comma-separated) to enable SharePoint integration."
+            )
+        for dept in _departments:
+            server_name = f"{dept.lower()}_sharepoint_server"
+            log.info(f"Configuring SharePoint server for department: {dept}")
 
             self.add_server_config(
                 name=server_name,
-                command=["python", str(server_file)],
+                command=["python", str(generic_server_path), dept],
                 working_dir=str(backend_dir),
                 env=dict(os.environ),
                 transport="stdio",

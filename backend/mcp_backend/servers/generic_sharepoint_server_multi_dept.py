@@ -1925,3 +1925,21 @@ def run_department_server(department_prefix: str):
 
     logger.info(f"🚀 Starting {department_prefix} SharePoint MCP Server")
     mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Generic SharePoint MCP Server — pass department prefix as argument."
+    )
+    parser.add_argument(
+        "department",
+        help="Department prefix, e.g. MPO, PMO, FIN",
+    )
+    _args = parser.parse_args()
+    logging.basicConfig(
+        level=logging.INFO,
+        format=f"%(asctime)s - {_args.department.upper()}-SharePoint - %(levelname)s - %(message)s",
+    )
+    run_department_server(_args.department)

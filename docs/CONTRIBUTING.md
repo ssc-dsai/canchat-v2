@@ -8,33 +8,40 @@ Your interest in contributing to CANChat is greatly appreciated. This document i
 
 ## 🗂️ MCP SharePoint Integration — Adding a New Department
 
-CANChat has a department-aware SharePoint RAG integration built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It is designed so that **onboarding a new department requires zero changes to application code**.
+CANChat has a department-aware SharePoint RAG integration built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It is designed so that **onboarding a new department requires zero changes to application code** — it is purely configuration-driven.
 
 ### What you need to do (two steps only)
 
-1. **Create a server file** — copy the template and rename it:
+1. **Add the department prefix** to the `SHAREPOINT_DEPARTMENTS` environment variable (comma-separated):
 
    ```
-   cp backend/mcp_backend/servers/template_department_sharepoint_server.py \
-      backend/mcp_backend/servers/{dept}_sharepoint_server.py
+   SHAREPOINT_DEPARTMENTS=MPO,PMO,FIN
    ```
 
-   Then open the new file and replace every `{DEPT_UPPER}` placeholder with your department prefix (e.g. `FIN`).
+2. **Set department environment variables** in your `.env` / Azure Key Vault / IaC secret store:
 
-2. **Set environment variables** in your `.env` / Azure Key Vault / Terraform secret store:
+   When `SHP_USE_DELEGATED_ACCESS=true` (production / delegated auth):
+
    ```
-   {DEPT_UPPER}_SHP_ID_APP=<Azure AD client ID>
-   {DEPT_UPPER}_SHP_ID_APP_SECRET=<Azure AD client secret>
-   {DEPT_UPPER}_SHP_TENANT_ID=<Azure AD tenant ID>
    {DEPT_UPPER}_SHP_SITE_URL=<SharePoint site URL>
    # Optional:
    {DEPT_UPPER}_SHP_ORG_NAME=<Human-readable department name>
    {DEPT_UPPER}_SHP_DOC_LIBRARY=<Default document library path>
    {DEPT_UPPER}_SHP_DEFAULT_SEARCH_FOLDERS=<Comma-separated folder paths>
    ```
+
+   When `SHP_USE_DELEGATED_ACCESS=false` (local dev / application credentials):
+
+   ```
+   {DEPT_UPPER}_SHP_ID_APP=<Azure AD client ID>
+   {DEPT_UPPER}_SHP_ID_APP_SECRET=<Azure AD client secret>
+   {DEPT_UPPER}_SHP_TENANT_ID=<Azure AD tenant ID>
+   {DEPT_UPPER}_SHP_SITE_URL=<SharePoint site URL>
+   ```
+
    Global variables shared across all departments (`SHP_USE_DELEGATED_ACCESS`, `SHP_OBO_SCOPE`) are already configured.
 
-That's it. On next startup the server is discovered and registered automatically.
+That's it. On next startup all departments listed in `SHAREPOINT_DEPARTMENTS` are registered automatically — no new files, no image rebuild required.
 
 ### What happens automatically
 
@@ -49,14 +56,11 @@ That's it. On next startup the server is discovered and registered automatically
 
 ### Naming convention
 
-| Item                          | Pattern                             | Example                     |
-| ----------------------------- | ----------------------------------- | --------------------------- |
-| Server file                   | `{dept_lower}_sharepoint_server.py` | `fin_sharepoint_server.py`  |
-| MCP server name               | `{dept_lower}_sharepoint_server`    | `fin_sharepoint_server`     |
-| Env var prefix                | `{DEPT_UPPER}_SHP_`                 | `FIN_SHP_`                  |
-| Tool names exposed to the LLM | `{dept_lower}_{action}`             | `fin_search_documents_fast` |
-
-> **Note:** `template_department_sharepoint_server.py` is the canonical reference and is intentionally excluded from auto-discovery at runtime.
+| Item                          | Pattern                          | Example                     |
+| ----------------------------- | -------------------------------- | --------------------------- |
+| MCP server name               | `{dept_lower}_sharepoint_server` | `fin_sharepoint_server`     |
+| Env var prefix                | `{DEPT_UPPER}_SHP_`              | `FIN_SHP_`                  |
+| Tool names exposed to the LLM | `{dept_lower}_{action}`          | `fin_search_documents_fast` |
 
 ---
 

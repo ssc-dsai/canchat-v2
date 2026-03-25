@@ -46,7 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **🧠 Personalized Memory Setting**: Removed the personalized memory feature in settings.
 
-## [0.5.7-ccv2-1.12.5] - 2026-02-26
+## [Unreleased] - Unreleased
+
+### Changed
+
+- **🗂️ SharePoint MCP — config-driven departments**: Adding a new SharePoint department now requires no application code changes and no image rebuild. Set `SHAREPOINT_DEPARTMENTS=MPO,PMO,FIN` (comma-separated) and the corresponding `{DEPT}_SHP_*` environment variables; all routing, permissions UI, and tool registration are handled automatically at startup. Per-department wrapper scripts (`mpo_sharepoint_server.py`, `pmo_sharepoint_server.py`) have been removed in favour of a single parameterised entry point (`generic_sharepoint_server_multi_dept.py`).
 
 ### Fixed
 

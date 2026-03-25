@@ -93,26 +93,34 @@ class CrewMCPManager:
         self.user_jwt_token = None
 
     def _discover_sharepoint_servers(self) -> dict:
-        """Scan the servers directory for *_sharepoint_server.py files.
+        """Read SHAREPOINT_DEPARTMENTS env var to determine active departments.
 
-        Returns a dict mapping uppercase department key → Path,
-        e.g. {"MPO": Path(".../mpo_sharepoint_server.py"), "PMO": Path(...)}
+        Returns a dict mapping uppercase department key → Path to the generic
+        server script, e.g. {"MPO": Path(".../generic_sharepoint_server_multi_dept.py")}
 
         ADDING A NEW SHAREPOINT DEPARTMENT — zero code changes required here.
-        Simply drop a new {dept}_sharepoint_server.py in the servers directory
-        and set the {DEPT}_SHP_* environment variables. This method, the MCP
-        manager, the CrewAI dispatcher, and the frontend all discover the new
-        department automatically.
+        Add the prefix to the SHAREPOINT_DEPARTMENTS env var (comma-separated)
+        and set the {DEPT}_SHP_* environment variables. No application files
+        need to be created or modified.
         """
-        servers_dir = self.backend_dir / "mcp_backend" / "servers"
+        generic_server_path = (
+            self.backend_dir
+            / "mcp_backend"
+            / "servers"
+            / "generic_sharepoint_server_multi_dept.py"
+        )
+        departments_env = os.getenv("SHAREPOINT_DEPARTMENTS", "")
         result = {}
-        for server_file in sorted(servers_dir.glob("*_sharepoint_server.py")):
-            if server_file.stem.startswith("template_"):
-                continue  # skip template/example files
-            # e.g. "mpo_sharepoint_server" → dept_key "MPO"
-            dept_key = server_file.stem.replace("_sharepoint_server", "").upper()
-            result[dept_key] = server_file
-            logger.info(f"Discovered SharePoint server: {dept_key} → {server_file}")
+        for dept in departments_env.split(","):
+            dept = dept.strip().upper()
+            if dept:
+                result[dept] = generic_server_path
+                logger.info(f"Configured SharePoint department: {dept}")
+        if not result:
+            logger.warning(
+                "SHAREPOINT_DEPARTMENTS is not set — SharePoint CrewAI crews will be unavailable. "
+                "Set SHAREPOINT_DEPARTMENTS=MPO,PMO (comma-separated) to enable SharePoint integration."
+            )
         return result
 
     def set_user_token(self, token: str):
@@ -166,12 +174,12 @@ class CrewMCPManager:
             logger.error(f"❌ Failed to initialize News server: {e}")
             _news_server_adapter = None
 
-        # Initialize SharePoint servers for all discovered departments
+        # Initialize SharePoint servers for all configured departments
         for dept_key, server_path in self._sharepoint_server_paths.items():
             try:
                 params = StdioServerParameters(
                     command="python",
-                    args=[str(server_path)],
+                    args=[str(server_path), dept_key],
                     env=dict(
                         os.environ
                     ),  # Pass environment variables so *_SHP_* vars are available
@@ -429,7 +437,7 @@ class CrewMCPManager:
             # Create adapter with current environment (includes USER_JWT_TOKEN set by set_user_token())
             sharepoint_params = StdioServerParameters(
                 command="python",
-                args=[str(server_path)],
+                args=[str(server_path), dept_key],
                 env=dict(os.environ),  # Fresh environment snapshot with USER_JWT_TOKEN
             )
 
