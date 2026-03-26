@@ -180,9 +180,11 @@ class CrewMCPManager:
                 params = StdioServerParameters(
                     command="python",
                     args=[str(server_path), dept_key],
-                    env=dict(
-                        os.environ
-                    ),  # Pass environment variables so *_SHP_* vars are available
+                    env={
+                        key: value
+                        for key, value in os.environ.items()
+                        if key.startswith("SHP_") or key.startswith(f"{dept_key}_SHP_")
+                    },  # Pass global and department specific environment variables
                 )
                 adapter = MCPServerAdapter(params)
                 _sharepoint_adapters[dept_key] = adapter.__enter__()
@@ -190,9 +192,6 @@ class CrewMCPManager:
             except Exception as e:
                 logger.error(
                     f"❌ Failed to initialize {dept_key} SharePoint server: {e}"
-                )
-                logger.error(
-                    f"   This is expected in local dev without {dept_key}_SHP_* environment variables"
                 )
                 _sharepoint_adapters[dept_key] = None
 
@@ -407,7 +406,7 @@ class CrewMCPManager:
 
     def run_sharepoint_crew(
         self, department: str, query: str = "Search SharePoint documents"
-    ) -> tuple:
+    ) -> tuple[str, dict[str, int]]:
         """
         Run a CrewAI crew with MCP SharePoint server tools for a given department.
 
@@ -438,7 +437,13 @@ class CrewMCPManager:
             sharepoint_params = StdioServerParameters(
                 command="python",
                 args=[str(server_path), dept_key],
-                env=dict(os.environ),  # Fresh environment snapshot with USER_JWT_TOKEN
+                env={
+                    key: value
+                    for key, value in os.environ.items()
+                    if key.startswith("SHP_")
+                    or key.startswith(f"{dept_key}_SHP_")
+                    or key == "USER_JWT_TOKEN"
+                },  # Fresh environment snapshot with USER_JWT_TOKEN
             )
 
             # Use context manager for automatic cleanup
