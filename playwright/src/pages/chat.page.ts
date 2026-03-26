@@ -1119,6 +1119,10 @@ export class ChatPage extends BasePage {
 		const mimeType = fileName.endsWith('.txt') ? 'text/plain' : 'application/octet-stream';
 		const base64Str = buffer.toString('base64');
 
+		// Wait for the drop target to be visible before dispatching the event
+		const dropTarget = this.page.locator('#chat-container');
+		await dropTarget.waitFor({ state: 'visible', timeout: 5000 });
+
 		await this.page.evaluate(
 			async ({ base64, name, mime }) => {
 				const dt = new DataTransfer();
@@ -1128,14 +1132,15 @@ export class ChatPage extends BasePage {
 				dt.items.add(file);
 
 				const container = document.getElementById('chat-container');
-				if (container) {
-					const dropEvent = new DragEvent('drop', {
-						bubbles: true,
-						cancelable: true,
-						dataTransfer: dt
-					});
-					container.dispatchEvent(dropEvent);
+				if (!container) {
+					throw new Error('Drop target #chat-container not found');
 				}
+				const dropEvent = new DragEvent('drop', {
+					bubbles: true,
+					cancelable: true,
+					dataTransfer: dt
+				});
+				container.dispatchEvent(dropEvent);
 			},
 			{ base64: base64Str, name: fileName, mime: mimeType }
 		);

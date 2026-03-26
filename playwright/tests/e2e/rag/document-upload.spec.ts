@@ -337,7 +337,7 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 	}, testInfo) => {
 		// Create a file with a 200+ character name at runtime
 		const longName = 'a'.repeat(200) + '.txt';
-		const longNamePath = path.resolve(UPLOADS_DIR, longName);
+		const longNamePath = testInfo.outputPath(longName);
 
 		fs.writeFileSync(longNamePath, 'This is a test file with a very long filename.');
 
@@ -428,7 +428,7 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 
 		// 6. Verify the truncation warning is displayed
 		const truncationMsg = userPage.getTranslation(
-			'Some content was truncated to fit the model limit'
+			'Some content was trimmed to fit the model limit.'
 		);
 		await expect(userPage.page.getByText(truncationMsg)).toBeVisible();
 
@@ -470,9 +470,9 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 	});
 
 	// ===========================================
-	// CHAT-UPLOAD-TC016: File count/size limit enforcement
+	// CHAT-UPLOAD-TC016: File count/size limits enforced on submit
 	// ===========================================
-	test('CHAT-UPLOAD-TC016: User cannot upload files above the file count limit or size limit', async ({
+	test('CHAT-UPLOAD-TC016: User cannot submit when file count or size exceed limits', async ({
 		adminPage,
 		userPage
 	}) => {
@@ -516,7 +516,9 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 			expect(await userPage.getUploadedFileCount()).toBe(0);
 
 			// Verify size error toast
-			const sizeErrorAppeared = await userPage.checkToastAppeared('File size should not exceed');
+			const sizeErrorAppeared = await userPage.checkToastAppeared(
+				userPage.getTranslation('File size should not exceed')
+			);
 			expect(sizeErrorAppeared).toBe(true);
 		} finally {
 			if (fs.existsSync(oversizedFilePath)) fs.unlinkSync(oversizedFilePath);
