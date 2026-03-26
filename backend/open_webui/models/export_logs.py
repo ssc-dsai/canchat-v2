@@ -4,7 +4,7 @@ from logging import getLogger
 
 from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.base import Base
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Integer, Text, select
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,6 +26,8 @@ class ExportLog(Base):
 
 
 class ExportLogModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     email_domain: str

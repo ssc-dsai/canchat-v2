@@ -4243,7 +4243,7 @@ class TestChat:
 
     class TestDeleteChatsById:
 
-        @pytest.mark.asyncios
+        @pytest.mark.asyncio
         async def test_valid_id(
             self,
             chat_table: ChatTable,
@@ -4277,7 +4277,7 @@ class TestChat:
 
     class TestDeleteChatsByIdAndUserId:
 
-        @pytest.mark.asyncios
+        @pytest.mark.asyncio
         async def test_valid_ids(
             self,
             chat_table: ChatTable,
@@ -4315,7 +4315,7 @@ class TestChat:
 
     class TestDeleteChatsByUserId:
 
-        @pytest.mark.asyncios
+        @pytest.mark.asyncio
         async def test_valid_id(
             self,
             chat_table: ChatTable,
@@ -4360,7 +4360,7 @@ class TestChat:
 
     class TestDeleteChatsByUserIdAndFolderId:
 
-        @pytest.mark.asyncios
+        @pytest.mark.asyncio
         async def test_valid_ids(
             self,
             chat_table: ChatTable,
@@ -4668,3 +4668,9 @@ class TestChat:
                 chat_models_for_cleanup
                 == chats_for_cleanup[offset : offset + batch_size]
             )
+
+    class TestDeleteChatList:
+        @pytest.mark.asyncio
+        async def test_valid():
+            # TODO: create test
+            pytest.mark.skip()

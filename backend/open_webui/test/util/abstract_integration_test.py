@@ -122,18 +122,26 @@ class AbstractPostgresTest(AbstractIntegrationTest):
                 db.close()
 
                 # Add open_webui.internal.db module
+                from sqlalchemy.orm import scoped_session
+
                 from open_webui.internal import db as db_module
-                from sqlalchemy.orm import scoped_session, sessionmaker
+                from open_webui.internal.db_utils import (
+                    AsyncDatabaseConnector,
+                    DatabaseConnector,
+                    get_async_session_maker,
+                    get_session_maker,
+                )
 
                 # Re-create engine with new URL
-                new_engine = create_engine(database_url, pool_pre_ping=True)
-                db_session_maker = sessionmaker(
-                    autocommit=False,
-                    autoflush=False,
-                    bind=new_engine,
-                    expire_on_commit=False,
+                db_module.DB_SESSION = scoped_session(get_session_maker(database_url))
+                db_module.DATABASE_CONNECTOR = DatabaseConnector(
+                    session=db_module.DB_SESSION
                 )
-                db_module.DB_SESSION = scoped_session(db_session_maker)
+
+                db_module.ASYNC_SESSION_LOCAL = get_async_session_maker(database_url)
+                db_module.ASYNC_DATABASE_CONNECTOR = AsyncDatabaseConnector(
+                    session=db_module.ASYNC_SESSION_LOCAL
+                )
 
                 # Run migrations on the new DB
                 try:
