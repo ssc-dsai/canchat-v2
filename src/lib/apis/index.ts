@@ -854,10 +854,10 @@ export const getBackendConfig = async () => {
 	return res;
 };
 
-export const getChangelog = async () => {
+export const getChangelog = async (locale: string = 'en') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/changelog`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/changelog?locale=${encodeURIComponent(locale)}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
