@@ -277,6 +277,7 @@ from open_webui.config import (
 )
 from open_webui.env import (
     CHANGELOG,
+    CHANGELOG_FR,
     GLOBAL_LOG_LEVEL,
     SAFE_MODE,
     SRC_LOG_LEVELS,
@@ -345,7 +346,8 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(rf"""
+print(
+    rf"""
   ___                    __        __   _     _   _ ___
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
 | | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
@@ -357,7 +359,8 @@ print(rf"""
 v{VERSION} - building the best open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
-""")
+"""
+)
 
 
 @asynccontextmanager
@@ -1421,8 +1424,9 @@ async def get_app_version():
 
 
 @app.get("/api/changelog")
-async def get_app_changelog():
-    return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+async def get_app_changelog(locale: str = "en"):
+    source = CHANGELOG_FR if locale.startswith("fr") else CHANGELOG
+    return {key: source[key] for idx, key in enumerate(source) if idx < 5}
 
 
 ############################

@@ -524,8 +524,10 @@ class RedisCollectionLockManager:
 
                     instance._initialized = False
                     instance.redis_client = None
-                    instance._redis_loop_id: Optional[int] = None
-                    instance._redis_loop: Optional[asyncio.AbstractEventLoop] = None
+                    instance._redis_loop_id = None
+                    instance._redis_loop = None
+                    instance._redis_clients_by_loop = {}
+                    instance._redis_loops_by_id = {}
                     # NOTE: threading.Lock is intentional; protected sections only
                     # perform synchronous reference/state updates. Never add await
                     # calls while holding this lock.
@@ -628,20 +630,37 @@ class RedisCollectionLockManager:
     def _client_ready_for_current_loop(self) -> bool:
         """Return True if Redis client exists and is bound to current loop."""
         try:
-            current_loop_id = id(asyncio.get_running_loop())
+            current_loop = asyncio.get_running_loop()
+            current_loop_id = id(current_loop)
         except RuntimeError:
             return False
 
         with self._client_state_lock:
-            return (
-                self._initialized
-                and self.redis_client is not None
-                and self._redis_loop_id == current_loop_id
+            client = self._redis_clients_by_loop.get(current_loop_id)
+            if client is None:
+                return False
+
+            self.redis_client = client
+            self._redis_loop_id = current_loop_id
+            self._redis_loop = self._redis_loops_by_id.get(
+                current_loop_id, current_loop
             )
+            self._initialized = True
+            return True
 
     async def _init_redis_client(self, retries: int = 1, delay: float = 0.0):
         """Initialize an async Redis client for the current event loop."""
-        current_loop_id = id(asyncio.get_running_loop())
+        current_loop = asyncio.get_running_loop()
+        current_loop_id = id(current_loop)
+
+        with self._client_state_lock:
+            existing_client = self._redis_clients_by_loop.get(current_loop_id)
+            if existing_client is not None:
+                self.redis_client = existing_client
+                self._redis_loop_id = current_loop_id
+                self._redis_loop = current_loop
+                self._initialized = True
+                return
 
         for attempt in range(retries):
             candidate_client = None
@@ -656,19 +675,13 @@ class RedisCollectionLockManager:
                 )
                 await candidate_client.ping()
 
-                old_client = None
-                old_loop = None
                 with self._client_state_lock:
-                    old_client = self.redis_client
-                    old_loop = self._redis_loop
+                    self._redis_clients_by_loop[current_loop_id] = candidate_client
+                    self._redis_loops_by_id[current_loop_id] = current_loop
                     self.redis_client = candidate_client
                     self._redis_loop_id = current_loop_id
-                    self._redis_loop = asyncio.get_running_loop()
+                    self._redis_loop = current_loop
                     self._initialized = True
-
-                if old_client is not None and old_client is not candidate_client:
-                    if not self._close_client_in_loop(old_loop, old_client):
-                        await self._close_redis_client(old_client)
 
                 log.info(
                     f"[LOCK:INIT] Redis lock manager initialized successfully: url={self.redis_url}, "
@@ -685,20 +698,36 @@ class RedisCollectionLockManager:
                 else:
                     log.debug(f"[LOCK:INIT_PENDING] Redis not ready yet: {e}")
                     with self._client_state_lock:
-                        self._initialized = False
-                        self._redis_loop = None
+                        self._initialized = bool(self._redis_clients_by_loop)
 
     async def _mark_client_unhealthy(self, error: Exception, operation: str) -> None:
         """Mark current Redis client unhealthy and close it to force re-initialization."""
+        try:
+            current_loop_id = id(asyncio.get_running_loop())
+        except RuntimeError:
+            current_loop_id = None
+
         stale_client = None
         stale_loop = None
         with self._client_state_lock:
-            stale_client = self.redis_client
-            stale_loop = self._redis_loop
-            self.redis_client = None
-            self._redis_loop_id = None
-            self._redis_loop = None
-            self._initialized = False
+            if current_loop_id is not None:
+                stale_client = self._redis_clients_by_loop.pop(current_loop_id, None)
+                stale_loop = self._redis_loops_by_id.pop(current_loop_id, None)
+
+            if stale_client is not None and self.redis_client is stale_client:
+                if self._redis_clients_by_loop:
+                    fallback_loop_id, fallback_client = next(
+                        iter(self._redis_clients_by_loop.items())
+                    )
+                    self.redis_client = fallback_client
+                    self._redis_loop_id = fallback_loop_id
+                    self._redis_loop = self._redis_loops_by_id.get(fallback_loop_id)
+                else:
+                    self.redis_client = None
+                    self._redis_loop_id = None
+                    self._redis_loop = None
+
+            self._initialized = bool(self._redis_clients_by_loop)
 
         if not self._close_client_in_loop(stale_loop, stale_client):
             await self._close_redis_client(stale_client)
@@ -706,6 +735,33 @@ class RedisCollectionLockManager:
             f"[LOCK:CLIENT_UNHEALTHY] Marked Redis client unhealthy after {operation}: "
             f"{type(error).__name__}: {error}"
         )
+
+    async def _prune_closed_loops(self) -> None:
+        """Remove dict entries for event loops that have since closed.
+
+        Called from _ensure_initialized() only when the current loop has no
+        client yet (the slow path), so the iteration cost is amortized across
+        the infrequent new-loop events rather than every lock acquisition.
+        """
+        stale = []
+        with self._client_state_lock:
+            for loop_id, loop in list(self._redis_loops_by_id.items()):
+                if loop.is_closed():
+                    client = self._redis_clients_by_loop.pop(loop_id, None)
+                    self._redis_loops_by_id.pop(loop_id, None)
+                    stale.append((loop, client))
+            remaining = len(self._redis_clients_by_loop)
+
+        if not stale:
+            return
+
+        log.info(
+            f"[LOCK:PRUNE] Pruned {len(stale)} stale Redis client(s) for closed loops, "
+            f"remaining_active={remaining}"
+        )
+        for loop, client in stale:
+            if not self._close_client_in_loop(loop, client):
+                await self._close_redis_client(client)
 
     async def _ensure_initialized(self):
         """Ensure Redis client is initialized and loop-compatible."""
@@ -715,15 +771,16 @@ class RedisCollectionLockManager:
         if self._client_ready_for_current_loop():
             return
 
-        with self._client_state_lock:
-            had_client = self.redis_client is not None
-            was_initialized = self._initialized
-            stale_loop_id = self._redis_loop_id
+        # Remove stale closed-loop entries before potentially adding a new one.
+        await self._prune_closed_loops()
 
-        if had_client and was_initialized:
+        with self._client_state_lock:
+            active_clients = len(self._redis_clients_by_loop)
+
+        if active_clients > 0:
             log.info(
-                f"[LOCK:RECOVER] Redis client loop mismatch (existing_loop={stale_loop_id}), "
-                "reconnecting for current loop..."
+                f"[LOCK:RECOVER] Redis client loop mismatch (active_clients={active_clients}), "
+                "initializing client for current loop..."
             )
         else:
             log.warning(
@@ -928,6 +985,9 @@ class RedisCollectionLockManager:
 
     def get_health_metrics(self) -> Dict[str, Any]:
         """Return health metrics for monitoring and readiness checks."""
+        with self._client_state_lock:
+            active_clients = len(self._redis_clients_by_loop)
+
         return {
             "use_redis_locks": self.use_redis_locks,
             "circuit_state": self.circuit_state.value,
@@ -939,6 +999,7 @@ class RedisCollectionLockManager:
             "redis_initialized": self._initialized,
             "redis_url": self.redis_url if self.redis_url else "NOT_SET",
             "redis_loop_id": self._redis_loop_id,
+            "redis_active_clients": active_clients,
         }
 
     async def close(self):
@@ -952,18 +1013,25 @@ class RedisCollectionLockManager:
         if not self.use_redis_locks:
             return
 
-        stale_client = None
-        stale_loop = None
+        clients_to_close = []
         with self._client_state_lock:
-            stale_client = self.redis_client
-            stale_loop = self._redis_loop
+            for loop_id, client in self._redis_clients_by_loop.items():
+                clients_to_close.append((self._redis_loops_by_id.get(loop_id), client))
+
+            self._redis_clients_by_loop.clear()
+            self._redis_loops_by_id.clear()
             self.redis_client = None
             self._redis_loop_id = None
             self._redis_loop = None
             self._initialized = False
 
-        if not self._close_client_in_loop(stale_loop, stale_client):
-            await self._close_redis_client(stale_client)
+        seen = set()
+        for loop, client in clients_to_close:
+            if client is None or id(client) in seen:
+                continue
+            seen.add(id(client))
+            if not self._close_client_in_loop(loop, client):
+                await self._close_redis_client(client)
 
 
 # Global singleton instance - managed by RedisCollectionLockManager.__new__

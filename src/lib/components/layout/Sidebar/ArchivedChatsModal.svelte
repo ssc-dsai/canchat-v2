@@ -16,6 +16,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import UnarchiveAllConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	const i18n = getI18n();
 
 	export let show = false;
@@ -24,6 +25,9 @@
 
 	let searchValue = '';
 	let showUnarchiveAllConfirmDialog = false;
+	let showDeleteConfirm = false;
+	let deleteChatId = null;
+	let deleteChatTitle = '';
 
 	let filteredChatList = [];
 
@@ -50,6 +54,12 @@
 		chats = await getArchivedChatList(localStorage.token);
 	};
 
+	const confirmDeleteChat = (chat) => {
+		deleteChatId = chat.id;
+		deleteChatTitle = chat.title;
+		showDeleteConfirm = true;
+	};
+
 	const unarchiveAllHandler = async () => {
 		let res = null;
 		for (const chat of chats) {
@@ -72,6 +82,18 @@
 		(c) => searchValue === '' || c.title.toLowerCase().includes(searchValue.toLowerCase())
 	);
 </script>
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete chat?')}
+	on:confirm={() => {
+		deleteChatHandler(deleteChatId);
+	}}
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will delete')} <span class="font-semibold">{deleteChatTitle}</span>.
+	</div>
+</DeleteConfirmDialog>
 
 <UnarchiveAllConfirmDialog
 	bind:show={showUnarchiveAllConfirmDialog}
@@ -214,7 +236,7 @@
 																aria-label={$i18n.t('Delete Chat')}
 																class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																on:click={async () => {
-																	deleteChatHandler(chat.id);
+																	confirmDeleteChat(chat);
 																}}
 															>
 																<svg

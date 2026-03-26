@@ -19,7 +19,7 @@
 	let changelog = null;
 
 	onMount(async () => {
-		const res = await getChangelog();
+		const res = await getChangelog($i18n.language);
 		changelog = res;
 	});
 </script>
@@ -75,15 +75,17 @@
 							{#each Object.keys(changelog[version]).filter((section) => section !== 'date') as section}
 								<div class="">
 									<div
-										class="font-semibold uppercase text-xs {section === 'added'
+										class="font-semibold uppercase text-xs {section === $i18n.t('added')
 											? 'text-white bg-blue-600'
-											: section === 'fixed'
+											: section === $i18n.t('fixed')
 												? 'text-white bg-green-600'
-												: section === 'changed'
+												: section === $i18n.t('changed')
 													? 'text-white bg-yellow-600'
-													: section === 'removed'
+													: section === $i18n.t('removed')
 														? 'text-white bg-red-600'
-														: ''}  w-fit px-3 rounded-full my-2.5"
+														: section === $i18n.t('enhanced')
+															? 'text-white bg-purple-600'
+															: ''}  w-fit px-3 rounded-full my-2.5"
 									>
 										{section}
 									</div>
