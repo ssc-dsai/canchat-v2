@@ -1,187 +1,34 @@
-import json
 import logging
-from contextlib import asynccontextmanager, contextmanager
-from typing import Any, Optional
 
-from open_webui.internal.wrappers import register_connection
 from open_webui.env import (
-    OPEN_WEBUI_DIR,
     DATABASE_URL,
     SRC_LOG_LEVELS,
-    DATABASE_POOL_MAX_OVERFLOW,
-    DATABASE_POOL_RECYCLE,
-    DATABASE_POOL_SIZE,
-    DATABASE_POOL_TIMEOUT,
 )
-from peewee_migrate import Router
-from sqlalchemy import Dialect, create_engine, types
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession, create_async_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.pool import QueuePool, NullPool
-from sqlalchemy.sql.type_api import _T
-from typing_extensions import Self
+from open_webui.internal.db_utils import (
+    AsyncDatabaseConnector,
+    DatabaseConnector,
+    get_async_session_maker,
+    get_session_maker,
+    run_migrations,
+)
+from sqlalchemy.orm import scoped_session
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
 
-
-class JSONField(types.TypeDecorator):
-    impl = types.Text
-    cache_ok = True
-
-    def process_bind_param(self, value: Optional[_T], dialect: Dialect) -> Any:
-        return json.dumps(value)
-
-    def process_result_value(self, value: Optional[_T], dialect: Dialect) -> Any:
-        if value is not None:
-            return json.loads(value)
-
-    def copy(self, **kw: Any) -> Self:
-        return JSONField(self.impl.length)
-
-    def db_value(self, value):
-        return json.dumps(value)
-
-    def python_value(self, value):
-        if value is not None:
-            return json.loads(value)
+# Run the peewee and alembic migrations
+run_migrations(DATABASE_URL)
 
 
-# Workaround to handle the peewee migration
-# This is required to ensure the peewee migration is handled before the alembic migration
-def handle_peewee_migration(DATABASE_URL):
-    # db = None
-    try:
-        # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
-        migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
-        router = Router(db, logger=log, migrate_dir=migrate_dir)
-        router.run()
-        db.close()
+DB_SESSION = scoped_session(get_session_maker(DATABASE_URL))
+DATABASE_CONNECTOR = DatabaseConnector(session=DB_SESSION)
 
-    except Exception as e:
-        log.error(f"Failed to initialize the database connection: {e}")
-        raise
-    finally:
-        # Properly closing the database connection
-        if db and not db.is_closed():
-            db.close()
-
-        # Assert if db connection has been closed
-        assert db.is_closed(), "Database connection is still open."
-
-
-handle_peewee_migration(DATABASE_URL)
-
-
-# Function to run the alembic migrations
-def run_migrations():
-    print("Running migrations")
-    try:
-        from alembic import command
-        from alembic.config import Config
-
-        alembic_cfg = Config(OPEN_WEBUI_DIR / "alembic.ini")
-
-        # Set the script location dynamically
-        migrations_path = OPEN_WEBUI_DIR / "migrations"
-        alembic_cfg.set_main_option("script_location", str(migrations_path))
-
-        command.upgrade(alembic_cfg, "head")
-    except Exception as e:
-        print(f"Error: {e}")
-
-
-run_migrations()
-
-
-SQLALCHEMY_DATABASE_URL = DATABASE_URL
-
-if "sqlite" in SQLALCHEMY_DATABASE_URL:
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-    )
-else:
-    if DATABASE_POOL_SIZE > 0:
-        engine = create_engine(
-            SQLALCHEMY_DATABASE_URL,
-            pool_size=DATABASE_POOL_SIZE,
-            max_overflow=DATABASE_POOL_MAX_OVERFLOW,
-            pool_timeout=DATABASE_POOL_TIMEOUT,
-            pool_recycle=DATABASE_POOL_RECYCLE,
-            pool_pre_ping=True,
-            poolclass=QueuePool,
-        )
-    else:
-        engine = create_engine(
-            SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool
-        )
-
-
-SessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
-)
-
-Session = scoped_session(SessionLocal)
-
-
-def get_session():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
+# For backwards compatibility until everything can move to using the DatabaseService class
 # Leaving in place a Blocking context manager for the config
-get_db = contextmanager(get_session)
-
-if "sqlite" in SQLALCHEMY_DATABASE_URL:
-    async_engine = create_async_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-    )
-else:
-    __db_url: str = SQLALCHEMY_DATABASE_URL
-    if "postgresql" in SQLALCHEMY_DATABASE_URL:
-        __db_url = SQLALCHEMY_DATABASE_URL.replace(
-            "postgresql://", "postgresql+asyncpg://"
-        )
-
-    if DATABASE_POOL_SIZE > 0:
-        async_engine = create_async_engine(
-            __db_url,
-            pool_size=DATABASE_POOL_SIZE,
-            max_overflow=DATABASE_POOL_MAX_OVERFLOW,
-            pool_timeout=DATABASE_POOL_TIMEOUT,
-            pool_recycle=DATABASE_POOL_RECYCLE,
-            pool_pre_ping=True,
-        )
-    else:
-        async_engine = create_async_engine(__db_url, pool_pre_ping=True)
+get_db = DATABASE_CONNECTOR.get_db
 
 
-AsyncSessionLocal = async_sessionmaker(
-    bind=async_engine,
-    expire_on_commit=False,  # Recommended for async
-    class_=AsyncSession,  # Ensure it's an AsyncSession
-)
+ASYNC_SESSION_LOCAL = get_async_session_maker(DATABASE_URL)
+ASYNC_DATABASE_CONNECTOR = AsyncDatabaseConnector(session=ASYNC_SESSION_LOCAL)
 
-
-@asynccontextmanager
-async def get_async_db():
-    """
-    Provides an asynchronous SQLAlchemy session.
-    This can be used as a dependency in web frameworks like FastAPI.
-    """
-    db: AsyncSession = AsyncSessionLocal()
-    try:
-        yield db
-        # For web frameworks, commit/rollback often happens explicitly in routes.
-        # If you want to auto-commit on success and rollback on error,
-        # you could add:
-        # await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-    finally:
-        await db.close()
+get_async_db = ASYNC_DATABASE_CONNECTOR.get_async_db

@@ -2,13 +2,12 @@ import logging
 import time
 import uuid
 
-from open_webui.internal.db import get_async_db
-from open_webui.models.chats import Chats
-from open_webui.models.base import Base
-
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db_utils import AsyncDatabaseConnector
+from open_webui.models.base import Base
+from open_webui.models.chats import ChatTable
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, JSON, select, Text
+from sqlalchemy import JSON, BigInteger, Boolean, Text, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 log = logging.getLogger(__name__)
@@ -58,10 +57,18 @@ class FolderForm(BaseModel):
 
 
 class FolderTable:
+
+    __db: AsyncDatabaseConnector
+    __chats: ChatTable
+
+    def __init__(self, db_connector: AsyncDatabaseConnector, chats: ChatTable) -> None:
+        self.__db = db_connector
+        self.__chats = chats
+
     async def insert_new_folder(
         self, user_id: str, name: str, parent_id: str | None = None
     ) -> FolderModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             id = str(uuid.uuid4())
             folder = FolderModel(
                 **{
@@ -90,7 +97,7 @@ class FolderTable:
         self, id: str, user_id: str
     ) -> FolderModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 folder = await db.scalar(
                     select(Folder).where(Folder.id == id, Folder.user_id == user_id)
                 )
@@ -106,7 +113,7 @@ class FolderTable:
         self, id: str, user_id: str
     ) -> list[FolderModel]:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 folders: list[FolderModel] = []
 
                 async def get_children(folder: Folder | FolderModel):
@@ -129,7 +136,7 @@ class FolderTable:
             return []
 
     async def get_folders_by_user_id(self, user_id: str) -> list[FolderModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             folders = await db.scalars(select(Folder).where(Folder.user_id == user_id))
             return [FolderModel.model_validate(folder) for folder in folders.all()]
 
@@ -137,7 +144,7 @@ class FolderTable:
         self, parent_id: str | None, user_id: str, name: str
     ) -> FolderModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Check if folder exists
                 folder = await db.scalar(
                     select(Folder).where(
@@ -158,7 +165,7 @@ class FolderTable:
     async def get_folders_by_parent_id_and_user_id(
         self, parent_id: str | None, user_id: str
     ) -> list[FolderModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             folders = await db.scalars(
                 select(Folder).where(
                     Folder.parent_id == parent_id, Folder.user_id == user_id
@@ -173,7 +180,7 @@ class FolderTable:
         parent_id: str,
     ) -> FolderModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 folder = await db.scalar(
                     select(Folder).where(Folder.id == id, Folder.user_id == user_id)
                 )
@@ -195,7 +202,7 @@ class FolderTable:
         self, id: str, user_id: str, name: str
     ) -> FolderModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 folder = await db.scalar(
                     select(Folder).where(Folder.id == id, Folder.user_id == user_id)
                 )
@@ -228,7 +235,7 @@ class FolderTable:
         self, id: str, user_id: str, is_expanded: bool
     ) -> FolderModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 folder = await db.scalar(
                     select(Folder).where(Folder.id == id, Folder.user_id == user_id)
                 )
@@ -248,7 +255,7 @@ class FolderTable:
 
     async def delete_folder_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 folder = await db.scalar(
                     select(Folder).where(Folder.id == id, Folder.user_id == user_id)
                 )
@@ -257,7 +264,9 @@ class FolderTable:
                     return False
 
                 # Delete all chats in the folder
-                await Chats.delete_chats_by_user_id_and_folder_id(user_id, folder.id)
+                await self.__chats.delete_chats_by_user_id_and_folder_id(
+                    user_id, folder.id
+                )
 
                 # Delete all children folders
                 async def delete_children(folder: Folder | FolderModel):
@@ -265,7 +274,7 @@ class FolderTable:
                         folder.id, user_id
                     )
                     for folder_child in folder_children:
-                        await Chats.delete_chats_by_user_id_and_folder_id(
+                        await self.__chats.delete_chats_by_user_id_and_folder_id(
                             user_id, folder_child.id
                         )
                         await delete_children(folder_child)
@@ -283,6 +292,3 @@ class FolderTable:
         except Exception as e:
             log.error(f"delete_folder: {e}")
             return False
-
-
-Folders = FolderTable()

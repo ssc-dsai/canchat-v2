@@ -1,22 +1,20 @@
 import logging
 import time
 
-from open_webui.internal.db import JSONField, get_async_db
-from open_webui.models.base import Base
-from open_webui.models.users import Users, UserResponse
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db_utils import AsyncDatabaseConnector, JSONField
+from open_webui.models.base import Base
+from open_webui.models.users import UserResponse, UsersTable
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
+    JSON,
     BigInteger,
-    delete,
-    select,
     String,
     Text,
-    JSON,
+    delete,
+    select,
 )
 from sqlalchemy.orm import Mapped, mapped_column
-
-from open_webui.utils.access_control import has_access
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -116,10 +114,20 @@ class ToolValves(BaseModel):
 
 
 class ToolsTable:
+
+    __db: AsyncDatabaseConnector
+    __users: UsersTable
+
+    def __init__(
+        self, db_connector: AsyncDatabaseConnector, users_table: UsersTable
+    ) -> None:
+        self.__db = db_connector
+        self.__users = users_table
+
     async def insert_new_tool(
         self, user_id: str, form_data: ToolForm, specs: list[dict]
     ) -> ToolModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             tool = ToolModel(
                 **{
                     **form_data.model_dump(),
@@ -145,14 +153,14 @@ class ToolsTable:
 
     async def get_tool_by_id(self, id: str) -> ToolModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 tool = await db.get(Tool, id)
                 return ToolModel.model_validate(tool)
         except Exception:
             return None
 
     async def get_tools(self) -> list[ToolUserModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             tools: list[ToolUserModel] = []
 
             # Import User model to do the join
@@ -180,7 +188,9 @@ class ToolsTable:
     async def get_tools_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ToolUserModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
+            from open_webui.utils.access_control import has_access
+
             tools: list[ToolUserModel] = []
 
             # Import User model to do the join
@@ -213,7 +223,7 @@ class ToolsTable:
 
     async def get_tool_valves_by_id(self, id: str) -> dict | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 tool = await db.get(Tool, id)
                 return tool.valves if tool.valves else {}
         except Exception as e:
@@ -224,7 +234,7 @@ class ToolsTable:
         self, id: str, valves: dict
     ) -> ToolValves | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 if tool := await db.get(Tool, id):
                     tool.valves = valves
                     await db.commit()
@@ -238,7 +248,7 @@ class ToolsTable:
         self, id: str, user_id: str
     ) -> dict | None:
         try:
-            if user := await Users.get_user_by_id(user_id):
+            if user := await self.__users.get_user_by_id(user_id):
                 user_settings = user.settings.model_dump() if user.settings else {}
 
                 # Check if user has "tools" and "valves" settings
@@ -257,7 +267,7 @@ class ToolsTable:
         self, id: str, user_id: str, valves: dict
     ) -> dict | None:
         try:
-            if user := await Users.get_user_by_id(user_id):
+            if user := await self.__users.get_user_by_id(user_id):
                 user_settings = user.settings.model_dump() if user.settings else {}
 
                 # Check if user has "tools" and "valves" settings
@@ -269,7 +279,7 @@ class ToolsTable:
                 user_settings["tools"]["valves"][id] = valves
 
                 # Update the user settings in the database
-                updated_user = await Users.update_user_by_id(
+                updated_user = await self.__users.update_user_by_id(
                     user_id, {"settings": user_settings}
                 )
 
@@ -285,7 +295,7 @@ class ToolsTable:
 
     async def update_tool_by_id(self, id: str, updated: dict) -> ToolModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 if tool := await db.get(Tool, id):
                     for key, value in updated.items():
                         if hasattr(tool, key):
@@ -304,13 +314,10 @@ class ToolsTable:
 
     async def delete_tool_by_id(self, id: str) -> bool:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 _ = await db.execute(delete(Tool).where(Tool.id == id))
                 await db.commit()
 
                 return True
         except Exception:
             return False
-
-
-Tools = ToolsTable()

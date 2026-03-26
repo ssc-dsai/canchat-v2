@@ -1,15 +1,12 @@
 import time
 from logging import getLogger
+from typing import Any
 
-from open_webui.internal.db import JSONField, get_async_db
-
+from open_webui.internal.db_utils import AsyncDatabaseConnector, JSONField
 from open_webui.models.base import Base
-from open_webui.models.chats import Chats
-from open_webui.models.groups import Groups
-
-
+from open_webui.models.chats import ChatTable
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, delete, func, select, String, Text
+from sqlalchemy import BigInteger, String, Text, delete, func, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 # Add logger for the users module
@@ -41,7 +38,7 @@ class User(Base):
     created_at: Mapped[int] = mapped_column(BigInteger)
 
     api_key: Mapped[str] = mapped_column(String, nullable=True, unique=True)
-    settings: Mapped[UserSettings | None] = mapped_column(JSONField, nullable=True)
+    settings: Mapped[dict | None] = mapped_column(JSONField, nullable=True)
     info: Mapped[dict | None] = mapped_column(JSONField, nullable=True)
 
     oauth_sub: Mapped[str] = mapped_column(Text, unique=True)
@@ -101,6 +98,18 @@ class UserUpdateForm(BaseModel):
 
 
 class UsersTable:
+
+    __db: AsyncDatabaseConnector
+    __chats: ChatTable
+
+    def __init__(
+        self,
+        db_connector: AsyncDatabaseConnector,
+        chats: ChatTable,
+    ) -> None:
+        self.__db = db_connector
+        self.__chats = chats
+
     async def insert_new_user(
         self,
         id: str,
@@ -111,7 +120,7 @@ class UsersTable:
         oauth_sub: str | None = None,
         domain: str = "*",
     ) -> UserModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             user = UserModel(
                 **{
                     "id": id,
@@ -137,7 +146,7 @@ class UsersTable:
 
     async def get_user_by_id(self, id: str) -> UserModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 result = await db.execute(select(User).where(User.id == id))
                 user = result.scalars().first()
                 return UserModel.model_validate(user)
@@ -146,7 +155,7 @@ class UsersTable:
 
     async def get_user_by_api_key(self, api_key: str) -> UserModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 result = await db.execute(select(User).where(User.api_key == api_key))
                 user = result.scalars().first()
                 return UserModel.model_validate(user)
@@ -155,7 +164,7 @@ class UsersTable:
 
     async def get_user_by_email(self, email: str) -> UserModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 result = await db.execute(select(User).where(User.email == email))
                 user = result.scalars().first()
                 return UserModel.model_validate(user)
@@ -164,7 +173,7 @@ class UsersTable:
 
     async def get_user_by_oauth_sub(self, sub: str) -> UserModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 result = await db.execute(select(User).where(User.oauth_sub == sub))
                 user = result.scalars().first()
                 return UserModel.model_validate(user)
@@ -174,7 +183,7 @@ class UsersTable:
     async def get_users(
         self, skip: int | None = None, limit: int | None = None
     ) -> list[UserModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             query = select(User).order_by(User.created_at.desc())
             if skip:
                 query = query.offset(skip)
@@ -187,21 +196,21 @@ class UsersTable:
             return [UserModel.model_validate(user) for user in users]
 
     async def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             result = await db.execute(select(User).where(User.id.in_(user_ids)))
             users = result.scalars().all()
 
             return [UserModel.model_validate(user) for user in users]
 
     async def get_user_domains(self) -> list[str]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             result = await db.execute(select(User.domain).distinct())
 
-            return [domain[0] for domain in result.scalars().all()]
+            return [domain[0] for domain in result.all()]
 
     async def get_num_users(self, domain: str | None = None) -> int | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 statement = select(func.count(User.id))
                 if domain:
                     statement = statement.where(User.domain == domain)
@@ -213,30 +222,30 @@ class UsersTable:
 
     async def get_first_user(self) -> UserModel | None:
         try:
-            async with get_async_db() as db:
-                result = await db.execute(select(User).order_by(User.created_at.asc()))
-                return UserModel.model_validate(result.scalar_one())
+            async with self.__db.get_async_db() as db:
+                result = await db.scalar(select(User).order_by(User.created_at.asc()))
+                return UserModel.model_validate(result)
         except Exception:
             return None
 
     async def get_user_webhook_url_by_id(self, id: str) -> str | None:
         try:
-            async with get_async_db() as db:
-                result = await db.execute(select(User).where(User.id == id))
-                user = result.scalar_one()
+            async with self.__db.get_async_db() as db:
+                if user := await db.scalar(select(User).where(User.id == id)):
+                    if user.settings is None:
+                        return None
+                    else:
+                        settings = user.settings
+                        ui = settings.get("ui", {})
+                        notifications = ui.get("notifications", {})
 
-                if user.settings is None:
-                    return None
-                else:
-                    return user.settings.ui.get("notifications", {}).get(
-                        "webhook_url", None
-                    )
+                        return notifications.get("webhook_url", None)
         except Exception:
             return None
 
     async def update_user_role_by_id(self, id: str, role: str) -> UserModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 user = await db.scalar(select(User).where(User.id == id))
 
                 if user:
@@ -251,7 +260,7 @@ class UsersTable:
         self, id: str, profile_image_url: str
     ) -> UserModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 user = await db.scalar(select(User).where(User.id == id))
 
                 if user:
@@ -264,7 +273,7 @@ class UsersTable:
 
     async def update_user_last_active_by_id(self, id: str) -> UserModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 user = await db.scalar(select(User).where(User.id == id))
 
                 if user:
@@ -279,7 +288,7 @@ class UsersTable:
         self, days: int = 1, domain: str | None = None
     ) -> int | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 start_time = int(time.time()) - (days * 24 * 60 * 60)
                 query = (
                     select(func.count())
@@ -300,7 +309,7 @@ class UsersTable:
         self, id: str, oauth_sub: str
     ) -> UserModel | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 user = await db.scalar(select(User).where(User.id == id))
 
                 if user:
@@ -311,9 +320,12 @@ class UsersTable:
         except Exception:
             return None
 
-    async def update_user_by_id(self, id: str, updated: dict) -> UserModel | None:
+    async def update_user_by_id(
+        self, id: str, updated: dict[str, Any]
+    ) -> UserModel | None:
         try:
-            async with get_async_db() as db:
+            # TODO: Should probably prevent `id` from being updated?
+            async with self.__db.get_async_db() as db:
                 user = await db.scalar(select(User).where(User.id == id))
 
                 if user:
@@ -332,12 +344,9 @@ class UsersTable:
 
     async def delete_user_by_id(self, id: str) -> bool:
         try:
-            # Remove User from Groups
-            _ = await Groups.remove_user_from_all_groups(id)
-
             # Delete User Chats
-            _ = await Chats.delete_chats_by_user_id(id)
-            async with get_async_db() as db:
+            _ = await self.__chats.delete_chats_by_user_id(id)
+            async with self.__db.get_async_db() as db:
                 # Delete User
                 _ = await db.execute(delete(User).where(User.id == id))
                 await db.commit()
@@ -348,7 +357,7 @@ class UsersTable:
 
     async def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 if user := await db.scalar(select(User).where(User.id == id)):
                     user.api_key = api_key
                     await db.commit()
@@ -360,7 +369,7 @@ class UsersTable:
 
     async def get_user_api_key_by_id(self, id: str) -> str | None:
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 if user := await db.scalar(select(User).where(User.id == id)):
                     return user.api_key
                 return None
@@ -368,7 +377,7 @@ class UsersTable:
             return None
 
     async def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             users = await db.scalars(select(User).where(User.id.in_(user_ids)))
             return [user.id for user in users.all()]
 
@@ -408,7 +417,7 @@ class UsersTable:
                 start_time = day_start
                 end_time = start_time + (24 * 60 * 60)
 
-                async with get_async_db() as db:
+                async with self.__db.get_async_db() as db:
                     query = (
                         select(func.count())
                         .select_from(User)
@@ -447,7 +456,7 @@ class UsersTable:
     ) -> dict[str, int]:
         """Get user metrics for a specific date range"""
         try:
-            async with get_async_db() as db:
+            async with self.__db.get_async_db() as db:
                 # Get the total count of users active in the range
                 query = (
                     select(func.count())
@@ -477,6 +486,3 @@ class UsersTable:
         except Exception as e:
             logger.error(f"Failed to get range metrics: {e}")
             return {"total_users": 0, "active_users": 0}
-
-
-Users = UsersTable()

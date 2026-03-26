@@ -1,13 +1,10 @@
-from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
 import logging
 
-from typing import Optional
-
+from fastapi import APIRouter, Depends, Request
+from open_webui.config import BannerModel, get_config, save_config
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.config import get_config, save_config
-from open_webui.config import BannerModel
+from pydantic import BaseModel
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -104,8 +101,8 @@ def export_config(user=Depends(get_admin_user)):
 # SetDefaultModels
 ############################
 class ModelsConfigForm(BaseModel):
-    DEFAULT_MODELS: Optional[str]
-    MODEL_ORDER_LIST: Optional[list[str]]
+    DEFAULT_MODELS: str | None
+    MODEL_ORDER_LIST: list[str | None]
 
 
 @router.get("/models", response_model=ModelsConfigForm)

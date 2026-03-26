@@ -1,81 +1,110 @@
-import time
-import logging
-import sys
-import requests
-import re
-
 import asyncio
-from typing import Optional
-import json
 import inspect
-from uuid import uuid4
-from concurrent.futures import ThreadPoolExecutor
+import json
+import logging
+import re
+import sys
+import time
 from datetime import datetime
+from typing import Optional
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from open_webui.models.message_metrics import MessageMetrics
+import requests
+import tiktoken
 from fastapi import Request
-
-from starlette.responses import StreamingResponse
-
-
-from open_webui.models.chats import Chats
-from open_webui.models.users import Users
-from open_webui.socket.main import (
-    get_event_call,
-    get_event_emitter,
-    get_active_status_by_user_id,
+from open_webui.config import (
+    DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    RAG_CONTEXT_FALLBACK_MAX_TOKENS,
+    RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE,
+    TIKTOKEN_ENCODING_NAME,
 )
+from open_webui.constants import TASKS
+from open_webui.env import (
+    ENABLE_REALTIME_CHAT_SAVE,
+    GLOBAL_LOG_LEVEL,
+    SRC_LOG_LEVELS,
+)
+from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
+from open_webui.models.db_services import CHATS, FUNCTIONS, MESSAGE_METRICS, USERS
+from open_webui.models.users import UserModel
+from open_webui.retrieval.utils import get_sources_from_files
+from open_webui.routers.images import GenerateImageForm, image_generations
+from open_webui.routers.retrieval import SearchForm, process_web_search
 from open_webui.routers.tasks import (
+    generate_chat_tags,
+    generate_image_prompt,
     generate_queries,
     generate_title,
-    generate_image_prompt,
-    generate_chat_tags,
 )
-from open_webui.routers.retrieval import process_web_search, SearchForm
-from open_webui.routers.images import image_generations, GenerateImageForm
-
-
-from open_webui.utils.webhook import post_webhook
-
-
-from open_webui.models.users import UserModel
-from open_webui.models.functions import Functions
-
-from open_webui.retrieval.utils import get_sources_from_files
-
-
+from open_webui.socket.main import (
+    get_active_status_by_user_id,
+    get_event_call,
+    get_event_emitter,
+)
+from open_webui.tasks import create_task
 from open_webui.utils.chat import generate_chat_completion
+from open_webui.utils.misc import (
+    add_or_update_system_message,
+    get_last_user_message,
+    get_message_list,
+    prepend_to_first_user_message_content,
+)
+from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.task import (
+    extract_title_from_response,
     get_task_model_id,
     rag_template,
     tools_function_calling_generation_template,
-)
-
-from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
-from open_webui.utils.misc import (
-    get_message_list,
-    add_or_update_system_message,
-    get_last_user_message,
-    prepend_to_first_user_message_content,
+    truncate_title_by_chars,
 )
 from open_webui.utils.tools import get_tools_async
-from open_webui.utils.plugin import load_function_module_by_id
-
-
-from open_webui.tasks import create_task
-
-from open_webui.config import DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
-from open_webui.env import (
-    SRC_LOG_LEVELS,
-    GLOBAL_LOG_LEVEL,
-    ENABLE_REALTIME_CHAT_SAVE,
-)
-from open_webui.constants import TASKS
+from open_webui.utils.webhook import post_webhook
+from starlette.responses import StreamingResponse
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def estimate_token_count(text: str, encoding_name: str = "cl100k_base") -> int:
+    """Estimate the number of tokens in a text string using tiktoken."""
+    if not text:
+        return 0
+    enc = tiktoken.get_encoding(encoding_name)
+    return len(enc.encode(text))
+
+
+def truncate_to_token_limit(
+    text: str, max_tokens: int, encoding_name: str = "cl100k_base"
+) -> str:
+    """Truncate text to fit within a token limit using tiktoken."""
+    if not text or max_tokens <= 0:
+        return ""
+    enc = tiktoken.get_encoding(encoding_name)
+    tokens = enc.encode(text)
+    if len(tokens) <= max_tokens:
+        return text
+    return enc.decode(tokens[:max_tokens])
+
+
+def sanitize_tool_ids_for_features(
+    tool_ids: Optional[list], features: Optional[dict]
+) -> Optional[list]:
+    """
+    Guardrail: web search or wiki grounding must not run with other tool calls.
+    Ignore tool_ids when either feature is active.
+    """
+    if not tool_ids:
+        return tool_ids
+
+    if not features:
+        return tool_ids
+
+    if features.get("web_search") or features.get("wiki_grounding"):
+        return None
+
+    return tool_ids
 
 
 def fetch_wikipedia_title_and_excerpt(url: str) -> tuple[str, str]:
@@ -166,7 +195,7 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
     async def get_filter_function_ids(model):
 
         # Get filter functions sorted by valve priority.
-        functions = await Functions.get_global_filter_functions(sorted=True)
+        functions = await FUNCTIONS.get_global_filter_functions(sorted=True)
         filter_ids = [function.id for function in functions]
         if "info" in model and "meta" in model["info"]:
             filter_ids.extend(model["info"]["meta"].get("filterIds", []))
@@ -174,7 +203,7 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
 
         enabled_filter_ids = [
             function.id
-            for function in await Functions.get_functions_by_type(
+            for function in await FUNCTIONS.get_functions_by_type(
                 "filter", active_only=True
             )
         ]
@@ -187,7 +216,7 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
 
     filter_ids = await get_filter_function_ids(model)
     for filter_id in filter_ids:
-        filter = await Functions.get_function_by_id(filter_id)
+        filter = await FUNCTIONS.get_function_by_id(filter_id)
         if not filter:
             continue
 
@@ -203,7 +232,7 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
 
         # Apply valves to the function
         if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            valves = await Functions.get_function_valves_by_id(filter_id)
+            valves = await FUNCTIONS.get_function_valves_by_id(filter_id)
             function_module.valves = function_module.Valves(
                 **(valves if valves else {})
             )
@@ -226,7 +255,7 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
                 if "__user__" in params and hasattr(function_module, "UserValves"):
                     try:
                         params["__user__"]["valves"] = function_module.UserValves(
-                            **await Functions.get_user_valves_by_id_and_user_id(
+                            **await FUNCTIONS.get_user_valves_by_id_and_user_id(
                                 filter_id, params["__user__"]["id"]
                             )
                         )
@@ -251,7 +280,7 @@ async def chat_completion_filter_functions_handler(request, body, model, extra_p
 async def chat_completion_tools_handler(
     request: Request, body: dict, user: UserModel, models, extra_params: dict
 ) -> tuple[dict, dict]:
-    async def get_content_from_response(response) -> Optional[str]:
+    async def get_content_from_response(response) -> str | None:
         content = None
         if hasattr(response, "body_iterator"):
             async for chunk in response.body_iterator:
@@ -631,7 +660,7 @@ async def chat_web_search_handler(
                 },
             }
         )
-        return
+        return form_data
 
     all_results = []
 
@@ -648,6 +677,8 @@ async def chat_web_search_handler(
             },
         }
     )
+
+    terminal_status_sent = False
 
     try:
         results = await process_web_search(
@@ -690,13 +721,14 @@ async def chat_web_search_handler(
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": "No search results found",
+                        "description": 'No search results found for "{{searchQuery}}"',
                         "query": searchQuery,
                         "done": True,
                         "error": True,
                     },
                 }
             )
+            terminal_status_sent = True
     except Exception as e:
         log.exception(e)
         await event_emitter(
@@ -711,6 +743,7 @@ async def chat_web_search_handler(
                 },
             }
         )
+        terminal_status_sent = True
 
     if all_results:
         urls = []
@@ -723,19 +756,21 @@ async def chat_web_search_handler(
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": "Searched {{count}} sites",
+                    "description": 'Searched {{count}} sites for "{{searchQuery}}"',
                     "urls": urls,
+                    "query": searchQuery,
                     "done": True,
                 },
             }
         )
-    else:
+    elif not terminal_status_sent:
         await event_emitter(
             {
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": "No search results found",
+                    "description": 'No search results found for "{{searchQuery}}"',
+                    "query": searchQuery,
                     "done": True,
                     "error": True,
                 },
@@ -1165,26 +1200,17 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body["messages"])]
 
         try:
-            # Offload get_sources_from_files to a separate thread and run async function
-            # NOTE: Do we need this to run in its own thread now?
-            loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
-                sources = await loop.run_in_executor(
-                    executor,
-                    lambda: asyncio.run(
-                        get_sources_from_files(
-                            request=request,
-                            files=files,
-                            queries=queries,
-                            embedding_function=request.app.state.EMBEDDING_FUNCTION,
-                            k=request.app.state.config.TOP_K,
-                            reranking_function=request.app.state.rf,
-                            r=request.app.state.config.RELEVANCE_THRESHOLD,
-                            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                            full_context=request.app.state.config.RAG_FULL_CONTEXT,
-                        )
-                    ),
-                )
+            sources = await get_sources_from_files(
+                request=request,
+                files=files,
+                queries=queries,
+                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                k=request.app.state.config.TOP_K,
+                reranking_function=request.app.state.rf,
+                r=request.app.state.config.RELEVANCE_THRESHOLD,
+                hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                full_context=request.app.state.config.RAG_FULL_CONTEXT,
+            )
         except Exception as e:
             log.exception(e)
 
@@ -1347,6 +1373,16 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         form_data["files"] = files
 
     features = form_data.pop("features", None)
+    # Sanitize tool_ids to ensure web_search/wiki_grounding do not run with tool calls
+    original_tool_ids = form_data.get("tool_ids")
+    form_data["tool_ids"] = sanitize_tool_ids_for_features(original_tool_ids, features)
+
+    if original_tool_ids and not form_data.get("tool_ids"):
+        log.info(
+            "Ignoring tool_ids because exclusive feature mode is active "
+            "(web_search/wiki_grounding)."
+        )
+
     if features:
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
@@ -1421,9 +1457,67 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
         context_string = context_string.strip()
         log.debug(f"Generated context string length: {len(context_string)}")
+        log.debug(f"Context string preview: {context_string[:500]}...")
+
+        # Truncate context if it exceeds token limit to prevent blowing context window
+        fallback_max_tokens = RAG_CONTEXT_FALLBACK_MAX_TOKENS.value
+        encoding_name = TIKTOKEN_ENCODING_NAME.value
+        context_limit_pct = float(RAG_CONTEXT_TOKEN_LIMIT_PERCENTAGE.value)
+
+        # Dynamically determine the effective limit based on model context window
+        model_context_length = model.get("context_length", 0)
         log.debug(
-            f"Context string preview: {context_string[:500]}..."
-        )  # Log first 500 chars
+            f"[MODEL INFO]: model_id={model.get('id')}, context_length={model_context_length}"
+        )
+
+        if model_context_length and model_context_length > 0:
+            # Use the configured percentage of the model's context window for RAG context
+            max_context_tokens = int(model_context_length * context_limit_pct)
+            log.debug(
+                f"Model context: {model_context_length} tokens, "
+                f"{context_limit_pct*100:.0f}% = {max_context_tokens} tokens"
+            )
+        else:
+            # No model context_length available, fall back to admin-configured limit
+            max_context_tokens = fallback_max_tokens
+            log.debug(
+                f"Model context window unknown, using fallback limit: {max_context_tokens} tokens"
+            )
+
+        estimated_tokens = estimate_token_count(context_string, encoding_name)
+
+        if estimated_tokens > max_context_tokens:
+
+            # Calculate available character budget for truncation
+            truncation_notice = f"\n[RAG context truncated from {estimated_tokens} to ~{max_context_tokens} tokens]"
+            notice_tokens = estimate_token_count(truncation_notice, encoding_name)
+            target_tokens = max_context_tokens - notice_tokens
+
+            # Use tiktoken to truncate precisely at the token boundary
+            truncated_context = truncate_to_token_limit(
+                context_string, target_tokens, encoding_name
+            )
+
+            # Try to truncate at the last complete </source> tag for clean XML
+            last_source_end = truncated_context.rfind("</source>")
+            if last_source_end > 0:
+                truncated_context = truncated_context[
+                    : last_source_end + len("</source>")
+                ]
+
+            context_string = truncated_context + truncation_notice
+
+            # Notify the client that the context was truncated
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "rag_context_truncated",
+                        "description": "Some search results were trimmed to fit the model's limit.",
+                        "done": True,
+                    },
+                }
+            )
 
         if (
             log.isEnabledFor(logging.DEBUG)
@@ -1500,10 +1594,10 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
 
 async def process_chat_response(
-    request, response, form_data, user, events, metadata, tasks
+    request, response, form_data, user: UserModel, events, metadata, tasks
 ):
     async def background_tasks_handler():
-        message_map = await Chats.get_messages_by_chat_id(metadata["chat_id"])
+        message_map = await CHATS.get_messages_by_chat_id(metadata["chat_id"])
         message = message_map.get(metadata["message_id"]) if message_map else None
 
         if message:
@@ -1523,22 +1617,16 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            if len(res.get("choices", [])) == 1:
-                                title = (
-                                    res.get("choices", [])[0]
-                                    .get("message", {})
-                                    .get(
-                                        "content",
-                                        message.get("content", "New Chat"),
-                                    )
-                                ).strip()
-                            else:
-                                title = None
+                            title = extract_title_from_response(res)
 
                             if not title:
+                                # Fallback: use first message or default
                                 title = messages[0].get("content", "New Chat")
+                            else:
+                                # Truncate title to reasonable length (max 50 characters)
+                                title = truncate_title_by_chars(title, max_chars=50)
 
-                            _ = await Chats.update_chat_title_by_id(
+                            _ = await CHATS.update_chat_title_by_id(
                                 metadata["chat_id"], title
                             )
 
@@ -1551,7 +1639,7 @@ async def process_chat_response(
                     elif len(messages) == 2:
                         title = messages[0].get("content", "New Chat")
 
-                        _ = await Chats.update_chat_title_by_id(
+                        _ = await CHATS.update_chat_title_by_id(
                             metadata["chat_id"], title
                         )
 
@@ -1589,8 +1677,8 @@ async def process_chat_response(
 
                         try:
                             tags = json.loads(tags_string).get("tags", [])
-                            _ = await Chats.update_chat_tags_by_id(
-                                metadata["chat_id"], tags, user
+                            _ = await CHATS.update_chat_tags_by_id(
+                                metadata["chat_id"], tags, user.id
                             )
 
                             await event_emitter(
@@ -1616,7 +1704,7 @@ async def process_chat_response(
     if not isinstance(response, StreamingResponse):
         if event_emitter:
             if "selected_model_id" in response:
-                _ = await Chats.upsert_message_to_chat_by_id_and_message_id(
+                _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
                     {
@@ -1635,7 +1723,7 @@ async def process_chat_response(
                         }
                     )
 
-                    title = await Chats.get_chat_title_by_id(metadata["chat_id"])
+                    title = await CHATS.get_chat_title_by_id(metadata["chat_id"])
 
                     await event_emitter(
                         {
@@ -1649,7 +1737,7 @@ async def process_chat_response(
                     )
 
                     # Save message in the database
-                    _ = await Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -1659,7 +1747,7 @@ async def process_chat_response(
 
                     # Send a webhook notification if the user is not active
                     if get_active_status_by_user_id(user.id) is None:
-                        webhook_url = await Users.get_user_webhook_url_by_id(user.id)
+                        webhook_url = await USERS.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             post_webhook(
                                 webhook_url,
@@ -1683,7 +1771,7 @@ async def process_chat_response(
                             )
 
                             # Save sources in the database
-                            _ = await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
                                 {
@@ -1712,7 +1800,7 @@ async def process_chat_response(
                     "total_tokens": 0,
                 }
 
-            await MessageMetrics.insert_new_metrics(
+            await MESSAGE_METRICS.insert_new_metrics(
                 user,
                 model_used,
                 usage_data,
@@ -1734,7 +1822,7 @@ async def process_chat_response(
 
         # Handle as a background task
         async def post_response_handler(response, events):
-            message = await Chats.get_message_by_id_and_message_id(
+            message = await CHATS.get_message_by_id_and_message_id(
                 metadata["chat_id"], metadata["message_id"]
             )
             content = message.get("content", "") if message else ""
@@ -1763,7 +1851,7 @@ async def process_chat_response(
                     )
 
                     # Save message in the database
-                    _ = await Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -1805,7 +1893,7 @@ async def process_chat_response(
                                 or metadata["selected_model_id"]
                                 or form_data["model"]
                             )
-                            await MessageMetrics.insert_new_metrics(
+                            await MESSAGE_METRICS.insert_new_metrics(
                                 user,
                                 model_used,
                                 data["usage"],
@@ -1814,7 +1902,7 @@ async def process_chat_response(
                             metrics_recorded = True
 
                         if "selected_model_id" in data:
-                            _ = await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
                                 {
@@ -1899,7 +1987,7 @@ async def process_chat_response(
 
                                 if ENABLE_REALTIME_CHAT_SAVE:
                                     # Save message in the database
-                                    _ = await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                                         metadata["chat_id"],
                                         metadata["message_id"],
                                         {
@@ -1924,12 +2012,12 @@ async def process_chat_response(
                         else:
                             continue
 
-                title = await Chats.get_chat_title_by_id(metadata["chat_id"])
+                title = await CHATS.get_chat_title_by_id(metadata["chat_id"])
                 data = {"done": True, "content": content, "title": title}
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
-                    _ = await Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -1939,7 +2027,7 @@ async def process_chat_response(
 
                 # Send a webhook notification if the user is not active
                 if get_active_status_by_user_id(user.id) is None:
-                    webhook_url = await Users.get_user_webhook_url_by_id(user.id)
+                    webhook_url = await USERS.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         post_webhook(
                             webhook_url,
@@ -1969,7 +2057,7 @@ async def process_chat_response(
                     )
 
                     # Save sources in the database
-                    _ = await Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -1990,7 +2078,7 @@ async def process_chat_response(
                         "prompt_tokens": 0,  # 0 to indicate no usage data was available
                         "total_tokens": 0,
                     }
-                    await MessageMetrics.insert_new_metrics(
+                    await MESSAGE_METRICS.insert_new_metrics(
                         user,
                         model_used,
                         fallback_usage,
@@ -2004,7 +2092,7 @@ async def process_chat_response(
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
-                    _ = await Chats.upsert_message_to_chat_by_id_and_message_id(
+                    _ = await CHATS.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {

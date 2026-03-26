@@ -1,11 +1,10 @@
 import time
 import uuid
 
-from open_webui.internal.db import get_async_db
+from open_webui.internal.db_utils import AsyncDatabaseConnector
 from open_webui.models.base import Base
-
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, delete, JSON, select, Text
+from sqlalchemy import JSON, BigInteger, Text, delete, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 ####################
@@ -91,10 +90,16 @@ class MessageResponse(MessageModel):
 
 
 class MessageTable:
+
+    __db: AsyncDatabaseConnector
+
+    def __init__(self, db_connector: AsyncDatabaseConnector) -> None:
+        self.__db = db_connector
+
     async def insert_new_message(
         self, form_data: MessageForm, channel_id: str, user_id: str
     ) -> MessageModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             id = str(uuid.uuid4())
 
             ts = int(time.time_ns())
@@ -119,7 +124,7 @@ class MessageTable:
             return MessageModel.model_validate(result) if result else None
 
     async def get_message_by_id(self, id: str) -> MessageResponse | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             message = await db.get(Message, id)
             if not message:
                 return None
@@ -137,7 +142,7 @@ class MessageTable:
             )
 
     async def get_replies_by_message_id(self, id: str) -> list[MessageModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             all_messages = await db.scalars(
                 select(Message)
                 .where(Message.parent_id == id)
@@ -149,7 +154,7 @@ class MessageTable:
             ]
 
     async def get_reply_user_ids_by_message_id(self, id: str) -> list[str]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             ids = await db.scalars(
                 select(Message.user_id).where(Message.parent_id == id)
             )
@@ -158,7 +163,7 @@ class MessageTable:
     async def get_messages_by_channel_id(
         self, channel_id: str, skip: int = 0, limit: int = 50
     ) -> list[MessageModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             messages = await db.scalars(
                 select(Message)
                 .where(Message.channel_id == channel_id, Message.parent_id == None)
@@ -171,7 +176,7 @@ class MessageTable:
     async def get_messages_by_parent_id(
         self, channel_id: str, parent_id: str, skip: int = 0, limit: int = 50
     ) -> list[MessageModel]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             parent_message = await db.get(Message, parent_id)
 
             if not parent_message:
@@ -198,7 +203,7 @@ class MessageTable:
     async def update_message_by_id(
         self, id: str, form_data: MessageForm
     ) -> MessageModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             if message := await db.get(Message, id):
                 message.content = form_data.content
                 message.data = form_data.data
@@ -211,7 +216,7 @@ class MessageTable:
     async def add_reaction_to_message(
         self, id: str, user_id: str, name: str
     ) -> MessageReactionModel | None:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             reaction_id = str(uuid.uuid4())
             reaction = MessageReactionModel(
                 id=reaction_id,
@@ -227,7 +232,7 @@ class MessageTable:
             return MessageReactionModel.model_validate(result) if result else None
 
     async def get_reactions_by_message_id(self, id: str) -> list[Reactions]:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             all_reactions = await db.scalars(
                 select(MessageReaction).where(MessageReaction.message_id == id)
             )
@@ -248,7 +253,7 @@ class MessageTable:
     async def remove_reaction_by_id_and_user_id_and_name(
         self, id: str, user_id: str, name: str
     ) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             _ = await db.execute(
                 delete(MessageReaction).where(
                     MessageReaction.message_id == id,
@@ -260,7 +265,7 @@ class MessageTable:
             return True
 
     async def delete_reactions_by_id(self, id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             _ = await db.execute(
                 delete(MessageReaction).where(
                     MessageReaction.message_id == id,
@@ -270,7 +275,7 @@ class MessageTable:
             return True
 
     async def delete_replies_by_id(self, id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             _ = await db.execute(
                 delete(Message).where(
                     Message.parent_id == id,
@@ -280,7 +285,7 @@ class MessageTable:
             return True
 
     async def delete_message_by_id(self, id: str) -> bool:
-        async with get_async_db() as db:
+        async with self.__db.get_async_db() as db:
             # Delete all reactions to this message
             _ = await db.execute(
                 delete(MessageReaction).where(MessageReaction.message_id == id)
@@ -290,6 +295,3 @@ class MessageTable:
 
             await db.commit()
             return True
-
-
-Messages = MessageTable()

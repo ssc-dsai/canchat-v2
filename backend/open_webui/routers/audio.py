@@ -5,39 +5,36 @@ import os
 import uuid
 from functools import lru_cache
 from pathlib import Path
-from pydub import AudioSegment
 
-import aiohttp
 import aiofiles
+import aiohttp
 import requests
-
 from fastapi import (
+    APIRouter,
     Depends,
     File,
     HTTPException,
     Request,
     UploadFile,
     status,
-    APIRouter,
 )
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
-
-
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.misc import validate_path
 from open_webui.config import (
+    CACHE_DIR,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
-    CACHE_DIR,
 )
-
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
-    SRC_LOG_LEVELS,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    SRC_LOG_LEVELS,
 )
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.misc import validate_path
+from pydantic import BaseModel
+from pydub import AudioSegment
+from pydub.utils import mediainfo
 
 router = APIRouter()
 
@@ -57,8 +54,6 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # Utility functions
 #
 ##########################################
-
-from pydub.utils import mediainfo
 
 
 def is_mp4_audio(file_path):

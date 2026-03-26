@@ -8,13 +8,13 @@ class TestPrompts(AbstractPostgresTest):
     @classmethod
     def setup_class(cls):
         super().setup_class()
-        from open_webui.models.users import Users
+        from open_webui.models.db_services import USERS
 
-        cls.users = Users
+        cls.users = USERS
 
-    def setup_method(self):
-        super().setup_method()
-        self.users.insert_new_user(
+    async def setup_method(self):
+        await super().setup_method()
+        _ = await self.users.insert_new_user(
             "2", "Admin User", "admin@example.com", "/admin.png", "admin"
         )
 

@@ -44,14 +44,14 @@ class AbstractIntegrationTest:
     def setup_class(cls):
         pass
 
-    def setup_method(self):
+    async def setup_method(self):
         pass
 
     @classmethod
     def teardown_class(cls):
         pass
 
-    def teardown_method(self):
+    async def teardown_method(self):
         pass
 
 
@@ -122,28 +122,30 @@ class AbstractPostgresTest(AbstractIntegrationTest):
                 db.close()
 
                 # Add open_webui.internal.db module
+                from sqlalchemy.orm import scoped_session
+
                 from open_webui.internal import db as db_module
-                from sqlalchemy.orm import scoped_session, sessionmaker
+                from open_webui.internal.db_utils import (
+                    AsyncDatabaseConnector,
+                    DatabaseConnector,
+                    get_async_session_maker,
+                    get_session_maker,
+                )
 
                 # Re-create engine with new URL
-                new_engine = create_engine(database_url, pool_pre_ping=True)
-                db_module.async_engine = new_engine
-                db_module.SessionLocal = sessionmaker(
-                    autocommit=False,
-                    autoflush=False,
-                    bind=new_engine,
-                    expire_on_commit=False,
+                db_module.DB_SESSION = scoped_session(get_session_maker(database_url))
+                db_module.DATABASE_CONNECTOR = DatabaseConnector(
+                    session=db_module.DB_SESSION
                 )
-                db_module.Session = scoped_session(db_module.SessionLocal)
+
+                db_module.ASYNC_SESSION_LOCAL = get_async_session_maker(database_url)
+                db_module.ASYNC_DATABASE_CONNECTOR = AsyncDatabaseConnector(
+                    session=db_module.ASYNC_SESSION_LOCAL
+                )
 
                 # Run migrations on the new DB
                 try:
-                    db_module.handle_peewee_migration(database_url)
-                except Exception as e:
-                    log.warning(f"Peewee migration failed: {e}")
-
-                try:
-                    db_module.run_migrations()
+                    db_module.run_migrations(database_url)
                 except Exception as e:
                     log.error(f"Alembic migration failed: {e}")
                     raise e
@@ -158,22 +160,22 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             pytest.fail(f"Could not setup test environment: {ex}")
 
     def _check_db_connection(self):
-        from open_webui.internal.db import Session
+        from open_webui.internal.db import DB_SESSION
 
         retries = 10
         while retries > 0:
             try:
-                Session.execute(text("SELECT 1"))
-                Session.commit()
+                DB_SESSION.execute(text("SELECT 1"))
+                DB_SESSION.commit()
                 break
             except Exception as e:
-                Session.rollback()
+                DB_SESSION.rollback()
                 log.warning(e)
                 time.sleep(3)
                 retries -= 1
 
-    def setup_method(self):
-        super().setup_method()
+    async def setup_method(self):
+        await super().setup_method()
         self._check_db_connection()
 
     @classmethod
@@ -181,11 +183,11 @@ class AbstractPostgresTest(AbstractIntegrationTest):
         super().teardown_class()
         cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(force=True)
 
-    def teardown_method(self):
-        from open_webui.internal.db import Session
+    async def teardown_method(self):
+        from open_webui.internal.db import DB_SESSION
 
         # rollback everything not yet committed
-        Session.commit()
+        DB_SESSION.commit()
 
         # truncate all tables
         tables = [
@@ -193,12 +195,11 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             "chat",
             "chatidtag",
             "document",
-            "memory",
             "model",
             "prompt",
             "tag",
             '"user"',
         ]
         for table in tables:
-            Session.execute(text(f"TRUNCATE TABLE {table}"))
-        Session.commit()
+            DB_SESSION.execute(text(f"TRUNCATE TABLE {table}"))
+        DB_SESSION.commit()

@@ -1,19 +1,16 @@
+import asyncio
 import inspect
 import logging
 import re
-import asyncio
+from functools import partial, update_wrapper
 from typing import Any, Awaitable, Callable, get_type_hints
-from functools import update_wrapper, partial
-
 
 from fastapi import Request
-from pydantic import BaseModel, Field, create_model
 from langchain_core.utils.function_calling import convert_to_openai_function
-
-
-from open_webui.models.tools import Tools
+from open_webui.models.db_services import TOOLS
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tools_module_by_id
+from pydantic import BaseModel, Field, create_model
 
 log = logging.getLogger(__name__)
 
@@ -148,7 +145,7 @@ async def get_tools_async(
 
     # Add regular tools
     for tool_id in tool_ids:
-        tools = await Tools.get_tool_by_id(tool_id)
+        tools = await TOOLS.get_tool_by_id(tool_id)
         if tools is None:
             continue
 
@@ -159,12 +156,12 @@ async def get_tools_async(
 
         extra_params["__id__"] = tool_id
         if hasattr(module, "valves") and hasattr(module, "Valves"):
-            valves = await Tools.get_tool_valves_by_id(tool_id) or {}
+            valves = await TOOLS.get_tool_valves_by_id(tool_id) or {}
             module.valves = module.Valves(**valves)
 
         if hasattr(module, "UserValves"):
             extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
-                **await Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
+                **await TOOLS.get_user_valves_by_id_and_user_id(tool_id, user.id)
             )
 
         for spec in tools.specs:
