@@ -41,6 +41,12 @@ from open_webui.retrieval.loaders.youtube import YoutubeLoader
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.retrieval.web.web_search_logger import (
+    new_web_search_event_id,
+    log_web_search_result,
+    log_web_search_content_load,
+    web_search_audit_scope,
+)
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
@@ -710,22 +716,6 @@ async def save_docs_to_vector_db(
     add: bool = False,
     user=None,
 ) -> bool:
-    """
-    Save documents to the vector database with proper synchronization to prevent
-    race conditions during concurrent operations.
-
-    Race conditions prevented:
-    1. Hash duplicate check-then-insert: Now atomic within lock
-    2. Collection exists check-then-create: Handled by QdrantClient.upsert() with lock
-    3. Overwrite delete-then-insert: Now atomic within lock
-
-    Returns:
-        bool: True if successful
-
-    Raises:
-        ValueError: If duplicate content detected or other validation errors
-    """
-
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
 
@@ -743,10 +733,27 @@ async def save_docs_to_vector_db(
         return ", ".join(docs_info)
 
     log.info(
-        f"[RETRIEVAL:SAVE_DOCS_START] save_docs_to_vector_db: document {_get_docs_info(docs)} → {collection_name}"
+        f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
 
-    # Prepare documents (splitting) BEFORE acquiring lock to minimize lock hold time
+    # Check if entries with the same hash (metadata.hash) already exist
+    if metadata and "hash" in metadata:
+        result = await VECTOR_DB_CLIENT.query(
+            collection_name=collection_name,
+            filter={"hash": metadata["hash"]},
+        )
+
+        if (
+            result is not None
+            and result.ids
+            and len(result.ids) > 0
+            and len(result.ids[0]) > 0
+        ):
+            existing_doc_ids = result.ids[0]
+            if existing_doc_ids:
+                log.info(f"Document with hash {metadata['hash']} already exists")
+                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+
     if split:
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
@@ -812,72 +819,67 @@ async def save_docs_to_vector_db(
             if isinstance(value, datetime):
                 metadata[key] = str(value)
 
-    # Generate embeddings BEFORE acquiring lock to minimize lock hold time
-    embedding_function = get_embedding_function(
-        request.app.state.config.RAG_EMBEDDING_ENGINE,
-        request.app.state.config.RAG_EMBEDDING_MODEL,
-        request.app.state.ef,
-        (
-            request.app.state.config.RAG_OPENAI_API_BASE_URL
-            if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-            else request.app.state.config.RAG_OLLAMA_BASE_URL
-        ),
-        (
-            request.app.state.config.RAG_OPENAI_API_KEY
-            if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-            else request.app.state.config.RAG_OLLAMA_API_KEY
-        ),
-        request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-    )
-
-    # Check if embedding function is properly initialized
-    if embedding_function is None:
-        error_msg = f"Embedding function is None. Engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}, Model: {request.app.state.config.RAG_EMBEDDING_MODEL}"
-        log.error(error_msg)
-        raise ValueError(error_msg)
-
-    embeddings = embedding_function(
-        list(map(lambda x: x.replace("\n", " "), texts)), user=user
-    )
-
-    items = [
-        {
-            "id": str(uuid.uuid4()),
-            "text": text,
-            "vector": embeddings[idx],
-            "metadata": metadatas[idx],
-        }
-        for idx, text in enumerate(texts)
-    ]
-
-    # Locking is now handled internally by QdrantClient methods
-    # The lock manager automatically handles reentrancy, so delete_collection
-    # and insert can be called sequentially without deadlock
     try:
         if await VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            log.info(f"collection {collection_name} already exists")
+
             if overwrite:
-                log.info(f"Overwriting collection: {collection_name}")
                 await VECTOR_DB_CLIENT.delete_collection(
-                    collection_name=collection_name,
+                    collection_name=collection_name
                 )
+                log.info(f"deleting existing collection {collection_name}")
             elif add is False:
+                log.info(
+                    f"collection {collection_name} already exists, overwrite is False and add is False"
+                )
                 return True
+
+        log.info(f"adding to collection {collection_name}")
+        embedding_function = get_embedding_function(
+            request.app.state.config.RAG_EMBEDDING_ENGINE,
+            request.app.state.config.RAG_EMBEDDING_MODEL,
+            request.app.state.ef,
+            (
+                request.app.state.config.RAG_OPENAI_API_BASE_URL
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else request.app.state.config.RAG_OLLAMA_BASE_URL
+            ),
+            (
+                request.app.state.config.RAG_OPENAI_API_KEY
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                else request.app.state.config.RAG_OLLAMA_API_KEY
+            ),
+            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+        )
+
+        # Check if embedding function is properly initialized
+        if embedding_function is None:
+            error_msg = f"Embedding function is None. Engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}, Model: {request.app.state.config.RAG_EMBEDDING_MODEL}"
+            log.error(error_msg)
+            raise ValueError(error_msg)
+
+        embeddings = embedding_function(
+            list(map(lambda x: x.replace("\n", " "), texts)), user=user
+        )
+
+        items = [
+            {
+                "id": str(uuid.uuid4()),
+                "text": text,
+                "vector": embeddings[idx],
+                "metadata": metadatas[idx],
+            }
+            for idx, text in enumerate(texts)
+        ]
 
         await VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
         )
-        log.info(
-            f"Successfully indexed {len(items)} document chunks in collection: {collection_name}"
-        )
 
         return True
-
     except Exception as e:
-        log.error(
-            f"Error saving documents to collection {collection_name}: {type(e).__name__}: {e}",
-            exc_info=True,
-        )
+        log.exception(e)
         raise e
 
 
@@ -965,18 +967,14 @@ async def process_file(
             # Usage: /files/
             file_path = file.path
             if file_path:
-                # Storage and loader calls can block; keep them off the event loop.
-                file_path = await asyncio.to_thread(Storage.get_file, file_path)
+                file_path = Storage.get_file(file_path)
                 loader = Loader(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                 )
-                docs = await asyncio.to_thread(
-                    loader.load,
-                    file.filename,
-                    file.meta.get("content_type"),
-                    file_path,
+                docs = loader.load(
+                    file.filename, file.meta.get("content_type"), file_path
                 )
 
                 docs = [
@@ -1183,7 +1181,12 @@ async def process_web(
 
 
 def search_web(
-    request: Request, engine: str, query: str, request_timeout: Optional[int] = None
+    request: Request,
+    engine: str,
+    query: str,
+    request_timeout: Optional[int] = None,
+    user=None,
+    audit_event_id: Optional[str] = None,
 ) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
@@ -1204,7 +1207,29 @@ def search_web(
         query (str): The query to search for
         request_timeout (Optional[int]): Optional per-request timeout override in seconds.
             If not provided, providers use the configured default request timeout.
+        user: The authenticated user who triggered the search (for audit logging).
     """
+
+    result_count = request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT
+    domain_filter = request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+
+    with web_search_audit_scope(
+        engine=engine,
+        query=query,
+        result_count_requested=result_count,
+        domain_filter_list=domain_filter,
+        user=user,
+        event_id=audit_event_id,
+    ) as dispatch_ctx:
+        results = _dispatch_search(request, engine, query, request_timeout)
+        log_web_search_result(dispatch_ctx=dispatch_ctx, results=results)
+        return results
+
+
+def _dispatch_search(
+    request: Request, engine: str, query: str, request_timeout: Optional[int] = None
+) -> list[SearchResult]:
+    """Internal dispatcher — routes to the correct search provider."""
 
     # TODO: add playwright to search the web
     if engine == "searxng":
@@ -1352,6 +1377,7 @@ async def process_web_search(
     total_timeout = RAG_WEB_SEARCH_TOTAL_TIMEOUT.value
     request_timeout_cap = RAG_WEB_SEARCH_REQUEST_TIMEOUT.value
     start_time = time.monotonic()
+    audit_event_id = new_web_search_event_id()
     loaded_docs: list[Document] = []
     loaded_urls: list[str] = []
 
@@ -1378,6 +1404,8 @@ async def process_web_search(
                     request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                     form_data.query,
                     request_timeout,
+                    user,
+                    audit_event_id,
                 )
             except TimeoutError:
                 raise
@@ -1394,6 +1422,7 @@ async def process_web_search(
             try:
                 urls = [result.link for result in web_results]
                 loaded_urls = urls
+                content_load_start = time.monotonic()
                 request_timeout = get_capped_request_timeout()
                 loader = get_web_loader(
                     urls,
@@ -1424,6 +1453,17 @@ async def process_web_search(
                 loaded_docs = docs
 
                 if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                    content_load_ms = round(
+                        (time.monotonic() - content_load_start) * 1000
+                    )
+                    log_web_search_content_load(
+                        event_id=audit_event_id,
+                        urls=urls,
+                        docs_loaded=len(docs),
+                        latency_ms=content_load_ms,
+                        bypass_embedding=True,
+                        engine=request.app.state.config.RAG_WEB_SEARCH_ENGINE,
+                    )
                     # Return raw results without embedding
                     return {
                         "status": True,
@@ -1454,6 +1494,17 @@ async def process_web_search(
                     user=user,
                 )
 
+                content_load_ms = round((time.monotonic() - content_load_start) * 1000)
+                log_web_search_content_load(
+                    event_id=audit_event_id,
+                    urls=urls,
+                    docs_loaded=len(docs),
+                    latency_ms=content_load_ms,
+                    bypass_embedding=False,
+                    collection_name=collection_name,
+                    engine=request.app.state.config.RAG_WEB_SEARCH_ENGINE,
+                )
+
                 return {
                     "status": True,
                     "collection_name": collection_name,
@@ -1463,6 +1514,15 @@ async def process_web_search(
             except (TimeoutError, asyncio.TimeoutError):
                 raise
             except Exception as e:
+                content_load_ms = round((time.monotonic() - content_load_start) * 1000)
+                log_web_search_content_load(
+                    event_id=audit_event_id,
+                    urls=urls,
+                    docs_loaded=0,
+                    latency_ms=content_load_ms,
+                    engine=request.app.state.config.RAG_WEB_SEARCH_ENGINE,
+                    error=e,
+                )
                 log.exception(e)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
