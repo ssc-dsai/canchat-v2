@@ -230,7 +230,7 @@
 					generateLabels: (c) => {
 						const items = Chart.defaults.plugins.legend.labels.generateLabels(c);
 						return items.map((i) => {
-							i.text = `${i.text} ${i.text === $i18n.t('Connected Users') ? $i18n.t('(Users who logged in during selected period)') : i.text === $i18n.t('Active Users') ? $i18n.t('(Users who prompted during selected period)') : $i18n.t('(All enrolled users to date)')}`;
+							i.text = `${i.text} ${i.text === $i18n.t('Last Active Users') ? $i18n.t('(Users whose last recorded activity was during the selected period)') : i.text === $i18n.t('Active Users') ? $i18n.t('(Users who prompted during selected period)') : $i18n.t('(All enrolled users to date)')}`;
 							return i;
 						});
 					}
@@ -404,7 +404,7 @@
 		}
 		if (userByDepartmentChart) {
 			userByDepartmentChart.data.datasets[0].label = $i18n.t('Active Users');
-			userByDepartmentChart.data.datasets[1].label = $i18n.t('Connected Users');
+			userByDepartmentChart.data.datasets[1].label = $i18n.t('Last Active Users');
 			userByDepartmentChart.data.datasets[2].label = $i18n.t('Total Users');
 			userByDepartmentChart.update();
 		}
@@ -688,7 +688,7 @@
 							borderWidth: 2
 						},
 						{
-							label: $i18n.t('Connected Users'),
+							label: $i18n.t('Last Active Users'),
 							data: departmentUsageData.map((item) => item.active_users),
 							borderColor: '#1115d9',
 							backgroundColor: '#1115d9',

@@ -159,6 +159,34 @@ def test_get_users_per_domain_forces_analyst_domain(monkeypatch, requested_domai
     ]
 
 
+def test_get_users_per_domain_includes_selected_end_day_for_date_ranges(monkeypatch):
+    calls = []
+
+    def _fake_get_users_count_by_domain(start_ts, end_ts, domain, is_active=False):
+        calls.append((start_ts, end_ts, domain, is_active))
+        return []
+
+    monkeypatch.setattr(
+        Users, "get_users_count_by_domain", _fake_get_users_count_by_domain
+    )
+
+    result = asyncio.run(
+        get_users_per_domain(
+            start_timestamp=86400,
+            end_timestamp=172800,
+            domain="a.com",
+            user=SimpleNamespace(role="admin"),
+        )
+    )
+
+    assert result == []
+    # Both queries receive end_timestamp + 86400 so the selected end day is inclusive
+    assert calls == [
+        (86400, 259200, "a.com", False),
+        (86400, 259200, "a.com", True),
+    ]
+
+
 class _FakeQuery:
     def __init__(self, rows):
         self.rows = rows

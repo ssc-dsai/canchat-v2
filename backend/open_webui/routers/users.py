@@ -30,6 +30,22 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
+
+def _normalize_department_range_end(start_timestamp: int, end_timestamp: int) -> int:
+    # The frontend date picker sends midnight timestamps (UTC).
+    # User.last_active_at is continuously updated to 'now', so users active on
+    # the selected end date fall outside the exclusive < end_timestamp boundary.
+    # Extend the end by one day so the selected end date is fully included.
+    if (
+        start_timestamp < end_timestamp
+        and start_timestamp % 86400 == 0
+        and end_timestamp % 86400 == 0
+    ):
+        return end_timestamp + 86400
+
+    return end_timestamp
+
+
 ############################
 # GetUsers
 ############################
@@ -326,6 +342,8 @@ async def get_users_per_domain(
         domain_to_use = domain
     else:
         domain_to_use = user.domain
+
+    end_timestamp = _normalize_department_range_end(start_timestamp, end_timestamp)
 
     # Fetch lists of dicts from the model
     total_users = Users.get_users_count_by_domain(
