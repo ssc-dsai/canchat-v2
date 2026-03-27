@@ -9,6 +9,7 @@ import logging
 import subprocess
 import asyncio
 import os
+import sys
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
@@ -511,7 +512,7 @@ class FastMCPManager:
         if time_server_path.exists():
             self.add_server_config(
                 name="time_server",
-                command=["python", str(time_server_path)],
+                command=[sys.executable, str(time_server_path)],
                 working_dir=str(backend_dir),
                 env=dict(os.environ),  # Pass current environment variables
                 transport="stdio",
@@ -539,7 +540,7 @@ class FastMCPManager:
         if news_server_path.exists():
             self.add_server_config(
                 name="news_server",
-                command=["python", str(news_server_path)],
+                command=[sys.executable, str(news_server_path)],
                 working_dir=str(backend_dir),
                 env=dict(os.environ),  # Pass current environment variables
                 transport="stdio",
@@ -589,9 +590,13 @@ class FastMCPManager:
 
             self.add_server_config(
                 name=server_name,
-                command=["python", str(generic_server_path), dept],
+                command=[sys.executable, str(generic_server_path), dept],
                 working_dir=str(backend_dir),
-                env=dict(os.environ),
+                env={
+                    key: value
+                    for key, value in os.environ.items()
+                    if key.startswith("SHP_") or key.startswith(f"{dept}_SHP_")
+                },  # Pass global and department specific environment variables
                 transport="stdio",
             )
 

@@ -31,7 +31,7 @@ const getMCPToolDescription = (toolName: string, i18n: any): string => {
 		const dept = spMatch[1].toUpperCase();
 		const action = spMatch[2];
 		if (action === 'search_documents_fast') {
-			return i18n.t(`Fast search {{dept}} SharePoint documents (sub-1 second)`, { dept });
+			return i18n.t(`Fast search {{dept}} SharePoint documents`, { dept });
 		}
 		if (action === 'list_folder_contents') {
 			return i18n.t(`List files in {{dept}} SharePoint folders`, { dept });

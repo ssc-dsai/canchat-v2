@@ -6,6 +6,7 @@ Simple integration using MCPServerAdapter with stdio transport for FastMCP time 
 
 import os
 import re
+import sys
 import logging
 from pathlib import Path
 from pydantic import BaseModel
@@ -149,7 +150,7 @@ class CrewMCPManager:
         # Initialize Time Server
         try:
             time_server_params = StdioServerParameters(
-                command="python",
+                command=sys.executable,
                 args=[str(self.time_server_path)],
                 env=dict(os.environ),  # Pass environment variables
             )
@@ -163,7 +164,7 @@ class CrewMCPManager:
         # Initialize News Server
         try:
             news_server_params = StdioServerParameters(
-                command="python",
+                command=sys.executable,
                 args=[str(self.news_server_path)],
                 env=dict(os.environ),  # Pass environment variables
             )
@@ -178,7 +179,7 @@ class CrewMCPManager:
         for dept_key, server_path in self._sharepoint_server_paths.items():
             try:
                 params = StdioServerParameters(
-                    command="python",
+                    command=sys.executable,
                     args=[str(server_path), dept_key],
                     env={
                         key: value
@@ -435,7 +436,7 @@ class CrewMCPManager:
         try:
             # Create adapter with current environment (includes USER_JWT_TOKEN set by set_user_token())
             sharepoint_params = StdioServerParameters(
-                command="python",
+                command=sys.executable,
                 args=[str(server_path), dept_key],
                 env={
                     key: value
