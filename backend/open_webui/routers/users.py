@@ -16,7 +16,7 @@ from open_webui.socket.main import get_active_status_by_user_id
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from open_webui.utils.auth import (
     get_admin_user,
     get_current_user,
@@ -129,9 +129,10 @@ async def get_daily_users_count(domain: str = None, user=Depends(get_verified_us
 # User Default Permissions
 ############################
 class MCPPermissions(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     time_server: bool = False
     news_server: bool = False
-    mpo_sharepoint_server: bool = False
 
 
 class WorkspacePermissions(BaseModel):
