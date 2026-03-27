@@ -579,6 +579,18 @@ class FastMCPManager:
         _departments = [
             d.strip().upper() for d in _departments_env.split(",") if d.strip()
         ]
+        # Validate dept keys are simple alphanumeric identifiers to prevent
+        # path traversal or env var injection via the config value.
+        _valid_departments = []
+        for dept in _departments:
+            if dept.isalpha() and dept.isascii():
+                _valid_departments.append(dept)
+            else:
+                log.warning(
+                    f"Skipping invalid SHAREPOINT_DEPARTMENTS entry '{dept}' — "
+                    "dept keys must contain only ASCII letters (e.g. MPO, PMO, FIN)."
+                )
+        _departments = _valid_departments
         if not _departments:
             log.warning(
                 "SHAREPOINT_DEPARTMENTS is not set — no SharePoint MCP servers will start. "
