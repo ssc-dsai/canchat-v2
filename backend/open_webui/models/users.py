@@ -469,7 +469,7 @@ class UsersTable:
                 # For total enrolled users, only filter by end timestamp
                 query = query.filter(timestamp_field < end_timestamp)
 
-            if domain and domain not in {"All", "Tous"}:
+            if domain:
                 query = query.filter(User.domain == domain)
 
             rows = (
@@ -478,7 +478,24 @@ class UsersTable:
                 .all()
             )
 
-            prompt_users_query = db.query(
+        return [
+            {
+                "domain": domain,
+                "department": description,
+                "user_count": user_count,
+            }
+            for domain, description, user_count in rows
+        ]
+
+    def get_prompt_users_by_domain(
+        self,
+        start_timestamp: int,
+        end_timestamp: int,
+        domain: Optional[str] = None,
+    ) -> dict[str, int]:
+        """Return a mapping of domain -> distinct prompt user count."""
+        with get_db() as db:
+            query = db.query(
                 MessageMetric.user_domain.label("domain"),
                 func.count(func.distinct(MessageMetric.user_id)).label(
                     "prompt_user_count"
@@ -488,28 +505,12 @@ class UsersTable:
                 MessageMetric.created_at < end_timestamp,
             )
 
-            if domain and domain not in {"All", "Tous"}:
-                prompt_users_query = prompt_users_query.filter(
-                    MessageMetric.user_domain == domain
-                )
+            if domain:
+                query = query.filter(MessageMetric.user_domain == domain)
 
-            prompt_user_rows = prompt_users_query.group_by(
-                MessageMetric.user_domain
-            ).all()
-            prompt_users_by_domain = {
-                user_domain: prompt_user_count
-                for user_domain, prompt_user_count in prompt_user_rows
-            }
+            rows = query.group_by(MessageMetric.user_domain).all()
 
-        return [
-            {
-                "domain": domain,
-                "department": description,
-                "user_count": user_count,
-                "prompt_users": prompt_users_by_domain.get(domain, 0),
-            }
-            for domain, description, user_count in rows
-        ]
+        return {user_domain: count for user_domain, count in rows}
 
 
 Users = UsersTable()

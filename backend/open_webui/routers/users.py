@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict
 from open_webui.utils.auth import (
     get_admin_user,
     get_current_user,
-    get_department_usage_user,
+    get_metrics_user,
     get_password_hash,
     get_verified_user,
 )
@@ -331,14 +331,8 @@ async def get_users_per_domain(
     start_timestamp: int,
     end_timestamp: int,
     domain: Optional[str] = Query(None),
-    user=Depends(get_department_usage_user),
+    user=Depends(get_metrics_user),
 ):
-    if user.role not in ["admin", "global_analyst", "analyst"]:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
     if user.role in ["admin", "global_analyst"]:
         domain_to_use = domain
     else:
@@ -346,12 +340,15 @@ async def get_users_per_domain(
 
     end_timestamp = _normalize_department_range_end(start_timestamp, end_timestamp)
 
-    # Fetch lists of dicts from the model
+    # Fetch user counts (total and active) and prompt users separately
     total_users = Users.get_users_count_by_domain(
         start_timestamp, end_timestamp, domain_to_use, False
     )
     active_users = Users.get_users_count_by_domain(
         start_timestamp, end_timestamp, domain_to_use, True
+    )
+    prompt_users_by_domain = Users.get_prompt_users_by_domain(
+        start_timestamp, end_timestamp, domain_to_use
     )
 
     # Merge by domain to keep department/domain labels aligned
@@ -364,23 +361,20 @@ async def get_users_per_domain(
             "department": item.get("department"),
             "total_users": item.get("user_count", 0),
             "active_users": 0,
-            "prompt_users": item.get("prompt_users", 0),
+            "prompt_users": prompt_users_by_domain.get(key, 0),
         }
 
     for item in active_users or []:
         key = item.get("domain")
         if key in merged:
             merged[key]["active_users"] = item.get("user_count", 0)
-            merged[key]["prompt_users"] = item.get(
-                "prompt_users", merged[key].get("prompt_users", 0)
-            )
         else:
             merged[key] = {
                 "domain": item.get("domain"),
                 "department": item.get("department"),
                 "total_users": 0,
                 "active_users": item.get("user_count", 0),
-                "prompt_users": item.get("prompt_users", 0),
+                "prompt_users": prompt_users_by_domain.get(key, 0),
             }
 
     # Return a sorted list for stable ordering (by department then domain)

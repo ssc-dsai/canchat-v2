@@ -2,27 +2,24 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from fastapi import HTTPException
 
 from open_webui.models.users import Users
 from open_webui.routers.users import get_users_per_domain
 
 
-def test_get_users_per_domain_rejects_unprivileged_roles():
-    with pytest.raises(HTTPException) as exc:
-        asyncio.run(
-            get_users_per_domain(
-                start_timestamp=1,
-                end_timestamp=100,
-                domain="example.com",
-                user=SimpleNamespace(role="user"),
-            )
-        )
+def _stub_prompt_users(monkeypatch, return_value=None):
+    """Stub get_prompt_users_by_domain to return empty dict by default."""
+    prompt_calls = []
 
-    assert exc.value.status_code == 401
+    def _fake(start_ts, end_ts, domain=None):
+        prompt_calls.append((start_ts, end_ts, domain))
+        return return_value if return_value is not None else {}
+
+    monkeypatch.setattr(Users, "get_prompt_users_by_domain", _fake)
+    return prompt_calls
 
 
-@pytest.mark.parametrize("domain", [None, "example.com", "All", "Tous"])
+@pytest.mark.parametrize("domain", [None, "example.com"])
 def test_get_users_per_domain_passes_single_domain_filter(monkeypatch, domain):
     calls = []
 
@@ -35,6 +32,7 @@ def test_get_users_per_domain_passes_single_domain_filter(monkeypatch, domain):
     monkeypatch.setattr(
         Users, "get_users_count_by_domain", _fake_get_users_count_by_domain
     )
+    prompt_calls = _stub_prompt_users(monkeypatch)
 
     result = asyncio.run(
         get_users_per_domain(
@@ -50,6 +48,7 @@ def test_get_users_per_domain_passes_single_domain_filter(monkeypatch, domain):
         (1, 100, domain, False),
         (1, 100, domain, True),
     ]
+    assert prompt_calls == [(1, 100, domain)]
 
 
 def test_get_users_per_domain_merges_and_sorts_data(monkeypatch):
@@ -59,37 +58,18 @@ def test_get_users_per_domain_merges_and_sorts_data(monkeypatch):
         calls.append((start_ts, end_ts, domain, is_active))
         if is_active:
             return [
-                {
-                    "domain": "z.com",
-                    "department": "Zeta",
-                    "user_count": 2,
-                    "prompt_users": 5,
-                },
-                {
-                    "domain": "orphan.com",
-                    "department": "Ops",
-                    "user_count": 1,
-                    "prompt_users": 1,
-                },
+                {"domain": "z.com", "department": "Zeta", "user_count": 2},
+                {"domain": "orphan.com", "department": "Ops", "user_count": 1},
             ]
         return [
-            {
-                "domain": "a.com",
-                "department": "Alpha",
-                "user_count": 10,
-                "prompt_users": 0,
-            },
-            {
-                "domain": "z.com",
-                "department": "Zeta",
-                "user_count": 7,
-                "prompt_users": 5,
-            },
+            {"domain": "a.com", "department": "Alpha", "user_count": 10},
+            {"domain": "z.com", "department": "Zeta", "user_count": 7},
         ]
 
     monkeypatch.setattr(
         Users, "get_users_count_by_domain", _fake_get_users_count_by_domain
     )
+    _stub_prompt_users(monkeypatch, {"z.com": 5, "orphan.com": 1})
 
     result = asyncio.run(
         get_users_per_domain(
@@ -129,7 +109,7 @@ def test_get_users_per_domain_merges_and_sorts_data(monkeypatch):
     ]
 
 
-@pytest.mark.parametrize("requested_domain", [None, "other.com", "All", "Tous"])
+@pytest.mark.parametrize("requested_domain", [None, "other.com"])
 def test_get_users_per_domain_forces_analyst_domain(monkeypatch, requested_domain):
     calls = []
 
@@ -142,6 +122,7 @@ def test_get_users_per_domain_forces_analyst_domain(monkeypatch, requested_domai
     monkeypatch.setattr(
         Users, "get_users_count_by_domain", _fake_get_users_count_by_domain
     )
+    prompt_calls = _stub_prompt_users(monkeypatch)
 
     result = asyncio.run(
         get_users_per_domain(
@@ -157,6 +138,7 @@ def test_get_users_per_domain_forces_analyst_domain(monkeypatch, requested_domai
         (1, 100, "analyst.example.com", False),
         (1, 100, "analyst.example.com", True),
     ]
+    assert prompt_calls == [(1, 100, "analyst.example.com")]
 
 
 def test_get_users_per_domain_includes_selected_end_day_for_date_ranges(monkeypatch):
@@ -169,6 +151,7 @@ def test_get_users_per_domain_includes_selected_end_day_for_date_ranges(monkeypa
     monkeypatch.setattr(
         Users, "get_users_count_by_domain", _fake_get_users_count_by_domain
     )
+    prompt_calls = _stub_prompt_users(monkeypatch)
 
     result = asyncio.run(
         get_users_per_domain(
@@ -185,6 +168,7 @@ def test_get_users_per_domain_includes_selected_end_day_for_date_ranges(monkeypa
         (86400, 259200, "a.com", False),
         (86400, 259200, "a.com", True),
     ]
+    assert prompt_calls == [(86400, 259200, "a.com")]
 
 
 class _FakeQuery:
@@ -242,14 +226,13 @@ def _install_fake_db(monkeypatch, query):
 
 @pytest.mark.parametrize(
     "domain,expected_domain_filter_calls",
-    [(None, 0), ("All", 0), ("Tous", 0), ("a.com", 1)],
+    [(None, 0), ("a.com", 1)],
 )
 def test_get_users_count_by_domain_domain_filter_handling(
     monkeypatch, domain, expected_domain_filter_calls
 ):
     fake_query = _FakeQuery(rows=[("a.com", "Alpha", 3)])
-    prompt_query = _FakeQuery(rows=[])
-    _install_fake_db(monkeypatch, [fake_query, prompt_query])
+    _install_fake_db(monkeypatch, [fake_query])
 
     result = Users.get_users_count_by_domain(
         start_timestamp=100,
@@ -263,19 +246,16 @@ def test_get_users_count_by_domain_domain_filter_handling(
             "domain": "a.com",
             "department": "Alpha",
             "user_count": 3,
-            "prompt_users": 0,
         }
     ]
 
     # One timestamp filter call is always present; optional domain filter adds one more.
     assert len(fake_query.filter_calls) == 1 + expected_domain_filter_calls
-    assert len(prompt_query.filter_calls) == 1 + expected_domain_filter_calls
 
 
 def test_get_users_count_by_domain_uses_expected_timestamp_field(monkeypatch):
     active_query = _FakeQuery(rows=[])
-    active_prompt_query = _FakeQuery(rows=[])
-    _install_fake_db(monkeypatch, [active_query, active_prompt_query])
+    _install_fake_db(monkeypatch, [active_query])
 
     Users.get_users_count_by_domain(
         start_timestamp=100,
@@ -292,8 +272,7 @@ def test_get_users_count_by_domain_uses_expected_timestamp_field(monkeypatch):
     assert "last_active_at" in active_filter_text
 
     total_query = _FakeQuery(rows=[])
-    total_prompt_query = _FakeQuery(rows=[])
-    _install_fake_db(monkeypatch, [total_query, total_prompt_query])
+    _install_fake_db(monkeypatch, [total_query])
 
     Users.get_users_count_by_domain(
         start_timestamp=100,
@@ -310,29 +289,29 @@ def test_get_users_count_by_domain_uses_expected_timestamp_field(monkeypatch):
     assert "created_at" in total_filter_text
 
 
-def test_get_users_count_by_domain_includes_prompt_users(monkeypatch):
-    user_query = _FakeQuery(rows=[("a.com", "Alpha", 3), ("z.com", "Zeta", 4)])
+def test_get_prompt_users_by_domain(monkeypatch):
     prompt_query = _FakeQuery(rows=[("a.com", 2), ("z.com", 1)])
-    _install_fake_db(monkeypatch, [user_query, prompt_query])
+    _install_fake_db(monkeypatch, [prompt_query])
 
-    result = Users.get_users_count_by_domain(
+    result = Users.get_prompt_users_by_domain(
         start_timestamp=100,
         end_timestamp=200,
         domain=None,
-        is_active=False,
     )
 
-    assert result == [
-        {
-            "domain": "a.com",
-            "department": "Alpha",
-            "user_count": 3,
-            "prompt_users": 2,
-        },
-        {
-            "domain": "z.com",
-            "department": "Zeta",
-            "user_count": 4,
-            "prompt_users": 1,
-        },
-    ]
+    assert result == {"a.com": 2, "z.com": 1}
+
+
+def test_get_prompt_users_by_domain_with_domain_filter(monkeypatch):
+    prompt_query = _FakeQuery(rows=[("a.com", 2)])
+    _install_fake_db(monkeypatch, [prompt_query])
+
+    result = Users.get_prompt_users_by_domain(
+        start_timestamp=100,
+        end_timestamp=200,
+        domain="a.com",
+    )
+
+    assert result == {"a.com": 2}
+    # timestamp filter + domain filter
+    assert len(prompt_query.filter_calls) == 2
