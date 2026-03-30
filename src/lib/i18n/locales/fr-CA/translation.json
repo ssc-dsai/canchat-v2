@@ -256,7 +256,7 @@
 	"Confirm Password": "Confirmer le mot de passe",
 	"Confirm your action": "Confirmez votre action",
 	"Confirm your new password": "Confirmez votre nouveau mot de passe",
-	"Connected Users": "",
+	"Connected Users": "Utilisateurs connectés",
 	"Connections": "Connexions",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort. (Default: medium)": "Contraint l'effort de raisonnement pour les modèles de raisonnement. Applicable uniquement aux modèles de raisonnement de certains fournisseurs qui supportent l'effort de raisonnement. (Par défaut : moyen)",
 	"Consulting CrewAI agents...": "Consultation des agents CrewAI...",
