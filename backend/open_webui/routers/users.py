@@ -340,12 +340,9 @@ async def get_users_per_domain(
 
     end_timestamp = _normalize_department_range_end(start_timestamp, end_timestamp)
 
-    # Fetch user counts (total and active) and prompt users separately
-    total_users = Users.get_users_count_by_domain(
-        start_timestamp, end_timestamp, domain_to_use, False
-    )
-    active_users = Users.get_users_count_by_domain(
-        start_timestamp, end_timestamp, domain_to_use, True
+    # Fetch aggregated user counts and prompt users separately
+    user_counts = Users.get_users_count_by_domain(
+        start_timestamp, end_timestamp, domain_to_use
     )
     prompt_users_by_domain = Users.get_prompt_users_by_domain(
         start_timestamp, end_timestamp, domain_to_use
@@ -354,28 +351,15 @@ async def get_users_per_domain(
     # Merge by domain to keep department/domain labels aligned
     merged = {}
 
-    for item in total_users or []:
+    for item in user_counts or []:
         key = item.get("domain")
         merged[key] = {
             "domain": item.get("domain"),
             "department": item.get("department"),
-            "total_users": item.get("user_count", 0),
-            "active_users": 0,
+            "total_users": item.get("total_users", 0),
+            "active_users": item.get("active_users", 0),
             "prompt_users": prompt_users_by_domain.get(key, 0),
         }
-
-    for item in active_users or []:
-        key = item.get("domain")
-        if key in merged:
-            merged[key]["active_users"] = item.get("user_count", 0)
-        else:
-            merged[key] = {
-                "domain": item.get("domain"),
-                "department": item.get("department"),
-                "total_users": 0,
-                "active_users": item.get("user_count", 0),
-                "prompt_users": prompt_users_by_domain.get(key, 0),
-            }
 
     # Return a sorted list for stable ordering (by department then domain)
     return sorted(

@@ -23,10 +23,8 @@ def _stub_prompt_users(monkeypatch, return_value=None):
 def test_get_users_per_domain_passes_single_domain_filter(monkeypatch, domain):
     calls = []
 
-    def _fake_get_users_count_by_domain(
-        start_ts, end_ts, domain_filter, is_active=False
-    ):
-        calls.append((start_ts, end_ts, domain_filter, is_active))
+    def _fake_get_users_count_by_domain(start_ts, end_ts, domain_filter):
+        calls.append((start_ts, end_ts, domain_filter))
         return []
 
     monkeypatch.setattr(
@@ -44,26 +42,34 @@ def test_get_users_per_domain_passes_single_domain_filter(monkeypatch, domain):
     )
 
     assert result == []
-    assert calls == [
-        (1, 100, domain, False),
-        (1, 100, domain, True),
-    ]
+    assert calls == [(1, 100, domain)]
     assert prompt_calls == [(1, 100, domain)]
 
 
 def test_get_users_per_domain_merges_and_sorts_data(monkeypatch):
     calls = []
 
-    def _fake_get_users_count_by_domain(start_ts, end_ts, domain, is_active=False):
-        calls.append((start_ts, end_ts, domain, is_active))
-        if is_active:
-            return [
-                {"domain": "z.com", "department": "Zeta", "user_count": 2},
-                {"domain": "orphan.com", "department": "Ops", "user_count": 1},
-            ]
+    def _fake_get_users_count_by_domain(start_ts, end_ts, domain):
+        calls.append((start_ts, end_ts, domain))
         return [
-            {"domain": "a.com", "department": "Alpha", "user_count": 10},
-            {"domain": "z.com", "department": "Zeta", "user_count": 7},
+            {
+                "domain": "a.com",
+                "department": "Alpha",
+                "total_users": 10,
+                "active_users": 0,
+            },
+            {
+                "domain": "orphan.com",
+                "department": "Ops",
+                "total_users": 0,
+                "active_users": 1,
+            },
+            {
+                "domain": "z.com",
+                "department": "Zeta",
+                "total_users": 7,
+                "active_users": 2,
+            },
         ]
 
     monkeypatch.setattr(
@@ -80,10 +86,7 @@ def test_get_users_per_domain_merges_and_sorts_data(monkeypatch):
         )
     )
 
-    assert calls == [
-        (100, 200, "a.com", False),
-        (100, 200, "a.com", True),
-    ]
+    assert calls == [(100, 200, "a.com")]
     assert result == [
         {
             "domain": "a.com",
@@ -113,10 +116,8 @@ def test_get_users_per_domain_merges_and_sorts_data(monkeypatch):
 def test_get_users_per_domain_forces_analyst_domain(monkeypatch, requested_domain):
     calls = []
 
-    def _fake_get_users_count_by_domain(
-        start_ts, end_ts, domain_filter, is_active=False
-    ):
-        calls.append((start_ts, end_ts, domain_filter, is_active))
+    def _fake_get_users_count_by_domain(start_ts, end_ts, domain_filter):
+        calls.append((start_ts, end_ts, domain_filter))
         return []
 
     monkeypatch.setattr(
@@ -134,18 +135,15 @@ def test_get_users_per_domain_forces_analyst_domain(monkeypatch, requested_domai
     )
 
     assert result == []
-    assert calls == [
-        (1, 100, "analyst.example.com", False),
-        (1, 100, "analyst.example.com", True),
-    ]
+    assert calls == [(1, 100, "analyst.example.com")]
     assert prompt_calls == [(1, 100, "analyst.example.com")]
 
 
 def test_get_users_per_domain_includes_selected_end_day_for_date_ranges(monkeypatch):
     calls = []
 
-    def _fake_get_users_count_by_domain(start_ts, end_ts, domain, is_active=False):
-        calls.append((start_ts, end_ts, domain, is_active))
+    def _fake_get_users_count_by_domain(start_ts, end_ts, domain):
+        calls.append((start_ts, end_ts, domain))
         return []
 
     monkeypatch.setattr(
@@ -163,11 +161,8 @@ def test_get_users_per_domain_includes_selected_end_day_for_date_ranges(monkeypa
     )
 
     assert result == []
-    # Both queries receive end_timestamp + 86400 so the selected end day is inclusive
-    assert calls == [
-        (86400, 259200, "a.com", False),
-        (86400, 259200, "a.com", True),
-    ]
+    # The aggregated count query receives end_timestamp + 86400 so the selected end day is inclusive
+    assert calls == [(86400, 259200, "a.com")]
     assert prompt_calls == [(86400, 259200, "a.com")]
 
 
@@ -231,62 +226,43 @@ def _install_fake_db(monkeypatch, query):
 def test_get_users_count_by_domain_domain_filter_handling(
     monkeypatch, domain, expected_domain_filter_calls
 ):
-    fake_query = _FakeQuery(rows=[("a.com", "Alpha", 3)])
+    fake_query = _FakeQuery(rows=[("a.com", "Alpha", 3, 1)])
     _install_fake_db(monkeypatch, [fake_query])
 
     result = Users.get_users_count_by_domain(
         start_timestamp=100,
         end_timestamp=200,
         domain=domain,
-        is_active=False,
     )
 
     assert result == [
         {
             "domain": "a.com",
             "department": "Alpha",
-            "user_count": 3,
+            "total_users": 3,
+            "active_users": 1,
         }
     ]
 
-    # One timestamp filter call is always present; optional domain filter adds one more.
+    # One combined range filter is always present; optional domain filter adds one more.
     assert len(fake_query.filter_calls) == 1 + expected_domain_filter_calls
 
 
-def test_get_users_count_by_domain_uses_expected_timestamp_field(monkeypatch):
-    active_query = _FakeQuery(rows=[])
-    _install_fake_db(monkeypatch, [active_query])
+def test_get_users_count_by_domain_uses_expected_timestamp_fields(monkeypatch):
+    query = _FakeQuery(rows=[])
+    _install_fake_db(monkeypatch, [query])
 
     Users.get_users_count_by_domain(
         start_timestamp=100,
         end_timestamp=200,
         domain="a.com",
-        is_active=True,
     )
 
-    active_filter_text = " ".join(
-        str(condition)
-        for conditions in active_query.filter_calls
-        for condition in conditions
+    filter_text = " ".join(
+        str(condition) for conditions in query.filter_calls for condition in conditions
     ).lower()
-    assert "last_active_at" in active_filter_text
-
-    total_query = _FakeQuery(rows=[])
-    _install_fake_db(monkeypatch, [total_query])
-
-    Users.get_users_count_by_domain(
-        start_timestamp=100,
-        end_timestamp=200,
-        domain="a.com",
-        is_active=False,
-    )
-
-    total_filter_text = " ".join(
-        str(condition)
-        for conditions in total_query.filter_calls
-        for condition in conditions
-    ).lower()
-    assert "created_at" in total_filter_text
+    assert "created_at" in filter_text
+    assert "last_active_at" in filter_text
 
 
 def test_get_prompt_users_by_domain(monkeypatch):

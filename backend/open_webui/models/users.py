@@ -12,7 +12,7 @@ from open_webui.models.message_metrics import MessageMetric
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, func
+from sqlalchemy import BigInteger, Column, String, Text, and_, case, func, or_
 
 # Add logger for the users module
 logger = getLogger(__name__)
@@ -446,28 +446,23 @@ class UsersTable:
         start_timestamp: int,
         end_timestamp: int,
         domain: Optional[str] = None,
-        is_active: bool = False,
-    ):
-        """Return user counts grouped by domain for a date range."""
+    ) -> list[dict[str, str | int | None]]:
+        """Return total and active user counts grouped by domain for a date range."""
         with get_db() as db:
-            # Choose timestamp field based on is_active flag
-            timestamp_field = User.last_active_at if is_active else User.created_at
+            total_condition = User.created_at < end_timestamp
+            active_condition = and_(
+                User.last_active_at >= start_timestamp,
+                User.last_active_at < end_timestamp,
+            )
 
             query = db.query(
                 User.domain,
                 Domain.description.label("description"),
-                func.count(User.id).label("user_count"),
+                func.sum(case((total_condition, 1), else_=0)).label("total_users"),
+                func.sum(case((active_condition, 1), else_=0)).label("active_users"),
             ).select_from(User)
 
-            # Apply timestamp filters based on is_active flag
-            if is_active:
-                # For active users, filter by both start and end timestamps
-                query = query.filter(
-                    timestamp_field >= start_timestamp, timestamp_field < end_timestamp
-                )
-            else:
-                # For total enrolled users, only filter by end timestamp
-                query = query.filter(timestamp_field < end_timestamp)
+            query = query.filter(or_(total_condition, active_condition))
 
             if domain:
                 query = query.filter(User.domain == domain)
@@ -482,9 +477,10 @@ class UsersTable:
             {
                 "domain": domain,
                 "department": description,
-                "user_count": user_count,
+                "total_users": total_users or 0,
+                "active_users": active_users or 0,
             }
-            for domain, description, user_count in rows
+            for domain, description, total_users, active_users in rows
         ]
 
     def get_prompt_users_by_domain(
