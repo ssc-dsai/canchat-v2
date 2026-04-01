@@ -516,9 +516,11 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 			expect(await userPage.getUploadedFileCount()).toBe(0);
 
 			// Verify size error toast
-			const sizeErrorAppeared = await userPage.checkToastAppeared(
-				userPage.getTranslation('File size should not exceed')
+			const sizeErrorTemplate = userPage.getTranslation(
+				'File size should not exceed {{maxSize}} MB.'
 			);
+			const toastErrorText = sizeErrorTemplate.split('{{maxSize}}')[0];
+			const sizeErrorAppeared = await userPage.checkToastAppeared(toastErrorText);
 			expect(sizeErrorAppeared).toBe(true);
 		} finally {
 			if (fs.existsSync(oversizedFilePath)) fs.unlinkSync(oversizedFilePath);
