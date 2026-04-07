@@ -5,6 +5,12 @@ Tous les changements notables apportés à ce projet seront documentés dans ce 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et ce projet adhère au [Versionnage sémantique](https://semver.org/lang/fr/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.14.1] - 2026-04-07
+
+### Corrigé
+
+- **Schéma d'URL Redis de socketio**: Mettre à jour python-socketio vers la version 5.16.1, ce qui corrige une régression de la version 5.14.0.
+
 ## [0.5.7-ccv2-1.14.0] - 2026-03-23
 
 ### Ajouté
