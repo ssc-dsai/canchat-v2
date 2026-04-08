@@ -54,13 +54,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
- 
-      - name: Force local Docker image update
-        run: |
-          docker images --format '{{.Repository}}:{{.Tag}}' | xargs -I {} bash -c 'docker inspect --format="{{index .RepoDigests 0}}" {} && docker pull {};';
-          docker rmi $(docker images -f "dangling=true" -q)
-        continue-on-error: true
- 
+
       - name: Override ref_name
         id: ref_name
         run: |
@@ -71,7 +65,13 @@ jobs:
           else
             echo "ref_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
- 
+
+      - name: Force local Docker image update
+        run: |
+          docker images --format '{{.Repository}}:{{.Tag}}' | xargs -I {} bash -c 'docker inspect --format="{{index .RepoDigests 0}}" {} && docker pull {};';
+          docker rmi $(docker images -f "dangling=true" -q)
+        continue-on-error: true
+
       - name:  Start CANChat Environment
         run: |
             docker run -d -p 8080:8080 \
