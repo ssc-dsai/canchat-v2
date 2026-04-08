@@ -21,7 +21,7 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		userPage,
 		locale
 	}) => {
-		// 1. Upload a supported document first
+		// Upload a supported document first
 		const supportedFile = uploadPath('pg11.txt');
 		if (!fs.existsSync(supportedFile)) throw new Error(`Test File not found: ${supportedFile}`);
 		await userPage.uploadFile(supportedFile);
@@ -30,17 +30,17 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		const toastAppeared = await userPage.checkToastAppeared('File uploaded successfully');
 		expect(toastAppeared).toBe(true);
 
-		// 2. Attempt to upload an unsupported document
+		// Attempt to upload an unsupported document
 		const unsupportedFile = uploadPath('unsupported_file.exe');
 		if (!fs.existsSync(unsupportedFile)) throw new Error(`Test File not found: ${unsupportedFile}`);
 		await userPage.uploadFile(unsupportedFile);
 		await userPage.waitForUploadComplete('document');
 
-		// 3. Observe the document is not added
+		// Observe the document is not added
 		const fileCount = await userPage.getUploadedFileCount();
 		expect(fileCount).toBe(1);
 
-		// 4. Observe toast notification regarding unsupported file
+		// Observe toast notification regarding unsupported file
 		const errorToast = await userPage.checkToastAppeared('Unsupported file type');
 		expect(errorToast).toBe(true);
 	});
@@ -54,17 +54,17 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		const filePath = uploadPath('pg11.txt');
 		if (!fs.existsSync(filePath)) throw new Error(`Test File not found: ${filePath}`);
 
-		// 1. Upload by dragging file into the window
+		// Upload by dragging file into the window
 		await userPage.uploadFileViaDragDrop(filePath);
 
-		// 2. Observe file is being uploaded (spinning circle on the file item)
+		// Observe file is being uploaded (spinning circle on the file item)
 		const spinnerWasVisible = await userPage.isUploadSpinnerVisible();
 		expect(spinnerWasVisible).toBe(true);
 
-		// 3. Wait for the spinner to disappear (upload completed)
+		// Wait for the spinner to disappear (upload completed)
 		await userPage.waitForUploadComplete('document');
 
-		// 4. Verify upload success toast
+		// Verify upload success toast
 		const toastAppeared = await userPage.checkToastAppeared('File uploaded successfully');
 		expect(toastAppeared).toBe(true);
 	});
@@ -103,23 +103,23 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 	test('CHAT-UPLOAD-TC004: User can add multiple files concurrently', async ({ userPage }) => {
 		await userPage.goto('/');
 
-		// 1. Upload one file
+		// Upload one file
 		const file1 = uploadPath('recipe_part1.txt');
 		if (!fs.existsSync(file1)) throw new Error(`Test File not found: ${file1}`);
 		await userPage.uploadFile(file1);
 		await userPage.waitForUploadComplete('document');
 
-		// 2. Verify file count is 1
+		// Verify file count is 1
 		const count1 = await userPage.getUploadedFileCount();
 		expect(count1).toBe(1);
 
-		// 3. Upload two more files at once
+		// Upload two more files at once
 		const file2 = uploadPath('recipe_part2.txt');
 		const file3 = uploadPath('recipe_part3.txt');
 		await userPage.uploadMultipleFiles([file2, file3]);
 		await userPage.waitForUploadComplete('document');
 
-		// 4. Verify file count is 3
+		// Verify file count is 3
 		const count3 = await userPage.getUploadedFileCount();
 		expect(count3).toBe(3);
 	});
@@ -173,37 +173,37 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 	}) => {
 		await userPage.goto('/');
 
-		// 1. Upload one file
+		// Upload one file
 		const filePath = uploadPath('pg11.txt');
 		if (!fs.existsSync(filePath)) throw new Error(`Test File not found: ${filePath}`);
 		await userPage.uploadFile(filePath);
 		await userPage.waitForUploadComplete('document');
 		await userPage.checkToastAppeared('File uploaded successfully');
 
-		// 3. Verify file count is 1
+		// Verify file count is 1
 		const count = await userPage.getUploadedFileCount();
 		expect(count).toBe(1);
 
-		// 4. Remove the document
+		// Remove the document
 		await userPage.removeUploadedFile(0);
 		const countAfter = await userPage.getUploadedFileCount();
 		expect(countAfter).toBe(0);
 
-		// 5. Send query and observe response is received (without document context)
+		// Send query and observe response is received (without document context)
 		await userPage.sendMessage('What was the uploaded document about?');
 		const answerText = await userPage.getLastMessageText();
 		expect(answerText).not.toBe('');
 
-		// 6. Upload the document again during the conversation
+		// Upload the document again during the conversation
 		await userPage.uploadFile(filePath);
 		await userPage.waitForUploadComplete('document');
 		await userPage.checkToastAppeared('File uploaded successfully');
 
-		// 7. Verify file count is 1 again
+		// Verify file count is 1 again
 		const countReuploaded = await userPage.getUploadedFileCount();
 		expect(countReuploaded).toBe(1);
 
-		// 8. Send query with the document
+		// Send query with the document
 		await userPage.sendMessage('Now that I uploaded it, what is it about?');
 		const secondAnswerText = await userPage.getLastMessageText();
 		expect(secondAnswerText).toContain('Alice');
@@ -220,22 +220,22 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		const filePath = uploadPath('recipe_part1.txt');
 		if (!fs.existsSync(filePath)) throw new Error(`Test File not found: ${filePath}`);
 
-		// 1. Upload once
+		// Upload once
 		await userPage.uploadFile(filePath);
 		await userPage.waitForUploadComplete('document');
 		await userPage.checkToastAppeared('File uploaded successfully');
 
-		// 3. Verify file count is 1
+		// Verify file count is 1
 		expect(await userPage.getUploadedFileCount()).toBe(1);
 
-		// 4. Upload again
+		// Upload again
 		await userPage.uploadFile(filePath);
 		await userPage.waitForUploadComplete('document');
 
-		// 5. Verify file count is 2 (file is added twice)
+		// Verify file count is 2 (file is added twice)
 		expect(await userPage.getUploadedFileCount()).toBe(2);
 
-		// 6. Send query and observe response
+		// Send query and observe response
 		await userPage.sendMessage('What are the ingredients listed in the uploaded files?');
 		const answerText = await userPage.getLastMessageText();
 		expect(answerText).not.toBe('');
@@ -252,11 +252,11 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 
 		await userPage.uploadFile(emptyFile);
 
-		// 2. Observe the file is not uploaded
+		// Observe the file is not uploaded
 		const fileCount = await userPage.getUploadedFileCount();
 		expect(fileCount).toBe(0);
 
-		// 3. Observe notification that the file has not been uploaded (empty file blocked on frontend)
+		// Observe notification that the file has not been uploaded (empty file blocked on frontend)
 		const errorToast = await userPage.checkToastAppeared('You cannot upload an empty file.');
 		expect(errorToast).toBe(true);
 	});
@@ -268,7 +268,7 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		test.setTimeout(180000);
 		await userPage.goto('/');
 
-		// 1. Upload three files (split recipe)
+		// Upload three files (split recipe)
 		const file1 = uploadPath('recipe_part1.txt');
 		const file2 = uploadPath('recipe_part2.txt');
 		const file3 = uploadPath('recipe_part3.txt');
@@ -280,10 +280,10 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		await userPage.uploadMultipleFiles([file1, file2, file3]);
 		await userPage.waitForUploadComplete('document');
 
-		// 3. Verify file count is 3
+		// Verify file count is 3
 		expect(await userPage.getUploadedFileCount()).toBe(3);
 
-		// 4. Ask to retrieve and combine content from all 3 documents
+		// Ask to retrieve and combine content from all 3 documents
 		await userPage.sendMessage(
 			'List all the ingredients (wet and dry) and instructions from the uploaded recipe documents.'
 		);
@@ -316,7 +316,7 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		await userPage.uploadFile(imagePath);
 		await userPage.waitForUploadComplete('image');
 
-		// 3. Verify file count is 1
+		// Verify file count is 1
 		expect(await userPage.getUploadedFileCount()).toBe(1);
 
 		await userPage.sendMessage('What text content can you see in the uploaded image?');
@@ -370,7 +370,7 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 	}, testInfo) => {
 		// Create a file with special characters at runtime
 		const specialName = 'test_file_#@!special.txt';
-		const specialNamePath = path.resolve(UPLOADS_DIR, specialName);
+		const specialNamePath = testInfo.outputPath(specialName);
 
 		fs.writeFileSync(specialNamePath, 'This is a test file with special characters in the name.');
 
@@ -407,28 +407,28 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		const largeFile = uploadPath('pg1259.txt');
 		if (!fs.existsSync(largeFile)) throw new Error(`Test File not found: ${largeFile}`);
 
-		// 1. Upload the large file
+		// Upload the large file
 		await userPage.uploadFile(largeFile);
 		await userPage.waitForUploadComplete('document');
 		await userPage.checkToastAppeared('File uploaded successfully');
 
-		// 2. Click the file chip to open the file detail modal
+		// Click the file chip to open the file detail modal
 		await userPage.clickUploadedFileChip(0);
 
-		// 3. Enable "Using Entire Document" mode
+		// Enable "Using Entire Document" mode
 		await userPage.enableFileFullContent();
 
-		// 4. Close the file detail modal
+		// Close the file detail modal
 		await userPage.closeFileItemModal();
 
-		// 5. Send the query
+		// Send the query
 		await userPage.sendMessage('Count the number of letter a in the uploaded document.');
 		const answerText = await userPage.getLastMessageText();
 		expect(answerText).not.toBe('');
 
-		// 6. Verify the truncation warning is displayed
+		// Verify the truncation warning is displayed
 		const truncationMsg = userPage.getTranslation(
-			'Some content was trimmed to fit the model limit.'
+			"Some content was trimmed to fit the model's limit."
 		);
 		await expect(userPage.page.getByText(truncationMsg)).toBeVisible();
 
@@ -446,24 +446,24 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 	}) => {
 		await userPage.goto('/');
 
-		// 1. Upload a supported file
+		// Upload a supported file
 		const supportedFile = uploadPath('recipe_part1.txt');
 		if (!fs.existsSync(supportedFile)) throw new Error(`Test File not found: ${supportedFile}`);
 		await userPage.uploadFile(supportedFile);
 		await userPage.waitForUploadComplete('document');
 		await userPage.checkToastAppeared('File uploaded successfully');
 
-		// 3. Verify file count is 1
+		// Verify file count is 1
 		expect(await userPage.getUploadedFileCount()).toBe(1);
 
-		// 4. Attempt to upload an unsupported file
+		// Attempt to upload an unsupported file
 		const unsupportedFile = uploadPath('unsupported_file.exe');
 		await userPage.uploadFile(unsupportedFile);
 
-		// 5. Verify file count is still 1 (unsupported file was rejected)
+		// Verify file count is still 1 (unsupported file was rejected)
 		expect(await userPage.getUploadedFileCount()).toBe(1);
 
-		// 6. Send query and observe response using the supported file
+		// Send query and observe response using the supported file
 		await userPage.sendMessage('What ingredients are listed?');
 		const answerText = await userPage.getLastMessageText();
 		expect(answerText).not.toBe('');
@@ -546,7 +546,7 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		await userPage.sendButton.click();
 		await userPage.waitToSettle(1000);
 
-		//Still on the page and the prompt was not accepted.
+		// Still on the page and the prompt was not accepted.
 		expect(await userPage.getUploadedFileCount()).toBe(MAX_FILE_COUNT + 1);
 	});
 });

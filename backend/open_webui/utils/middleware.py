@@ -1536,7 +1536,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                     "type": "status",
                     "data": {
                         "action": "rag_context_truncated",
-                        "description": "Some search results were trimmed to fit the model's limit.",
+                        "description": "Some content was trimmed to fit the model's limit.",
                         "done": True,
                     },
                 }
