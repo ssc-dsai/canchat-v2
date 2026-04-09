@@ -21,7 +21,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Iterator, Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -90,6 +90,8 @@ def _create_metrics_instruments() -> WebSearchMetricsInstruments:
 
 
 _METRICS_INSTRUMENTS = _create_metrics_instruments()
+_MAX_LOGGED_RESULT_URLS = 20
+_MAX_LOGGED_CONTENT_LOAD_URLS = 20
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +126,35 @@ def _safe_user_attrs(user) -> dict:
     }
 
 
+def _sanitize_result_url(url: str) -> str:
+    """Remove query strings and fragments before logging result URLs."""
+    parsed = urlparse(url)
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+
+
+def _sanitize_urls(urls: list[str], limit: int) -> list[str]:
+    sanitized_urls = []
+    for url in urls:
+        if len(sanitized_urls) >= limit:
+            break
+        try:
+            sanitized_urls.append(_sanitize_result_url(url))
+        except Exception:
+            sanitized_urls.append(url)
+    return sanitized_urls
+
+
+def _emit_sensitive_debug_record(record: dict) -> None:
+    """Emit sensitive dispatch details at DEBUG level only."""
+    try:
+        payload = json.dumps(
+            record, default=str, ensure_ascii=False, separators=(",", ":")
+        )
+        log.debug("[web_search_audit_sensitive] %s", payload)
+    except Exception:
+        log.exception("[web_search_audit_sensitive] failed to serialize audit record")
+
+
 def _emit_audit_record(record: dict) -> None:
     """Emit a structured audit record into container logs without raising."""
     try:
@@ -133,6 +164,12 @@ def _emit_audit_record(record: dict) -> None:
         log.info("[web_search_audit] %s", payload)
     except Exception:
         log.exception("[web_search_audit] failed to serialize audit record")
+
+
+def _emit_audit_records(record: dict, sensitive_record: Optional[dict] = None) -> None:
+    _emit_audit_record(record)
+    if sensitive_record is not None:
+        _emit_sensitive_debug_record(sensitive_record)
 
 
 def _record_counter(instrument, value: int, attributes: dict[str, Any]) -> None:
@@ -203,6 +240,8 @@ def log_web_search_dispatch(
         engine=engine,
     )
     ts = datetime.now(timezone.utc).isoformat()
+    user_attrs = _safe_user_attrs(user)
+    query_hash = _hash_query(query)
 
     try:
         record = {
@@ -210,15 +249,26 @@ def log_web_search_dispatch(
             "event_type": "web_search_dispatch",
             "timestamp": ts,
             "engine": engine,
-            "query": query,
-            "query_hash": _hash_query(query),
+            "query": None,
+            "query_hash": query_hash,
             "query_length": len(query),
             "result_count_requested": result_count_requested,
             "domain_filter_active": bool(domain_filter_list),
             "domain_filter_count": len(domain_filter_list) if domain_filter_list else 0,
-            **_safe_user_attrs(user),
+            "user_id": user_attrs["user_id"],
+            "user_role": user_attrs["user_role"],
+            "user_email": None,
+            "user_name": None,
         }
-        _emit_audit_record(record)
+        _emit_audit_records(
+            record,
+            {
+                "event_type": "web_search_dispatch_sensitive",
+                "query": query,
+                "user_email": user_attrs["user_email"],
+                "user_name": user_attrs["user_name"],
+            },
+        )
         _record_counter(
             _METRICS_INSTRUMENTS.dispatch_counter,
             1,
@@ -253,13 +303,13 @@ def log_web_search_result(
     engine = ctx.engine
 
     try:
-        result_urls = []
+        result_links = []
         result_domains: list[str] = []
         _seen_domains: set[str] = set()
         for result in results or []:
             link = getattr(result, "link", None)
             if link:
-                result_urls.append(link)
+                result_links.append(link)
                 try:
                     domain = urlparse(link).netloc
                     if domain and domain not in _seen_domains:
@@ -267,6 +317,8 @@ def log_web_search_result(
                         _seen_domains.add(domain)
                 except Exception:
                     continue
+
+        result_urls = _sanitize_urls(result_links, _MAX_LOGGED_RESULT_URLS)
 
         record = {
             "event_id": event_id,
@@ -359,7 +411,6 @@ def log_web_search_content_load(
             "event_type": "web_search_content_load",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "engine": engine,
-            "urls_requested": urls,
             "urls_requested_count": len(urls) if urls else 0,
             "docs_loaded": docs_loaded,
             "latency_ms": latency_ms,
@@ -369,7 +420,13 @@ def log_web_search_content_load(
             "error_type": type(error).__name__ if error else None,
             "error_message": str(error)[:500] if error else None,
         }
-        _emit_audit_record(record)
+        _emit_audit_records(
+            record,
+            {
+                "event_type": "web_search_content_load_sensitive",
+                "urls_requested": urls,
+            },
+        )
 
         metric_attrs = {
             "engine": engine or "unknown",

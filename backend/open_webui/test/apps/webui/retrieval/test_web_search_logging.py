@@ -23,6 +23,7 @@ from open_webui.retrieval.web.web_search_logger import (
 )
 
 AUDIT_PREFIX = "[web_search_audit] "
+SENSITIVE_AUDIT_PREFIX = "[web_search_audit_sensitive] "
 LOGGER_NAME = "open_webui.retrieval.web.web_search_logger"
 
 
@@ -35,6 +36,19 @@ def _extract_audit_records(caplog) -> list[dict]:
         if not message.startswith(AUDIT_PREFIX):
             continue
         payload = message[len(AUDIT_PREFIX) :]
+        records.append(json.loads(payload))
+    return records
+
+
+def _extract_sensitive_audit_records(caplog) -> list[dict]:
+    records = []
+    for rec in caplog.records:
+        if rec.name != LOGGER_NAME:
+            continue
+        message = rec.getMessage()
+        if not message.startswith(SENSITIVE_AUDIT_PREFIX):
+            continue
+        payload = message[len(SENSITIVE_AUDIT_PREFIX) :]
         records.append(json.loads(payload))
     return records
 
@@ -98,10 +112,33 @@ class TestStructuredAuditLogs:
         record = records[-1]
         assert record["event_type"] == "web_search_dispatch"
         assert record["engine"] == "brave"
-        assert record["query"] == "audit test query"
+        assert record["query"] is None
         assert record["query_hash"] == _hash_query("audit test query")
         assert record["domain_filter_active"] is True
         assert record["user_id"] == "user-abc-123"
+        assert record["user_email"] is None
+        assert record["user_name"] is None
+
+    def test_dispatch_logs_sensitive_fields_at_debug(self, audit_caplog, fake_user):
+        audit_caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
+
+        log_web_search_dispatch(
+            engine="brave",
+            query="audit test query",
+            result_count_requested=10,
+            user=fake_user,
+        )
+
+        info_record = _extract_audit_records(audit_caplog)[-1]
+        sensitive_record = _extract_sensitive_audit_records(audit_caplog)[-1]
+
+        assert info_record["query"] is None
+        assert info_record["user_email"] is None
+        assert info_record["user_name"] is None
+        assert sensitive_record["event_type"] == "web_search_dispatch_sensitive"
+        assert sensitive_record["query"] == "audit test query"
+        assert sensitive_record["user_email"] == "test.user@example.gc.ca"
+        assert sensitive_record["user_name"] == "Test User"
 
     def test_dispatch_generates_uuid_event_id(self, audit_caplog):
         ctx = log_web_search_dispatch(
@@ -130,6 +167,25 @@ class TestStructuredAuditLogs:
         assert record["latency_ms"] >= 400
         assert "example.com" in record["result_domains"]
         assert "other.org" in record["result_domains"]
+
+    def test_result_urls_are_logged_without_query_strings(self, audit_caplog):
+        ctx = {
+            "event_id": "wsd_sanitized_urls",
+            "start_time": time.monotonic() - 0.1,
+            "engine": "brave",
+        }
+        results = [
+            SimpleNamespace(
+                link="https://example.com/page?token=secret&redirect=internal#frag",
+                title="Page 1",
+                snippet="Snippet 1",
+            )
+        ]
+
+        log_web_search_result(dispatch_ctx=ctx, results=results)
+
+        record = _extract_audit_records(audit_caplog)[-1]
+        assert record["result_urls"] == ["https://example.com/page"]
 
     def test_result_failure(self, audit_caplog):
         ctx = {
@@ -161,6 +217,28 @@ class TestStructuredAuditLogs:
         assert record["urls_requested_count"] == 2
         assert record["docs_loaded"] == 2
         assert record["collection_name"] == "web_search_1234-abcd"
+
+    def test_content_load_logs_sanitized_urls_at_info_and_full_urls_at_debug(
+        self, audit_caplog
+    ):
+        audit_caplog.set_level(logging.DEBUG, logger=LOGGER_NAME)
+
+        log_web_search_content_load(
+            event_id="wscl_sensitive001",
+            urls=["https://a.com/path?token=secret#frag"],
+            docs_loaded=1,
+            latency_ms=100,
+            engine="brave",
+        )
+
+        info_record = _extract_audit_records(audit_caplog)[-1]
+        sensitive_record = _extract_sensitive_audit_records(audit_caplog)[-1]
+
+        assert info_record["event_type"] == "web_search_content_load"
+        assert sensitive_record["event_type"] == "web_search_content_load_sensitive"
+        assert sensitive_record["urls_requested"] == [
+            "https://a.com/path?token=secret#frag"
+        ]
 
     def test_context_manager_logs_failure(self, audit_caplog):
         with pytest.raises(ConnectionError, match="API unreachable"):
@@ -296,7 +374,8 @@ class TestSearchWebLogging:
         result_record = next(
             r for r in records if r["event_type"] == "web_search_result"
         )
-        assert dispatch_record["query"] == "test logging query"
+        assert dispatch_record["query"] is None
+        assert dispatch_record["query_hash"] == _hash_query("test logging query")
         assert result_record["success"] is True
         assert result_record["event_id"] == dispatch_record["event_id"]
 
@@ -435,6 +514,6 @@ class TestAuditPayloadFormat:
             user=fake_user,
         )
         record = _extract_audit_records(audit_caplog)[-1]
-        assert record["query"] == sensitive_query
+        assert record["query"] is None
         assert record["query_hash"] == _hash_query(sensitive_query)
-        assert record["user_email"] == "test.user@example.gc.ca"
+        assert record["user_email"] is None
