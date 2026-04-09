@@ -10,6 +10,7 @@ export class AuthPage extends BasePage {
 	nameInput!: Locator;
 	onboardingButton!: Locator;
 	signOutButtonPendingUser!: Locator;
+	changeLanguageButtonPendingUser!: Locator;
 	readonly isFirstRunButton: Locator;
 
 	constructor(page: Page, lang: Language = 'en-GB') {
@@ -47,6 +48,10 @@ export class AuthPage extends BasePage {
 		this.signOutButtonPendingUser = this.page.getByRole('button', {
 			name: this.t['Sign Out'] || 'Sign Out'
 		});
+		this.changeLanguageButtonPendingUser = this.page.getByRole('button', {
+			name: 'Français',
+			exact: true
+		});
 	}
 
 	/**
@@ -59,6 +64,12 @@ export class AuthPage extends BasePage {
 		await this.emailInput.fill(email);
 		await this.passwordInput.fill(pass);
 		await this.signInButton.click();
+
+		// If the test is in French, click the change language button to switch to French UI
+		if (this.lang === 'fr-CA' && email === 'pending@canchat.ca') {
+			await this.changeLanguageButtonPendingUser.isVisible({ timeout: 2000 });
+			await this.changeLanguageButtonPendingUser.click();
+		}
 
 		await Promise.race([
 			this.page.waitForURL(/\/($|\?|c\/)/),

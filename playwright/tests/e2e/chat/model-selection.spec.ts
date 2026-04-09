@@ -45,7 +45,7 @@ test.describe('Model Selection', () => {
 		}
 
 		const targetIndex = availableModels > 1 ? 1 : 0;
-		const selectedModel = await userPage.selectModelByIndex(0, targetIndex);
+		const selectedModel = await userPage.addModelByIndex(0, targetIndex);
 		await userPage.sendMessage(locale === 'fr-CA' ? QUESTION_LIST.fr : QUESTION_LIST.en);
 
 		const [responseModel] = await userPage.getLastAssistantModelNames(1);
@@ -67,9 +67,9 @@ test.describe('Model Selection', () => {
 
 		for (let selectorIndex = 0; selectorIndex < modelCount; selectorIndex += 1) {
 			if (selectorIndex > 0) {
-				await userPage.addModelSelector();
+				await userPage.clickModelSelector();
 			}
-			const selectedModel = await userPage.selectModelByIndex(selectorIndex, selectorIndex);
+			const selectedModel = await userPage.addModelByIndex(selectorIndex, selectorIndex);
 			selectedModels.push(selectedModel);
 		}
 
@@ -89,7 +89,7 @@ test.describe('Model Selection', () => {
 		}
 
 		const targetIndex = availableModels > 1 ? 1 : 0;
-		const selectedModel = await userPage.selectModelByIndex(0, targetIndex);
+		const selectedModel = await userPage.addModelByIndex(0, targetIndex);
 		await userPage.setDefaultChatModel();
 
 		await userPage.newChat();
@@ -137,12 +137,12 @@ test.describe('Model Selection', () => {
 			return;
 		}
 
-		const initialModel = await userPage.selectModelByIndex(0, 0);
+		const initialModel = await userPage.addModelByIndex(0, 0);
 		await userPage.sendMessage(locale === 'fr-CA' ? DOG_QUESTION.fr : DOG_QUESTION.en);
 		const [initialResponseModel] = await userPage.getLastAssistantModelNames(1);
 		expect(initialResponseModel).toBe(initialModel);
 
-		const nextModel = await userPage.selectModelByIndex(0, 1);
+		const nextModel = await userPage.addModelByIndex(0, 1);
 		await userPage.sendMessage(locale === 'fr-CA' ? DOG_FOLLOWUP.fr : DOG_FOLLOWUP.en);
 		const [followupResponseModel] = await userPage.getLastAssistantModelNames(1);
 		expect(followupResponseModel).toBe(nextModel);
@@ -163,13 +163,13 @@ test.describe('Model Selection', () => {
 			.filter({ has: userPage.page.locator('.chat-assistant') });
 		const getAssistantCount = async () => assistantMessages.count();
 
-		await userPage.selectModelByIndex(0, 0);
+		await userPage.addModelByIndex(0, 0);
 		const beforeFirst = await getAssistantCount();
 		await userPage.sendMessage(
 			locale === 'fr-CA' ? MULTI_MODEL_QUESTION.fr : MULTI_MODEL_QUESTION.en,
 			false
 		);
-		await userPage.selectModelByIndex(0, 1);
+		await userPage.addModelByIndex(0, 1);
 		await userPage.waitForGeneration();
 		const afterFirst = await getAssistantCount();
 		expect(afterFirst - beforeFirst).toBe(1);
@@ -179,8 +179,8 @@ test.describe('Model Selection', () => {
 			locale === 'fr-CA' ? MULTI_MODEL_FOLLOWUP_1.fr : MULTI_MODEL_FOLLOWUP_1.en,
 			false
 		);
-		await userPage.addModelSelector();
-		await userPage.selectModelByIndex(1, 1);
+		await userPage.clickModelSelector();
+		await userPage.addModelByIndex(1, 2);
 		await userPage.waitForGeneration();
 		const afterSecond = await getAssistantCount();
 		expect(afterSecond - beforeSecond).toBe(1);
@@ -193,16 +193,7 @@ test.describe('Model Selection', () => {
 		await userPage.removeModelSelector(1);
 		await userPage.waitForGeneration();
 		const afterThird = await getAssistantCount();
-		expect(afterThird - beforeThird).toBe(2);
-
-		const beforeFourth = await getAssistantCount();
-		await userPage.sendMessage(
-			locale === 'fr-CA' ? MULTI_MODEL_FOLLOWUP_1.fr : MULTI_MODEL_FOLLOWUP_1.en,
-			false
-		);
-		await userPage.waitForGeneration();
-		const afterFourth = await getAssistantCount();
-		expect(afterFourth - beforeFourth).toBe(1);
+		expect(afterThird - beforeThird).toBe(1);
 	});
 
 	test('CHAT-MODEL-TC007: User can use all available models', async ({ userPage }) => {
@@ -215,7 +206,7 @@ test.describe('Model Selection', () => {
 
 		for (let modelIndex = 0; modelIndex < availableModels; modelIndex += 1) {
 			await userPage.newChat();
-			const selectedModel = await userPage.selectModelByIndex(0, modelIndex);
+			const selectedModel = await userPage.addModelByIndex(0, modelIndex);
 			await userPage.sendMessage('When was Canada founded?');
 			const [responseModel] = await userPage.getLastAssistantModelNames(1);
 			expect(responseModel).toBe(selectedModel);

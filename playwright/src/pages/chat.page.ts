@@ -219,11 +219,11 @@ export class ChatPage extends BasePage {
 	}
 
 	/**
-	 * Selects a model by index using keyboard navigation
+	 * Add a model by index using keyboard navigation
 	 * @param selectorIndex The model selector index to target
 	 * @param modelIndex The index of the model in the list (0-based)
 	 */
-	async selectModelByIndex(selectorIndex: number, modelIndex: number): Promise<string> {
+	async addModelByIndex(selectorIndex: number, modelIndex: number): Promise<string> {
 		const searchInput = await this.openModelSelector(selectorIndex);
 		await searchInput.fill('');
 		for (let i = 0; i < modelIndex; i += 1) {
@@ -259,18 +259,20 @@ export class ChatPage extends BasePage {
 	/**
 	 * Adds a new model selector (up to 3)
 	 */
-	async addModelSelector(): Promise<void> {
-		const addLabel = this.getTranslation('Add Model');
-		await this.page.getByRole('button', { name: addLabel }).click();
+	async clickModelSelector(): Promise<void> {
+		// The label is translated but not the name of the button
+		//const addLabel = this.getTranslation('Add Model');
+		await this.page.getByRole('button', { name: 'Add Model' }).click();
 	}
 
 	/**
 	 * Removes a model selector by index (1 or 2)
 	 */
 	async removeModelSelector(selectorIndex: number): Promise<void> {
-		const removeLabel = this.getTranslation('Remove Model');
+		// The button does not have a proper translation
+		//const removeLabel = this.getTranslation('Remove Model');
 		const removeButton = this.page
-			.getByRole('button', { name: removeLabel })
+			.getByRole('button', { name: 'Remove Model' })
 			.nth(selectorIndex - 1);
 		await removeButton.click();
 	}
