@@ -243,7 +243,8 @@ def log_web_search_result(
     Log the outcome of a web search call AFTER the upstream provider returns.
 
     Args:
-        dispatch_ctx: The dict returned by ``log_web_search_dispatch()``.
+        dispatch_ctx: A ``WebSearchAuditContext`` returned by
+            ``log_web_search_dispatch()`` or a compatible dict audit context.
         results: The list of SearchResult objects returned (empty on failure).
         error: The exception if the call failed, else None.
     """
