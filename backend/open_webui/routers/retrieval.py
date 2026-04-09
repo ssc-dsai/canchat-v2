@@ -1427,6 +1427,8 @@ async def process_web_search(
 
             log.debug(f"[process_web_search] web_results: {web_results}")
 
+            urls = []
+            content_load_start = time.monotonic()
             try:
                 urls = [result.link for result in web_results]
                 loaded_urls = urls
