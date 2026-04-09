@@ -263,3 +263,53 @@ async def test_local_mode_close_does_not_raise(monkeypatch):
     await manager.close()
     assert manager.redis_client is None
     assert manager._initialized is False
+
+
+@pytest.mark.anyio
+async def test_prune_closed_loops_removes_only_stale_entries(manager):
+    """Closed-loop Redis clients should be evicted while active-loop entries remain."""
+    stale_loop = MagicMock()
+    stale_loop.is_closed.return_value = True
+    active_loop = MagicMock()
+    active_loop.is_closed.return_value = False
+
+    stale_client = MagicMock()
+    active_client = MagicMock()
+
+    manager._redis_clients_by_loop = {1: stale_client, 2: active_client}
+    manager._redis_loops_by_id = {1: stale_loop, 2: active_loop}
+    manager._close_client_in_loop = MagicMock(return_value=False)
+    manager._close_redis_client = AsyncMock(return_value=None)
+
+    await manager._prune_closed_loops()
+
+    assert manager._redis_clients_by_loop == {2: active_client}
+    assert manager._redis_loops_by_id == {2: active_loop}
+    manager._close_client_in_loop.assert_called_once_with(stale_loop, stale_client)
+    manager._close_redis_client.assert_awaited_once_with(stale_client)
+
+
+@pytest.mark.anyio
+async def test_ensure_initialized_prunes_before_reinit(manager):
+    """Slow-path initialization should prune stale loop entries before creating a client."""
+    manager._client_ready_for_current_loop = MagicMock(side_effect=[False, True])
+    manager._prune_closed_loops = AsyncMock(return_value=None)
+    manager._init_redis_client = AsyncMock(return_value=None)
+
+    await manager._ensure_initialized()
+
+    manager._prune_closed_loops.assert_awaited_once()
+    manager._init_redis_client.assert_awaited_once_with(retries=1)
+
+
+@pytest.mark.anyio
+async def test_ensure_initialized_skips_prune_when_loop_is_ready(manager):
+    """Fast path should return immediately when current loop client is already ready."""
+    manager._client_ready_for_current_loop = MagicMock(return_value=True)
+    manager._prune_closed_loops = AsyncMock(return_value=None)
+    manager._init_redis_client = AsyncMock(return_value=None)
+
+    await manager._ensure_initialized()
+
+    manager._prune_closed_loops.assert_not_awaited()
+    manager._init_redis_client.assert_not_called()

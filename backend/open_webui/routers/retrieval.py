@@ -965,14 +965,18 @@ async def process_file(
             # Usage: /files/
             file_path = file.path
             if file_path:
-                file_path = Storage.get_file(file_path)
+                # Storage and loader calls can block; keep them off the event loop.
+                file_path = await asyncio.to_thread(Storage.get_file, file_path)
                 loader = Loader(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                 )
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
+                docs = await asyncio.to_thread(
+                    loader.load,
+                    file.filename,
+                    file.meta.get("content_type"),
+                    file_path,
                 )
 
                 docs = [
@@ -4198,9 +4202,8 @@ async def api_cleanup_expired_chats(
             CHAT_CLEANUP_PRESERVE_ARCHIVED,
             CHAT_CLEANUP_LOCK_TIMEOUT,
             CHAT_CLEANUP_LOCK_RENEWAL_INTERVAL,
-            CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS,
         )
-        from open_webui.env import WEBSOCKET_MANAGER, WEBSOCKET_REDIS_URL
+        from open_webui.env import REDIS_URL, USE_REDIS_LOCKS
         from open_webui.socket.utils import RedisLock, renew_lock_periodically
 
         # Use config defaults if not specified
@@ -4211,9 +4214,9 @@ async def api_cleanup_expired_chats(
         if preserve_archived is None:
             preserve_archived = CHAT_CLEANUP_PRESERVE_ARCHIVED.value
 
-        if WEBSOCKET_MANAGER == "redis":
+        if USE_REDIS_LOCKS:
             lock = RedisLock(
-                redis_url=WEBSOCKET_REDIS_URL,
+                redis_url=REDIS_URL,
                 lock_name="chat_cleanup_job",
                 timeout_secs=CHAT_CLEANUP_LOCK_TIMEOUT,
             )
@@ -4237,11 +4240,10 @@ async def api_cleanup_expired_chats(
                     on_lock_lost=lock_lost_event.set,
                 )
             )
-        elif not CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS:
+        elif not USE_REDIS_LOCKS:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Chat cleanup requires WEBSOCKET_MANAGER=redis for distributed locking. "
-                "Set CHAT_CLEANUP_ALLOW_LOCAL_NO_REDIS=true for single-instance local development.",
+                detail="Chat cleanup requires Redis for distributed locking. ",
             )
 
         # Check if chat lifetime is enabled to determine cleanup behavior

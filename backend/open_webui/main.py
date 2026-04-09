@@ -277,6 +277,7 @@ from open_webui.config import (
 )
 from open_webui.env import (
     CHANGELOG,
+    CHANGELOG_FR,
     GLOBAL_LOG_LEVEL,
     SAFE_MODE,
     SRC_LOG_LEVELS,
@@ -381,10 +382,11 @@ async def lifespan(app: FastAPI):
             f"Redis distributed locking validated and ready: {redis_lock_manager.redis_url}"
         )
     except Exception as e:
-        log.error(
-            f"FATAL: Redis validation failed. Application cannot start without distributed locking. Error: {e}"
+        log.warning(
+            f"Redis validation failed — distributed locking unavailable. "
+            f"Continuing without Redis (single-instance / local dev mode). Error: {e}"
         )
-        raise
+        app.state.redis_lock_manager = None
 
     if RESET_CONFIG_ON_START:
         reset_config()
@@ -453,14 +455,14 @@ async def lifespan(app: FastAPI):
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
 
-    # Initialize chat lifetime scheduler
+    # Initialize scheduler (chat cleanup, Redis pool cleanup, etc.)
     try:
-        from open_webui.scheduler import start_chat_lifetime_scheduler
+        from open_webui.scheduler import start_scheduler
 
-        start_chat_lifetime_scheduler()
-        log.info("Chat lifetime scheduler initialized")
+        start_scheduler()
+        log.info("Scheduler initialized")
     except Exception as e:
-        log.error(f"Failed to initialize chat lifetime scheduler: {e}")
+        log.error(f"Failed to initialize scheduler: {e}")
 
     # Add task completion callback to log if it exits
     def on_cleanup_done(task):
@@ -513,14 +515,14 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 log.error(f"Error during MCP manager cleanup: {e}")
 
-        # Cleanup chat lifetime scheduler
+        # Cleanup scheduler
         try:
-            from open_webui.scheduler import stop_chat_lifetime_scheduler
+            from open_webui.scheduler import stop_scheduler
 
-            stop_chat_lifetime_scheduler()
-            log.info("Chat lifetime scheduler cleanup completed")
+            stop_scheduler()
+            log.info("Scheduler cleanup completed")
         except Exception as e:
-            log.error(f"Error during chat lifetime scheduler cleanup: {e}")
+            log.error(f"Error during scheduler cleanup: {e}")
 
         # Cleanup cached Qdrant client
         try:
@@ -1420,8 +1422,9 @@ async def get_app_version():
 
 
 @app.get("/api/changelog")
-async def get_app_changelog():
-    return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+async def get_app_changelog(locale: str = "en"):
+    source = CHANGELOG_FR if locale.startswith("fr") else CHANGELOG
+    return {key: source[key] for idx, key in enumerate(source) if idx < 5}
 
 
 ############################

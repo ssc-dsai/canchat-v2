@@ -255,6 +255,7 @@ RUN if [ ! -z "$BUILDKIT_VERSION" ]; then \
 # copy built frontend files
 COPY --chown=$UID:$GID --chmod=g=u --from=build /app/build /app/build
 COPY --chown=$UID:$GID --chmod=g=u --from=build /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --chown=$UID:$GID --chmod=g=u --from=build /app/CHANGELOG-FR.md /app/CHANGELOG-FR.md
 COPY --chown=$UID:$GID --chmod=g=u --from=build /app/package.json /app/package.json
 
 # copy backend files

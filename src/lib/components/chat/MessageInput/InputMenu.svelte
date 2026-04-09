@@ -36,7 +36,7 @@
 		// MPO SharePoint tool translations
 		$i18n.t('MCP: MPO SharePoint');
 		$i18n.t('MCP: MPO SharePoint (By ID)');
-		$i18n.t('Fast search MPO SharePoint documents (sub-1 second)');
+		$i18n.t('Fast search MPO SharePoint documents');
 		$i18n.t('List files in MPO SharePoint folders');
 		$i18n.t('Retrieve MPO SharePoint document by ID from search results');
 		$i18n.t('Search and retrieve MPO SharePoint documents');
@@ -44,7 +44,7 @@
 		// PMO SharePoint tool translations
 		$i18n.t('MCP: PMO SharePoint');
 		$i18n.t('MCP: PMO SharePoint (By ID)');
-		$i18n.t('Fast search PMO SharePoint documents (sub-1 second)');
+		$i18n.t('Fast search PMO SharePoint documents');
 		$i18n.t('List files in PMO SharePoint folders');
 		$i18n.t('Retrieve PMO SharePoint document by ID from search results');
 		$i18n.t('Search and retrieve PMO SharePoint documents');
