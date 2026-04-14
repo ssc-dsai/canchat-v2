@@ -91,7 +91,6 @@ def _create_metrics_instruments() -> WebSearchMetricsInstruments:
 
 _METRICS_INSTRUMENTS = _create_metrics_instruments()
 _MAX_LOGGED_RESULT_URLS = 20
-_MAX_LOGGED_CONTENT_LOAD_URLS = 20
 
 
 # ---------------------------------------------------------------------------
